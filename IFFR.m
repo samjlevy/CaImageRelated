@@ -1,5 +1,5 @@
 
-
+[MD, ref] = MakeMouseSessionList('Sam')
 
 %%
 tempScale=20;%frames per second
