@@ -1,4 +1,5 @@
-function [PFhits, PFiffr]=IFFR_Sam(userstr,session)%varargin
+function [PFhits, PFiffr]=IFFR_Sam(session)
+% [PFhits, PFiffr]=IFFR_Sam(session)
 % This function gets the in-field firing rate for a session of alternation
 % data, for which tenaspis has already been run and places fields already
 % described. IFFR is calculated in two ways: 1) Number of transients in a
@@ -9,7 +10,7 @@ function [PFhits, PFiffr]=IFFR_Sam(userstr,session)%varargin
 % various intermediate steps can be uncommented / made modular.
 %
 %
-% INPUT - userstr, session
+% INPUT - session
 %   Additionally, this function is built to run on the entire session's
 %   data, though could be run on continuous or alternation blocks
 %   separately
@@ -22,7 +23,12 @@ function [PFhits, PFiffr]=IFFR_Sam(userstr,session)%varargin
 %    IFFR table, with rates aligned in same format as PFepochs etc.,
 % 
 
-[MD, ref] = MakeMouseSessionList(userstr);
+% Run MakeMouseSessionList if inputs require you to do so
+% if nargin == 2 && ~isempty(userstr)
+%     [MD, ref] = MakeMouseSessionList(userstr);
+%     session = MD(session);
+% end
+
 %{
 %Under construction
 if ~exist('session','var')
@@ -45,7 +51,7 @@ end
 
 
 %% Load appropriate files
-cd(MD(session).Location)
+cd(session.Location)
 tempScale=20;%frames per second
 load Pos_align.mat x_adj_cm y_adj_cm
 load PlaceMaps.mat FT t 
