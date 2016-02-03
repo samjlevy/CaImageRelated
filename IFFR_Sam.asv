@@ -1,5 +1,5 @@
-function [PFhits, PFiffr]=IFFR_Sam(session,userstr)%varargin
-% [PFhits, PFiffr]=IFFR_Sam(session,userstr)%varargin
+function [PFhits, PFiffr]=IFFR_Sam(session,varargin)
+% [PFhits, PFiffr]=IFFR_Sam(session,varargin)
 % This function gets the in-field firing rate for a session of alternation
 % data, for which tenaspis has already been run and places fields already
 % described. IFFR is calculated in two ways: 1) Number of transients in a
@@ -10,24 +10,29 @@ function [PFhits, PFiffr]=IFFR_Sam(session,userstr)%varargin
 % various intermediate steps can be uncommented / made modular.
 %
 %
-% INPUT - userstr, session
+% INPUT - session
 %   Additionally, this function is built to run on the entire session's
-%   data, though could be run on continuous or alternation blocks
+%   data, though could be run on continuous or delayed alternation blocks
 %   separately
 % 
 % OUTPUT - Tables aligned in same format as PFepochs and similar, 3rd
-% dimension is context
+% dimension is context/block type (e.g. 1 = continuous, 2 = delayed)
 %
-%    Hits table, number of passes in field with hits and totale number of
-%    passes through field
+%    Hits table, number of passes in field with hits
+%    Passes table - not that different from PFepochs, but separated by
+%    context
 %    IFFR table, with rates aligned in same format as PFepochs etc.,
+%
+%   varargins:
+%   - 'use_alt_PMfile': enter in alternate file to PlaceMaps.mat if you
+%   wish.
 % 
 
 % Run MakeMouseSessionList if inputs require you to do so
-if nargin == 2 && ~isempty(userstr)
-    [MD, ref] = MakeMouseSessionList(userstr);
-    session = MD(session);
-end
+% if nargin == 2 && ~isempty(userstr)
+%     [MD, ref] = MakeMouseSessionList(userstr);
+%     session = MD(session);
+% end
 
 %{
 %Under construction
@@ -49,12 +54,19 @@ end
 %}
 %Output choice from a varargin: requires varargouts, more varargin handling
 
+%% Get varargins
+PFstats_file = 'PlaceMaps.mat';
+for j = 1:length(varargin)
+   if strcmpi(varargin{j},'use_alt_PMfile')
+       PMfile = varargin{j+1};
+   end
+end
 
 %% Load appropriate files
-cd(MD(session).Location)
+cd(session.Location)
 tempScale=20;%frames per second
 load Pos_align.mat x_adj_cm y_adj_cm
-load PlaceMaps.mat FT t 
+load(PMfile, 'FT', 't'); 
 load PFstats.mat PFepochs PFnumepochs
 
 %% This block asks the user to describe the bounds for each context type
@@ -91,7 +103,7 @@ sized=[size(PFepochs),length(blockTypes)];
 %}
 %Rate type 2
 PFyes=cell(size(PFepochs));
-PFhits=cell(sized);
+PFhits=zeros(sized);
 PFiffr=zeros(sized);
 
 %% Get indices in PFepochs to run, so don't have to loop through entire array
@@ -138,11 +150,12 @@ end
     %PFrateMax(k,l,d)=max(PFrates{k,l,d});
     %}
     %Rate type 2
-    PFhits{k,l,d}=[sum(PFyes{k,l,d}), length(PFyes{k,l,d})];
-    PFiffr(k,l,d)=(PFhits{k,l,d}(1)/PFhits{k,l,d}(2))*100;
+    PFhits(k,l,d)=sum(PFyes{k,l,d});
+    PFpasses(k,l,d)=length(PFyes{k,l,d});
+    PFiffr(k,l,d)=(PFhits(k,l,d)/PFpasses(k,l,d))*100;
 end        
 end
 
-save PFiffr.mat PFhits PFiffr blockTypes
+save PFiffr.mat PFhits PFiffr PFpasses blockInd blockTypes
 
 end

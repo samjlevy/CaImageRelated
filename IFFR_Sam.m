@@ -55,10 +55,10 @@ end
 %Output choice from a varargin: requires varargouts, more varargin handling
 
 %% Get varargins
-PMfile = 'PlaceMaps.mat';
+PFstats_file = 'PFstats.mat';
 for j = 1:length(varargin)
-   if strcmpi(varargin{j},'use_alt_PMfile')
-       PMfile = varargin{j+1};
+   if strcmpi(varargin{j},'use_alt_PFstatsfile')
+       PFstats_file = varargin{j+1};
    end
 end
 
@@ -66,8 +66,8 @@ end
 cd(session.Location)
 tempScale=20;%frames per second
 load Pos_align.mat x_adj_cm y_adj_cm
-load(PMfile, 'FT', 't'); 
-load PFstats.mat PFepochs PFnumepochs
+load PlaceMaps.mat FT t 
+load(PFstats_file, 'PFepochs', 'PFnumepochs')
 
 %% This block asks the user to describe the bounds for each context type
 blockTypes={'continuous'; 'delay'};
