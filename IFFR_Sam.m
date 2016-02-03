@@ -1,5 +1,5 @@
-function [PFhits, PFiffr]=IFFR_Sam(session)
-% [PFhits, PFiffr]=IFFR_Sam(session)
+function [PFhits, PFiffr]=IFFR_Sam(session,varargin)
+% [PFhits, PFiffr]=IFFR_Sam(session,varargin)
 % This function gets the in-field firing rate for a session of alternation
 % data, for which tenaspis has already been run and places fields already
 % described. IFFR is calculated in two ways: 1) Number of transients in a
@@ -12,16 +12,20 @@ function [PFhits, PFiffr]=IFFR_Sam(session)
 %
 % INPUT - session
 %   Additionally, this function is built to run on the entire session's
-%   data, though could be run on continuous or alternation blocks
+%   data, though could be run on continuous or delayed alternation blocks
 %   separately
 % 
 % OUTPUT - Tables aligned in same format as PFepochs and similar, 3rd
-% dimension is context
+% dimension is context/block type (e.g. 1 = continuous, 2 = delayed)
 %
 %    Hits table, number of passes in field with hits
 %    Passes table - not that different from PFepochs, but separated by
 %    context
 %    IFFR table, with rates aligned in same format as PFepochs etc.,
+%
+%   varargins:
+%   - 'use_alt_PMfile': enter in alternate file to PlaceMaps.mat if you
+%   wish.
 % 
 
 % Run MakeMouseSessionList if inputs require you to do so
@@ -50,12 +54,19 @@ end
 %}
 %Output choice from a varargin: requires varargouts, more varargin handling
 
+%% Get varargins
+PMfile = 'PlaceMaps.mat';
+for j = 1:length(varargin)
+   if strcmpi(varargin{j},'use_alt_PMfile')
+       PMfile = varargin{j+1};
+   end
+end
 
 %% Load appropriate files
 cd(session.Location)
 tempScale=20;%frames per second
 load Pos_align.mat x_adj_cm y_adj_cm
-load PlaceMaps.mat FT t 
+load(PMfile, 'FT', 't'); 
 load PFstats.mat PFepochs PFnumepochs
 
 %% This block asks the user to describe the bounds for each context type
