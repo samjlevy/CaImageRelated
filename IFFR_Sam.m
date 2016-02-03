@@ -18,8 +18,9 @@ function [PFhits, PFiffr]=IFFR_Sam(session)
 % OUTPUT - Tables aligned in same format as PFepochs and similar, 3rd
 % dimension is context
 %
-%    Hits table, number of passes in field with hits and totale number of
-%    passes through field
+%    Hits table, number of passes in field with hits
+%    Passes table - not that different from PFepochs, but separated by
+%    context
 %    IFFR table, with rates aligned in same format as PFepochs etc.,
 % 
 
@@ -91,7 +92,7 @@ sized=[size(PFepochs),length(blockTypes)];
 %}
 %Rate type 2
 PFyes=cell(size(PFepochs));
-PFhits=cell(sized);
+PFhits=zeros(sized);
 PFiffr=zeros(sized);
 
 %% Get indices in PFepochs to run, so don't have to loop through entire array
@@ -138,11 +139,12 @@ end
     %PFrateMax(k,l,d)=max(PFrates{k,l,d});
     %}
     %Rate type 2
-    PFhits{k,l,d}=[sum(PFyes{k,l,d}), length(PFyes{k,l,d})];
-    PFiffr(k,l,d)=(PFhits{k,l,d}(1)/PFhits{k,l,d}(2))*100;
+    PFhits(k,l,d)=sum(PFyes{k,l,d});
+    PFpasses(k,l,d)=length(PFyes{k,l,d});
+    PFiffr(k,l,d)=(PFhits(k,l,d)/PFpasses(k,l,d))*100;
 end        
 end
 
-save PFiffr.mat PFhits PFiffr blockTypes
+save PFiffr.mat PFhits PFiffr PFpasses blockInd blockTypes
 
 end
