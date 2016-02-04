@@ -10,7 +10,7 @@ function [PFhits, PFiffr]=IFFR_Sam(session,varargin)
 % various intermediate steps can be uncommented / made modular.
 %
 %
-% INPUT - session
+% INPUT - session ( MD(session number) )
 %   Additionally, this function is built to run on the entire session's
 %   data, though could be run on continuous or delayed alternation blocks
 %   separately
@@ -59,7 +59,11 @@ PFstats_file = 'PFstats.mat';
 for j = 1:length(varargin)
    if strcmpi(varargin{j},'use_alt_PFstatsfile')
        PFstats_file = varargin{j+1};
+   elseif strcmpi(varargin{j},'use_exist_blocks')
+       %blockFile = varargin{j+1};
+       load(fullfile(session.Location,varargin{j+1}), 'blockTypes', 'blockInd')
    end
+   
 end
 
 %% Load appropriate files
@@ -70,7 +74,10 @@ load PlaceMaps.mat FT t
 load(PFstats_file, 'PFepochs', 'PFnumepochs')
 
 %% This block asks the user to describe the bounds for each context type
-blockTypes={'continuous'; 'delay'};
+if ~exist('blockTypes','var')
+    blockTypes={'continuous'; 'delay'};
+end
+if ~exist('blockInd','var')
 for f=1:length(blockTypes)
     numBlocks(f)=input(['How many ' blockTypes{f} ' blocks?']);  
     if numBlocks(f)>0
@@ -90,6 +97,7 @@ for f=1:length(blockTypes)
     close(h)
     blockInd{f}=[times([1:2:length(times)-1]) times([2:2:length(times)])];
     end
+end
 end
 
 %% Preallocate for all arrays being used
