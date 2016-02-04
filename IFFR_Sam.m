@@ -1,4 +1,4 @@
-function [PFhits, PFiffr]=IFFR_Sam(session,varargin)
+function [PFhits, PFiffr]=IFFR_Sam(userstr,session,varargin)
 % [PFhits, PFiffr]=IFFR_Sam(session,varargin)
 % This function gets the in-field firing rate for a session of alternation
 % data, for which tenaspis has already been run and places fields already
@@ -63,7 +63,15 @@ for j = 1:length(varargin)
 end
 
 %% Load appropriate files
-cd(session.Location)
+try
+cd(MD(session).Location)
+catch
+if ~exist('userstr', 'var')
+    userstr=input('Enter userstr: ','s');
+end    
+[MD,ref]=MakeMouseSessionList(userstr);
+cd(MD(session).Location)
+end    
 tempScale=20;%frames per second
 load Pos_align.mat x_adj_cm y_adj_cm
 load PlaceMaps.mat FT t 
