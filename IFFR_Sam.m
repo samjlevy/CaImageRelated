@@ -1,4 +1,4 @@
-function [PFhits, PFiffr]=IFFR_Sam(session,varargin)
+function [PFhits2, PFiffr2]=IFFR_Sam(session,varargin)
 % [PFhits, PFiffr]=IFFR_Sam(session,varargin)
 % This function gets the in-field firing rate for a session of alternation
 % data, for which tenaspis has already been run and places fields already
@@ -71,7 +71,7 @@ for j = 1:length(varargin)
    if strcmpi(varargin{j},'use_alt_PFstatsfile')
        PFstats_file = varargin{j+1};
    end
-   if strcmpi(varargin{j},'use_prev_run')
+   if strcmpi(varargin{j},'use_prev_blockind')
        use_prev_blockind = varargin{j+1};
    end
    if strcmpi(varargin{j},'name_append')
@@ -80,7 +80,15 @@ for j = 1:length(varargin)
 end
 
 %% Create savename for Piffr file later on
-savename = ['Piffr' name_append '.mat'];
+savename = fullfile(session.Location,['PFiffr' name_append '.mat']);
+
+% Check if PFiffr exists - if it doesn't overwrite flag to load it
+if ~exist(savename,'file') && use_prev_blockind == 1
+    disp(['Specified file to load - ' savename ' - does not exist.  Proceeding with manual block selection'])
+    use_prev_blockind = 0;
+elseif exist(savename,'file') && use_prev_blockind == 1
+    disp(['Loading block indices from ' savename])
+end
 
 %% Load appropriate files
 cd(session.Location)
@@ -142,9 +150,11 @@ for v=1:r
 end
 
 %% Run through each pass through each field (PFepochs) and see if there was a spike there
-keyboard
 
-[PFepochs_blocks] = assign_block_to_epoch(PFepochs,blockInd);
+% Nat's quick attempt to do this in an alternate fashion
+[PFepochs_blocks] = assign_block_to_epoch(PFepochs, blockInd);
+[PFhits2, PFpasses2] = assign_hits(PFepochs_blocks, PFactive, length(blockInd));
+PFiffr2 = PFhits2./PFpasses2*100;
 
 for d=1:length(blockTypes);% iterate through each context/block d
     thisBlockInds=blockInd{d};
@@ -187,8 +197,7 @@ for d=1:length(blockTypes);% iterate through each context/block d
     end
 end
 
-keyboard
-save(savename, 'PFhits', 'PFiffr', 'PFpasses', 'blockInd', 'blockTypes')
+save(savename, 'PFhits', 'PFiffr', 'PFpasses', 'PFhits2', 'PFpasses2', 'blockInd', 'blockTypes')
 
 end
 
@@ -225,8 +234,8 @@ for j = 1:size(PFactive,1)
     for k = 1:size(PFactive,2)
         for ll = 1:num_block_types
             
-            PFhits2 = sum(PFactive{j,k}(PFepochs_blocks{j,k} == ll)); % Sum up all passes through neuron j, PF k in block_type ll where there was a transient
-            PFpasses2 = sum(PFepochs_blocks{j,k} == ll); % Sum up al passes through neuron j, PF k in block_type
+            PFhits2(j,k,ll) = sum(PFactive{j,k}(PFepochs_blocks{j,k} == ll)); % Sum up all passes through neuron j, PF k in block_type ll where there was a transient
+            PFpasses2(j,k,ll) = sum(PFepochs_blocks{j,k} == ll); % Sum up al passes through neuron j, PF k in block_type
             
         end
     end
