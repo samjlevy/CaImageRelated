@@ -26,6 +26,15 @@ function [PFhits, PFiffr]=IFFR_Sam(session,varargin)
 %   varargins:
 %   - 'use_alt_PMfile': enter in alternate file to PlaceMaps.mat if you
 %   wish.
+%
+%   - 'use_prev_blockind': 1 = lets you load the blockInd from a previous run if you
+%   wish. 0 = re-run with manual selection of block starts/ends (default).
+%   This loads ONLY block indexing information and will overwrite all the
+%   PFiffr, PFhits, and PFpasses outputs
+%
+%   - 'name_append': saves Piffr.mat (default) with whatever you append
+%   here, e.g. ...'name_append','_yourchoice'... gives you
+%   Piffr_yourchoice.mat
 % 
 
 % Run MakeMouseSessionList if inputs require you to do so
@@ -55,12 +64,23 @@ end
 %Output choice from a varargin: requires varargouts, more varargin handling
 
 %% Get varargins
-PFstats_file = 'PFstats.mat';
+PFstats_file = 'PFstats.mat'; % default
+name_append = []; % default
+use_prev_blockind = 0; % default
 for j = 1:length(varargin)
    if strcmpi(varargin{j},'use_alt_PFstatsfile')
        PFstats_file = varargin{j+1};
    end
+   if strcmpi(varargin{j},'use_prev_run')
+       use_prev_blockind = varargin{j+1};
+   end
+   if strcmpi(varargin{j},'name_append')
+       name_append = varargin{j+1};
+   end
 end
+
+%% Create savename for Piffr file later on
+savename = ['Piffr' name_append '.mat'];
 
 %% Load appropriate files
 cd(session.Location)
@@ -70,25 +90,29 @@ load PlaceMaps.mat FT t
 load(PFstats_file, 'PFepochs', 'PFnumepochs', 'PFactive')
 
 %% This block asks the user to describe the bounds for each context type
-blockTypes={'continuous'; 'delay'};
-for f=1:length(blockTypes)
-    numBlocks(f)=input(['How many ' blockTypes{f} ' blocks?']);  
-    if numBlocks(f)>0
-    h=figure;
-    subplot(2,1,1)
-    plot(1:length(t),x_adj_cm)
-    xlim([-5000,length(t)+5000])
-    ylabel('X position')
-    title(['Select block start-stop for all ' blockTypes{f} ' blocks'])
-    subplot(2,1,2)
-    plot(1:length(t),y_adj_cm)
-    xlim([-5000,length(t)+5000])
-    ylabel('Y position')
-    disp(['Select block start-stop for all ' blockTypes{f} ' blocks'])
-    [times,~] = ginput(numBlocks(f)*2);
-    times(times<0)=0;
-    close(h)
-    blockInd{f}=[times([1:2:length(times)-1]) times([2:2:length(times)])];
+if use_prev_blockind == 1 % Skip manual selection of bounds if indicated
+    load(savename,'blockInd','blockTypes');
+elseif use_prev_blockind == 0 % Proceed with manual selection of bounds
+    blockTypes={'continuous'; 'delay'};
+    for f=1:length(blockTypes)
+        numBlocks(f)=input(['How many ' blockTypes{f} ' blocks?']);
+        if numBlocks(f)>0
+            h=figure;
+            subplot(2,1,1)
+            plot(1:length(t),x_adj_cm)
+            xlim([-5000,length(t)+5000])
+            ylabel('X position')
+            title(['Select block start-stop for all ' blockTypes{f} ' blocks'])
+            subplot(2,1,2)
+            plot(1:length(t),y_adj_cm)
+            xlim([-5000,length(t)+5000])
+            ylabel('Y position')
+            disp(['Select block start-stop for all ' blockTypes{f} ' blocks'])
+            [times,~] = ginput(numBlocks(f)*2);
+            times(times<0)=0;
+            close(h)
+            blockInd{f}=[times([1:2:length(times)-1]) times([2:2:length(times)])];
+        end
     end
 end
 
@@ -164,7 +188,7 @@ for d=1:length(blockTypes);% iterate through each context/block d
 end
 
 keyboard
-save PFiffr.mat PFhits PFiffr PFpasses blockInd blockTypes
+save(savename, 'PFhits', 'PFiffr', 'PFpasses', 'blockInd', 'blockTypes')
 
 end
 

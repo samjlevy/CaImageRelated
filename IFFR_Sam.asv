@@ -26,6 +26,13 @@ function [PFhits, PFiffr]=IFFR_Sam(session,varargin)
 %   varargins:
 %   - 'use_alt_PMfile': enter in alternate file to PlaceMaps.mat if you
 %   wish.
+%
+%   - 'use_prev_blockind': 1 = lets you load the blockInd from a previous run if you
+%   wish. 0 = re-run with manual selection of block starts/ends (default)
+%
+%   - 'name_append': saves Piffr.mat (default) with whatever you append
+%   here, e.g. ...'name_append','_yourchoice'... gives you
+%   Piffr_yourchoice.mat
 % 
 
 % Run MakeMouseSessionList if inputs require you to do so
@@ -55,10 +62,18 @@ end
 %Output choice from a varargin: requires varargouts, more varargin handling
 
 %% Get varargins
-PFstats_file = 'PFstats.mat';
+PFstats_file = 'PFstats.mat'; % default
+name_append = []; % default
+use_prev_run = 0; % default
 for j = 1:length(varargin)
    if strcmpi(varargin{j},'use_alt_PFstatsfile')
        PFstats_file = varargin{j+1};
+   end
+   if strcmpi(varargin{j},'use_prev_run')
+       use_prev_run = varargin{j+1};
+   end
+   if strcmpi(varargin{j},'name_append')
+       name_append = varargin{j+1};
    end
 end
 
@@ -195,9 +210,17 @@ end
 end
 
 %% Sub-function
-function [PFhits2] = assign_hits(PFepochs_blocks,PFactive)
+function [PFhits2, PFpasses2] = assign_hits(PFepochs_blocks,PFactive,num_block_types)
 
 for j = 1:size(PFactive,1)
-    for k = 1:size(PFactive
-sum(PFactive{1,1}(PFepochs_blocks{1,1} == 1))
+    for k = 1:size(PFactive,2)
+        for ll = 1:num_block_types
+            
+            PFhits2 = sum(PFactive{j,k}(PFepochs_blocks{j,k} == ll)); % Sum up all passes through neuron j, PF k in block_type ll where there was a transient
+            PFpasses2 = sum(PFepochs_blocks{j,k} == ll); % Sum up al passes through neuron j, PF k in block_type
+            
+        end
+    end
+end
+
 end
