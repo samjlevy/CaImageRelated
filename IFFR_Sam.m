@@ -10,7 +10,7 @@ function [PFhits2, PFiffr2]=IFFR_Sam(session,varargin)
 % various intermediate steps can be uncommented / made modular.
 %
 %
-% INPUT - session
+% INPUT - session ( MD(session number) )
 %   Additionally, this function is built to run on the entire session's
 %   data, though could be run on continuous or delayed alternation blocks
 %   separately
@@ -70,6 +70,9 @@ use_prev_blockind = 0; % default
 for j = 1:length(varargin)
    if strcmpi(varargin{j},'use_alt_PFstatsfile')
        PFstats_file = varargin{j+1};
+   elseif strcmpi(varargin{j},'use_exist_blocks')
+       %blockFile = varargin{j+1};
+       load(fullfile(session.Location,varargin{j+1}), 'blockTypes', 'blockInd')
    end
    if strcmpi(varargin{j},'use_prev_blockind')
        use_prev_blockind = varargin{j+1};
@@ -123,6 +126,33 @@ elseif use_prev_blockind == 0 % Proceed with manual selection of bounds
         end
     end
 end
+
+% % Sam's version
+% if ~exist('blockTypes','var')
+%     blockTypes={'continuous'; 'delay'};
+% end
+% if ~exist('blockInd','var')
+%     for f=1:length(blockTypes)
+%         numBlocks(f)=input(['How many ' blockTypes{f} ' blocks?']);
+%         if numBlocks(f)>0
+%             h=figure;
+%             subplot(2,1,1)
+%             plot(1:length(t),x_adj_cm)
+%             xlim([-5000,length(t)+5000])
+%             ylabel('X position')
+%             title(['Select block start-stop for all ' blockTypes{f} ' blocks'])
+%             subplot(2,1,2)
+%             plot(1:length(t),y_adj_cm)
+%             xlim([-5000,length(t)+5000])
+%             ylabel('Y position')
+%             disp(['Select block start-stop for all ' blockTypes{f} ' blocks'])
+%             [times,~] = ginput(numBlocks(f)*2);
+%             times(times<0)=0;
+%             close(h)
+%             blockInd{f}=[times([1:2:length(times)-1]) times([2:2:length(times)])];
+%         end
+%     end
+% end
 
 %% Preallocate for all arrays being used
 sized=[size(PFepochs),length(blockTypes)];

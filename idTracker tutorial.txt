@@ -1,0 +1,62 @@
+idTracker Tutorial
+####################################################
+One of the advantages to idTracker is that it will use more than one frame 
+to compute the background image, meaning it is much less prone to following
+experimenter's hands or transient barriers and such. In theory it will also
+use some Bayesian likelihood function to compute an alternate set of 
+coordinates that makes an inference about the animal's position if 
+traditional methods fail, but I can't find that output...
+
+
+1. Download and install idTracker, as per the instructions on their website. 
+	http://www.idtracker.es/download
+
+2. Open idTracker. It will immediately prompt you for the video to parse. 
+
+3. Change various options. Things that seem to work well include:
+	- Include region - most of the time this works well and it doesn't
+		come up with points outside of it.
+	- Exclude region - same deal
+	- Contrast threshold - like Cineplex, idTracker works from a background
+		image subtraction and finds dark things. This can be improved if
+		the mouse is more darker than the shadows, but you can also bump
+		down the threshold for its calling a dark spot an animal. Success
+		was had with values in the 0.65-0.75 range
+	- Number of animals - probably you only have one mouse, but they claim it
+		could follow a bunch. 
+
+	Haven't played with:
+	- minimum blob size - it seems like they built this specifically to 
+		find worms and zebrafish, so this is probably more relavant to them. 
+	- max blob size - doesn't exist, but would be nice, right? Someone on their
+		forum has a fix, and I've copied the instructions they came up
+		with at the bottom of this document. I haven't tried it
+
+4. Click start and wait for results. Results are in the file titled trajectories.mat
+	in the format: x, y, prob -by- animal -by- frame.
+
+5. Use Sam's idTrajtoDVT to convert output file into a format for use with 
+	PreProcessMousePosition, though output is actually Video.txt rather than
+	a DVT. You need the AVI, Cineplex's DVT output and trajectories.mat.
+	https://github.com/samjlevy/CaImageRelated/idTrajtoDVT.m
+
+
+
+
+Max Blob Size:
+- Start idTracker, open your video and adjust all tracking parameters.
+- Click the button "S&E". This will save the parameters, and exit idTracker.
+- Open Matlab. If it was already open, type clear to erase all variables.
+- Go to the "segm" subfolder that you will find in the same folder as the video.
+ Inside you will find a file called "datosegm.mat". Drag & drop this file inside
+ Matlab's command window. A line saying something like load('......\segm\datosegm.mat')
+ should appear.
+- Now type variable.umbral_npixelsmax=500; Change the number 500 for whatever
+ number of pixels works for you.
+- Copy the line load('......\segm\datosegm.mat') that Matlab generated automatically,
+ paste it being careful not to execute it right away. Change load for save, so that
+ it now reads save('......\segm\datosegm.mat') and execute it.
+- Open idTracker again, and select your video. 
+- Click the button "Load previous data". All tracking parameters should be now as you
+ set them in the first step. And you don't see it, but the threshold for maximum size should also be set.
+ 
