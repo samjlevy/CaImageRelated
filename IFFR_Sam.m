@@ -67,7 +67,7 @@ cd(session.Location)
 tempScale=20;%frames per second
 load Pos_align.mat x_adj_cm y_adj_cm
 load PlaceMaps.mat FT t 
-load(PFstats_file, 'PFepochs', 'PFnumepochs')
+load(PFstats_file, 'PFepochs', 'PFnumepochs', 'PFactive')
 
 %% This block asks the user to describe the bounds for each context type
 blockTypes={'continuous'; 'delay'};
@@ -118,44 +118,94 @@ for v=1:r
 end
 
 %% Run through each pass through each field (PFepochs) and see if there was a spike there
-for d=1:length(blockTypes);%context d
-thisBlockInds=blockInd{d};   
-for a=1:length(PFinds)%place field a
-[k,l]=ind2sub(size(PFepochs),PFinds(a));%PF large matrix index location 
-if exist('fieldCheck','var') && fieldCheck==1 && a==fieldToCheck
-    plot(t,x_adj_cm)
-end
-    for b=1:PFnumepochs(PFinds(a))%pass through field b
-        thisEpoch=PFepochs{PFinds(a)}(b,:);
-        [q,~]=size(blockInd{d});
-        for gg=1:q%generalization for number of blocks in context d
-        if any(thisEpoch(1) >= thisBlockInds(gg,1)) && thisEpoch(2) <= thisBlockInds(gg,2)%|| thisEpoch(1) >= thisBlockInds(2,1) && thisEpoch(2) <= thisBlockInds(2,2)
-            if exist('fieldCheck','var') && fieldCheck==1 && a==fieldToCheck
-                hold on
-                plot(t(thisEpoch(1)),x_adj_cm(thisEpoch(1)),'.r')
-                plot(t(thisEpoch(2)),x_adj_cm(thisEpoch(2)),'.r')
+keyboard
+
+[PFepochs_blocks] = assign_block_to_epoch(PFepochs,blockInd);
+
+for d=1:length(blockTypes);% iterate through each context/block d
+    thisBlockInds=blockInd{d};
+    for a=1:length(PFinds)%place field a
+        [k,l]=ind2sub(size(PFepochs),PFinds(a));%PF large matrix index location
+        if exist('fieldCheck','var') && fieldCheck==1 && a==fieldToCheck
+            plot(t,x_adj_cm)
+        end
+        for b=1:PFnumepochs(PFinds(a))%pass through field b
+            thisEpoch=PFepochs{PFinds(a)}(b,:);
+            [q,~]=size(blockInd{d});
+            for gg=1:q%generalization for number of blocks in context d
+                if any(thisEpoch(1) >= thisBlockInds(gg,1)) && thisEpoch(2) <= thisBlockInds(gg,2)%|| thisEpoch(1) >= thisBlockInds(2,1) && thisEpoch(2) <= thisBlockInds(2,2)
+                    if exist('fieldCheck','var') && fieldCheck==1 && a==fieldToCheck
+                        hold on
+                        plot(t(thisEpoch(1)),x_adj_cm(thisEpoch(1)),'.r')
+                        plot(t(thisEpoch(2)),x_adj_cm(thisEpoch(2)),'.r')
+                    end
+                    %Type 1 Spikes per duration in field k, l pass b condition d
+                    %PFrates{k,l,d}(b)=sum(FT(i,thisEpoch(1):thisEpoch(2)))/((thisEpoch(2)-thisEpoch(1)+1)/tempScale);
+                    
+                    %Type 2 Was there a hit on pass b through field k, l condition d
+                    PFyes{k,l,d}(b)= any(FTonset{b} >= thisEpoch(1) & FTonset{b} <= thisEpoch(2)); % Think this is an error - should pre-allocate
+%                     PFyes2{k,l,d}(b) = PFactive{PFinds(a)}(b);
+                end
             end
-            %Type 1 Spikes per duration in field k, l pass b condition d
-            %PFrates{k,l,d}(b)=sum(FT(i,thisEpoch(1):thisEpoch(2)))/((thisEpoch(2)-thisEpoch(1)+1)/tempScale);
-            
-            %Type 2 Was there a hit on pass b through field k, l condition d
-            PFyes{k,l,d}(b)= any(FTonset{b} >= thisEpoch(1) & FTonset{b} <= thisEpoch(2));
         end
-        end
-    end
-    %Rate type 1
-    %{
+        %Rate type 1
+        %{
     %PFrateAverageNO(k,l,d)=mean(PFrates{k,l,d}(PFrates{k,l,d}~=0));
     %PFrateAverage(k,l,d)=mean(PFrates{k,l,d});
     %PFrateMax(k,l,d)=max(PFrates{k,l,d});
-    %}
-    %Rate type 2
-    PFhits(k,l,d)=sum(PFyes{k,l,d});
-    PFpasses(k,l,d)=length(PFyes{k,l,d});
-    PFiffr(k,l,d)=(PFhits(k,l,d)/PFpasses(k,l,d))*100;
-end        
+        %}
+        %Rate type 2
+        PFhits(k,l,d)=sum(PFyes{k,l,d});
+%         PFhits2(k,l,d) = sum(PFyes2{k,l,d});
+        PFpasses(k,l,d)=length(PFyes{k,l,d});
+%         PFpasses2(k,l,d)=length(PFyes2{k,l,d});
+        PFiffr(k,l,d)=(PFhits(k,l,d)/PFpasses(k,l,d))*100;
+    end
 end
 
+keyboard
 save PFiffr.mat PFhits PFiffr PFpasses blockInd blockTypes
+
+end
+
+%% Sub-function
+function [PFepochs_blocks] = assign_block_to_epoch(PFepochs,blockInd)
+
+PFepochs_blocks = cell(size(PFepochs));
+for j = 1:size(PFepochs,1) % each neuron
+    for k = 1:size(PFepochs,2) % each PF
+        PFepochs_blocks{j,k} = zeros(size(PFepochs{j,k},1),1);
+        if ~isempty(PFepochs{j,k})
+            for block_type = 1:length(blockInd) % each block type
+                for num_block = 1:size(blockInd{block_type},1) % each block for a given block type
+                    try
+                        in_block_binary = PFepochs{j,k}(:,1) > blockInd{block_type}(num_block,1) & ...
+                            PFepochs{j,k}(:,2) < blockInd{block_type}(num_block,2); % decides if the epochs are within the given block
+                        PFepochs_blocks{j,k}(in_block_binary) = block_type; % Assign block number to valid epochs
+                    catch
+                        disp('assign_block_to_epoch error catching')
+                        keyboard
+                    end
+                    
+                end
+            end
+        end
+    end
+end
+end
+
+%% Sub-function
+function [PFhits2, PFpasses2] = assign_hits(PFepochs_blocks,PFactive,num_block_types)
+
+for j = 1:size(PFactive,1)
+    for k = 1:size(PFactive,2)
+        for ll = 1:num_block_types
+            
+            PFhits2 = sum(PFactive{j,k}(PFepochs_blocks{j,k} == ll)); % Sum up all passes through neuron j, PF k in block_type ll where there was a transient
+            PFpasses2 = sum(PFepochs_blocks{j,k} == ll); % Sum up al passes through neuron j, PF k in block_type
+            
+        end
+    end
+end
 
 end
