@@ -133,7 +133,7 @@ for a=1:length(PFinds)%place field a
 if exist('fieldCheck','var') && fieldCheck==1 && a==fieldToCheck
     plot(t,x_adj_cm)
 end
-disp(['Working context' num2str(d) ' cell ' num2str(a)])
+%disp(['Working context' num2str(d) ' cell ' num2str(a)])
     for b=1:PFnumepochs(PFinds(a))%pass through field b
         thisEpoch=PFepochs{PFinds(a)}(b,:);
         [q,~]=size(blockInd{d});
@@ -149,7 +149,7 @@ disp(['Working context' num2str(d) ' cell ' num2str(a)])
             
             %Type 2 Was there a hit on pass b through field k, l condition d
             %PFyes{k,l,d}(b)= any(FTonset{b} >= thisEpoch(1) & FTonset{b} <= thisEpoch(2));
-            PFanyhit{k,l,d}(b)=any(FT(b,:) >= thisEpoch(1) & FT(b,:) <= thisEpoch(2));
+            PFanyhit{k,l,d}(b)=any(sum(FT(b,thisEpoch(1):thisEpoch(2))));
         end
         end
     end

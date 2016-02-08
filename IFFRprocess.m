@@ -40,5 +40,15 @@ for g=1:length(thresholds)
     PctPass(g)=sum(sum(Passed))/numcells;
 end
 toc
-
+figure;
+histogram(Pass(Pass>0 & Pass<1),20)
+xlabel('Max absolute rate difference')
+ylabel('Number of rate remappers')
+title('Number of remappers by rate')
+figure;
+plot(thresholds,PctPass,'.')
+xlabel('Max rate difference threshold')
+ylabel('Percent cells that "remap" ')
+ylabel('Percent cells that "rate remap" ')
+title('Rate remapping by threshold')
 end
