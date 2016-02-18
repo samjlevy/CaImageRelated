@@ -22,6 +22,7 @@ KeepMat=zeros(r,c);
 for a=1:r
     for b=1:c
         Pass(a,b)=abs(PFiffr(a,b,1)-PFiffr(a,b,2))/max(PFiffr(a,b,:));
+        %Could leave the sign to tell which context it was more active in
     end
 end
 
