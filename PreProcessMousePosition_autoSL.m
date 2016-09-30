@@ -34,7 +34,8 @@ function [xpos_interp,ypos_interp,start_time,MoMtime,time_interp,AVItime_interp]
 %   MoMtime: the time that the mouse starts running on the maze
 
 close all;
-
+[DVTfile, DVTpath] = uigetfile('*.DVT', 'Select DVT file');
+cd(DVTpath);
 %% Get varargin
 
 update_pos_realtime = 0; % Default setting
@@ -62,6 +63,7 @@ cluster_thresh = 40; % For auto thresholding - any time there are events above
 
 
 % Import position data from DVT file
+filepath=fullfile(DVTpath,DVTfile);
 try
     pos_data = importdata(filepath);
     %f_s = max(regexp(filepath,'\'))+1;
@@ -145,6 +147,7 @@ else
         switch choice
             case 'Yes'
                 disp(['Proceeding with velocity threshold ' num2str(auto_vel_thresh)])
+                velLineGood=1;
             case 'No > ginput'
                 figure(velthreshing);
                 [~,user_vel_thresh] = ginput(1);
@@ -213,13 +216,40 @@ plot([maskx; maskx(1)],[masky; masky(1)],'r','LineWidth',2)
 %Ask if it's good
 
 %get background image:
-%option 1: load from file, not sure where cineplex puts this
-%option 2: compile top/bottom halves from two images
-avi_filepath = ls('*.avi');
-h1 = implay(avi_filepath);
-msgbox({'Find images: ' '   -frame 1: top half has no mouse' '   -frame 2: bottom half has no mouse'})
-topClearNum = input('Frame number with no mouse on top: ')
-bottomClearNum = input('Frame number with no mouse on bottom: ')
+bkgChoice = questdlg('Supply/Load background image or composite?', ...
+	'Background Image', ...
+	'Supply','Composite','Composite');
+switch bkgChoice
+    case 'Supply'
+        [backgroundImage,bkgpath]=uigetfile('Select background image');
+        load(fullfile(bkgpath,backgroundImage))
+    case 'Composite'
+        try
+            h1 = implay(avi_filepath);
+        catch
+            avi_filepath = ls('*.avi');
+            h1 = implay(avi_filepath);
+        end    
+        msgbox({'Find images: ' '   -frame 1: top half has no mouse' '   -frame 2: bottom half has no mouse'})
+        topClearNum = input('Frame number with no mouse on top: ')
+        bottomClearNum = input('Frame number with no mouse on bottom: ')
+        close(h1);
+        obj.CurrentTime = (topClearNum-1)/obj.FrameRate;
+        topClearFrame = readFrame(obj);
+        obj.CurrentTime = (bottomClearNum-1)/obj.FrameRate;
+        bottomClearFrame = readFrame(obj);
+        top=figure;imagesc(topClearFrame); title(['Top Clear Frame ' num2str(topClearNum)])
+        bot=figure;imagesc(bottomClearFrame); title(['Bottom Clear Frame ' num2str(bottomClearNum)])
+        compositeBkg=uint8(zeros(480,640,3));
+        compositeBkg(1:240,:,:)=topClearFrame(1:240,:,:);
+        compositeBkg(241:480,:,:)=bottomClearFrame(241:480,:,:);
+        figure; imagesc(compositeBkg); title('Composite Background Image')
+        %fix a hole: ginput to get a hole, manually find frame number where
+        %that's clear, insert those pixels. 
+        backgroundImage = compositeBkg;
+end
+
+
 %get these frames, take pixels from top half and pixels from bottom half
 
 %plot(xAVI(inCage),yAVIflip(inCage),'.y')
@@ -233,14 +263,25 @@ highVel_frames = vel_init > auto_vel_thresh;
 msgbox(['Frames out of bounds first: n=' num2str(sum(auto_frames))])
 
 n = 1; %first_time = 1;
-full_auto_done==0;
+full_auto_done=0;
 while full_auto_done==0
-    
-    
+    offInds=diff(auto_frames);
+    ends=find(offInds==-1);
+    ons=find(offInds==1)+1;
+    sFrame=MouseOnMazeFrame;
+    eFrame=ends(find(ends>MouseOnMazeFrame,1,'first'));
+    for frameCor=sFrame:eFrame
+    %Is frame good?    
+    %Good frame either side?
+        %Background image subtraction, how close to interpolation
+        %Linear interpolate
+    end
     
 end
+%%
 
-
+Maybe run this first before new stuff...
+    
 while (strcmp(MorePoints,'y')) || strcmp(MorePoints,'m') || isempty(MorePoints)
     %     if first_time == 1
     %         hx0 = subplot(4,3,1:3); plot(time,Xpix); xlabel('time (sec)'); ylabel('x position (cm)');
@@ -377,6 +418,8 @@ while (strcmp(MorePoints,'y')) || strcmp(MorePoints,'m') || isempty(MorePoints)
                 if whichMouseX == whichMouseY
                     xm = stats(MouseBlob(whichMouseX)).Centroid(1);
                     ym = stats(MouseBlob(whichMouseY)).Centroid(2);
+                    %compile to single blog by distance, doesn't exceed
+                    %velocity of known good points around it in time
                 else
                     %keyboard;
                     [xm,ym] = ginput(1);
