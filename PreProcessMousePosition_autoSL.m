@@ -212,6 +212,15 @@ title('Cage Mask')
 plot([maskx; maskx(1)],[masky; masky(1)],'r','LineWidth',2)
 %Ask if it's good
 
+%get background image:
+%option 1: load from file, not sure where cineplex puts this
+%option 2: compile top/bottom halves from two images
+avi_filepath = ls('*.avi');
+h1 = implay(avi_filepath);
+msgbox({'Find images: ' '   -frame 1: top half has no mouse' '   -frame 2: bottom half has no mouse'})
+topClearNum = input('Frame number with no mouse on top: ')
+bottomClearNum = input('Frame number with no mouse on bottom: ')
+%get these frames, take pixels from top half and pixels from bottom half
 
 %plot(xAVI(inCage),yAVIflip(inCage),'.y')
 [height,~,~]=size(v0);
@@ -224,6 +233,14 @@ highVel_frames = vel_init > auto_vel_thresh;
 msgbox(['Frames out of bounds first: n=' num2str(sum(auto_frames))])
 
 n = 1; %first_time = 1;
+full_auto_done==0;
+while full_auto_done==0
+    
+    
+    
+end
+
+
 while (strcmp(MorePoints,'y')) || strcmp(MorePoints,'m') || isempty(MorePoints)
     %     if first_time == 1
     %         hx0 = subplot(4,3,1:3); plot(time,Xpix); xlabel('time (sec)'); ylabel('x position (cm)');
@@ -260,7 +277,7 @@ while (strcmp(MorePoints,'y')) || strcmp(MorePoints,'m') || isempty(MorePoints)
                 
             end
             
-        elseif auto_thresh_flag == 1 % Input times from auto_threholded vector
+        elseif auto_thresh_flag == 1 && full_auto_done==1% Input times from auto_threholded vector
             sFrame = max([1 epoch_start(n)- 6]);
             eFrame = min([length(time) epoch_end(n) + 6]);
             
