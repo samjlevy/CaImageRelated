@@ -30,7 +30,7 @@ MDSL(i).Date = '08_09_2016';
 MDSL(i).Session = 1;
 MDSL(i).Env = 'Continuous T Maze';
 MDSL(i).Room = '201a - 2015';
-MDSL(i).RecordStartTime = ' ';
+MDSL(i).RecordStartTime = '04:41:29.97 PM';
 if strcmp(userstr,'Sam')
     MDSL(i).Location = 'E:\SLIDE\Polaris\Polaris_160809';
 end
@@ -44,7 +44,7 @@ MDSL(i).Date = '08_10_2016';
 MDSL(i).Session = 1;
 MDSL(i).Env = 'Continuous T Maze';
 MDSL(i).Room = '201a - 2015';
-MDSL(i).RecordStartTime = ' ';
+MDSL(i).RecordStartTime = '04:41:29.97 PM';
 if strcmp(userstr,'Sam')
     MDSL(i).Location = 'E:\SLIDE\Polaris\Polaris_160810';
 end
@@ -56,7 +56,7 @@ MDSL(i).Date = '08_11_2016';
 MDSL(i).Session = 1;
 MDSL(i).Env = 'Continuous T Maze';
 MDSL(i).Room = '201a - 2015';
-MDSL(i).RecordStartTime = ' ';
+MDSL(i).RecordStartTime = '05:35:30.54 PM';
 if strcmp(userstr,'Sam')
     MDSL(i).Location = 'E:\SLIDE\Polaris\Polaris_160811';
 end
@@ -68,7 +68,7 @@ MDSL(i).Date = '08_22_2016';
 MDSL(i).Session = 1;
 MDSL(i).Env = 'Continuous T Maze';
 MDSL(i).Room = '201a - 2015';
-MDSL(i).RecordStartTime = ' ';
+MDSL(i).RecordStartTime = '06:58:35.64 PM';
 if strcmp(userstr,'Sam')
     MDSL(i).Location = 'E:\SLIDE\Polaris\Polaris_160822';
 end
@@ -92,7 +92,7 @@ MDSL(i).Date = '08_24_2016';
 MDSL(i).Session = 1;
 MDSL(i).Env = 'Continuous T Maze';
 MDSL(i).Room = '201a - 2015';
-MDSL(i).RecordStartTime = ' ';
+MDSL(i).RecordStartTime = '04:52:18.56 PM';
 if strcmp(userstr,'Sam')
     MDSL(i).Location = 'E:\SLIDE\Polaris\Polaris_160824';
 end
@@ -104,7 +104,7 @@ MDSL(i).Date = '08_25_2016';
 MDSL(i).Session = 1;
 MDSL(i).Env = 'Continuous T Maze';
 MDSL(i).Room = '201a - 2015';
-MDSL(i).RecordStartTime = ' ';
+MDSL(i).RecordStartTime = '04:08:50.10 PM';
 if strcmp(userstr,'Sam')
     MDSL(i).Location = 'E:\SLIDE\Polaris\Polaris_160825';
 end
@@ -115,7 +115,7 @@ MDSL(i).Date = '08_26_2016';
 MDSL(i).Session = 1;
 MDSL(i).Env = 'Continuous T Maze';
 MDSL(i).Room = '201a - 2015';
-MDSL(i).RecordStartTime = ' ';
+MDSL(i).RecordStartTime = '05:45:04.46 PM';
 if strcmp(userstr,'Sam')
     MDSL(i).Location = 'E:\SLIDE\Polaris\Polaris_160826';
 end
@@ -126,9 +126,20 @@ MDSL(i).Date = '08_29_2016';
 MDSL(i).Session = 1;
 MDSL(i).Env = 'Continuous T Maze';
 MDSL(i).Room = '201a - 2015';
-MDSL(i).RecordStartTime = ' ';
+MDSL(i).RecordStartTime = '06:45:09.41 PM';
 if strcmp(userstr,'Sam')
     MDSL(i).Location = 'H:\Polaris\Polaris_160829';
+end
+
+i = i+1;
+MDSL(i).Animal = 'Polaris_DNMP';
+MDSL(i).Date = '08_29_2016_2';
+MDSL(i).Session = 1;
+MDSL(i).Env = 'Continuous T Maze';
+MDSL(i).Room = '201a - 2015';
+MDSL(i).RecordStartTime = '06:55:54.23 PM';
+if strcmp(userstr,'Sam')
+    MDSL(i).Location = 'H:\Polaris\Polaris_160829-2';
 end
 
 i = i+1;
@@ -137,7 +148,7 @@ MDSL(i).Date = '08_30_2016';
 MDSL(i).Session = 1;
 MDSL(i).Env = 'Continuous T Maze';
 MDSL(i).Room = '201a - 2015';
-MDSL(i).RecordStartTime = ' ';
+MDSL(i).RecordStartTime = '05:09:55.64 PM';
 if strcmp(userstr,'Sam')
     MDSL(i).Location = 'H:\Polaris\Polaris_160830';
 end
@@ -172,7 +183,7 @@ MDSL(i).Date = '09_05_2016';
 MDSL(i).Session = 1;
 MDSL(i).Env = 'Continuous T Maze';
 MDSL(i).Room = '201a - 2015';
-MDSL(i).RecordStartTime = ' ';
+MDSL(i).RecordStartTime = '01:32:15.60 PM';
 if strcmp(userstr,'Sam')
     MDSL(i).Location = 'H:\Polaris\Polaris_160905';
 end
@@ -184,7 +195,7 @@ MDSL(i).Date = '09_06_2016';
 MDSL(i).Session = 1;
 MDSL(i).Env = 'Continuous T Maze';
 MDSL(i).Room = '201a - 2015';
-MDSL(i).RecordStartTime = ' ';
+MDSL(i).RecordStartTime = '11:25:38.15 AM';
 if strcmp(userstr,'Sam')
     MDSL(i).Location = 'H:\Polaris\Polaris_160906';
 end
@@ -192,13 +203,38 @@ MDSL(i).Notes = [];
 
 i = i+1;
 MDSL(i).Animal = 'Polaris_DNMP';
+MDSL(i).Date = '09_06_2016_2';
+MDSL(i).Session = 1;
+MDSL(i).Env = 'Continuous T Maze';
+MDSL(i).Room = '201a - 2015';
+MDSL(i).RecordStartTime = '11:36:35.43 AM';
+if strcmp(userstr,'Sam')
+    MDSL(i).Location = 'H:\Polaris\Polaris_160906-2';
+end
+MDSL(i).Notes = [];
+
+
+i = i+1;
+MDSL(i).Animal = 'Polaris_DNMP';
 MDSL(i).Date = '09_07_2016';
 MDSL(i).Session = 1;
 MDSL(i).Env = 'Continuous T Maze';
 MDSL(i).Room = '201a - 2015';
-MDSL(i).RecordStartTime = ' ';
+MDSL(i).RecordStartTime = '02:31:01.58 PM';
 if strcmp(userstr,'Sam')
     MDSL(i).Location = 'H:\Polaris\Polaris_160907';
+end
+MDSL(i).Notes = [];
+
+i = i+1;
+MDSL(i).Animal = 'Polaris_DNMP';
+MDSL(i).Date = '09_07_2016_2';
+MDSL(i).Session = 1;
+MDSL(i).Env = 'Continuous T Maze';
+MDSL(i).Room = '201a - 2015';
+MDSL(i).RecordStartTime = '03:02:38.37 PM';
+if strcmp(userstr,'Sam')
+    MDSL(i).Location = 'H:\Polaris\Polaris_160907-2';
 end
 MDSL(i).Notes = [];
 
@@ -208,7 +244,7 @@ MDSL(i).Date = '09_08_2016';
 MDSL(i).Session = 1;
 MDSL(i).Env = 'Continuous T Maze';
 MDSL(i).Room = '201a - 2015';
-MDSL(i).RecordStartTime = ' ';
+MDSL(i).RecordStartTime = '11:41:48.29 AM';
 if strcmp(userstr,'Sam')
     MDSL(i).Location = 'H:\Polaris\Polaris_160908';
 end
@@ -220,7 +256,7 @@ MDSL(i).Date = '09_09_2016';
 MDSL(i).Session = 1;
 MDSL(i).Env = 'Continuous T Maze';
 MDSL(i).Room = '201a - 2015';
-MDSL(i).RecordStartTime = ' ';
+MDSL(i).RecordStartTime = '01:54:15.06 PM';
 if strcmp(userstr,'Sam')
     MDSL(i).Location = 'H:\Polaris\Polaris_160909';
 end
@@ -232,7 +268,7 @@ MDSL(i).Date = '09_10_2016';
 MDSL(i).Session = 1;
 MDSL(i).Env = 'Continuous T Maze';
 MDSL(i).Room = '201a - 2015';
-MDSL(i).RecordStartTime = ' ';
+MDSL(i).RecordStartTime = '02:12:43.86 PM';
 if strcmp(userstr,'Sam')
     MDSL(i).Location = 'H:\Polaris\Polaris_160910';
 end
@@ -473,7 +509,8 @@ MDSL(i).Notes = [];
 session_ref.Polaris_DNMP = Polaris_DNMP;
 session_ref.Bellatrix_DNMP = Bellatrix_DNMP;
 %%
-save MasterDirectorySL.mat MDSL;
+MD=MDSL;
+save MasterDirectory.mat MD;
 
 cd(CurrDir);
 
