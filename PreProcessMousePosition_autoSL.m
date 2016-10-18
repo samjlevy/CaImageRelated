@@ -1,4 +1,4 @@
-function [xpos_interp,ypos_interp,start_time,MoMtime,time_interp,AVItime_interp] = PreProcessMousePosition_autoSL(filepath, auto_thresh,varargin)
+function [xpos_interp,ypos_interp,start_time,MoMtime,time_interp,AVItime_interp] = PreProcessMousePosition_autoSL( varargin)
 % [xpos_interp,ypos_interp,start_time,MoMtime] = PreProcessMousePosition_auto(filepath, auto_thresh,...)
 % Function to correct errors in mouse tracking.  Runs once through the
 % entire sessions automatically having you edit any events above a velocity
@@ -34,20 +34,26 @@ function [xpos_interp,ypos_interp,start_time,MoMtime,time_interp,AVItime_interp]
 %   MoMtime: the time that the mouse starts running on the maze
 
 close all;
-[DVTfile, DVTpath] = uigetfile('*.DVT', 'Select DVT file');
-cd(DVTpath);
 %% Get varargin
 
 update_pos_realtime = 0; % Default setting
 epoch_length_lim = 200; % default
 for j = 1:length(varargin)
+    if strcmpi('filepath', varargin{j})
+        filepath = varargin{j+1};
+    end
     if strcmpi('update_pos_realtime', varargin{j})
         update_pos_realtime = varargin{j+1};
     end
     if strcmpi('epoch_length_lim', varargin{j})
         epoch_length_lim = varargin{j+1};
     end
-    
+    if strcmpi('auto_thresh', varargin{j})
+        auto_thresh = varargin{j+1};
+    end
+    if strcmpi('max_pixel_jump', varargin{j})
+        max_pixel_jump = varargin{j+1};
+    end
 end
 
 %%
@@ -61,9 +67,17 @@ cluster_thresh = 40; % For auto thresholding - any time there are events above
 % the velocity threshold specified by auto_thresh that are less than this
 % number of frames apart they will be grouped together
 
+if ~exist('filepath','var')
+    [DVTfile, DVTpath] = uigetfile('*.DVT', 'Select DVT file');
+    filepath = fullfile(DVTpath, DVTfile);
+else
+    [DVTpath,name,ext] = fileparts(filepath);
+    DVTfile=fullfile(name,ext);
+end    
+cd(DVTpath);
+
 
 % Import position data from DVT file
-filepath=fullfile(DVTpath,DVTfile);
 try
     pos_data = importdata(filepath);
     %f_s = max(regexp(filepath,'\'))+1;
@@ -160,13 +174,12 @@ else
                     case 'Yes'
                         velLineGood=1;
                         auto_vel_thresh=user_vel_thresh;
-                        close(velthreshing)
                     case 'No > ginput'
                         velLineGood=0;
                 end        
         end
     end
-    
+    close(velthreshing)
     
     auto_thresh = nan; % Don't perform any autocorrection if not specified
 end
@@ -177,7 +190,7 @@ MorePoints = 'y';
 %{
 % Determine if auto thresholding applies
 if sum(auto_frames) > 0 && ~isnan(auto_thresh)
-    auto_thresh_flag = 1;
+    flags.auto_thresh_flag = 1;
     [ on, off ] = get_on_off( auto_frames );
     [ epoch_start, epoch_end ] = cluster_epochs( on, off, cluster_thresh );
     n_epochs = length(epoch_start);
@@ -190,10 +203,11 @@ if sum(auto_frames) > 0 && ~isnan(auto_thresh)
         n_epochs = length(epoch_start);
     end
 else %if sum(auto_frames) == 0
-    auto_thresh_flag = 0;
+    flags.auto_thresh_flag = 0;
 end
 %}
 
+%Positions and velocity trajectory figure
 PosAndVel=figure('name','Position and Velocity');
 hx0 = subplot(4,3,1:3);plot(time,Xpix);xlabel('time (sec)');ylabel('x position (cm)');yl = get(gca,'YLim');line([MoMtime MoMtime], [yl(1) yl(2)],'Color','r');axis tight;
 hy0 = subplot(4,3,4:6);plot(time,Ypix);xlabel('time (sec)');ylabel('y position (cm)');yl = get(gca,'YLim');line([MoMtime MoMtime], [yl(1) yl(2)],'Color','r');axis tight;
@@ -202,27 +216,64 @@ hVel = subplot(4,3,7:12);plot(vel_init);xlabel('time (sec)');ylabel('velocity');
 hline=refline(0,auto_vel_thresh);hline.Color='r';hline.LineWidth=1.5;
 vel = hypot(diff(Xpix),diff(Ypix))/(time(2)-time(1));
 
+%% Draw a mask for the maze.
 
-
-%Draw a mask for the maze.
 v0 = readFrame(obj);
-MaskFig=figure;
-imagesc(v0); title('Draw position mask (press enter to stop)');
-%maze = roipoly;
-[maskx,masky] = ginput;
-hold on
-title('Cage Mask')
-plot([maskx; maskx(1)],[masky; masky(1)],'r','LineWidth',2)
-%Ask if it's good
+MaskFig=figure('name', 'Cage Mask'); imagesc(v0);
+maskSwitch= exist('maskx','var') && exist('masky','var');
+switch maskSwitch  
+    case 1
+        title('Found cage mask')
+    case 0 
+        title('Draw position mask');
+        [maze, maskx, masky] = roipoly;        
+end  
+hold on; plot([maskx; maskx(1)],[masky; masky(1)],'r','LineWidth',2)
 
-%get background image:
+cageMaskGood=0;
+while cageMaskGood==0
+    figure(MaskFig); title('Cage Mask')
+    choice = questdlg('Is this cage mask good?', ...
+	'Cage Mask', ...
+	'Yes','No redraw','Yes');
+    switch choice
+        case 'Yes'
+            disp('Proceeding with this cage mask')
+            cageMaskGood=1;
+        case 'No redraw'
+            figure(MaskFig); imagesc(v0);
+            title('Draw position mask');
+            [maze, maskx, masky] = roipoly;
+            hold on; plot([maskx; maskx(1)],[masky; masky(1)],'r','LineWidth',2)
+            cageMaskGood=0;       
+    end
+end
+close(MaskFig)
+
+
+%% Get background image:
+if ~exist('backgroundImage','var')
 bkgChoice = questdlg('Supply/Load background image or composite?', ...
 	'Background Image', ...
-	'Supply','Composite','Composite');
+	'Load','Frame #','Composite','Composite');
+else
 switch bkgChoice
-    case 'Supply'
+    case 'Load'    
         [backgroundImage,bkgpath]=uigetfile('Select background image');
         load(fullfile(bkgpath,backgroundImage))
+    case 'Frame #'
+        try
+            h1 = implay(avi_filepath);
+        catch
+            avi_filepath = ls('*.avi');
+            h1 = implay(avi_filepath);
+        end
+        bkgFrameNum = input('frame number of mouse-free background frame??? --->');
+        close(h1);
+        obj.CurrentTime = (bkgFrameNum-1)/obj.FrameRate;
+        backgroundImage = readFrame(obj);
+        backgroundFrame=figure; imagesc(backgroundImage); title('Background Image')
+        %could break here to allow fixing a piece of this one
     case 'Composite'
         try
             h1 = implay(avi_filepath);
@@ -233,28 +284,53 @@ switch bkgChoice
         msgbox({'Find images: ' '   -frame 1: top half has no mouse' '   -frame 2: bottom half has no mouse'})
         topClearNum = input('Frame number with no mouse on top: ')
         bottomClearNum = input('Frame number with no mouse on bottom: ')
-        close(h1);
+        
         obj.CurrentTime = (topClearNum-1)/obj.FrameRate;
         topClearFrame = readFrame(obj);
         obj.CurrentTime = (bottomClearNum-1)/obj.FrameRate;
         bottomClearFrame = readFrame(obj);
-        top=figure;imagesc(topClearFrame); title(['Top Clear Frame ' num2str(topClearNum)])
-        bot=figure;imagesc(bottomClearFrame); title(['Bottom Clear Frame ' num2str(bottomClearNum)])
+        top=figure('name','top'); imagesc(topClearFrame); title(['Top Clear Frame ' num2str(topClearNum)])
+        bot=figure('name','bot'); imagesc(bottomClearFrame); title(['Bottom Clear Frame ' num2str(bottomClearNum)])
         compositeBkg=uint8(zeros(480,640,3));
         compositeBkg(1:240,:,:)=topClearFrame(1:240,:,:);
         compositeBkg(241:480,:,:)=bottomClearFrame(241:480,:,:);
-        figure; imagesc(compositeBkg); title('Composite Background Image')
+        close top; close bot;
+        backgroundFrame=figure; imagesc(compositeBkg); title('Composite Background Image')
         %fix a hole: ginput to get a hole, manually find frame number where
-        %that's clear, insert those pixels. 
+        %that's clear, insert those pixels.
+        compGood=0;
+        while compGood==0
+        holdChoice = questdlg('Good or fix a piece?', ...
+                              'Background Image', ...
+                              'Good','Fix area','Good');               
+        switch holdChoice
+            case 'Good'
+                close(h1);
+                compGood=1;
+            case 'Fix area'
+                figure(backgroundFrame); title('Select area to swap out')
+                [swapRegion, SwapX, SwapY] = roipoly;
+                hold on 
+                plot([SwapX; SwapX(1)],[SwapY; SwapY(1)],'r','LineWidth',2)
+                h1; msgbox('Enter frame number of image to swap in')
+                swapInNum = input('Frame number to swap in area from ---->')
+                try; close h1; end
+                obj.CurrentTime = (swapInNum-1)/obj.FrameRate;
+                swapClearFrame = readFrame(obj);
+                [rows,cols]=ind2sub([480,640],find(swapRegion));
+                compositeBkg(rows,cols,:)=swapClearFrame(rows,cols,:);
+                figure(backgroundFrame);imagesc(compositeBkg)
+                compGood=0;
+        end
+        end
         backgroundImage = compositeBkg;
 end
-
-
-%get these frames, take pixels from top half and pixels from bottom half
+end
+%%    
 
 %plot(xAVI(inCage),yAVIflip(inCage),'.y')
 [height,~,~]=size(v0);
-yAVI=height-yAVI; yAVIflippedFlag=1;
+yAVI=height-yAVI; flags.yAVIflippedFlag=1;
 inBounds = inpolygon(xAVI,yAVI,maskx,masky);
 
 %auto_frames = (Xpix == 0 | Ypix == 0 ) & time > MoMtime;
@@ -263,24 +339,151 @@ highVel_frames = vel_init > auto_vel_thresh;
 msgbox(['Frames out of bounds first: n=' num2str(sum(auto_frames))])
 
 n = 1; %first_time = 1;
-full_auto_done=0;
-while full_auto_done==0
+%% Thresholding
+%threshFrameInds=randi(length(xAVI),3,1);
+play=figure('name','PlayFrame'); imagesc(playFrame)
+playGray=rgb2gray(playFrame);
+grayFrane=figure('name','GrayFrame'); imagesc(playGray)
+colormap(gray)
+[xsamp,ysamp]=ginput(3);
+xsamp=round(xsamp); ysamp=round(ysamp);
+for tsam=1:length(xsamp)
+    thresh(tsam)=playGray(xsamp(tsam),ysamp(tsam));
+
+end
+
+
+%% Sam's full auto sequence
+%Wrap into callable function at the end? Probably need to use globals.
+missed=[];
+max_pixel_jump=sqrt(50^2+50^2);
+flags.full_auto_done=0;
+frame_is_good=xAVI*0;%only use when user-confirmed positions
+%while flags.full_auto_done==0
     offInds=diff(auto_frames);
     ends=find(offInds==-1);
     ons=find(offInds==1)+1;
-    sFrame=MouseOnMazeFrame;
-    eFrame=ends(find(ends>MouseOnMazeFrame,1,'first'));
-    for frameCor=sFrame:eFrame
-    %Is frame good?    
-    %Good frame either side?
-        %Background image subtraction, how close to interpolation
-        %Linear interpolate
+    if auto_frames(1)==1
+        ons=[1; ons];
+    end
+    if auto_frames(end)==1
+        ends=[ends; time(end)];
+    end    
+    if length(ends)~=length(ons)
+       %????
+       disp('Unequal number ends and ons')
+    else 
+        offMazeEpochs=[ons ends];
     end
     
-end
+    %Or just this part as callable function?
+    numOffEpochs=length(ons);
+    offMazeEpochs(1,1) = min(Ons(1), MouseOnMazeFrame);
+    
+    resol = 1; % Percent resolution for progress bar
+    p = ProgressBar(100/resol);
+    update_inc = round(sum(auto_frames)/(100/resol));
+    total=0;
+    for offEpoch=1:numOffEpochs
+        for corrFrame = offMazeEpochs(offEpoch,1):offMazeEpochs(offEpoch,2)
+            %If there's only one bad frame interpolate position
+            if offMazeEpochs(offEpoch,2)-offMazeEpochs(offEpoch,1)==0 && offEpoch(1,1)~=1
+                xm=(xAVI(offMazeEpochs(offEpoch,2)+1) + xAVI(offMazeEpochs(offEpoch,2)-1))/2;
+                ym=(yAVI(offMazeEpochs(offEpoch,2)+1) + yAVI(offMazeEpochs(offEpoch,2)-1))/2;
+            else %THIS PART ISN"T DONE YET %Can it handle frame on?
+                %Run will's thing on the sequence
+                %or maybe just this part?
+                %Subtract current frame from reference, then smooth. Next,
+                %run regionprops.
+                obj.CurrentTime = (corrFrame-1)/aviSR;
+                currentFrame = readFrame(obj);
+                d = imgaussfilt(rgb2gray(backgroundImage-currentFrame),10);
+                %shading? probably can't get it from diff
+                stats = regionprops(d>20 & maze,'area','solidity','centroid','eccentricity','majoraxislength','minoraxislength');
+            
+                %Find the blob that corresponds to the mouse.
+                MouseBlob = find(   [stats.Area] > 300 & ...
+                    [stats.MajorAxisLength] > 10 & ...
+                    [stats.MinorAxisLength] > 10);
+                    %use more restrictions to better identify mouse
+                    
+                if length(MouseBlob)==1
+                    xm = stats(MouseBlob).Centroid(1);
+                    ym = stats(MouseBlob).Centroid(2);
+                elseif length(MouseBlob)>1
+                    %Get mouse position on the previous frame.
+                    %Assumes previous frame is good: if previous frame is
+                    %bad b/c high velocity jump, will shift all to that new
+                    %area, 
+                    switch corrFrame==1
+                        case 1 %No previous, manual fix
+                            ManualCorrect=figure; title('click here')
+                            imagesc(currentFrame)
+                            [xm, ym]=ginput(1);
+                            close ManualCorrect;
+                        case 0 %Run as normal
+                            previousX = xAVI(corrFrame-1);
+                            previousY = yAVI(corrFrame-1);
+                            
+                            %Possible mouse blobs.
+                            putativeMouse = [stats(MouseBlob).Centroid];
+                            putativeMouseX = putativeMouse(1:2:end);
+                            putativeMouseY = putativeMouse(2:2:end);
+                
+                            %Find which blob is closest to the mouse's location in the
+                            %previous frame.
+                            whichMouseX = findclosest(putativeMouseX,previousX);
+                            whichMouseY = findclosest(putativeMouseY,previousY);
+                
+                            %If they agree, use that blob.
+                            if whichMouseX == whichMouseY
+                                xm = stats(MouseBlob(whichMouseX)).Centroid(1);
+                                ym = stats(MouseBlob(whichMouseY)).Centroid(2);
+                                %compile to single blog by distance, doesn't exceed
+                                %velocity of known good points around it in time
+                            else %if they don't, get the overall closest check
+                                %distance limit  max_pixel_jump, could
+                                %scale by how near in time good frame is
+                                
+                                %disp(['Frame ' num2str(corrFrame) ' not fixed'])
+                                missed=[missed; corrFrame];
+                            end
+                    end        
+                    
+                end
+                
+                %double check its not outside the maze?
+                xAVI(corrFrame)=xm; yAVI(corrFrame)=ym;
+                Xpix(corrFrame) = ceil(xm/0.6246);
+                Ypix(corrFrame) = ceil((height-ym)/0.6246);           
+            end
+            
+            total=total+1;
+            if round(total/update_inc) == (total/update_inc) % Update progress bar
+                p.progress;
+            end
+        end %each frame
+        
+        %Update position and velocity figure
+        %{
+        figure(PosAndVel)
+        hx0 = subplot(4,3,1:3);plot(time,Xpix);xlabel('time (sec)');ylabel('x position (cm)');yl = get(gca,'YLim');line([MoMtime MoMtime], [yl(1) yl(2)],'Color','r');axis tight;
+        hy0 = subplot(4,3,4:6);plot(time,Ypix);xlabel('time (sec)');ylabel('y position (cm)');yl = get(gca,'YLim');line([MoMtime MoMtime], [yl(1) yl(2)],'Color','r');axis tight;
+        linkaxes([hx0 hy0],'x');
+        vel = hypot(diff(Xpix),diff(Ypix))/(time(2)-time(1));
+        hVel = subplot(4,3,7:12);plot(vel);xlabel('time (sec)');ylabel('velocity');axis tight;
+        hline=refline(0,auto_vel_thresh);hline.Color='r';hline.LineWidth=1.5;
+          %}  
+        %save Pos_temp.mat Xpix Ypix xAVI yAVI MoMtime MouseOnMazeFrame
+    end %each epoch
+    p.stop;
+    save Pos_temp.mat Xpix Ypix xAVI yAVI MoMtime MouseOnMazeFrame maze maskx masky backgroundImage
+%end
+%run again for too fast points, need to get fancier...
+flags.full_auto_done=1;
 %%
 
-Maybe run this first before new stuff...
+%Maybe run this first before new stuff...
     
 while (strcmp(MorePoints,'y')) || strcmp(MorePoints,'m') || isempty(MorePoints)
     %     if first_time == 1
@@ -291,7 +494,7 @@ while (strcmp(MorePoints,'y')) || strcmp(MorePoints,'m') || isempty(MorePoints)
     %         first_time = 0;
     %         linkaxes([hx0 hy0],'x');
     %     end
-    if auto_thresh_flag == 0 || isempty(epoch_start)
+    if flags.auto_thresh_flag == 0 || isempty(epoch_start)
         MorePoints = input('Is there a flaw that needs to be corrected?  [y/n/manual correct (m)] -->','s');
     else
         MorePoints = 'y'; pause(1)
@@ -299,7 +502,7 @@ while (strcmp(MorePoints,'y')) || strcmp(MorePoints,'m') || isempty(MorePoints)
     
     
     if strcmp(MorePoints,'y')
-        if auto_thresh_flag == 0 || isempty(epoch_start)
+        if flags.auto_thresh_flag == 0 || isempty(epoch_start)
             FrameSelOK = 0;
             while (FrameSelOK == 0)
                 display('click on the good points around the flaw then hit enter');
@@ -318,14 +521,14 @@ while (strcmp(MorePoints,'y')) || strcmp(MorePoints,'m') || isempty(MorePoints)
                 
             end
             
-        elseif auto_thresh_flag == 1 && full_auto_done==1% Input times from auto_threholded vector
+        elseif flags.auto_thresh_flag == 1 && full_auto_done==1% Input times from auto_threholded vector
             sFrame = max([1 epoch_start(n)- 6]);
             eFrame = min([length(time) epoch_end(n) + 6]);
             
             % Turn on manual thresholding once you correct all epochs above
             % the velocity threshold
             if n == n_epochs
-                auto_thresh_flag = 0;
+                flags.auto_thresh_flag = 0;
             else
                 n = n + 1;
             end
@@ -458,7 +661,7 @@ while (strcmp(MorePoints,'y')) || strcmp(MorePoints,'m') || isempty(MorePoints)
         plot(time(MouseOnMazeFrame:end),vel(MouseOnMazeFrame:end));
         hold on
         plot(time([sFrame eFrame]),vel([sFrame eFrame]),'ro'); % plot start and end points of last edit
-        if auto_thresh_flag == 1
+        if flags.auto_thresh_flag == 1
             % Get indices for all remaining times that fall above the auto
             % threshold that have not been corrected
             ind_red = auto_frames & time > time(eFrame);
@@ -620,7 +823,7 @@ while (strcmp(MorePoints,'y')) || strcmp(MorePoints,'m') || isempty(MorePoints)
         plot(time(MouseOnMazeFrame:end),vel(MouseOnMazeFrame:end));
         hold on
         plot(time([sFrame eFrame]),vel([sFrame eFrame]),'ro'); % plot start and end points of last edit
-        if auto_thresh_flag == 1
+        if flags.auto_thresh_flag == 1
             % Get indices for all remaining times that fall above the auto
             % threshold that have not been corrected
             ind_red = auto_frames & time > time(eFrame);

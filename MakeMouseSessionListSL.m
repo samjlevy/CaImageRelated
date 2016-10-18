@@ -128,7 +128,7 @@ MDSL(i).Env = 'Continuous T Maze';
 MDSL(i).Room = '201a - 2015';
 MDSL(i).RecordStartTime = '06:45:09.41 PM';
 if strcmp(userstr,'Sam')
-    MDSL(i).Location = 'H:\Polaris\Polaris_160829';
+    MDSL(i).Location = 'M:\Polaris_160829';
 end
 
 i = i+1;
@@ -139,7 +139,7 @@ MDSL(i).Env = 'Continuous T Maze';
 MDSL(i).Room = '201a - 2015';
 MDSL(i).RecordStartTime = '06:55:54.23 PM';
 if strcmp(userstr,'Sam')
-    MDSL(i).Location = 'H:\Polaris\Polaris_160829-2';
+    MDSL(i).Location = 'M:\Polaris_160829-2';
 end
 
 i = i+1;
@@ -246,7 +246,7 @@ MDSL(i).Env = 'Continuous T Maze';
 MDSL(i).Room = '201a - 2015';
 MDSL(i).RecordStartTime = '11:41:48.29 AM';
 if strcmp(userstr,'Sam')
-    MDSL(i).Location = 'H:\Polaris\Polaris_160908';
+    MDSL(i).Location = 'M:\Polaris_160908';
 end
 MDSL(i).Notes = [];
 
