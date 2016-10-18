@@ -341,22 +341,29 @@ msgbox(['Frames out of bounds first: n=' num2str(sum(auto_frames))])
 n = 1; %first_time = 1;
 %% Thresholding
 %threshFrameInds=randi(length(xAVI),3,1);
+%{
 play=figure('name','PlayFrame'); imagesc(playFrame)
 playGray=rgb2gray(playFrame);
 grayFrane=figure('name','GrayFrame'); imagesc(playGray)
 colormap(gray)
-[xsamp,ysamp]=ginput(3);
-xsamp=round(xsamp); ysamp=round(ysamp);
+[colSamp,rowSamp]=ginput(3);
 for tsam=1:length(xsamp)
-    thresh(tsam)=playGray(xsamp(tsam),ysamp(tsam));
+    thresh(tsam)=playGray(round(rowSamp(tsam)),round(colSamp(tsam)));
 
 end
-
-
+grayFrame=rgb2gray(playFrame); colormap(gray)
+threshFrame=grayFrame<100;
+gaussThresh=imgaussfilt(double(threshFrame),10);
+g0thresh=gaussThresh>0.2;
+stats = regionprops(g0thresh & maze,'area','centroid','majoraxislength','minoraxislength');
+B = bwboundaries(BW);
+%}
 %% Sam's full auto sequence
 %Wrap into callable function at the end? Probably need to use globals.
 missed=[];
 max_pixel_jump=sqrt(50^2+50^2);
+distLim=max_pixel_jump;
+grayThresh=100; gaussThresh=0.2;
 flags.full_auto_done=0;
 frame_is_good=xAVI*0;%only use when user-confirmed positions
 %while flags.full_auto_done==0
@@ -399,7 +406,7 @@ frame_is_good=xAVI*0;%only use when user-confirmed positions
                 currentFrame = readFrame(obj);
                 d = imgaussfilt(rgb2gray(backgroundImage-currentFrame),10);
                 %shading? probably can't get it from diff
-                stats = regionprops(d>20 & maze,'area','solidity','centroid','eccentricity','majoraxislength','minoraxislength');
+                stats = regionprops(d>20 & maze,'centroid');%'area','solidity','eccentricity','majoraxislength','minoraxislength'
             
                 %Find the blob that corresponds to the mouse.
                 MouseBlob = find(   [stats.Area] > 300 & ...
@@ -422,6 +429,7 @@ frame_is_good=xAVI*0;%only use when user-confirmed positions
                             [xm, ym]=ginput(1);
                             close ManualCorrect;
                         case 0 %Run as normal
+                            %UPDATE: last one not tagged to fix 
                             previousX = xAVI(corrFrame-1);
                             previousY = yAVI(corrFrame-1);
                             
@@ -441,12 +449,31 @@ frame_is_good=xAVI*0;%only use when user-confirmed positions
                                 ym = stats(MouseBlob(whichMouseY)).Centroid(2);
                                 %compile to single blog by distance, doesn't exceed
                                 %velocity of known good points around it in time
-                            else %if they don't, get the overall closest check
-                                %distance limit  max_pixel_jump, could
-                                %scale by how near in time good frame is
-                                
-                                %disp(['Frame ' num2str(corrFrame) ' not fixed'])
-                                missed=[missed; corrFrame];
+                            else
+                                %blob that agrees with raw thresholding
+                                %(any?)
+                                 %colormap(gray)
+                                grayGaussThresh=imgaussfilt(double(rgb2gray(currentFrame)<grayThresh),10)>gaussThresh;
+                                grayStats = regionprops(grayGaussThresh & maze,'centroid');
+                                possible=[];
+                                for statses=1:length(stats)
+                                for grats=1:length(grayStats)
+                                poRow=size(possible,1)+1;    
+                                possible(poRow,1:3)=[statses grats...
+                                    hypot(stats(statses).Centroid(1)-grayStats(grats).Centroid(1),...
+                                    stats(statses).Centroid(2)-grayStats(grats).Centroid(2))];
+                                end; end
+                                posDel=possible(:,3)>distLim;
+                                possible(posDel,:)=[];
+                                if size(possible,1)==1
+                                    xm=mean([stats(possible(1)).Centroid(1) grayStats(possible(2)).Centroid(1)]);
+                                    ym=mean([stats(possible(1)).Centroid(2) grayStats(possible(2)).Centroid(2)]);
+                                else
+                                    %if they don't, get the overall closest check
+                                    %distance limit  max_pixel_jump, could
+                                    %scale by how near in time good frame is
+                                    missed=[missed; corrFrame]; %disp(['Frame ' num2str(corrFrame) ' not fixed'])
+                                end
                             end
                     end        
                     
