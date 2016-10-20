@@ -120,7 +120,7 @@ if exist('Pos_temp.mat','file') || exist('Pos.mat','file')
         load_file = 'Pos.mat';
     end
     if strcmpi(use_temp,'y')
-        load(load_file,'Xpix', 'Ypix', 'xAVI', 'yAVI', 'MoMtime', 'MouseOnMazeFrame');
+        load(load_file);%,'Xpix', 'Ypix', 'xAVI', 'yAVI', 'MoMtime', 'MouseOnMazeFrame');
         MoMtime
     else
         h1 = implay(avi_filepath);
@@ -137,16 +137,16 @@ end
 
 
 %% Cage mask
-v0 = readFrame(obj);
-MaskFig=figure('name', 'Cage Mask'); imagesc(v0);
-maskSwitch= exist('maskx','var') && exist('masky','var');
+dummy = readFrame(obj);
+MaskFig=figure('name', 'Cage Mask'); imagesc(flipud(dummy));
+maskSwitch= exist('maskx','var') && exist('masky','var') && exist('maze','var');
 switch maskSwitch  
     case 1
         title('Found cage mask')
     case 0 
         title('Draw position mask');
         [maze, maskx, masky] = roipoly;        
-end  
+end 
 hold on; plot([maskx; maskx(1)],[masky; masky(1)],'r','LineWidth',2)
 
 cageMaskGood=0;
@@ -160,17 +160,17 @@ while cageMaskGood==0
             disp('Proceeding with this cage mask')
             cageMaskGood=1;
         case 'No redraw'
-            figure(MaskFig); imagesc(v0);
+            figure(MaskFig); imagesc(flipud(dummy));
             title('Draw position mask');
             [maze, maskx, masky] = roipoly;
             hold on; plot([maskx; maskx(1)],[masky; masky(1)],'r','LineWidth',2)
             cageMaskGood=0;       
     end
-end
+end 
 close(MaskFig)
 
 %% Background Image
-if ~exist('backgroundImage','var')
+if ~exist('v0','var')
 bkgChoice = questdlg('Supply/Load background image or composite?', ...
 	'Background Image', ...
 	'Load','Frame #','Composite','Composite');
@@ -212,12 +212,14 @@ switch bkgChoice
         compositeBkg(1:240,:,:)=topClearFrame(1:240,:,:);
         compositeBkg(241:480,:,:)=bottomClearFrame(241:480,:,:);
         close top; close bot;
+        compositeBkg=compositeBkg;
         backgroundFrame=figure('name','backgroundFrame'); imagesc(compositeBkg); title('Composite Background Image')
         %fix a hole: ginput to get a hole, manually find frame number where
         %that's clear, insert those pixels.
 end
 else 
-     backgroundFrame=figure('name','backgroundFrame'); imagesc(bagkgoundImage); title('Background Image')
+    backgroundImage=v0;
+    backgroundFrame=figure('name','backgroundFrame'); imagesc(backgroundImage); title('Background Image')
 end     
 
 compGood=0;
@@ -227,9 +229,12 @@ while compGood==0
                               'Good','Fix area','Good');               
     switch holdChoice
         case 'Good'
+            try
             close(h1);
+            end
             compGood=1;
         case 'Fix area'
+            %CHECK this is still working
             figure(backgroundFrame); title('Select area to swap out')
             [swapRegion, SwapX, SwapY] = roipoly;
             hold on 
@@ -245,16 +250,61 @@ while compGood==0
             compositeBkg(rows,cols,:)=swapClearFrame(rows,cols,:);
             figure(backgroundFrame);imagesc(compositeBkg)
             compGood=0;
+            backgroundImage = compositeBkg;
     end
 end
-backgroundImage = compositeBkg;
-
+v0 = backgroundImage;%right?
+%}
 close(backgroundFrame);
-v0 = backgroundImage;
+
 
 %% Position and velocity
-
+vel_init = hypot(diff(Xpix),diff(Ypix))/(time(2)-time(1));
+%vel_init = [vel_init; vel_init(end)];
+% vel_init = [vel_init(1); vel_init];
+[fv, xv] = ecdf(vel_init);
+if exist('auto_thresh','var')
+    auto_vel_thresh = min(xv(fv > (1-auto_thresh)));
+else
+    velthreshing=figure; plot(vel_init)
+    auto_vel_thresh = 1500;
+    title(['suggested velocity threshold: ' num2str(auto_vel_thresh)])
+    hline=refline(0,auto_vel_thresh);
+    hline.Color='r';
+    hline.LineWidth=1.5;
+    
+    choice = questdlg('Is this velocity threshold good?', ...
+	'Velocity Threshold', ...
+	'Yes','No > ginput','Yes');
+    % Handle response
+    velLineGood=0;
+    while velLineGood==0
+    
+        switch choice
+            case 'Yes'
+                disp(['Proceeding with velocity threshold ' num2str(auto_vel_thresh)])
+                velLineGood=1;
+            case 'No > ginput'
+                figure(velthreshing);
+                [~,user_vel_thresh] = ginput(1);
+                plot(vel_init)
+                hline = refline(0,user_vel_thresh); hline.Color='r'; hline.LineWidth=1.5;
+                choice2 = questdlg('Is this velocity threshold good?', ...
+                                'Velocity Threshold', ...
+                                'Yes','No > ginput','Yes');
+                switch choice2
+                    case 'Yes'
+                        velLineGood=1;
+                        auto_vel_thresh=user_vel_thresh;
+                    case 'No > ginput'
+                        velLineGood=0;
+                end        
+        end
+    end
+    close(velthreshing)
+end
 % Get initial velocity profile for auto-thresholding
+%{
 vel_init = hypot(diff(Xpix),diff(Ypix))/(time(2)-time(1));
 vel_init = [vel_init; vel_init(end)];
 % vel_init = [vel_init(1); vel_init];
@@ -266,10 +316,9 @@ else
     auto_thresh = nan; % Don't perform any autocorrection if not specified
 end
 
-% start auto-correction of anything above threshold
-auto_frames = (Xpix == 0 | Ypix == 0 | vel_init > auto_vel_thresh) & time > MoMtime;
 
 % Determine if auto thresholding applies
+
 if sum(auto_frames) > 0 && ~isnan(auto_thresh)
     auto_thresh_flag = 1;
     [ on, off ] = get_on_off( auto_frames );
@@ -286,6 +335,8 @@ if sum(auto_frames) > 0 && ~isnan(auto_thresh)
 else %if sum(auto_frames) == 0
     auto_thresh_flag = 0;
 end
+%}
+
 
 PosAndVel=figure('name','Position and Velocity');
 hx0 = subplot(4,3,1:3);plot(time,Xpix);xlabel('time (sec)');ylabel('x position (cm)');yl = get(gca,'YLim');line([MoMtime MoMtime], [yl(1) yl(2)],'Color','r');axis tight;
@@ -293,27 +344,137 @@ hy0 = subplot(4,3,4:6);plot(time,Ypix);xlabel('time (sec)');ylabel('y position (
 linkaxes([hx0 hy0],'x');
 hVel = subplot(4,3,7:12);plot(vel_init);xlabel('time (sec)');ylabel('velocity');axis tight;
 hline=refline(0,auto_vel_thresh);hline.Color='r';hline.LineWidth=1.5;
-vel = hypot(diff(Xpix),diff(Ypix))/(time(2)-time(1));
+%vel = hypot(diff(Xpix),diff(Ypix))/(time(2)-time(1));
 
 %% All the rest...
-MorePoints = 'y';
+if ~exist('Pos_temp.mat','file')
+    save Pos_temp.mat Xpix Ypix xAVI yAVI MoMtime MouseOnMazeFrame maze v0 maskx masky 
+end 
+definitely_good=Xpix*0;
+zero_frames = Xpix == 0 | Ypix == 0 ;
+auto_frames = find(zero_frames);
+if any(auto_frames)
+auto_thresh_flag=1;
+end
+grayThresh=100; gaussThresh=0.2;
+max_pixel_jump=sqrt(50^2+50^2);
+distLim=max_pixel_jump;
+MorePoints = 'y';%first
 %length(time);
 
-%Draw a mask for the maze.
-figure;
-imagesc(flipud(v0)); title('Draw a mask for the maze');
-maze = roipoly;
-
 n = 1; %first_time = 1;
-while (strcmp(MorePoints,'y')) || strcmp(MorePoints,'m') || isempty(MorePoints)
-    %     if first_time == 1
-    %         hx0 = subplot(4,3,1:3); plot(time,Xpix); xlabel('time (sec)'); ylabel('x position (cm)');
-    %         hold on;yl = get(gca,'YLim');line([MoMtime MoMtime], [yl(1) yl(2)],'Color','r');hold off;axis tight;
-    %         hy0 = subplot(4,3,4:6); plot(time,Ypix); xlabel('time (sec)'); ylabel('y position (cm)');
-    %         hold on;yl = get(gca,'YLim');line([MoMtime MoMtime], [yl(1) yl(2)],'Color','r');hold off;axis tight;
-    %         first_time = 0;
-    %         linkaxes([hx0 hy0],'x');
-    %     end
+while ~(strcmp(MorePoints,'n')) 
+%%Sam section    
+    %First pass go for automatic detection
+    if n==1 && auto_thresh_flag==1;
+    ManualCorrFig=figure('name','ManualCorrFig'); imagesc(flipud(v0)); title('Auto correcting, please wait')
+    resol = 1; % Percent resolution for progress bar
+    p = ProgressBar(100/resol);
+    update_inc = round(length(auto_frames)/(100/resol));
+    total=0;    
+        for corrFrame=1:length(auto_frames)
+            obj.CurrentTime=(auto_frames(corrFrame)-1)/aviSR;
+            v = readFrame(obj);
+            d = imgaussfilt(flipud(rgb2gray(v0-v)),10);
+            stats = regionprops(d>20 & maze,'area','centroid','majoraxislength','minoraxislength');%'solidity','eccentricity',
+            
+            %Find the blob that corresponds to the mouse.
+            MouseBlob = find(   [stats.Area] > 300 & ...
+                [stats.MajorAxisLength] > 10 & ...
+                [stats.MinorAxisLength] > 10);
+            %lower Area lower limit, add an upper limit
+            %add: centroid in a VERY rough area that is below threshold
+            %conditional: if couldn't find a blob, accept smaller blob if
+            %previous position was user-corrected
+            %manual corrected redo condition: part of high velocity jump
+                %should get caught during auto-high vel check, so don't
+                %allow manual exception during that
+            if length(MouseBlob)==1
+                xm = stats(MouseBlob).Centroid(1);
+                ym = stats(MouseBlob).Centroid(2);
+            elseif length(MouseBlob)>1 && auto_frames(corrFrame)>1
+                %Get mouse position on the previous frame.
+                previousX = xAVI(auto_frames(corrFrame)-1);
+                previousY = yAVI(auto_frames(corrFrame)-1);
+                
+                %Possible mouse blobs.
+                putativeMouse = [stats(MouseBlob).Centroid];
+                putativeMouseX = putativeMouse(1:2:end);
+                putativeMouseY = putativeMouse(2:2:end);
+                
+                %Find which blob is closest to the mouse's location in the
+                %previous frame.
+                whichMouseX = findclosest(putativeMouseX,previousX);
+                whichMouseY = findclosest(putativeMouseY,previousY);
+                
+                %If they agree, use that blob.
+                if whichMouseX == whichMouseY
+                    xm = stats(MouseBlob(whichMouseX)).Centroid(1);
+                    ym = stats(MouseBlob(whichMouseY)).Centroid(2);
+                else
+                    %try SAMs mouse blobs with raw thresholding
+                    grayFrame=rgb2gray(v);
+                    grayFrameThresh=grayFrame<grayThresh;
+                    grayGauss=imgaussfilt(double(grayFrameThresh),10);
+                    grayGaussThresh=grayGauss>gaussThresh;
+                    grayStats = regionprops(grayGaussThresh & maze,'centroid');
+                    possible=[];
+                    for statses=1:length(stats)
+                        for grats=1:length(grayStats)
+                            poRow=size(possible,1)+1;     
+                            possible(poRow,1:3)=[statses grats...
+                            hypot(stats(statses).Centroid(1)-grayStats(grats).Centroid(1),...
+                            stats(statses).Centroid(2)-grayStats(grats).Centroid(2))];
+                        end 
+                    end
+                    posDel=possible(:,3)>distLim; possible(posDel,:)=[];
+                    if size(possible,1)==1
+                        xm=mean([stats(possible(1)).Centroid(1) grayStats(possible(2)).Centroid(1)]);
+                        ym=mean([stats(possible(1)).Centroid(2) grayStats(possible(2)).Centroid(2)]);
+                    else
+                        %this could be a callable function
+                        % { 
+                        figure(ManualCorrFig); 
+                        imagesc(flipud(v))
+                        hold on
+                        title('click here')
+                        [xm,ym] = ginput(1);
+                        plot(xm,ym,'og','MarkerSize',4,'MarkerFaceColor','g');hold off;
+                        definitely_good(auto_frames(corrFrame))=1;
+                        title('Auto correcting, please wait')
+                        %  }
+                    end
+                end    
+            else
+                %keyboard;
+                figure(ManualCorrFig); 
+                imagesc(flipud(v))
+                hold on
+                title('click here')
+                [xm,ym] = ginput(1);
+                plot(xm,ym,'og','MarkerSize',4,'MarkerFaceColor','g');hold off;
+                definitely_good(auto_frames(corrFrame))=1;
+                title('Auto correcting, please wait')
+            end
+            %figure(ManualCorrFig); 
+            
+            % apply corrected position to current frame
+            xAVI(corrFrame) = xm;
+            yAVI(corrFrame) = ym;
+            Xpix(corrFrame) = ceil(xm/0.6246);
+            Ypix(corrFrame) = ceil(ym/0.6246);
+            total=total+1;
+            if round(total/update_inc) == (total/update_inc) % Update progress bar
+                p.progress;
+            end
+        end 
+    close(ManualCorrFig);    
+    save Pos_temp.mat Xpix Ypix xAVI yAVI MoMtime MouseOnMazeFrame maskx v0 maze masky definitely_good   
+    p.stop;
+    disp(['Completed auto-pass on ' num2str(total) ' 0s'])
+    end 
+    
+%% All the rest for real    
     if auto_thresh_flag == 0 || isempty(epoch_start)
         MorePoints = input('Is there a flaw that needs to be corrected?  [y/n/manual correct (m)/save (s)] -->','s');
     else
@@ -321,6 +482,9 @@ while (strcmp(MorePoints,'y')) || strcmp(MorePoints,'m') || isempty(MorePoints)
     end
     
     
+    
+        
+        
     if strcmp(MorePoints,'y')
         if auto_thresh_flag == 0 || isempty(epoch_start)
             FrameSelOK = 0;
@@ -330,7 +494,6 @@ while (strcmp(MorePoints,'y')) || strcmp(MorePoints,'m') || isempty(MorePoints)
                 sFrame = findclosest(time,DVTsec(1)); % index of start frame
                 eFrame = findclosest(time,DVTsec(2)); % index of end frame
                 eFrame = max(eFrame,time(end));
-                aviSR*sFrame;
                 
                 if (sFrame/aviSR > obj.Duration || eFrame/aviSR > obj.Duration)
                    continue;
@@ -467,6 +630,7 @@ while (strcmp(MorePoints,'y')) || strcmp(MorePoints,'m') || isempty(MorePoints)
             % plot marker
             plot(xm,ym,marker{marker_fr(i)},'MarkerSize',4,'MarkerFaceColor',marker_face{marker_fr(i)});hold off;
         end
+        
         disp(['You just edited from ' num2str(edit_start_time) ...
             ' sec to ' num2str(edit_end_time) ' sec.']);
         
@@ -512,7 +676,7 @@ while (strcmp(MorePoints,'y')) || strcmp(MorePoints,'m') || isempty(MorePoints)
         drawnow % Make sure everything gets updated properly!
         
         % NRK edit
-        save Pos_temp.mat Xpix Ypix xAVI yAVI MoMtime MouseOnMazeFrame
+        save Pos_temp.mat Xpix Ypix xAVI yAVI MoMtime MouseOnMazeFrame maze v0 maskx masky definitely_good
         
         continue
     end
@@ -674,13 +838,13 @@ while (strcmp(MorePoints,'y')) || strcmp(MorePoints,'m') || isempty(MorePoints)
         drawnow % Make sure everything gets updated properly!
         
         % NRK edit
-        save Pos_temp.mat Xpix Ypix xAVI yAVI MoMtime MouseOnMazeFrame
+        save Pos_temp.mat Xpix Ypix xAVI yAVI MoMtime MouseOnMazeFrame maze v0 maskx masky definitely_good
         
         continue
        
     end
     if strcmp(MorePoints,'s')
-        save Pos_temp.mat Xpix Ypix xAVI yAVI MoMtime MouseOnMazeFrame
+        save Pos_temp.mat Xpix Ypix xAVI yAVI MoMtime MouseOnMazeFrame maze v0 maskx masky definitely_good
     end    
 end
 
@@ -726,6 +890,6 @@ AVItime_interp = cellfun(@(a,b) lin_interp(time(a), AVIobjTime(a),...
 
 % Save all filtered data as well as raw data in case you want to go back
 % and fix an error you discover later on
-save Pos.mat xpos_interp ypos_interp time_interp start_time MoMtime Xpix Ypix xAVI yAVI MouseOnMazeFrame AVItime_interp
-
+save Pos.mat xpos_interp ypos_interp time_interp start_time MoMtime Xpix Ypix xAVI yAVI MouseOnMazeFrame AVItime_interp maze v0 maskx masky definitely_good
+ 
 end
