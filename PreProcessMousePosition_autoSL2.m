@@ -336,6 +336,7 @@ else %if sum(auto_frames) == 0
     auto_thresh_flag = 0;
 end
 %}
+epoch_start=[]; epoch_end=[];
 
 
 PosAndVel=figure('name','Position and Velocity');
@@ -495,15 +496,26 @@ while ~(strcmp(MorePoints,'n'))
                 eFrame = findclosest(time,DVTsec(2)); % index of end frame
                 eFrame = max(eFrame,time(end));
                 
-                if (sFrame/aviSR > obj.Duration || eFrame/aviSR > obj.Duration)
-                   continue;
+                if sFrame>eFrame
+                    holder=sFrame;
+                    sFrame=eFrame;
+                    eFrame=holder;
+                end    
+                
+                if eFrame/aviSR > obj.Duration)
+                   eFrame=obj.Duration*aviSR; 
+                end
+                
+                if sFrame/aviSR > obj.Duration 
+                    error('What are you doing')
+                    continue;
                 end
                 %               obj.currentTime = sFrame/aviSR; % sFrame is the correct frame #, but .avi reads are done according to time
                 %               v = readFrame(obj);
                 FrameSelOK = 1;
                 
             end
-            
+        %{    
         elseif auto_thresh_flag == 1 % Input times from auto_threholded vector
             sFrame = max([1 epoch_start(n)- 6]);
             eFrame = min([length(time) epoch_end(n) + 6]);
@@ -515,8 +527,9 @@ while ~(strcmp(MorePoints,'n'))
             else
                 n = n + 1;
             end
+        %}    
         end
-        obj.currentTime = sFrame/aviSR; % sFrame is the correct frame #, but .avi reads are done according to time
+        obj.currentTime = (sFrame-1)/aviSR; % sFrame is the correct frame #, but .avi reads are done according to time
         v = readFrame(obj);
         
         framesToCorrect = sFrame:eFrame;
