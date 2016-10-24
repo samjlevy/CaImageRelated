@@ -12,6 +12,10 @@ global ParsedFrames
 global videoFig
 global video
 
+msgbox({'Notes on use:';' Q/R - step back/forward 100';...
+        ' A/F - step back/forward 10'; ' S/D  - step back/forward 1';' ';...
+        'Click off of button for keyboard!'})
+
 miscVar.panelHeight = 480;
 videoFig.videoPanel = figure('Position',[100,100,900,miscVar.panelHeight],'MenuBar','none','KeyPressFcn',@keyPress);
 videoFig.plotted = subplot(1,2,1,'Position',[0.05,0.1,0.55,0.8]);
@@ -117,14 +121,18 @@ videoFig.PopDurPunish = uicontrol('Style','popup',...
                              'Value', 1,'Callback',{@fcnSetFakePlaySpeed}); 
                          
 %%
-ParsedFrames.LapStart=cell(0,0); 
-ParsedFrames.LiftBarrier=cell(0,0);
-ParsedFrames.LeaveMaze=cell(0,0);
-ParsedFrames.StartHomecage=cell(0,0);
-ParsedFrames.LeaveHomecage=cell(0,0);
-ParsedFrames.ForcedDir=cell(0,0);
-ParsedFrames.FreeDir=cell(0,0);
-ParsedFrames.EnterDelay=cell(0,0);
+headings={'Trial #'; 'Start on maze (start of Forced'; 'Lift barrier (start of free choice)';...
+            'Leave maze'; 'Start in homecage'; 'Leave homecage'; 'Forced Trial Type (L/R)';...
+            'Free Trial Choice (L/R)'; 'Enter Delay'};
+ParsedFrames.LapNumber={headings{1}};        
+ParsedFrames.LapStart={headings{2}}; 
+ParsedFrames.LiftBarrier={headings{3}};
+ParsedFrames.LeaveMaze={headings{4}};
+ParsedFrames.StartHomecage={headings{5}};
+ParsedFrames.LeaveHomecage={headings{6}};
+ParsedFrames.ForcedDir={headings{7}};
+ParsedFrames.FreeDir={headings{8}};
+ParsedFrames.EnterDelay={headings{9}};
 
 end
 %%
@@ -185,8 +193,8 @@ disp('Lap Start')
 global miscVar
 global ParsedFrames
 if miscVar.VideoLoadedFlag==1
-    ParsedFrames.LapStart{miscVar.LapNumber,1}=miscVar.frameNum;
-    disp(num2str(ParsedFrames.LapStart{miscVar.LapNumber,1}))
+    ParsedFrames.LapStart{miscVar.LapNumber+1,1}=miscVar.frameNum;
+    disp(num2str(ParsedFrames.LapStart{miscVar.LapNumber+1,1}))
 end
 end
 function fcnEnterDelayButton(~,~)
@@ -194,8 +202,8 @@ disp('Enter Delay')
 global miscVar
 global ParsedFrames
 if miscVar.VideoLoadedFlag==1
-    ParsedFrames.EnterDelay{miscVar.LapNumber,1}=miscVar.frameNum;
-    disp(num2str(ParsedFrames.EnterDelay{miscVar.LapNumber,1}))
+    ParsedFrames.EnterDelay{miscVar.LapNumber+1,1}=miscVar.frameNum;
+    disp(num2str(ParsedFrames.EnterDelay{miscVar.LapNumber+1,1}))
 end
 end
 function fcnLiftBarrierButton(~,~)
@@ -203,8 +211,8 @@ disp('Lift Barrier')
 global miscVar
 global ParsedFrames
 if miscVar.VideoLoadedFlag==1
-    ParsedFrames.LiftBarrier{miscVar.LapNumber,1}=miscVar.frameNum;
-    disp(num2str(ParsedFrames.LiftBarrier{miscVar.LapNumber,1}))
+    ParsedFrames.LiftBarrier{miscVar.LapNumber+1,1}=miscVar.frameNum;
+    disp(num2str(ParsedFrames.LiftBarrier{miscVar.LapNumber+1,1}))
 end
 end
 function fcnLeaveMazeButton(~,~)
@@ -212,8 +220,8 @@ disp('Leave Maze')
 global miscVar
 global ParsedFrames
 if miscVar.VideoLoadedFlag==1
-    ParsedFrames.LeaveMaze{miscVar.LapNumber,1}=miscVar.frameNum;
-    disp(num2str(ParsedFrames.LeaveMaze{miscVar.LapNumber,1}))
+    ParsedFrames.LeaveMaze{miscVar.LapNumber+1,1}=miscVar.frameNum;
+    disp(num2str(ParsedFrames.LeaveMaze{miscVar.LapNumber+1,1}))
 end
 end
 function fcnStartHomecageButton(~,~)
@@ -221,8 +229,8 @@ disp('Start Homecage')
 global miscVar
 global ParsedFrames
 if miscVar.VideoLoadedFlag==1
-    ParsedFrames.StartHomecage{miscVar.LapNumber,1}=miscVar.frameNum;
-    disp(num2str(ParsedFrames.StartHomecage{miscVar.LapNumber,1}))
+    ParsedFrames.StartHomecage{miscVar.LapNumber+1,1}=miscVar.frameNum;
+    disp(num2str(ParsedFrames.StartHomecage{miscVar.LapNumber+1,1}))
 end
 end
 function fcnLeaveHomecageButton(~,~)
@@ -230,8 +238,8 @@ disp('Leave Homecage')
 global miscVar
 global ParsedFrames
 if miscVar.VideoLoadedFlag==1
-    ParsedFrames.LeaveHomecage{miscVar.LapNumber,1}=miscVar.frameNum;
-    disp(num2str(ParsedFrames.LeaveHomecage{miscVar.LapNumber,1}))
+    ParsedFrames.LeaveHomecage{miscVar.LapNumber+1,1}=miscVar.frameNum;
+    disp(num2str(ParsedFrames.LeaveHomecage{miscVar.LapNumber+1,1}))
 end
 end
 function fcnForcedDirButton(~,~)
@@ -242,11 +250,11 @@ global videoFig
 if miscVar.VideoLoadedFlag==1
     switch videoFig.PopForcedDir.Value
         case 1
-            ParsedFrames.ForcedDir{miscVar.LapNumber,1}='L';
+            ParsedFrames.ForcedDir{miscVar.LapNumber+1,1}='L';
         case 2    
-            ParsedFrames.ForcedDir{miscVar.LapNumber,1}='R';
+            ParsedFrames.ForcedDir{miscVar.LapNumber+1,1}='R';
     end        
-    disp(ParsedFrames.ForcedDir{miscVar.LapNumber,1})
+    disp(ParsedFrames.ForcedDir{miscVar.LapNumber+1,1})
 end
 end
 function fcnFreeDirButton(~,~)
@@ -257,11 +265,11 @@ global videoFig
 if miscVar.VideoLoadedFlag==1
     switch videoFig.PopFreeDir.Value
         case 1
-            ParsedFrames.FreeDir{miscVar.LapNumber,1}='L';
+            ParsedFrames.FreeDir{miscVar.LapNumber+1,1}='L';
         case 2    
-            ParsedFrames.FreeDir{miscVar.LapNumber,1}='R';
+            ParsedFrames.FreeDir{miscVar.LapNumber+1,1}='R';
     end        
-    disp(ParsedFrames.FreeDir{miscVar.LapNumber,1})
+    disp(ParsedFrames.FreeDir{miscVar.LapNumber+1,1})
 end
 end
 function fcnJumpFrameButton(~,~)
@@ -317,14 +325,11 @@ function fcnSaveSheet(~,~)
 global ParsedFrames
 global miscVar
 disp('Save sheet')
-for laps=1:length(size(ParsedFrames.LapStart,1));
-    ParsedFrames.LapNumber{laps,1}=laps;
+for laps=1:(size(ParsedFrames.LapStart,1)-1);
+    ParsedFrames.LapNumber{laps+1,1}=laps;
 end    
 %try 
-%   
-headings={'Trial #'; 'Start on maze (start of Forced'; 'Lift barrier (start of free choice)';...
-            'Leave maze'; 'Start in homecage'; 'Leave homecage'; 'Forced Trial Type (L/R)';...
-            'Free Trial Choice (L/R)'};
+%   ParsedFrames.LapNumber,...
 realTable=table(ParsedFrames.LapNumber,...
                 ParsedFrames.LapStart,...
                 ParsedFrames.LiftBarrier,...
@@ -335,7 +340,7 @@ realTable=table(ParsedFrames.LapNumber,...
                 ParsedFrames.FreeDir);
             
 bonusTable=table(ParsedFrames.LapNumber,...
-                 ParsedFrames.EnterDelay);
+              ParsedFrames.EnterDelay);
 %catch 
 %    save 'trystuff.mat' 'ParsedFrames'
 %end            
