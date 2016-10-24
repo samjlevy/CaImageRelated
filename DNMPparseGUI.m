@@ -174,7 +174,7 @@ ParsedFrames.LeaveMaze={headings{4}};
 ParsedFrames.StartHomecage={headings{5}};
 ParsedFrames.LeaveHomecage={headings{6}};
 ParsedFrames.TrialType={headings{7}};
-ParsedFrames.FreeDir={headings{8}};
+ParsedFrames.TrialDir={headings{8}};
 
 
     case 3
