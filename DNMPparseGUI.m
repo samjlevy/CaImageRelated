@@ -23,7 +23,8 @@ miscVar.buttonLeftEdge = 560;
 miscVar.buttonSecondCol = 705;
 miscVar.buttonWidth = 130;
 miscVar.Gray=[0.94,0.94,0.94];
-miscVar.Red=[0.75,0,0];
+miscVar.Red=[1,0.5,0.5];
+miscVar.Green = [0.5 1 0.5];
 miscVar.VideoLoadedFlag=0;
 
 
@@ -100,6 +101,11 @@ videoFig.SaveSheetExcel = uicontrol('Style','pushbutton','String','SAVE SHEET',.
 videoFig.JumpFrameButton = uicontrol('Style','pushbutton','String','JUMP TO FRAME',...
                              'Position',[miscVar.buttonLeftEdge,miscVar.upperLimit - miscVar.buttonStepDown*7,...
                              miscVar.buttonWidth,30], 'Callback',{@fcnJumpFrameButton});
+
+
+videoFig.LoadSheetExcel = uicontrol('Style','pushbutton','String','LOAD SHEET',...                         
+                             'Position',[miscVar.buttonSecondCol,miscVar.upperLimit - miscVar.buttonStepDown*7,...
+                             miscVar.buttonWidth,30],'Callback',{@fcnLoadSheet});     
                          
 videoFig.fakePlay = uicontrol('Style','pushbutton','String','PLAY',...
                         'Position',[miscVar.buttonLeftEdge,miscVar.upperLimit - miscVar.buttonStepDown*8,...
@@ -111,32 +117,15 @@ videoFig.PopDurPunish = uicontrol('Style','popup',...
                              'Value', 1,'Callback',{@fcnSetFakePlaySpeed}); 
                          
 %%
-%ParsedFrames.StartMaze, LiftBarrier, LeaveMaze, StartHomecage, LeaveHomecage, ForcedTrialLR, FreeTrialLR, EnterDelay
+ParsedFrames.LapStart=cell(0,0); 
+ParsedFrames.LiftBarrier=cell(0,0);
+ParsedFrames.LeaveMaze=cell(0,0);
+ParsedFrames.StartHomecage=cell(0,0);
+ParsedFrames.LeaveHomecage=cell(0,0);
+ParsedFrames.ForcedDir=cell(0,0);
+ParsedFrames.FreeDir=cell(0,0);
+ParsedFrames.EnterDelay=cell(0,0);
 
-
-
-% green = [0.5 1 0.5], red = [1 0.5 0.5]
-%avi_filepath = fullfile(pathname,filename);
-%{
-
-%}
-%MyButton = uicontrol('Style', 'pushbutton','Callback',@task);
-%      function task(src, e)
- %        disp('button press');
-  %    end
-%}  
-%{
-Controller = figure('Position',[50,180,295,480],...
-                    'KeyPressFcn', @keyPress,...
-                    'Name','Video Buttons',...
-                    'MenuBar','none');
-                
-%}
-%{
-LiftBarrierButton
-
-PlayVid button (spacebar hotkey), play rate drop down
-%}
 end
 %%
 function fcnLapNumberButton(~,~)
@@ -196,8 +185,8 @@ disp('Lap Start')
 global miscVar
 global ParsedFrames
 if miscVar.VideoLoadedFlag==1
-    ParsedFrames.LapStart(miscVar.LapNumber)=miscVar.frameNum;
-    disp(num2str(ParsedFrames.LapStart(miscVar.LapNumber)))
+    ParsedFrames.LapStart{miscVar.LapNumber,1}=miscVar.frameNum;
+    disp(num2str(ParsedFrames.LapStart{miscVar.LapNumber,1}))
 end
 end
 function fcnEnterDelayButton(~,~)
@@ -205,8 +194,8 @@ disp('Enter Delay')
 global miscVar
 global ParsedFrames
 if miscVar.VideoLoadedFlag==1
-    ParsedFrames.EnterDelay(miscVar.LapNumber)=miscVar.frameNum;
-    disp(num2str(ParsedFrames.EnterDelay(miscVar.LapNumber)))
+    ParsedFrames.EnterDelay{miscVar.LapNumber,1}=miscVar.frameNum;
+    disp(num2str(ParsedFrames.EnterDelay{miscVar.LapNumber,1}))
 end
 end
 function fcnLiftBarrierButton(~,~)
@@ -214,8 +203,8 @@ disp('Lift Barrier')
 global miscVar
 global ParsedFrames
 if miscVar.VideoLoadedFlag==1
-    ParsedFrames.LiftBarrier(miscVar.LapNumber)=miscVar.frameNum;
-    disp(num2str(ParsedFrames.LiftBarrier(miscVar.LapNumber)))
+    ParsedFrames.LiftBarrier{miscVar.LapNumber,1}=miscVar.frameNum;
+    disp(num2str(ParsedFrames.LiftBarrier{miscVar.LapNumber,1}))
 end
 end
 function fcnLeaveMazeButton(~,~)
@@ -223,8 +212,8 @@ disp('Leave Maze')
 global miscVar
 global ParsedFrames
 if miscVar.VideoLoadedFlag==1
-    ParsedFrames.LeaveMaze(miscVar.LapNumber)=miscVar.frameNum;
-    disp(num2str(ParsedFrames.LeaveMaze(miscVar.LapNumber)))
+    ParsedFrames.LeaveMaze{miscVar.LapNumber,1}=miscVar.frameNum;
+    disp(num2str(ParsedFrames.LeaveMaze{miscVar.LapNumber,1}))
 end
 end
 function fcnStartHomecageButton(~,~)
@@ -232,8 +221,8 @@ disp('Start Homecage')
 global miscVar
 global ParsedFrames
 if miscVar.VideoLoadedFlag==1
-    ParsedFrames.StartHomecage(miscVar.LapNumber)=miscVar.frameNum;
-    disp(num2str(ParsedFrames.StartHomecage(miscVar.LapNumber)))
+    ParsedFrames.StartHomecage{miscVar.LapNumber,1}=miscVar.frameNum;
+    disp(num2str(ParsedFrames.StartHomecage{miscVar.LapNumber,1}))
 end
 end
 function fcnLeaveHomecageButton(~,~)
@@ -241,8 +230,8 @@ disp('Leave Homecage')
 global miscVar
 global ParsedFrames
 if miscVar.VideoLoadedFlag==1
-    ParsedFrames.LeaveHomecage(miscVar.LapNumber)=miscVar.frameNum;
-    disp(num2str(ParsedFrames.LeaveHomecage(miscVar.LapNumber)))
+    ParsedFrames.LeaveHomecage{miscVar.LapNumber,1}=miscVar.frameNum;
+    disp(num2str(ParsedFrames.LeaveHomecage{miscVar.LapNumber,1}))
 end
 end
 function fcnForcedDirButton(~,~)
@@ -276,17 +265,17 @@ if miscVar.VideoLoadedFlag==1
 end
 end
 function fcnJumpFrameButton(~,~)
-disp('Jump frame')
 global videoFig
 global miscVar
 global video
 
     try
         jumpFrame = inputdlg('Jump to what frame?');
-        switch mod(str2double(jumpFrame),1)==0
+        switch mod(str2double(jumpFrame{:}),1)==0
             case 0
                 msgbox('Frame number must be an integer','Error','error')
             case 1  
+                jumpFrame=str2double(jumpFrame{:});
                 if jumpFrame>0 && jumpFrame <=miscVar.totalFrames
                     miscVar.frameNum = jumpFrame-1;
                     video.CurrentTime = miscVar.frameNum/video.FrameRate;
@@ -295,7 +284,7 @@ global video
                     videoFig.plotted = imagesc(miscVar.currentFrame);
                     title(['frame ' num2str(miscVar.frameNum) '/' num2str(miscVar.totalFrames)])
                 else   
-                    msgbox('Fram number must in range','Error','error')
+                    msgbox('Frame number must in range','Error','error')
                 end
         end
     catch
@@ -303,7 +292,6 @@ global video
     end 
 end
 function fcnLoadVideo(~,~)
-disp('Load video')
 global videoFig
 global miscVar
 global video
@@ -320,17 +308,69 @@ videoFig.plotted;
 imagesc(miscVar.currentFrame);
 title(['Frame ' num2str(miscVar.frameNum) '/' num2str(miscVar.totalFrames)])
 miscVar.VideoLoadedFlag=1;
-videoFig;
+videoFig.Name=miscVar.FileName;
+catch
+    disp('Something went wrong')
 end
 end
 function fcnSaveSheet(~,~)
+global ParsedFrames
+global miscVar
 disp('Save sheet')
+for laps=1:length(size(ParsedFrames.LapStart,1));
+    ParsedFrames.LapNumber{laps,1}=laps;
+end    
+%try 
+%   
+headings={'Trial #'; 'Start on maze (start of Forced'; 'Lift barrier (start of free choice)';...
+            'Leave maze'; 'Start in homecage'; 'Leave homecage'; 'Forced Trial Type (L/R)';...
+            'Free Trial Choice (L/R)'};
+realTable=table(ParsedFrames.LapNumber,...
+                ParsedFrames.LapStart,...
+                ParsedFrames.LiftBarrier,...
+                ParsedFrames.LeaveMaze,...
+                ParsedFrames.StartHomecage,...
+                ParsedFrames.LeaveHomecage,...
+                ParsedFrames.ForcedDir,...
+                ParsedFrames.FreeDir);
+            
+bonusTable=table(ParsedFrames.LapNumber,...
+                 ParsedFrames.EnterDelay);
+%catch 
+%    save 'trystuff.mat' 'ParsedFrames'
+%end            
+             
+undecided=0;
+while undecided==0
+    saveName = inputdlg('Name to save as:','Save Name',[1 40],{'DNMPsheet.xlsx'});             
+    if exist(fullfile(miscVar.PathName,saveName{1}),'file')==0
+        xlswrite(fullfile(miscVar.PathName,saveName{1}),table2cell(realTable));
+        xlswrite(fullfile(miscVar.PathName,[saveName{1}(1:end-5) '_bonus.xlsx']),table2cell(bonusTable));
+        undecided=1;
+    else                 
+        filechoice = questdlg('File already exists!', 'File exists',...
+                              'Replace','New name','Cancel','Replace');
+        switch filechoice
+            case 'Replace'
+                xlswrite(fullfile(miscVar.PathName,saveName{1}),table2cell(realTable));
+                xlswrite(fullfile(miscVar.PathName,[saveName{1}(1:end-5) '_bonus.xlsx']),table2cell(bonusTable));
+                undecided=1;
+            case 'New name'
+                undecided=0;
+            case 'Cancel'
+                undecided=1;
+        end         
+    end
+end    
+end
+function fcnLoadSheet(~,~)
+disp('Load sheet')
 end
 function fcnFakePlayer(~,~)
 disp('fake player')
 end
 %%
-function keyPress(src, e)
+function keyPress(~, e)%src
 
 global miscVar
 global videoFig
