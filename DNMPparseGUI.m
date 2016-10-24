@@ -1,95 +1,125 @@
 function DNMPparseGUI( ~,~ )
-%UNTITLED Summary of this function goes here
-%   Detailed explanation goes here
+% Tool to facilitate parsing AVI for DNMP task into event time stamps (frame numbers),
+% export those numbers in an excel sheet for using with Nat's DNMP
+% functions. Select lap number, toggle between frames, click button to set
+% that frame number as that type of event. Have to click away from button
+% on figure for going between frames to work. If lap number button is red, click it to 
+% start logging on that lap number
+
+%%
 global miscVar
-global Controller
+global ParsedFrames
 global videoFig
 global video
 
 miscVar.panelHeight = 480;
-videoFig.videoPanel = figure('Position',[100,100,800,miscVar.panelHeight],'MenuBar','none');
-plotted = subplot(1,2,1,'Position',[0.05,0.1,0.6,0.8]);
+videoFig.videoPanel = figure('Position',[100,100,900,miscVar.panelHeight],'MenuBar','none','KeyPressFcn',@keyPress);
+videoFig.plotted = subplot(1,2,1,'Position',[0.05,0.1,0.55,0.8]);
 title('Frame 1/lots')
 
-miscVar.upperLimit = miscVar.panelHeight - 70;
+miscVar.upperLimit = miscVar.panelHeight - 120;
 miscVar.buttonStepDown = 40;
-miscVar.buttonLeftEdge = 550;
+miscVar.buttonLeftEdge = 560;
+miscVar.buttonSecondCol = 705;
+miscVar.buttonWidth = 130;
+miscVar.Gray=[0.94,0.94,0.94];
+miscVar.Red=[0.75,0,0];
+miscVar.VideoLoadedFlag=0;
 
+
+videoFig.LapNumberButton = uicontrol('Style','pushbutton','String','LAP NUMBER',...
+                           'Position',[miscVar.buttonLeftEdge+60,miscVar.upperLimit+50,miscVar.buttonWidth,30],...
+                           'Callback',{@fcnLapNumberButton},'BackgroundColor',miscVar.Gray);
+miscVar.LapNumber=1;                       
+
+videoFig.LapNumberBox = uicontrol('Style','edit','string','1',...
+                           'Position',[miscVar.buttonLeftEdge+60+miscVar.buttonWidth+15,miscVar.upperLimit+50,...
+                           50,30]);
+                       
+videoFig.LapNumberPlus = uicontrol('Style','pushbutton','String','+',...
+                           'Position',[miscVar.buttonLeftEdge+60+miscVar.buttonWidth+15+52,miscVar.upperLimit+65,...
+                           20,15],'Callback',{@fcnLapNumberPlus});
+                       
+videoFig.LapNumberMinus = uicontrol('Style','pushbutton','String','-',...
+                           'Position',[miscVar.buttonLeftEdge+60+miscVar.buttonWidth+15+52,miscVar.upperLimit+50,...
+                           20,15],'Callback',{@fcnLapNumberMinus});
+                       
+
+%%
 videoFig.LapStartButton = uicontrol('Style','pushbutton','String','LAP START',...
-                           'Position',[miscVar.buttonLeftEdge,miscVar.upperLimit,230,30],...
+                           'Position',[miscVar.buttonLeftEdge,miscVar.upperLimit,miscVar.buttonWidth,30],...
                            'Callback',{@fcnLapStartButton});
                        
 videoFig.EnterDelayButton = uicontrol('Style','pushbutton','String','ENTER DELAY',...
-                             'Position',[miscVar.buttonLeftEdge,miscVar.upperLimit - miscVar.buttonStepDown*1,230,30],...
+                             'Position',[miscVar.buttonSecondCol,miscVar.upperLimit, miscVar.buttonWidth,30],...
                              'Callback',{@fcnEnterDelayButton});
                          
 videoFig.LiftBarrierButton = uicontrol('Style','pushbutton','String','LIFT BARRIER',...
-                             'Position',[miscVar.buttonLeftEdge,miscVar.upperLimit - miscVar.buttonStepDown*2,230,30],...
-                             'Callback',{@fcnLiftBarrierButton});
+                             'Position',[miscVar.buttonLeftEdge,miscVar.upperLimit - miscVar.buttonStepDown*1,...
+                             miscVar.buttonWidth,30], 'Callback',{@fcnLiftBarrierButton});
                          
 videoFig.LeaveMazeButton = uicontrol('Style','pushbutton','String','LEAVE MAZE',...
-                             'Position',[miscVar.buttonLeftEdge,miscVar.upperLimit - miscVar.buttonStepDown*3,230,30],...
-                             'Callback',{@fcnLeaveMazeButton});
+                             'Position',[miscVar.buttonSecondCol,miscVar.upperLimit - miscVar.buttonStepDown*1,...
+                             miscVar.buttonWidth,30], 'Callback',{@fcnLeaveMazeButton});
 
 videoFig.StartHomecageButton = uicontrol('Style','pushbutton','String','START HOMECAGE',...
-                             'Position',[miscVar.buttonLeftEdge,miscVar.upperLimit - miscVar.buttonStepDown*4,230,30],...
-                             'Callback',{@fcnStartHomecageButton});
+                             'Position',[miscVar.buttonLeftEdge,miscVar.upperLimit - miscVar.buttonStepDown*2,...
+                             miscVar.buttonWidth,30], 'Callback',{@fcnStartHomecageButton});
 
 videoFig.LeaveHomecageButton = uicontrol('Style','pushbutton','String','LEAVE HOMECAGE',...
-                             'Position',[miscVar.buttonLeftEdge,miscVar.upperLimit - miscVar.buttonStepDown*5,230,30],...
-                             'Callback',{@fcnLeaveHomecageButton});
+                             'Position',[miscVar.buttonSecondCol,miscVar.upperLimit - miscVar.buttonStepDown*2,...
+                             miscVar.buttonWidth,30], 'Callback',{@fcnLeaveHomecageButton});
 
 videoFig.ForcedTrialDirButton = uicontrol('Style','pushbutton','String','FORCED TRIAL DIR',...
-                                'Position',[miscVar.buttonLeftEdge,miscVar.upperLimit - miscVar.buttonStepDown*6,130,30],...
-                                'Callback',{@fcnForcedDirButton});
+                                'Position',[miscVar.buttonLeftEdge,miscVar.upperLimit - miscVar.buttonStepDown*3,...
+                                130,30], 'Callback',{@fcnForcedDirButton});
 
 videoFig.PopForcedDir = uicontrol('Style','popup',... 
-                             'Position',[miscVar.buttonLeftEdge+130+10,miscVar.upperLimit - miscVar.buttonStepDown*6-7,95,30],...
+                             'Position',[miscVar.buttonLeftEdge+130+10,miscVar.upperLimit - miscVar.buttonStepDown*3-7,95,30],...
                              'string',{'          LEFT   ';'         RIGHT   '},...
                              'Value', 1);
 
-videoFig.FreeTrialDirButton = uicontrol('Style','pushbutton','String','FORCED TRIAL DIR',...
-                                'Position',[miscVar.buttonLeftEdge,miscVar.upperLimit - miscVar.buttonStepDown*7,130,30],...
-                                'Callback',{@fcnFreeDirButton});
+videoFig.FreeTrialDirButton = uicontrol('Style','pushbutton','String','FREE TRIAL DIR',...
+                             'Position',[miscVar.buttonLeftEdge,miscVar.upperLimit - miscVar.buttonStepDown*4,130,30],...
+                             'Callback',{@fcnFreeDirButton});
 
 videoFig.PopFreeDir = uicontrol('Style','popup',... 
-                             'Position',[miscVar.buttonLeftEdge+130+10,miscVar.upperLimit - miscVar.buttonStepDown*7-7,95,30],...
+                             'Position',[miscVar.buttonLeftEdge+130+10,miscVar.upperLimit - miscVar.buttonStepDown*4-7,95,30],...
                              'string',{'          LEFT   ';'         RIGHT   '},...
                              'Value', 1); 
+%%
+                         
+videoFig.LoadVideoButton = uicontrol('Style','pushbutton','String','LOAD VIDEO',...
+                             'Position',[miscVar.buttonLeftEdge,miscVar.upperLimit - miscVar.buttonStepDown*6,...
+                             miscVar.buttonWidth,30],'Callback',{@fcnLoadVideo}); 
+                         
+videoFig.SaveSheetExcel = uicontrol('Style','pushbutton','String','SAVE SHEET',...                         
+                             'Position',[miscVar.buttonSecondCol,miscVar.upperLimit - miscVar.buttonStepDown*6,...
+                             miscVar.buttonWidth,30],'Callback',{@fcnSaveSheet});     
                          
 videoFig.JumpFrameButton = uicontrol('Style','pushbutton','String','JUMP TO FRAME',...
-                             'Position',[miscVar.buttonLeftEdge,miscVar.upperLimit - miscVar.buttonStepDown*9,230,30],...
-                             'Callback',{@fcnJumpFrameButton});
+                             'Position',[miscVar.buttonLeftEdge,miscVar.upperLimit - miscVar.buttonStepDown*7,...
+                             miscVar.buttonWidth,30], 'Callback',{@fcnJumpFrameButton});
                          
 videoFig.fakePlay = uicontrol('Style','pushbutton','String','PLAY',...
-                        'Position',[miscVar.buttonLeftEdge,miscVar.upperLimit - miscVar.buttonStepDown*10,130,30],...
-                        'BackgroundColor',[0.92 0.92 0.92],'Callback',{@fcnHFGNGv2_CycleOnOff});
+                        'Position',[miscVar.buttonLeftEdge,miscVar.upperLimit - miscVar.buttonStepDown*8,...
+                        miscVar.buttonWidth,30], 'BackgroundColor',miscVar.Gray,'Callback',{@fcnFakePlayer});
 
 videoFig.PopDurPunish = uicontrol('Style','popup',... 
-                             'Position',[miscVar.buttonLeftEdge+130+10,miscVar.upperLimit - miscVar.buttonStepDown*10-7,95,30],...
+                             'Position',[miscVar.buttonLeftEdge+130+10,miscVar.upperLimit - miscVar.buttonStepDown*8-7,95,30],...
                              'string',{'          1x   ';'         2x   ';'         4x   ';'        10x   '},...
                              'Value', 1,'Callback',{@fcnSetFakePlaySpeed}); 
-                    
+                         
+%%
+%ParsedFrames.StartMaze, LiftBarrier, LeaveMaze, StartHomecage, LeaveHomecage, ForcedTrialLR, FreeTrialLR, EnterDelay
+
+
+
 % green = [0.5 1 0.5], red = [1 0.5 0.5]
-%[filename, pathname] = uigetfile('*.avi', 'Select AVI file to scroll through: ');
 %avi_filepath = fullfile(pathname,filename);
+%{
 
-avi_filepath = fullfile('D:\Polaris_160831','0021.avi'); 
-
-%h1 = implay(avi_filepath);
-disp(['Using ' avi_filepath ])
-video = VideoReader(avi_filepath);
-miscVar.currentTime = 0;
-miscVar.currentFrame = readFrame(video);
-miscVar.currentTime = miscVar.currentTime+video.FrameRate^-1;
-miscVar.frameNum = 1;
-%close(h1);
-videoFig = figure('Name',avi_filepath,...
-                  'KeyPressFcn',@keyPress);
-imagesc(miscVar.currentFrame);
-miscVar.totalFrames = 100000;
-title(['Frame ' num2str(miscVar.frameNum) '/' num2str(miscVar.totalFrames)])
-
+%}
 %MyButton = uicontrol('Style', 'pushbutton','Callback',@task);
 %      function task(src, e)
  %        disp('button press');
@@ -108,37 +138,201 @@ LiftBarrierButton
 PlayVid button (spacebar hotkey), play rate drop down
 %}
 end
+%%
+function fcnLapNumberButton(~,~)
+global miscVar
+global videoFig
 
-function task(src, e)
-         disp('button press');
+disp('Lap number')
+try 
+    miscVar.hold=miscVar.LapNumber;
+    miscVar.LapNumber=str2double(videoFig.LapNumberBox.String);
+    if miscVar.LapNumber<1 || mod(str2double(videoFig.LapNumberBox.String),1)~=0
+        msgbox('Lap number must be integer > zero.', 'Error','error');
+        miscVar.LapNumber=miscVar.hold;
+        videoFig.LapNumberBox.String=miscVar.LapNumber;
+        videoFig.LapNumberBox.BackgroundColor=miscVar.Red;
+        disp(num2str(miscVar.LapNumber))
+    else    
+        videoFig.LapNumberButton.BackgroundColor=miscVar.Gray;
+        miscVar.LapNumber=str2double(videoFig.LapNumberBox.String);
+        disp(['Lap number is ' num2str(miscVar.LapNumber)])
+    end    
+catch
+    msgbox('Lap number must be an integer.', 'Error','error');
+    videoFig.LapNumberBox.BackgroundColor=miscVar.Red;
+end
+videoFig;
+
+end
+function fcnLapNumberPlus(~,~)
+global videoFig
+global miscVar
+disp('Lap number plus')
+switch mod(str2double(videoFig.LapNumberBox.String),1)~=0
+    case 0
+    videoFig.LapNumberBox.String=num2str(str2double(videoFig.LapNumberBox.String)+1);
+    videoFig.LapNumberButton.BackgroundColor=miscVar.Red;
+    case 1
+    msgbox('Lap number must be an integer.', 'Error','error');
+end    
+end
+function fcnLapNumberMinus(~,~)
+global videoFig
+global miscVar
+disp('Lap number minus')
+if str2double(videoFig.LapNumberBox.String)-1>0
+switch mod(str2double(videoFig.LapNumberBox.String),1)~=0
+    case 0
+    videoFig.LapNumberBox.String=num2str(str2double(videoFig.LapNumberBox.String)-1);
+    videoFig.LapNumberButton.BackgroundColor=miscVar.Red;
+    case 1
+    msgbox('Lap number must be an integer.', 'Error','error');
+end     
+end
 end
 function fcnLapStartButton(~,~)
 disp('Lap Start')
+global miscVar
+global ParsedFrames
+if miscVar.VideoLoadedFlag==1
+    ParsedFrames.LapStart(miscVar.LapNumber)=miscVar.frameNum;
+    disp(num2str(ParsedFrames.LapStart(miscVar.LapNumber)))
+end
 end
 function fcnEnterDelayButton(~,~)
 disp('Enter Delay')
+global miscVar
+global ParsedFrames
+if miscVar.VideoLoadedFlag==1
+    ParsedFrames.EnterDelay(miscVar.LapNumber)=miscVar.frameNum;
+    disp(num2str(ParsedFrames.EnterDelay(miscVar.LapNumber)))
+end
 end
 function fcnLiftBarrierButton(~,~)
 disp('Lift Barrier')
+global miscVar
+global ParsedFrames
+if miscVar.VideoLoadedFlag==1
+    ParsedFrames.LiftBarrier(miscVar.LapNumber)=miscVar.frameNum;
+    disp(num2str(ParsedFrames.LiftBarrier(miscVar.LapNumber)))
+end
 end
 function fcnLeaveMazeButton(~,~)
 disp('Leave Maze')
+global miscVar
+global ParsedFrames
+if miscVar.VideoLoadedFlag==1
+    ParsedFrames.LeaveMaze(miscVar.LapNumber)=miscVar.frameNum;
+    disp(num2str(ParsedFrames.LeaveMaze(miscVar.LapNumber)))
+end
 end
 function fcnStartHomecageButton(~,~)
 disp('Start Homecage')
+global miscVar
+global ParsedFrames
+if miscVar.VideoLoadedFlag==1
+    ParsedFrames.StartHomecage(miscVar.LapNumber)=miscVar.frameNum;
+    disp(num2str(ParsedFrames.StartHomecage(miscVar.LapNumber)))
+end
 end
 function fcnLeaveHomecageButton(~,~)
 disp('Leave Homecage')
+global miscVar
+global ParsedFrames
+if miscVar.VideoLoadedFlag==1
+    ParsedFrames.LeaveHomecage(miscVar.LapNumber)=miscVar.frameNum;
+    disp(num2str(ParsedFrames.LeaveHomecage(miscVar.LapNumber)))
+end
 end
 function fcnForcedDirButton(~,~)
 disp('Forced Direction')
+global miscVar
+global ParsedFrames
+global videoFig
+if miscVar.VideoLoadedFlag==1
+    switch videoFig.PopForcedDir.Value
+        case 1
+            ParsedFrames.ForcedDir{miscVar.LapNumber,1}='L';
+        case 2    
+            ParsedFrames.ForcedDir{miscVar.LapNumber,1}='R';
+    end        
+    disp(ParsedFrames.ForcedDir{miscVar.LapNumber,1})
+end
 end
 function fcnFreeDirButton(~,~)
 disp('Free Direction')
-end
-function keyPress(src, e)
 global miscVar
-%global Controller
+global ParsedFrames
+global videoFig
+if miscVar.VideoLoadedFlag==1
+    switch videoFig.PopFreeDir.Value
+        case 1
+            ParsedFrames.FreeDir{miscVar.LapNumber,1}='L';
+        case 2    
+            ParsedFrames.FreeDir{miscVar.LapNumber,1}='R';
+    end        
+    disp(ParsedFrames.FreeDir{miscVar.LapNumber,1})
+end
+end
+function fcnJumpFrameButton(~,~)
+disp('Jump frame')
+global videoFig
+global miscVar
+global video
+
+    try
+        jumpFrame = inputdlg('Jump to what frame?');
+        switch mod(str2double(jumpFrame),1)==0
+            case 0
+                msgbox('Frame number must be an integer','Error','error')
+            case 1  
+                if jumpFrame>0 && jumpFrame <=miscVar.totalFrames
+                    miscVar.frameNum = jumpFrame-1;
+                    video.CurrentTime = miscVar.frameNum/video.FrameRate;
+                    miscVar.currentFrame = readFrame(video);
+                    miscVar.frameNum = miscVar.frameNum + 1;
+                    videoFig.plotted = imagesc(miscVar.currentFrame);
+                    title(['frame ' num2str(miscVar.frameNum) '/' num2str(miscVar.totalFrames)])
+                else   
+                    msgbox('Fram number must in range','Error','error')
+                end
+        end
+    catch
+        msgbox('Why would you even?')
+    end 
+end
+function fcnLoadVideo(~,~)
+disp('Load video')
+global videoFig
+global miscVar
+global video
+
+try
+[miscVar.FileName,miscVar.PathName] = uigetfile('*.AVI','Select the AVI file');
+video = VideoReader(fullfile(miscVar.PathName,miscVar.FileName));
+miscVar.currentTime = 0;
+miscVar.currentFrame = readFrame(video);
+miscVar.currentTime = miscVar.currentTime+video.FrameRate^-1;
+miscVar.frameNum = 1;
+miscVar.totalFrames = video.Duration/video.FrameRate^-1;
+videoFig.plotted;
+imagesc(miscVar.currentFrame);
+title(['Frame ' num2str(miscVar.frameNum) '/' num2str(miscVar.totalFrames)])
+miscVar.VideoLoadedFlag=1;
+videoFig;
+end
+end
+function fcnSaveSheet(~,~)
+disp('Save sheet')
+end
+function fcnFakePlayer(~,~)
+disp('fake player')
+end
+%%
+function keyPress(src, e)
+
+global miscVar
 global videoFig
 global video
 
@@ -152,8 +346,8 @@ switch e.Key
             video.CurrentTime = miscVar.frameNum/video.FrameRate;
             miscVar.currentFrame = readFrame(video);
             miscVar.frameNum = miscVar.frameNum + 1;
-            videoFig = imagesc(miscVar.currentFrame);
-            title(['Frame ' num2str(miscVar.frameNum)])
+            videoFig.plotted = imagesc(miscVar.currentFrame);
+            title(['Frame ' num2str(miscVar.frameNum) ' / ' num2str(miscVar.totalFrames)])
         end
     case 'a' %Step back 10
         if video.currentTime > 10/video.FrameRate
@@ -161,8 +355,8 @@ switch e.Key
             video.CurrentTime = miscVar.frameNum/video.FrameRate;
             miscVar.currentFrame = readFrame(video);
             miscVar.frameNum = miscVar.frameNum + 1;
-            videoFig = imagesc(miscVar.currentFrame);
-            title(['Frame ' num2str(miscVar.frameNum)])
+            videoFig.plotted = imagesc(miscVar.currentFrame);
+            title(['Frame ' num2str(miscVar.frameNum) ' / ' num2str(miscVar.totalFrames)])
         end
     case 's'   %Step back
         %can't do frame 0/1
@@ -171,31 +365,36 @@ switch e.Key
             video.CurrentTime = miscVar.frameNum/video.FrameRate;
             miscVar.currentFrame = readFrame(video);
             miscVar.frameNum = miscVar.frameNum + 1;
-            videoFig = imagesc(miscVar.currentFrame);
-            title(['Frame ' num2str(miscVar.frameNum)])
+            videoFig.plotted = imagesc(miscVar.currentFrame);
+            title(['Frame ' num2str(miscVar.frameNum) ' / ' num2str(miscVar.totalFrames)])
         end
-    case 'd' %Step forward
-        
-        miscVar.currentFrame = readFrame(video);
-        miscVar.frameNum = miscVar.frameNum+1;
-        videoFig = imagesc(miscVar.currentFrame);
-        title(['Frame ' num2str(miscVar.frameNum)])
+    case 'd' %Step forward 1
+        if video.currentTime+1 <= miscVar.totalFrames
+            miscVar.currentFrame = readFrame(video);
+            miscVar.frameNum = miscVar.frameNum+1;
+            videoFig.plotted = imagesc(miscVar.currentFrame);
+            title(['Frame ' num2str(miscVar.frameNum) ' / ' num2str(miscVar.totalFrames)])
+        end
     case 'f' %Step forward 10  
-        miscVar.frameNum = miscVar.frameNum + 9;
-        video.CurrentTime = miscVar.frameNum/video.FrameRate;
-        miscVar.currentFrame = readFrame(video);
-        miscVar.frameNum = miscVar.frameNum + 1;
-        videoFig = imagesc(miscVar.currentFrame);
-        title(['Frame ' num2str(miscVar.frameNum)])
+        if video.currentTime+10 <= miscVar.totalFrames
+            miscVar.frameNum = miscVar.frameNum + 9;
+            video.CurrentTime = miscVar.frameNum/video.FrameRate;
+            miscVar.currentFrame = readFrame(video);
+            miscVar.frameNum = miscVar.frameNum + 1;
+            videoFig.plotted = imagesc(miscVar.currentFrame);
+            title(['Frame ' num2str(miscVar.frameNum) ' / ' num2str(miscVar.totalFrames)])
+        end
     case 'r' %Step forward 100
-        miscVar.frameNum = miscVar.frameNum + 99;
-        video.CurrentTime = miscVar.frameNum/video.FrameRate;
-        miscVar.currentFrame = readFrame(video);
-        miscVar.frameNum = miscVar.frameNum + 1;
-        videoFig = imagesc(miscVar.currentFrame);
-        title(['Frame ' num2str(miscVar.frameNum)])
+        if video.currentTime+1 <= miscVar.totalFrames
+            miscVar.frameNum = miscVar.frameNum + 99;
+            video.CurrentTime = miscVar.frameNum/video.FrameRate;
+            miscVar.currentFrame = readFrame(video);
+            miscVar.frameNum = miscVar.frameNum + 1;
+            videoFig.plotted = imagesc(miscVar.currentFrame);
+            title(['Frame ' num2str(miscVar.frameNum) ' / ' num2str(miscVar.totalFrames)])
+        end    
     case 'space'    
-        
+        disp('Fake player start/stop')
 end
          
 end
