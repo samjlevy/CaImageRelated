@@ -30,6 +30,7 @@ miscVar.Gray=[0.94,0.94,0.94];
 miscVar.Red=[1,0.5,0.5];
 miscVar.Green = [0.5 1 0.5];
 miscVar.VideoLoadedFlag=0;
+miscVar.LapsWorkedOn=[];
 
 
 videoFig.LapNumberButton = uicontrol('Style','pushbutton','String','LAP NUMBER',...
@@ -68,6 +69,10 @@ end
 %% Layout for DNMP
 switch miscVar.sessionClass
     case 1
+        miscVar.buttonsInUse={'LapStartButton';'EnterDelayButton';...
+                               'LiftBarrierButton';'LeaveMazeButton';
+                               'StartHomecageButton';'LeaveHomecageButton';'ForcedTrialDirButton';...
+                               'FreeTrialDirButton'}; 
 videoFig.LapStartButton = uicontrol('Style','pushbutton','String','LAP START',...
                            'Position',[miscVar.buttonLeftEdge,miscVar.upperLimit,miscVar.buttonWidth,30],...
                            'Callback',{@fcnLapStartButton});
@@ -126,6 +131,10 @@ ParsedFrames.EnterDelay={headings{9}};
 
 %% Layout for ForcedUnforced
     case 2
+        miscVar.buttonsInUse={'LapStartButton';'EnterDelayButton';...
+                               'LeaveMazeButton';'StartHomecageButton';...
+                               'LeaveHomecageButton';'TrialTypeButton';...
+                               'TrialDirButton'}; 
 videoFig.LapStartButton = uicontrol('Style','pushbutton','String','LAP START',...
                            'Position',[miscVar.buttonLeftEdge,miscVar.upperLimit,miscVar.buttonWidth,30],...
                            'Callback',{@fcnLapStartButton});
@@ -157,7 +166,7 @@ videoFig.PopTrialType = uicontrol('Style','popup',...
 
 videoFig.TrialDirButton = uicontrol('Style','pushbutton','String','TRIAL DIR',...
                              'Position',[miscVar.buttonLeftEdge,miscVar.upperLimit - miscVar.buttonStepDown*4,130,30],...
-                             'Callback',{@fcnDirButton});
+                             'Callback',{@fcnTrialDirButton});
 
 videoFig.PopTrialDir = uicontrol('Style','popup',... 
                              'Position',[miscVar.buttonLeftEdge+130+10,miscVar.upperLimit - miscVar.buttonStepDown*4-7,110,30],...
@@ -229,7 +238,16 @@ try
         disp(num2str(miscVar.LapNumber))
     else    
         videoFig.LapNumberButton.BackgroundColor=miscVar.Gray;
-        miscVar.LapNumber=str2double(videoFig.LapNumberBox.String);
+        %miscVar.LapNumber=str2double(videoFig.LapNumberBox.String);
+        switch any(miscVar.LapsWorkedOn==miscVar.LapNumber)
+            case 0
+                for buttonCol=1:length(miscVar.buttonsInUse)
+                    eval(['videoFig.',miscVar.buttonsInUse{buttonCol},'.BackgroundColor=miscVar.Red;'])
+                end
+            case 1
+                %message things will be overwritten
+        end
+        miscVar.LapsWorkedOn=[miscVar.LapsWorkedOn; miscVar.LapNumber];
         disp(['Lap number is ' num2str(miscVar.LapNumber)])
     end    
 catch
@@ -265,58 +283,71 @@ switch mod(str2double(videoFig.LapNumberBox.String),1)~=0
 end     
 end
 end
+%%
 function fcnLapStartButton(~,~)
 disp('Lap Start')
 global miscVar
 global ParsedFrames
+global videoFig
 if miscVar.VideoLoadedFlag==1
     ParsedFrames.LapStart{miscVar.LapNumber+1,1}=miscVar.frameNum;
     disp(num2str(ParsedFrames.LapStart{miscVar.LapNumber+1,1}))
+    videoFig.LapStartButton.BackgroundColor=miscVar.Gray;
 end
 end
 function fcnEnterDelayButton(~,~)
 disp('Enter Delay')
 global miscVar
 global ParsedFrames
+global videoFig
 if miscVar.VideoLoadedFlag==1
     ParsedFrames.EnterDelay{miscVar.LapNumber+1,1}=miscVar.frameNum;
     disp(num2str(ParsedFrames.EnterDelay{miscVar.LapNumber+1,1}))
+    videoFig.EnterDelayButton.BackgroundColor=miscVar.Gray;
 end
 end
 function fcnLiftBarrierButton(~,~)
 disp('Lift Barrier')
 global miscVar
 global ParsedFrames
+global videoFig
 if miscVar.VideoLoadedFlag==1
     ParsedFrames.LiftBarrier{miscVar.LapNumber+1,1}=miscVar.frameNum;
     disp(num2str(ParsedFrames.LiftBarrier{miscVar.LapNumber+1,1}))
+    videoFig.LiftBarrierButton.BackgroundColor=miscVar.Gray;
 end
 end
 function fcnLeaveMazeButton(~,~)
 disp('Leave Maze')
 global miscVar
 global ParsedFrames
+global videoFig
 if miscVar.VideoLoadedFlag==1
     ParsedFrames.LeaveMaze{miscVar.LapNumber+1,1}=miscVar.frameNum;
     disp(num2str(ParsedFrames.LeaveMaze{miscVar.LapNumber+1,1}))
+    videoFig.LeaveMazeButton.BackgroundColor=miscVar.Gray;
 end
 end
 function fcnStartHomecageButton(~,~)
 disp('Start Homecage')
 global miscVar
 global ParsedFrames
+global videoFig
 if miscVar.VideoLoadedFlag==1
     ParsedFrames.StartHomecage{miscVar.LapNumber+1,1}=miscVar.frameNum;
     disp(num2str(ParsedFrames.StartHomecage{miscVar.LapNumber+1,1}))
+    videoFig.StartHomecageButton.BackgroundColor=miscVar.Gray;
 end
 end
 function fcnLeaveHomecageButton(~,~)
 disp('Leave Homecage')
 global miscVar
 global ParsedFrames
+global videoFig
 if miscVar.VideoLoadedFlag==1
     ParsedFrames.LeaveHomecage{miscVar.LapNumber+1,1}=miscVar.frameNum;
     disp(num2str(ParsedFrames.LeaveHomecage{miscVar.LapNumber+1,1}))
+    videoFig.LeaveHomecageButton.BackgroundColor=miscVar.Gray;
 end
 end
 function fcnForcedDirButton(~,~)
@@ -332,6 +363,7 @@ if miscVar.VideoLoadedFlag==1
             ParsedFrames.ForcedDir{miscVar.LapNumber+1,1}='R';
     end        
     disp(ParsedFrames.ForcedDir{miscVar.LapNumber+1,1})
+    videoFig.ForcedDirButton.BackgroundColor=miscVar.Gray;
 end
 end
 function fcnFreeDirButton(~,~)
@@ -347,6 +379,7 @@ if miscVar.VideoLoadedFlag==1
             ParsedFrames.FreeDir{miscVar.LapNumber+1,1}='R';
     end        
     disp(ParsedFrames.FreeDir{miscVar.LapNumber+1,1})
+    videoFig.FreeDirButton.BackgroundColor=miscVar.Gray;
 end
 end
 function fcnTrialTypeButton(~,~)
@@ -362,9 +395,10 @@ if miscVar.VideoLoadedFlag==1
             ParsedFrames.TrialType{miscVar.LapNumber+1,1}='FREE';
     end        
     disp(ParsedFrames.TrialType{miscVar.LapNumber+1,1})
+    videoFig.TrialTypeButton.BackgroundColor=miscVar.Gray;
 end
 end
-function fcnDirButton(~,~)
+function fcnTrialDirButton(~,~)
 disp('Trial Direction')
 global miscVar
 global ParsedFrames
@@ -377,8 +411,10 @@ if miscVar.VideoLoadedFlag==1
             ParsedFrames.TrialDir{miscVar.LapNumber+1,1}='R';
     end        
     disp(ParsedFrames.TrialDir{miscVar.LapNumber+1,1})
+    videoFig.TrialDirButton.BackgroundColor=miscVar.Gray;
 end
 end
+%%
 function fcnJumpFrameButton(~,~)
 global videoFig
 global miscVar
@@ -465,28 +501,32 @@ catch
     %Error handling!
 end            
              
-undecided=0;
+undecided=0; saveNow=0;
 while undecided==0
     saveName = inputdlg('Name to save as:','Save Name',[1 40],{'DNMPsheet.xlsx'});             
-    if exist(fullfile(miscVar.PathName,saveName{1}),'file')==0
-        xlswrite(fullfile(miscVar.PathName,saveName{1}),table2cell(realTable));
-        xlswrite(fullfile(miscVar.PathName,[saveName{1}(1:end-5) '_bonus.xlsx']),table2cell(bonusTable));
-        undecided=1;
-    else                 
-        filechoice = questdlg('File already exists!', 'File exists',...
+    if exist(fullfile(miscVar.PathName,saveName{1}),'file')==2
+      filechoice = questdlg('File already exists!', 'File exists',...
                               'Replace','New name','Cancel','Replace');
         switch filechoice
             case 'Replace'
-                xlswrite(fullfile(miscVar.PathName,saveName{1}),table2cell(realTable));
-                xlswrite(fullfile(miscVar.PathName,[saveName{1}(1:end-5) '_bonus.xlsx']),table2cell(bonusTable));
-                undecided=1;
+                undecided=1; saveNow=1;
             case 'New name'
                 undecided=0;
             case 'Cancel'
-                undecided=1;
-        end         
+                undecided=1; saveNow=1;
+        end
+    else 
+        
     end
-end    
+end
+if saveNow==1;
+    try
+        xlswrite(fullfile(miscVar.PathName,saveName{1}),table2cell(realTable));
+        xlswrite(fullfile(miscVar.PathName,[saveName{1}(1:end-5) '_bonus.xlsx']),table2cell(bonusTable));
+    catch
+        disp('Some saving error')   
+    end    
+end
 end
 function fcnLoadSheet(~,~)
 disp('Load sheet')
