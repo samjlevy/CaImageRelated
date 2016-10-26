@@ -303,41 +303,8 @@ else
     end
     close(velthreshing)
 end
-% Get initial velocity profile for auto-thresholding
-%{
-vel_init = hypot(diff(Xpix),diff(Ypix))/(time(2)-time(1));
-vel_init = [vel_init; vel_init(end)];
-% vel_init = [vel_init(1); vel_init];
-[fv, xv] = ecdf(vel_init);
-if exist('auto_thresh','var')
-    auto_vel_thresh = min(xv(fv > (1-auto_thresh)));
-else
-    auto_vel_thresh = max(vel_init)+1;
-    auto_thresh = nan; % Don't perform any autocorrection if not specified
-end
 
-
-% Determine if auto thresholding applies
-
-if sum(auto_frames) > 0 && ~isnan(auto_thresh)
-    auto_thresh_flag = 1;
-    [ on, off ] = get_on_off( auto_frames );
-    [ epoch_start, epoch_end ] = cluster_epochs( on, off, cluster_thresh );
-    n_epochs = length(epoch_start);
-    
-    % Apply epoch length limits if applicable
-    if ~isempty(epoch_length_lim)
-        epoch_lengths = epoch_end - epoch_start;
-        epoch_start = epoch_start(epoch_lengths < epoch_length_lim);
-        epoch_end = epoch_end(epoch_lengths < epoch_length_lim);
-        n_epochs = length(epoch_start);
-    end
-else %if sum(auto_frames) == 0
-    auto_thresh_flag = 0;
-end
-%}
 epoch_start=[]; epoch_end=[];
-
 
 PosAndVel=figure('name','Position and Velocity');
 hx0 = subplot(4,3,1:3);plot(time,Xpix);xlabel('time (sec)');ylabel('x position (cm)');yl = get(gca,'YLim');line([MoMtime MoMtime], [yl(1) yl(2)],'Color','r');axis tight;
@@ -348,26 +315,39 @@ hline=refline(0,auto_vel_thresh);hline.Color='r';hline.LineWidth=1.5;
 %vel = hypot(diff(Xpix),diff(Ypix))/(time(2)-time(1));
 
 %% All the rest...
+%% Sam section
 if ~exist('Pos_temp.mat','file')
     save Pos_temp.mat Xpix Ypix xAVI yAVI MoMtime MouseOnMazeFrame maze v0 maskx masky 
 end 
 definitely_good=Xpix*0;
-zero_frames = Xpix == 0 | Ypix == 0 ;
-auto_frames = find(zero_frames);
-if any(auto_frames)
-auto_thresh_flag=1;
-end
 grayThresh=100; gaussThresh=0.2;
 max_pixel_jump=sqrt(50^2+50^2);
 distLim=max_pixel_jump;
-MorePoints = 'y';%first
-%length(time);
+typesToFix={'zero_frames'; 'outofbounds_frames'; 'highVel_frames'};
 
-n = 1; %first_time = 1;
-while ~(strcmp(MorePoints,'n')) 
-%%Sam section    
-    %First pass go for automatic detection
-    if n==1 && auto_thresh_flag==1;
+%First pass go for automatic detection
+for typeBeingFixed=1:size(typesToFix,1)
+switch typeBeingFixed    
+    case 1
+        zero_frames = Xpix == 0 | Ypix == 0 ;
+        auto_frames = find(zero_frames);%number indices
+    %{
+    case 2
+        [in,on] = inpolygon(xAVI, yAVI, maskx, masky);
+        inBounds = in || on;
+        auto_frames = find(inBounds==0);%out of bounds indices
+    case 3
+        vel_init = hypot(diff(Xpix),diff(Ypix))/(time(2)-time(1));
+        tooFast = vel_init > auto_vel_thresh;
+        auto_frames = find(tooFast);
+        %}
+end 
+        
+if any(auto_frames)
+    auto_thresh_flag=1;
+end
+
+if auto_thresh_flag==1 %n==1 &&
     ManualCorrFig=figure('name','ManualCorrFig'); imagesc(flipud(v0)); title('Auto correcting, please wait')
     resol = 1; % Percent resolution for progress bar
     p = ProgressBar(100/resol);
@@ -467,15 +447,52 @@ while ~(strcmp(MorePoints,'n'))
             total=total+1;
             if round(total/update_inc) == (total/update_inc) % Update progress bar
                 p.progress;
+                %would like to have a 50% save spot...
             end
         end 
     close(ManualCorrFig);    
     save Pos_temp.mat Xpix Ypix xAVI yAVI MoMtime MouseOnMazeFrame maskx v0 maze masky definitely_good   
     p.stop;
     disp(['Completed auto-pass on ' num2str(total) ' 0s'])
-    end 
+end 
+end    
+%% All the rest for real 
+n = 1;
+% Get initial velocity profile for auto-thresholding
+%{
+vel_init = hypot(diff(Xpix),diff(Ypix))/(time(2)-time(1));
+vel_init = [vel_init; vel_init(end)];
+% vel_init = [vel_init(1); vel_init];
+[fv, xv] = ecdf(vel_init);
+if exist('auto_thresh','var')
+    auto_vel_thresh = min(xv(fv > (1-auto_thresh)));
+else
+    auto_vel_thresh = max(vel_init)+1;
+    auto_thresh = nan; % Don't perform any autocorrection if not specified
+end
+
+
+% Determine if auto thresholding applies
+
+if sum(auto_frames) > 0 && ~isnan(auto_thresh)
+    auto_thresh_flag = 1;
+    [ on, off ] = get_on_off( auto_frames );
+    [ epoch_start, epoch_end ] = cluster_epochs( on, off, cluster_thresh );
+    n_epochs = length(epoch_start);
     
-%% All the rest for real    
+    % Apply epoch length limits if applicable
+    if ~isempty(epoch_length_lim)
+        epoch_lengths = epoch_end - epoch_start;
+        epoch_start = epoch_start(epoch_lengths < epoch_length_lim);
+        epoch_end = epoch_end(epoch_lengths < epoch_length_lim);
+        n_epochs = length(epoch_start);
+    end
+else %if sum(auto_frames) == 0
+    auto_thresh_flag = 0;
+end
+%}
+MorePoints = 'y';%first
+while ~(strcmp(MorePoints,'n')) 
     if auto_thresh_flag == 0 || isempty(epoch_start)
         MorePoints = input('Is there a flaw that needs to be corrected?  [y/n/manual correct (m)/save (s)] -->','s');
     else
