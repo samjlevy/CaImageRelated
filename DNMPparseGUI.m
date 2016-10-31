@@ -466,6 +466,7 @@ catch
     disp('Something went wrong')
 end
 end
+
 function fcnSaveSheet(~,~)
 global ParsedFrames
 global miscVar
@@ -516,7 +517,8 @@ while undecided==0
                 undecided=1; saveNow=1;
         end
     else 
-        
+        disp('File does not exist.  Writing new file')
+        undecided = 1; saveNow = 1;
     end
 end
 if saveNow==1;
@@ -528,9 +530,41 @@ if saveNow==1;
     end    
 end
 end
+
+
 function fcnLoadSheet(~,~)
 disp('Load sheet')
+global ParsedFrames
+global miscVar
+[filename, pathname, ext] = uigetfile({'*.xlsx', 'Excel Files'; '*.xls', 'Excel Files'}, 'Select previously saved sheet: ');
+
+[~, ~, raw] = xlsread(fullfile(pathname, filename));
+
+switch miscVar.sessionClass
+    case 1
+        ParsedFrames.LapNumber = raw(:,1);
+        ParsedFrames.LapStart = raw(:,2);
+        ParsedFrames.LiftBarrier = raw(:,3);
+        ParsedFrames.LeaveMaze = raw(:,4);
+        ParsedFrames.StartHomecage = raw(:,5);
+        ParsedFrames.LeaveHomecage = raw(:,6);
+        ParsedFrames.ForcedDir = raw(:,7);
+        ParsedFrames.FreeDir = raw(:,8);
+    case 2
+        ParsedFrames.LapNumber = raw(:,1);
+        ParsedFrames.LapStart = raw(:,2);
+        ParsedFrames.LeaveMaze = raw(:,3);
+        ParsedFrames.StartHomecage = raw(:,4);
+        ParsedFrames.LeaveHomecage = raw(:,5);
+        ParsedFrames.TrialType = raw(:,6);
+        ParsedFrames.TrialDir = raw(:,7);
 end
+bonus_sheet = fullfile(pathname, [filename(1:end-5) '_bonus.xlsx']);
+[~,~,bonus_raw] = xlsread(bonus_sheet);
+ParsedFrames.EnterDelay = bonus_raw(:,2);
+
+end
+
 function fcnFakePlayer(~,~)
 disp('fake player')
 end
