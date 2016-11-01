@@ -214,8 +214,6 @@ switch bkgChoice
         close top; close bot;
         compositeBkg=compositeBkg;
         backgroundFrame=figure('name','backgroundFrame'); imagesc(compositeBkg); title('Composite Background Image')
-        %fix a hole: ginput to get a hole, manually find frame number where
-        %that's clear, insert those pixels.
 end
 else 
     backgroundImage=v0;
@@ -495,6 +493,18 @@ MorePoints = 'y';%first
 while ~(strcmp(MorePoints,'n')) 
     if auto_thresh_flag == 0 || isempty(epoch_start)
         MorePoints = input('Is there a flaw that needs to be corrected?  [y/n/manual correct (m)/save (s)] -->','s');
+        y - auto again, manual when fails, skips previous auto or manual frames
+            - right click skips frame, accepts existing point and saves that as a good index 
+        o - auto again, overwrites all
+        t - adjust auto thresholds, not sure what to to here
+        m - all manual
+            - right click skips frame, accepts existing point and saves that as a good index
+        p - drag select points by position and correct all of those
+            - skips known good frames from manual
+            - right click skips frame, accepts existing point and saves that as a good index
+        s - save 
+        n - smoothing and whatever else at end, save
+        
     else
         MorePoints = 'y'; pause(1)
     end
@@ -503,7 +513,7 @@ while ~(strcmp(MorePoints,'n'))
     
         
         
-    if strcmp(MorePoints,'y')
+    if strcmp(MorePoints,'y') %%%switch, case, use otherwise (after cases) to handle miscellaneous letters
         if auto_thresh_flag == 0 || isempty(epoch_start)
             FrameSelOK = 0;
             while (FrameSelOK == 0)
