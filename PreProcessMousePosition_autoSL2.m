@@ -9,6 +9,7 @@ function [xpos_interp,ypos_interp,start_time,MoMtime,time_interp,AVItime_interp]
 %   the AVI file it matches, and there must be only ONE DVT and ONE AVI
 %   file in this directory
 %
+% OPTIONAL
 %   auto_thresh: proportion of timestamps you wish to edit - 0.01 will have
 %   you edit all timestamps where the velocity of the mouse is in the top
 %   1% of the distribution of all velocities - suggest starting at 0.01 or
@@ -24,7 +25,7 @@ function [xpos_interp,ypos_interp,start_time,MoMtime,time_interp,AVItime_interp]
 %   where the mouse is at 0,0 or above the velocity threhold - suggest
 %   using if the mouse is off the maze for a long time.
 %
-%   OUTPUTS (all saved in Pos.mat, along with some others)
+% OUTPUTS (all saved in Pos.mat, along with some others)
 %   xpos_interp, ypos_interp: smoothed, corrected position data
 %   interpolated to match the frame rate of the imaging data (hardcoded at
 %   20 fps)
@@ -33,7 +34,6 @@ function [xpos_interp,ypos_interp,start_time,MoMtime,time_interp,AVItime_interp]
 %
 %   MoMtime: the time that the mouse starts running on the maze
 
-close all;
 
 %% Get varargin
 
@@ -215,7 +215,7 @@ switch bkgChoice
         compositeBkg=compositeBkg;
         backgroundFrame=figure('name','backgroundFrame'); imagesc(compositeBkg); title('Composite Background Image')
 end
-else 
+elseif exist ('v0','var') 
     backgroundImage=v0;
     backgroundFrame=figure('name','backgroundFrame'); imagesc(backgroundImage); title('Background Image')
 end     
@@ -251,6 +251,14 @@ while compGood==0
             backgroundImage = compositeBkg;
     end
 end
+
+
+REALLY - CHECK BACKGROUND IMAGE ORIENTATION
+
+
+
+
+
 v0 = backgroundImage;%right?
 %}
 close(backgroundFrame);
