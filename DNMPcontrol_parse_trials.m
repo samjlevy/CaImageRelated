@@ -37,8 +37,8 @@ cage_leave = frames(2:end,5);
 
 correct_trials = ones(size(frames,1),1);
 
-all_trials_start=frames(2:end,2);
-all_trials_stop=frames(2:end,3);
+all_trials_start=frames(1:end,2);
+all_trials_stop=frames(1:end,3);
 
 % Interp AVIframes to brainframes
 on_maze_start = AVI_to_brain_frame(all_trials_start, AVItime_interp);
@@ -58,7 +58,7 @@ left_trials_free_stop = AVI_to_brain_frame(left_trials_free_stop, AVItime_interp
 
 
 
-leave_maze = AVI_to_brain_frame(leave_maze, AVItime_interp);
+%leave_maze = AVI_to_brain_frame(leave_maze, AVItime_interp);
 
 % keyboard
 %% Get all frames to include for each trial type (free, forced, L, R, correct)
@@ -71,7 +71,7 @@ inc_forced_r = [];
 on_maze = [];
 inc_correct = [];%same as on maze
 
-for j = 1:length(on_maze)
+for j = 1:length(blocks)
     on_maze = [on_maze, on_maze_start(j):on_maze_stop(j)];
 end    
 inc_correct = on_maze;    

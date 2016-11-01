@@ -173,7 +173,7 @@ MDSL(i).Env = 'Continuous T Maze';
 MDSL(i).Room = '201a - 2015';
 MDSL(i).RecordStartTime = '05:40:47.86 PM';
 if strcmp(userstr,'Sam')
-    MDSL(i).Location = 'H:\Polaris\Polaris_160902';
+    MDSL(i).Location = 'E:\Polaris\Polaris_160902';
 end
 MDSL(i).Notes = [];
 
