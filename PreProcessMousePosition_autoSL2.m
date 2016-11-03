@@ -218,16 +218,26 @@ end
 elseif exist ('v0','var') 
     backgroundImage=v0;
     backgroundFrame=figure('name','backgroundFrame'); imagesc(backgroundImage); title('Background Image')
+    %should have checker for is it right orientation
+    bkgNotFlipped=0;
+    while bkgNotFlipped==0
+    bkgNormal = questdlg('Is the background image right-side up?', 'Background Image', ...
+                              'Yes','No','No');               
+        switch bkgNormal
+            case 'Yes'
+                bkgNotFlipped=1;
+            case 'No'
+                backgroundImage=flipud(backgroundImage);
+        end
+    end     
 end     
-
 compGood=0;
 while compGood==0
-    holdChoice = questdlg('Good or fix a piece?', ...
-                              'Background Image', ...
+    holdChoice = questdlg('Good or fix a piece?', 'Background Image', ...
                               'Good','Fix area','Good');               
     switch holdChoice
         case 'Good'
-            try
+            try %#ok<*TRYNC>
             close(h1);
             end
             compGood=1;
@@ -251,23 +261,12 @@ while compGood==0
             backgroundImage = compositeBkg;
     end
 end
-
-
-REALLY - CHECK BACKGROUND IMAGE ORIENTATION
-
-
-
-
-
-v0 = backgroundImage;%right?
-%}
+%Comes out rightside up
+v0 = backgroundImage;
 close(backgroundFrame);
-
 
 %% Position and velocity
 vel_init = hypot(diff(Xpix),diff(Ypix))/(time(2)-time(1));
-%vel_init = [vel_init; vel_init(end)];
-% vel_init = [vel_init(1); vel_init];
 [fv, xv] = ecdf(vel_init);
 if exist('auto_thresh','var')
     auto_vel_thresh = min(xv(fv > (1-auto_thresh)));

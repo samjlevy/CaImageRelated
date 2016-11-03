@@ -279,6 +279,18 @@ Bellatrix_DNMP.DNMP(1) = (i+1);
 
 i = i+1;
 MDSL(i).Animal = 'Bellatrix_DNMP';
+MDSL(i).Date = '08_31_2016';
+MDSL(i).Session = 1;
+MDSL(i).Env = 'Continuous T Maze';
+MDSL(i).Room = '201a - 2015';
+MDSL(i).RecordStartTime = ' ';
+if strcmp(userstr,'Sam')
+    MDSL(i).Location = 'H:\Bellatrix\Bellatrix_160831';
+end
+MDSL(i).Notes = [];
+
+i = i+1;
+MDSL(i).Animal = 'Bellatrix_DNMP';
 MDSL(i).Date = '08_09_2016';
 MDSL(i).Session = 1;
 MDSL(i).Env = 'Continuous T Maze';
@@ -404,18 +416,6 @@ MDSL(i).RecordStartTime = ' ';
 if strcmp(userstr,'Sam')
     MDSL(i).Location = 'H:\Bellatrix\Bellatrix_160830';
 end
-
-i = i+1;
-MDSL(i).Animal = 'Bellatrix_DNMP';
-MDSL(i).Date = '08_31_2016';
-MDSL(i).Session = 1;
-MDSL(i).Env = 'Continuous T Maze';
-MDSL(i).Room = '201a - 2015';
-MDSL(i).RecordStartTime = ' ';
-if strcmp(userstr,'Sam')
-    MDSL(i).Location = 'H:\Bellatrix\Bellatrix_160831';
-end
-MDSL(i).Notes = [];
 
 i = i+1;
 MDSL(i).Animal = 'Bellatrix_DNMP';
