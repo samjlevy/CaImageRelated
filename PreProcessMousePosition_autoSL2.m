@@ -354,11 +354,12 @@ end
 
 if auto_thresh_flag==1
 for pass=1:2
+   
     %pass 1 skip where bad, pass 2 run skipped, keep iterating til cleared
     %through skipped or add manual now?
     ManualCorrFig=figure('name','ManualCorrFig'); imagesc(flipud(v0)); title('Auto correcting, please wait')
     resol = 1; % Percent resolution for progress bar
-    p = ProgressBar(100/resol);
+    %p = ProgressBar(100/resol);
     update_inc = round(length(auto_frames)/(100/resol));
     total=0;
     skipped=[];
@@ -459,7 +460,7 @@ for pass=1:2
                         fixedThisFrameFlag=1;
                     elseif auto_frames(corrFrame)==1 || pass==2
                         %Should it be do a last frame check and see which
-                        %is really close?
+                        %is really close? Or try will, if that fails try gray
                         figure(ManualCorrFig); 
                         imagesc(flipud(v))
                         hold on
@@ -570,7 +571,7 @@ for pass=1:2
                     fixedThisFrameFlag=0;
                     skipThisStep=1;
                 else
-                    disp(['missed something somewhere...')
+                    disp('missed something somewhere...')
                 end
                 
                 if skipThisStep==0
@@ -612,7 +613,7 @@ for pass=1:2
             end
             total=total+1;
             if round(total/update_inc) == (total/update_inc) % Update progress bar
-                p.progress;
+                %p.progress;
                 %would like to have a 50% save spot...
             end
             %else 
