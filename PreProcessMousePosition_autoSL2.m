@@ -137,6 +137,7 @@ end
 
 
 %% Cage mask
+%Comes out flipped
 dummy = readFrame(obj);
 MaskFig=figure('name', 'Cage Mask'); imagesc(flipud(dummy));
 maskSwitch= exist('maskx','var') && exist('masky','var') && exist('maze','var');
@@ -199,6 +200,11 @@ switch bkgChoice
             h1 = implay(avi_filepath);
         end    
         msgbox({'Find images: ' '   -frame 1: top half has no mouse' '   -frame 2: bottom half has no mouse'})
+        prompt = {'No mouse on top frame:','No mouse on bottom frame:'};
+        dlg_title = 'Clear frames';
+        num_lines = 1;
+        clearFrames = inputdlg(prompt,dlg_title,num_lines);
+        
         topClearNum = input('Frame number with no mouse on top: ')
         bottomClearNum = input('Frame number with no mouse on bottom: ')
         
@@ -247,7 +253,7 @@ while compGood==0
             [swapRegion, SwapX, SwapY] = roipoly;
             hold on 
             plot([SwapX; SwapX(1)],[SwapY; SwapY(1)],'r','LineWidth',2)
-            h1; msgbox('Enter frame number of image to swap in')
+            h1; %msgbox('Enter frame number of image to swap in')
             swapInNum = input('Frame number to swap in area from ---->')
             try 
                 close h1; 
@@ -325,49 +331,65 @@ if ~exist('Pos_temp.mat','file')
     save Pos_temp.mat Xpix Ypix xAVI yAVI MoMtime MouseOnMazeFrame maze v0 maskx masky 
 end 
 definitely_good=Xpix*0;
-grayThresh=100; gaussThresh=0.2;
+grayThresh=115; gaussThresh=0.2;
 max_pixel_jump=sqrt(50^2+50^2);
 distLim=max_pixel_jump;
-typesToFix={'zero_frames'; 'outofbounds_frames'; 'highVel_frames'};
+distLim2=45;
+got=[];
+skipped=[];
+%typesToFix={'zero_frames'; 'outofbounds_frames'; 'highVel_frames'};
 
-%First pass go for automatic detection
-for typeBeingFixed=1:size(typesToFix,1)
-switch typeBeingFixed    
-    case 1
-        zero_frames = Xpix == 0 | Ypix == 0 ;
-        auto_frames = find(zero_frames);%number indices
-    %{
-    case 2
-        [in,on] = inpolygon(xAVI, yAVI, maskx, masky);
-        inBounds = in || on;
-        auto_frames = find(inBounds==0);%out of bounds indices
-    case 3
-        vel_init = hypot(diff(Xpix),diff(Ypix))/(time(2)-time(1));
-        tooFast = vel_init > auto_vel_thresh;
-        auto_frames = find(tooFast);
-        %}
-end 
-        
+% First let's do frames out of bounds
+zero_frames = Xpix == 0 | Ypix == 0 ;
+%auto_zero = find(zero_frames);
+[in,on] = inpolygon(xAVI, yAVI, maskx, masky);
+inBounds = in | on;
+outOfBounds=inBounds==0;
+auto_logical = zero_frames | outOfBounds;
+auto_frames = find(auto_logical);
+
+%First pass go for automatic detection 
 if any(auto_frames)
     auto_thresh_flag=1;
 end
 
-if auto_thresh_flag==1 %n==1 &&
+if auto_thresh_flag==1
+for pass=1:2
     ManualCorrFig=figure('name','ManualCorrFig'); imagesc(flipud(v0)); title('Auto correcting, please wait')
     resol = 1; % Percent resolution for progress bar
     p = ProgressBar(100/resol);
     update_inc = round(length(auto_frames)/(100/resol));
-    total=0;    
+    total=0;
+    skipped=[];
         for corrFrame=1:length(auto_frames)
+            %{
+            Logic: 
+                - get background subtraction blobs (Will's)
+                - get gray threshold blobs
+                - see if there are any that are within a distance limit of
+                eachother
+                - if there are none because gray or Will dont agree
+                    - if one only has one, use that
+                        - this will only get will's, need to exclude some
+                        black blobs that always show up
+                - if there's more than one they agree on
+                    - find an adjacent frame for reference, first looking
+                    back then forward, making sure it isn't 
+            %}
             obj.CurrentTime=(auto_frames(corrFrame)-1)/aviSR;
             v = readFrame(obj);
-            d = imgaussfilt(flipud(rgb2gray(v0-v)),10);
-            stats = regionprops(d>20 & maze,'area','centroid','majoraxislength','minoraxislength');%'solidity','eccentricity',
             
             %Find the blob that corresponds to the mouse.
-            MouseBlob = find(   [stats.Area] > 300 & ...
+            d = imgaussfilt(flipud(rgb2gray(v0-v)),10);
+            stats = regionprops(d>20 & maze,'area','centroid','majoraxislength','minoraxislength');%flipped %'solidity','eccentricity',
+            %{
+            MouseBlob = find(   [stats.Area] > 250 & ...
+                [stats.Area] < 3500 &...
                 [stats.MajorAxisLength] > 10 & ...
                 [stats.MinorAxisLength] > 10);
+            stats=stats(MouseBlob)
+            %}
+            %{
             %lower Area lower limit, add an upper limit
             %add: centroid in a VERY rough area that is below threshold
             %conditional: if couldn't find a blob, accept smaller blob if
@@ -375,6 +397,85 @@ if auto_thresh_flag==1 %n==1 &&
             %manual corrected redo condition: part of high velocity jump
                 %should get caught during auto-high vel check, so don't
                 %allow manual exception during that
+            %}
+            grayFrameThresh=rgb2gray(flipud(v)) < grayThresh; %flipud
+            grayGaussThresh=imgaussfilt(double(grayFrameThresh),10) > gaussThresh;
+            grayStats = regionprops(grayGaussThresh & maze,'centroid','area'); %flipped
+            possible=[];
+            if ~isempty(grayStats) && ~isempty(stats) %what if one is empty?
+            for statsInd=1:length(stats)
+                for grayStatsInd=1:length(grayStats)
+                    poRow=size(possible,1)+1;  
+                    %possible is [stats_index, graystats_index, distance]
+                    possible(poRow,1:3)=[statsInd grayStatsInd...
+                    hypot(stats(statsInd).Centroid(1)-grayStats(grayStatsInd).Centroid(1),...
+                    stats(statsInd).Centroid(2)-grayStats(grayStatsInd).Centroid(2))];
+                end 
+            end
+            posDel=possible(:,3)>distLim2; possible(posDel,:)=[];
+            %not sure all this works yet...
+            %{ 
+                if size(possible,1)==0   
+                %No agreement using distance limit
+                fixedThisFrameFlag=0;
+                howWell(method).missed=[howWell(method).missed corrFrame];
+                %}
+            if size(possible,1)==1
+                %Will and thresh agree on one blob
+                xm=mean([stats(possible(1)).Centroid(1) grayStats(possible(2)).Centroid(1)]);
+                ym=mean([stats(possible(1)).Centroid(2) grayStats(possible(2)).Centroid(2)]);
+                fixedThisFrameFlag=1;
+                got=[got corrFrame];
+            elseif size(possible,1)==0
+                if length(stats)==1 && length(grayStats)>1
+                    xm = stats.Centroid(1);
+                    ym = stats.Centroid(2);
+                elseif length(stats)>1 && length(grayStats)==1
+                    xm = grayStats.Centroid(1);
+                    ym = grayStats.Centroid(2);
+                end    
+            elseif size(possible,1)>1 %any(howWell(method).missed == (auto_frames(corrFrame)-1))==0 && auto_frames(corrFrame)>1
+                %more than one blob will and thresh agree on
+                if auto_frames(corrFrame) > 0 && any(skipped==auto_frames(corrFrame)-1)==0 %Look at adjacent frames
+                %not the first frame and we didn't skip the last one
+                    adjacentX = xAVI(auto_frames(corrFrame)-1);
+                    adjacentY = yAVI(auto_frames(corrFrame)-1);
+                elseif auto_frames(corrFrame) > length(xAVI) && any(skipped==auto_frames(corrFrame)+1)==0 ...
+                    && any(auto_frames(corr_frame+1)==auto_frames(corrFrame)+1)==0
+                %not the last frame and next frame doesn't need to be corrected or was skipped                
+                    adjacentX = xAVI(auto_frames(corrFrame)+1);
+                    adjacentY = yAVI(auto_frames(corrFrame)+1);
+                elseif auto_frames(corrFrame)==1
+                    [xm,ym]=ginput(1);
+                    definitelyGood(1)=1;
+                    skipThis=1;
+                else %no usable frames
+                    skipped = [skipped; auto_frames(corrFrame)];
+                end
+                
+                if skipThis==0
+                    for posNum=1:size(possible,1)
+                        putativeMouseX(posNum)=mean([stats(possible(posNum,1)).Centroid(1) grayStats(possible(posNum,2)).Centroid(1)]); %#ok<AGROW>
+                        putativeMouseY(posNum)=mean([stats(possible(posNum,1)).Centroid(2) grayStats(possible(posNum,2)).Centroid(2)]); %#ok<AGROW>
+                    end
+                    whichSharedMouseX = findclosest( adjacentX, putativeMouseX);
+                    whichSharedMouseY = findclosest( adjacentY, putativeMouseY);
+                    if whichSharedMouseX  == whichSharedMouseY
+                        xm=putativeMouseX(whichSharedMouseX);
+                        ym=putativeMouseY(whichSharedMouseY);
+                        fixedThisFrameFlag=1;
+                        got=[got; corrFrame];
+                    else    
+                        %%%?????
+                    end
+                end
+            end
+            else 
+                %What to do if either will or thresh is empty
+                %A: whichever is not, use blob closest to last known good
+                fixedThisFrameFlag=0;
+                howWell(method).missed=[howWell(method).missed corrFrame];
+            end
             if length(MouseBlob)==1
                 xm = stats(MouseBlob).Centroid(1);
                 ym = stats(MouseBlob).Centroid(2);
