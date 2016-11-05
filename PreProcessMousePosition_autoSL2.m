@@ -626,7 +626,88 @@ for pass=1:2
     disp(['Completed auto-pass ' num2str(pass) ' on ' num2str(total) ' out of bounds frames'])
 end 
 end    
-%% All the rest for real 
+
+%% so many options
+optionsText={'y - attempt auto, manual when missed';...
+             'm - all manual';...
+             'p - select points by position';...
+             't - reset auto-velocity threshold';...
+             'v - run auto on high velocity points';...
+             'o - change AOM flag';...
+             's - save work';...
+             'q - save, finalize and quit';...
+             ' ';...
+             'AOM flag (auto-overwrites-manual)';...
+             '    - when automatic processes are correcting';...
+             '    frames, they will ignore frames that have';...
+             '    been corrected manually.';...
+             ' ';...
+             'When manually correcting, you can right-mouse';...
+             'to accept existing position. You can also';...
+             'middle-mouse to go back to the last manually';...
+             'corrected frame to re-do it.'};
+msgbox(optionsText,'PreProcess Keys')
+             
+AOMflag=0;
+stillEditingFlag=1;
+while stillEditingFlag==1
+    
+correctSomePoints=0;
+MorePoints = input('Is there a flaw that needs to be corrected?','s');
+switch MorePoints
+case 'y'
+        disp('attempt auto')
+        correctSomePoints=1;
+case 'm'
+        disp('correcting manually')
+        correctSomePoints=1;
+case 'p'
+        disp('correcting by position')
+        posSelect=figure('name','posSelect','Position',[250 250 640*1.5 480*1.5]); imagesc(flipud(v0))
+        title('Drag region around points to correct')
+        hold on
+        plot(xAVI,yAVI,'.')
+        [~, pointBoxX, pointBoxY] = roipoly;
+        [editLogical,~] = inpolygon(xAVI, yAVI, pointBoxX, pointBoxY);
+        hold on
+        plot(xAVI(editLogical),yAVI(editLogical),'.r')
+        poschoice = questdlg('Edit these points?', 'Edit by position','Yes','No','Yes');
+        switch poschoice
+            case 'Yes'
+                auto_frames=find(editLogical);
+                correctSomePoints=1;
+            case 'No'
+        end
+        close(posSelect);
+        
+case 't'
+        disp('reset high-velocity threshold')
+case 'v'
+        disp('auto-correcting high velocity points')
+case 'o'
+    switch AOMflag
+        case 0
+            AOMflag=1;
+            disp('auto-overwrites-manual is now ENABLED')
+        case 1
+            AOMflag=0;
+            disp('auto-overwrites-manual is now DISABLED')
+    end
+case 's'
+    save Pos_temp.mat Xpix Ypix xAVI yAVI MoMtime MouseOnMazeFrame maskx v0 maze masky definitelyGood
+case 'q'
+    stillEditingFlag=0;    
+otherwise
+    disp('Not a recognized input')
+end
+
+if correctSomePoints==1
+    %Here goes to code to load frames and correct them
+end
+
+end
+
+%% All the rest old 
 n = 1;
 % Get initial velocity profile for auto-thresholding
 %{
@@ -664,19 +745,7 @@ end
 MorePoints = 'y';%first
 while ~(strcmp(MorePoints,'n')) 
     if auto_thresh_flag == 0 || isempty(epoch_start)
-        MorePoints = input('Is there a flaw that needs to be corrected?  [y/n/manual correct (m)/save (s)] -->','s');
-        y - auto again, manual when fails, skips previous auto or manual frames
-            - right click skips frame, accepts existing point and saves that as a good index 
-        o - auto again, overwrites all
-        t - adjust auto thresholds, not sure what to to here
-        m - all manual
-            - right click skips frame, accepts existing point and saves that as a good index
-        p - drag select points by position and correct all of those
-            - skips known good frames from manual
-            - right click skips frame, accepts existing point and saves that as a good index
-        s - save 
-        n - smoothing and whatever else at end, save
-        
+        MorePoints = input('Is there a flaw that needs to be corrected?  [y/n/manual correct (m)] -->','s');
     else
         MorePoints = 'y'; pause(1)
     end
