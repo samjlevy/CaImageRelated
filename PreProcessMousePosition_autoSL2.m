@@ -589,16 +589,34 @@ for pass=1:2
                     elseif pass==1
                         fixedThisFrameFlag=0;
                         skipped = [skipped; auto_frames(corrFrame)];
-                    elseif pass==2 || auto_frames(corrFrame)==1    
+                    elseif pass>=2 || auto_frames(corrFrame)==1    
                         figure(ManualCorrFig); 
                         imagesc(flipud(v))
                         hold on
                         title('click here')
-                        [xm,ym] = ginput(1);
-                        plot(xm,ym,'og','MarkerSize',4,'MarkerFaceColor','g');hold off;
-                        title('Auto correcting, please wait')
-                        definitelyGood(auto_frames(corrFrame)) = 1;
-                        fixedThisFrameFlag=1;
+                        switch pass>2
+                            case 0
+                                [xm,ym,button] = ginput(1);
+                                plot(xm,ym,'og','MarkerSize',4,'MarkerFaceColor','g');hold off;
+                                title('Auto correcting, please wait')
+                                definitelyGood(auto_frames(corrFrame)) = 1;
+                                fixedThisFrameFlag=1;    
+                            case 1  
+                                plot existing point, with right color, open circle
+                                [xm,ym,button] = ginput(1);
+                            switch button
+                                case 1%left click
+                                    plot(xm,ym,'og','MarkerSize',4,'MarkerFaceColor','g');hold off;
+                                    title('Auto correcting, please wait')
+                                    definitelyGood(auto_frames(corrFrame)) = 1;
+                                    fixedThisFrameFlag=1;    
+                                case 2%middle click
+                                    %go back
+                                case 3%right click 
+                                    fixedThisFrameFlag=0;
+                                    %skip
+                            end
+                        end
                     end
                 end
             end
@@ -1174,3 +1192,5 @@ AVItime_interp = cellfun(@(a,b) lin_interp(time(a), AVIobjTime(a),...
 save Pos.mat xpos_interp ypos_interp time_interp start_time MoMtime Xpix Ypix xAVI yAVI MouseOnMazeFrame AVItime_interp maze v0 maskx masky definitely_good
  
 end
+function 
+
