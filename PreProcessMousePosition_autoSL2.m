@@ -592,7 +592,7 @@ for pass=1:2
                     elseif pass>=2 || auto_frames(corrFrame)==1    
                         figure(ManualCorrFig); 
                         imagesc(flipud(v))
-                        hold on
+                        hold on 
                         title('click here')
                         switch pass>2
                             case 0
@@ -668,8 +668,11 @@ msgbox(optionsText,'PreProcess Keys')
              
 AOMflag=0;
 stillEditingFlag=1;
+pass=1;
 while stillEditingFlag==1
-    
+
+switch pass <=2
+case 0
 correctSomePoints=0;
 MorePoints = input('Is there a flaw that needs to be corrected?','s');
 switch MorePoints
@@ -718,11 +721,16 @@ case 'q'
 otherwise
     disp('Not a recognized input')
 end
+case 1
+    auto frames code
+    correctSomePoints=1;
+
 
 if correctSomePoints==1
     %Here goes to code to load frames and correct them
 end
 
+pass=pass+1;
 end
 
 %% All the rest old 
