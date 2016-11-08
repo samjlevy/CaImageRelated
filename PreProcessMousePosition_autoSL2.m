@@ -33,9 +33,14 @@ function [xpos_interp,ypos_interp,start_time,MoMtime,time_interp,AVItime_interp]
 %   start_time: start of DVT file
 %
 %   MoMtime: the time that the mouse starts running on the maze
-
+for a=1:length(v); right(a)=strcmpi(v(a).Name,'MATLAB'); end
+if strcmpi(v(find(right)).Release,'(R2016a)') || strcmpi(v(find(right)).Release,'(R2016b)')
+    disp('Sorry, 2016 not going to work; use 2015b or earlier')
+    return
+end
 
 %% Get varargin
+    
 
 update_pos_realtime = 0; % Default setting
 epoch_length_lim = 200; % default
@@ -200,10 +205,10 @@ switch bkgChoice
             h1 = implay(avi_filepath);
         end    
         msgbox({'Find images: ' '   -frame 1: top half has no mouse' '   -frame 2: bottom half has no mouse'})
-        prompt = {'No mouse on top frame:','No mouse on bottom frame:'};
-        dlg_title = 'Clear frames';
-        num_lines = 1;
-        clearFrames = inputdlg(prompt,dlg_title,num_lines);
+        %prompt = {'No mouse on top frame:','No mouse on bottom frame:'};
+        %dlg_title = 'Clear frames';
+        %num_lines = 1;
+        %clearFrames = inputdlg(prompt,dlg_title,num_lines);
         
         topClearNum = input('Frame number with no mouse on top: ')
         bottomClearNum = input('Frame number with no mouse on bottom: ')
@@ -556,10 +561,11 @@ for pass=1:2
                     adjacentX = xAVI(auto_frames(corrFrame)+1);
                     adjacentY = yAVI(auto_frames(corrFrame)+1);
                 elseif auto_frames(corrFrame)==1 || pass==2
+                    %% does this part need the skipping/backstepping?
                     figure(ManualCorrFig); 
                     imagesc(flipud(v))
                     hold on
-                    title('click here')
+                    title(['click here, frame ' num2str(auto_frames(corrFrame))])
                     [xm,ym] = ginput(1);
                     plot(xm,ym,'og','MarkerSize',4,'MarkerFaceColor','g');hold off;
                     title('Auto correcting, please wait')
@@ -589,32 +595,54 @@ for pass=1:2
                     elseif pass==1
                         fixedThisFrameFlag=0;
                         skipped = [skipped; auto_frames(corrFrame)];
-                    elseif pass>=2 || auto_frames(corrFrame)==1    
+                   elseif auto_frames(corrFrame)==1    
                         figure(ManualCorrFig); 
                         imagesc(flipud(v))
                         hold on 
                         title('click here')
-                        switch pass>2
-                            case 0
-                                [xm,ym,button] = ginput(1);
-                                plot(xm,ym,'og','MarkerSize',4,'MarkerFaceColor','g');hold off;
-                                title('Auto correcting, please wait')
-                                definitelyGood(auto_frames(corrFrame)) = 1;
-                                fixedThisFrameFlag=1;    
-                            case 1  
-                                plot existing point, with right color, open circle
-                                [xm,ym,button] = ginput(1);
+                    elseif pass>=2 
+                        intendedFrame=v;
+                        intendedFrameGood=0;
+                        while intendedFrameGood==0;
+                            figure(ManualCorrFig);
+                            imagesc(flipud(intendedFrame))
+                            title(['click here, frame ' num2str(auto_frames(corrFrame))])
+                            if pass>2
+                                %plot existing point 
+                            end
+                            [xm,ym,button] = ginput(1);
+                            plot(xm,ym,'og','MarkerSize',4,'MarkerFaceColor','g');hold off;
+                            fixedThisFrameFlag=1;    
                             switch button
                                 case 1%left click
                                     plot(xm,ym,'og','MarkerSize',4,'MarkerFaceColor','g');hold off;
                                     title('Auto correcting, please wait')
                                     definitelyGood(auto_frames(corrFrame)) = 1;
-                                    fixedThisFrameFlag=1;    
+                                    fixedThisFrameFlag=1;
+                                    lastManualFrame=auto_frames(corrFrame);
+                                    intendedFrameGood=1;
                                 case 2%middle click
-                                    %go back
+                                    presentFrame=auto_frames(corrFrame);
+                                    obj.CurrentTime=(lastManualFrame-1)/aviSR;
+                                    pastFrame = readFrame(obj);
+                                    imagesc(flipud(pastFrame))
+                                    title(['click here, backed up to ' num2str(lastManualFrame)])
+                                    [xm,ym] = ginput(1);
+                                    hold on
+                                    plot(xm,ym,'og','MarkerSize',4,'MarkerFaceColor','g'); hold off
+                                    xAVI(corrFrame) = xm;
+                                    yAVI(corrFrame) = ym;
+                                    Xpix(corrFrame) = ceil(xm/0.6246);
+                                    Ypix(corrFrame) = ceil(ym/0.6246);
+                                    definitelyGood(lastManualFrame)=1;%just in case
+                                    obj.CurrentTime = (presentFrame-1)/aviSR;
+                                    intendedFrame = readFrame(obj);
+                                    intendedFrameGood=0;
                                 case 3%right click 
-                                    fixedThisFrameFlag=0;
                                     %skip
+                                    fixedThisFrameFlag=0;
+                                    definitelyGood(auto_frames(corrFrame)) = 1;
+                                    intendedFrameGood=1;
                             end
                         end
                     end
@@ -732,6 +760,7 @@ end
 
 pass=pass+1;
 end
+end
 
 %% All the rest old 
 n = 1;
@@ -796,7 +825,7 @@ while ~(strcmp(MorePoints,'n'))
                     eFrame=holder;
                 end    
                 
-                if eFrame/aviSR > obj.Duration)
+                if eFrame/aviSR > obj.Duration
                    eFrame=obj.Duration*aviSR; 
                 end
                 
@@ -943,7 +972,7 @@ while ~(strcmp(MorePoints,'n'))
         
         close(1702);
         catch
-        disp(['unable to edit these frames, some error'])
+        disp('unable to edit these frames, some error')
         end
         
         % plot updated velocity
@@ -1199,6 +1228,4 @@ AVItime_interp = cellfun(@(a,b) lin_interp(time(a), AVIobjTime(a),...
 % and fix an error you discover later on
 save Pos.mat xpos_interp ypos_interp time_interp start_time MoMtime Xpix Ypix xAVI yAVI MouseOnMazeFrame AVItime_interp maze v0 maskx masky definitely_good
  
-end
-function 
-
+end 
