@@ -600,15 +600,24 @@ for pass=1:2
                         imagesc(flipud(v))
                         hold on 
                         title('click here')
-                    elseif pass>=2 
-                        intendedFrame=v;
-                        intendedFrameGood=0;
-                        while intendedFrameGood==0;
+                   elseif pass>=2
+                        if corrFrame==1
+                            [xm,ym] = ginput(1);
+                            hold on
+                            plot(xm,ym,'og','MarkerSize',4,'MarkerFaceColor','g'); hold off   
+                            fixedThisFrameFlag=1;
+                            definitelyGood(auto_frames(corrFrame)) = 1;
+                        elseif corrFrame > 1
+                            intendedFrame=v;
+                            intendedFrameNum=auto_frames(corrFrame);
+                            intendedFrameGood=0;
+                            while intendedFrameGood==0;
                             figure(ManualCorrFig);
                             imagesc(flipud(intendedFrame))
                             title(['click here, frame ' num2str(auto_frames(corrFrame))])
                             if pass>2
-                                %plot existing point 
+                                %plot existing point
+                                hold on; plot(xAVI(intendedFrameNum),yAVI(intendedFrameNum),'og','MarkerSize',4,'MarkerFaceColor','g');hold off;
                             end
                             [xm,ym,button] = ginput(1);
                             plot(xm,ym,'og','MarkerSize',4,'MarkerFaceColor','g');hold off;
@@ -644,8 +653,8 @@ for pass=1:2
                                     definitelyGood(auto_frames(corrFrame)) = 1;
                                     intendedFrameGood=1;
                             end
+                            end
                         end
-                    end
                 end
             end
             %figure(ManualCorrFig); 
