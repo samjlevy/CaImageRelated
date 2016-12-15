@@ -95,15 +95,21 @@ right_trials_forced = strcmpi(txt(2:end,7),'R');
 right_trials_free = strcmpi(txt(2:end,8),'R');
 left_trials_forced = strcmpi(txt(2:end,7),'L');
 left_trials_free = strcmpi(txt(2:end,8),'L');
+delay_following_l = strcmpi(txt(2:end,7),'L');%I think?
+delay_following_r = strcmpi(txt(2:end,7),'R');%I think?
+cage_following_r = strcmpi(txt(2:end,8),'R');
+cage_following_l = strcmpi(txt(2:end,8),'L');
 correct_trials = (strcmpi(txt(2:end,7),'R') & strcmpi(txt(2:end,8),'L')) | ...
     (strcmpi(txt(2:end,7),'L') & strcmpi(txt(2:end,8),'R'));
 
+forced_start_r = forced_start(right_trials_forced);
 
 forced_start = AVI_to_brain_frame(forced_start, AVItime_interp);
 forced_end = AVI_to_brain_frame(delay_start, AVItime_interp);
 free_start = AVI_to_brain_frame(free_start, AVItime_interp);
 leave_maze = AVI_to_brain_frame(leave_maze, AVItime_interp);
-%if doing it this way, still need to get FT offset, etc. from above
+
+
 
 inc_forced_l=[];
 inc_forced_r=[];
@@ -136,7 +142,7 @@ for blockNum=1:length(blockTypes)
     for trialNum=1:length(starts this block)
         useInds=starts(trialNum):ends(trialNum);
         BFTindices=[BFTindices, useInds];
-        BFThits
+        BFThits=
         BFTprobability
         BFTduration
     end
@@ -145,6 +151,7 @@ end
 
 BlockedFT=FT(:,BFTindices);
 
+z score all of these?
 % number/length/probability of a transient in a cell on a trial
 
 
@@ -164,3 +171,4 @@ STselectivity = hitsStudy/totalHits
 
 
 % correlation of block by block: representational similarity analysis
+[r,p] = corrcoef(x,y)
