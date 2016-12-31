@@ -1,158 +1,174 @@
-%%
-%From DNMP_Placefields
-save_names = {'PlaceMapsv2_forced_025cmbins.mat','PlaceMapsv2_free_025cmbins.mat','PlaceMapsv2_onmaze.mat','PlaceMapsv2_forced.mat','PlaceMapsv2_free.mat',...
-     'PlaceMapsv2_forced_left.mat','PlaceMapsv2_forced_right.mat',...
-     'PlaceMapsv2_free_left.mat','PlaceMapsv2_free_right.mat'};
-name_append = {'forced_025cmbins', 'free_025cmbins','onmaze','forced','free',...
-     'forced_left','forced_right',...
-     'free_left','free_right'};
-exc_frames_type = {'forced_exclude','free_exclude','on_maze_exclude','forced_exclude','free_exclude',...
-     'forced_l_exclude','forced_r_exclude','free_l_exclude','free_r_exclude'};
-
- exc_frames = load('exclude_frames.mat');
- 
- k = 6; %forced l exclude
- 
- 
- room,'exclude_frames_raw',exc_frames.(exc_frames_type{k}),...
-                'alt_inputs',neuron_input,'man_savename',save_names{k},...
-                'half_window',0,'minspeed',minspeed,'cmperbin',cmperbin,...
-                'NumShuffles',NumShuffles,'calc_half',1);
-            
-%From CalculatePlaceFields
-
-NumNeurons = size(FT,1);
-
-SR = 20;
-Pix2Cm = 0.15;
-
-if strcmpi(RoomStr,'201a - 2015')
-        Pix2Cm = 0.0874;
-        display('Room 201a - 2015');
-        end
-    
-        if ~isempty(pos_align_file) % Load alternate file with aligned position data if specified
-        load(pos_align_file)
-        end
-x = x_adj_cm;
-y = y_adj_cm;
-pos_align_use = 1;
-
-if ~isempty(exclude_frames_raw)
-    % take raw/non-aligned frame inidices that aligned with FT from
-    % ProcOut.mat file and align to aligned position/FT data.
-    exclude_aligned = exclude_frames_raw - FToffset + 2;
-    exclude_aligned = exclude_aligned(exclude_aligned > 0); % Get rid of any negative values (corresponding to times before the mouse was on the maze)
-    exclude_frames = [exclude_frames, exclude_aligned]; % concatenate to exclude_frames 
-end
-
-% New stuff
-forced_l_include=exc_to_inc(exclude_frames,length(x));
-
-
-diffs=diff(forced_l_include);
-starts=find(diffs==1);
-starts=starts+1;
-ends=find(diffs==-1);
-
-    %sanity check
-figure; plot(x(exclude_frames),y(exclude_frames),'.k')
-hold on
-plot(x(forced_l_include),y(forced_l_include),'.r')
-plot(x(starts),y(starts),'.y')
-plot(x(ends),y(ends),'.g')
-
-
 %% Maybe better to step back and do the calcs from the beginning
 % from DNMP_parse_trials
 
 xls_sheet_num=1;
 xls_bonus_sheet_num=1;
 
-xls_path='C:\MasterData\InUse\Polaris_160831\DNMPsheet.xlsx';
-xls_bonus_path='C:\MasterData\InUse\Polaris_160831\DNMPbonus.xlsx';
-pos_file_fullpath='C:\MasterData\InUse\Polaris_160831\Pos_align.mat';
+folderUse='D:\bits160831\';
+%folderUse='C:\MasterData\InUse\Polaris_160831\';
+
+xls_path=fullfile(folderUse,'DNMPsheet.xlsx');
+xls_bonus_path=fullfile(folderUse,'DNMPbonus.xlsx');
 
 [frames, txt] = xlsread(xls_path, xls_sheet_num);
 [bonusFrames, bonusTxt] = xlsread(xls_bonus_path, xls_bonus_sheet_num);
 
-
-
-
+pos_file_fullpath=fullfile(folderUse,'Pos.mat');%NOT pos_align
 load(pos_file_fullpath,'time_interp','AVItime_interp')
 % pos_data = importdata(DVT_fullpath);
 
+load(fullfile(folderUse,'Pos_align.mat'),'x_adj_cm','y_adj_cm',...
+    'FT','FToffset','FToffsetRear');
+
+%% Adjust for FToffset
+%Should check the results by plotting things 
+longFrames = frames(:,2:end); 
+longBrainFrames = AVI_to_brain_frame(longFrames(:), AVItime_interp);
+longBrainOffset = longBrainFrames - FToffset + 2;
+longBrainOffset(longBrainOffset<1) = 1; 
+longBrainOffset(longBrainOffset>length(x_adj_cm)) = length(x_adj_cm);
+frames(:,2:end) = reshape(longBrainOffset,[size(frames,1),size(frames,2)-1]);
+
+longBonusFrames = bonusFrames(:,2:end); 
+longBonusBrainFrames = AVI_to_brain_frame(longBonusFrames(:), AVItime_interp);
+longBonusBrainOffset = longBonusBrainFrames - FToffset + 2;
+longBonusBrainOffset(longBonusBrainOffset<1) = 1; 
+longBonusBrainOffset(longBonusBrainOffset>length(x_adj_cm)) = length(x_adj_cm);
+bonusFrames(:,2:end) =...
+    reshape(longBonusBrainOffset, [size(bonusFrames,1), size(bonusFrames,2)-1]);
+
+disp('Using cheater edge trimming')
+%% parse spreadsheets
 num_brain_frames = length(AVItime_interp);
 blocks = frames(:,1);
 forced_start = frames(:,2);
 free_start = frames(:,3);
 leave_maze = frames(:,4);
-%cage_start = frames(:,5);
-%cage_leave = frames(2:end,6);
-delay_start = bonusFrames(2:end);
+cage_start = frames(:,5);
+cage_leave = frames(2:end,6);
+delay_start = bonusFrames(:,2);
+delay_end = free_start;
+forced_end = delay_start;
+free_end = leave_maze;
 
+%% logicals for lap type
 right_trials_forced = strcmpi(txt(2:end,7),'R');
+    delay_following_r = right_trials_forced;
 right_trials_free = strcmpi(txt(2:end,8),'R');
-left_trials_forced = strcmpi(txt(2:end,7),'L');
+    cage_following_r = right_trials_free;
+left_trials_forced = strcmpi(txt(2:end,7),'L'); 
+    delay_following_l = left_trials_forced;
 left_trials_free = strcmpi(txt(2:end,8),'L');
-delay_following_l = strcmpi(txt(2:end,7),'L');%I think?
-delay_following_r = strcmpi(txt(2:end,7),'R');%I think?
-cage_following_r = strcmpi(txt(2:end,8),'R');
-cage_following_l = strcmpi(txt(2:end,8),'L');
-correct_trials = (strcmpi(txt(2:end,7),'R') & strcmpi(txt(2:end,8),'L')) | ...
-    (strcmpi(txt(2:end,7),'L') & strcmpi(txt(2:end,8),'R'));
+    cage_following_l = left_trials_free;
+correct_trials = right_trials_forced & left_trials_free | ...
+    left_trials_forced & right_trials_free;
 
-forced_start_r = forced_start(right_trials_forced);
+%% get some frame numbers 
+forced_r_start = forced_start(right_trials_forced);%.*correct_trials;
+forced_r_end = forced_end(right_trials_forced);
+forced_l_start = forced_start(left_trials_forced);
+forced_l_end = forced_end(left_trials_forced);
+free_r_start = free_start(right_trials_free);
+free_r_end = free_end(right_trials_free);
+free_l_start = free_start(left_trials_free);
+free_l_end = free_end(left_trials_free);
+delay_afterl_start = delay_start(left_trials_forced);
+delay_afterl_end = delay_end(left_trials_forced);
+delay_afterr_start = delay_start(right_trials_forced);
+delay_afterr_end = delay_end(right_trials_forced);
+%cage epochs too
+%also need reward get
+%%
+blockTypes={'forced r', 'forced l', 'free r', 'free l'};
+            %'delay after r', 'delay after l', 'choice after r', 'choice after l'}; 
 
-forced_start = AVI_to_brain_frame(forced_start, AVItime_interp);
-forced_end = AVI_to_brain_frame(delay_start, AVItime_interp);
-free_start = AVI_to_brain_frame(free_start, AVItime_interp);
-leave_maze = AVI_to_brain_frame(leave_maze, AVItime_interp);
+blocksLeft=[-1 1 -1 1];%0 1 0 0]; %1 = left, -1 = r, 0 = don't use
+blocksForced=[1 1 -1 -1];%0 0 0 0]; %not sure how to handle these 
+    %1 = forced, -1 = unforced, 0 = don't use
 
-
-
-inc_forced_l=[];
-inc_forced_r=[];
-num_blocks = size(frames,1);
-for j=1:num_blocks
-    if left_trials_forced(j) == 1
-        inc_forced_l = [inc_forced_l, forced_start(j):free_start(j)];
-    elseif right_trials_forced(j) == 1
-        inc_forced_r = [inc_forced_r, forced_start(j):free_start(j)];
-    end
-end
-
-%fix for FToffset
-    % take raw/non-aligned frame inidices that aligned with FT from
-    % ProcOut.mat file and align to aligned position/FT data.
-    exclude_aligned = exclude_frames_raw - FToffset + 2;
-    exclude_aligned = exclude_aligned(exclude_aligned > 0); % Get rid of any negative values (corresponding to times before the mouse was on the maze)
-    exclude_frames = [exclude_frames, exclude_aligned]; % concatenate to exclude_frames 
-    
-
+trial_block_inds=cell(1,4);
+trial_block_inds{1,1}=[forced_r_start, forced_r_end];
+trial_block_inds{1,2}=[forced_l_start, forced_l_end];
+trial_block_inds{1,3}=[free_r_start, free_r_end];
+trial_block_inds{1,4}=[free_l_start, free_l_end];
 
 %% And much later, actually plot the stuff
-%this is still some pseudocode
-blockTypes={'forced_l', 'forced_r', 'free_l', 'free_r','delay','cage_epochs'};
+
+%All cell activity
 BFTindices=[];
 for blockNum=1:length(blockTypes)
     blockStart(blockNum)=length(BFTindices)+1;
-    starts this block type %cell array?
-    stops this block type
-    for trialNum=1:length(starts this block)
-        useInds=starts(trialNum):ends(trialNum);
-        BFTindices=[BFTindices, useInds];
-        BFThits=
-        BFTprobability
-        BFTduration
+    for trialNum=1:size(trial_block_inds{1,blockNum},1)
+        theseInds = trial_block_inds{1,blockNum}(trialNum,1):...
+           trial_block_inds{1,blockNum}(trialNum,2);
+        BFTindices=[BFTindices, theseInds];
     end
     blockEnd(blockNum)=length(BFTindices);
 end
+%Need to trim frames ends for this to work
 
-BlockedFT=FT(:,BFTindices);
+BlockedFT = FT(:,BFTindices);
+    jak.Children.XTick=blockEnd;
+    plot([blockEnd(1) blockEnd(1)],[1 1849],'r')
+    
+%Number of times a cell fired on a trial, also as probability
+BlockedFThits = cell(1,4);
+BlockedFTprob = cell(1,4);
+for blockNum = 1:length(blockTypes)
+   hitsHolder = zeros(size(FT,1),1);
+   for trialNum = 1:size(trial_block_inds{1,blockNum},1) 
+       theseInds = trial_block_inds{1,blockNum}(trialNum,1):...
+           trial_block_inds{1,blockNum}(trialNum,2);
+       hitsHolder = hitsHolder+any(FT(:,theseInds),2);
+   end
+   BlockedFThits{1,blockNum} = hitsHolder;
+   BlockedFTprob{1,blockNum} = hitsHolder/size(trial_block_inds{1,blockNum},1);
+end
+%Should look at least something like the place field
 
-z score all of these?
-% number/length/probability of a transient in a cell on a trial
+%Idea:  LRselectivity = (hitsLeft-hitsRight)/totalHits
+%       STselectivity = (hitsStudy-hitsTest)/totalHits
+
+probLeft = []; probForced = [];
+for blockInd=1:length(blocksLeft)       
+    probLeft = [probLeft, blocksLeft(blockInd)*BlockedFTprob{1,blockInd}];    
+    probForced = [probForced, blocksForced(blockInd)*BlockedFTprob{1,blockInd}];
+end
+LRselectivity = mean(probLeft,2);
+STselectivity = mean(probForced,2);
+histogram(LRselectivity(LRselectivity~=0),30)
+figure; histogram(STselectivity(STselectivity~=0),30)
+
+%% Doesn't work yet
+%Threshold for selectivity, leave a batch unsorted
+LRthresh=0.02; %left positive, right neg
+STthresh=0.01; %forced positive, free neg
+LeftStudySelective = find(LRselectivity > LRthresh & STselectivity > STthresh);
+RightStudySelective = find(LRselectivity < -LRthresh & STselectivity > STthresh);
+LeftTestSelective = find(LRselectivity > LRthresh & STselectivity < -STthresh);
+RightTestSelective = find(LRselectivity < -LRthresh & STselectivity < -STthresh);
+everythingElse = find( (LRselectivity < LRthresh & LRselectivity > -LRthresh)...
+    | (STselectivity < STthresh & STselectivity > -STthresh) );
+
+SortedBlockedFT = [BlockedFT(RightStudySelective,:);...
+                   BlockedFT(LeftStudySelective,:);...
+                   BlockedFT(RightTestSelective,:);...
+                   BlockedFT(LeftTestSelective,:);...
+                   BlockedFT(everythingElse,:)];
+%Similarity by percentile rank difference
+
+
+%vertical shuffle of cells:
+    %breakdown by correct/incorrect
+    
+%Get duration
+traceBit=FT(cell,theseInds);
+transientStarts=find(diff(traceBit)==1);
+transientEnds=find(diff(traceBit)==-1);
+%need to handle when uneven number
+
+
+%z score all of these?
 
 
 
@@ -164,11 +180,60 @@ for trialNum=1:length(allStarts)
     useInds = allStarts(shuffleInd(trialNum)):allStops(shuffleInds(trialNum));
     BFTshuffleInds=[BFTshuddleInds, useInds];
 end
-%vertical shuffle of cells:
-    %breakdown by correct/incorrect
-LRselectivity = hitsLeft/totalHits
-STselectivity = hitsStudy/totalHits
+
 
 
 % correlation of block by block: representational similarity analysis
 [r,p] = corrcoef(x,y)
+
+
+%% Old stuff
+%%All brain frames of each type
+%{
+inc_forced_l=[]; inc_free_l=[];
+inc_forced_r=[]; inc_free_r=[];
+num_blocks = size(frames,1);
+for j=1:num_blocks
+    if left_trials_forced(j) == 1
+        inc_forced_l = [inc_forced_l, forced_start(j):forced_end(j)];
+    elseif right_trials_forced(j) == 1
+        inc_forced_r = [inc_forced_r, forced_start(j):forced_end(j)];
+    end
+    
+    if left_trials_free(j) == 1
+        inc_free_l = [inc_free_l, free_start(j):free_end(j)];
+    elseif right_trials_free(j) == 1
+        inc_free_r = [inc_free_r, free_start(j):free_end(j)];
+    end
+end
+
+
+%fix for FToffset
+    % take raw/non-aligned frame inidices that aligned with FT from
+    % ProcOut.mat file and align to aligned position/FT data.
+    exclude_frames_raw=inc_free_r;
+    exclude_frames=[];
+    exclude_aligned = exclude_frames_raw - FToffset + 2;
+    exclude_aligned = exclude_aligned(exclude_aligned > 0); % Get rid of any negative values (corresponding to times before the mouse was on the maze)
+    exclude_frames = [exclude_frames, exclude_aligned]; % concatenate to exclude_frames 
+    exclude_frames = exclude_frames(exclude_frames <= length(x_adj_cm));%sometimes come up with frames longer than FT
+figure;
+plot(x_adj_cm,y_adj_cm,'.k')
+hold on
+plot(x_adj_cm(exclude_frames),y_adj_cm(exclude_frames),'.r')
+%}
+
+
+%convert to brain frames (shouldn't need this anymore
+%{
+forced_start = AVI_to_brain_frame(forced_start, AVItime_interp);
+forced_end = AVI_to_brain_frame(delay_start, AVItime_interp);
+free_start = AVI_to_brain_frame(free_start, AVItime_interp);
+free_end = AVI_to_brain_frame(leave_maze, AVItime_interp);
+cage_start = AVI_to_brain_frame(cage_start, AVItime_interp);
+cage_leave = AVI_to_brain_frame(cage_leave, AVItime_interp);
+    if length(cage_leave)==length(cage_start)-1
+        cage_start(end) = []; end
+delay_start = AVI_to_brain_frame(delay_start, AVItime_interp);
+delay_end = free_start;
+%}
