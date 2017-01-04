@@ -111,7 +111,7 @@ if ~isempty(strfind(version,'R2016a'))
     disp('Sorry, 2016a not going to work; use 2015b or earlier')
     return
 end
-% %}
+%% Need these for better organization
 global obj
 global aviSR
 global auto_frames
@@ -130,13 +130,16 @@ global numPasses
 global v
 global v0
 global maze
-global lastManualFrame
+global lastManualFrame; lastManualFrame=[];
 global grayThresh
 global gaussThresh
 global distLim2
 global got
 global skipped
-%}
+global huh
+global putativeMouseX
+global putativeMouseY
+
 
 %% Get varargin
     
@@ -426,25 +429,20 @@ hline=refline(0,auto_vel_thresh);hline.Color='r';hline.LineWidth=1.5;
 if ~exist('Pos_temp.mat','file')
     save Pos_temp.mat Xpix Ypix xAVI yAVI MoMtime MouseOnMazeFrame maze v0 maskx masky 
 end 
-definitelyGood=Xpix*0;
-grayThresh=115; gaussThresh=0.2;
-max_pixel_jump=sqrt(50^2+50^2);
-distLim=max_pixel_jump;
-distLim2=45;
+
+definitelyGood = Xpix*0;
+grayThresh = 115; 
+gaussThresh = 0.2;
+max_pixel_jump = sqrt(50^2+50^2);
+distLim = max_pixel_jump;
+grayBlobArea = 60;
+distLim2 = 45;
 got=[];
 skipped=[];
 
 %Expected gray blobs to exclude
-%{
-grayFrameThresh=rgb2gray(flipud(v0)) < grayThresh; %flipud
-grayGaussThresh=imgaussfilt(double(grayFrameThresh),10) > gaussThresh;
-expectedBlobs = regionprops(grayGaussThresh & maze,'centroid','area'); %flipped
-for aa=1:length(expectedBlobs); blobCenters(aa,1:2)=expectedBlobs(aa).Centroid; end
-[inBlob,onBlob] = inpolygon(blobCenters(:,1), blobCenters(:,2), maskx, masky);
-inMaze= inBlob | onBlob; %probably going to yes all of them (maze above)
-expectedBkgBlobs=expectedBlobs(inMaze);
-    %not done yet
-%}
+grayFrameThreshB=rgb2gray(flipud(v0)) < grayThresh; %flipud
+expectedBlobs=logical(imgaussfilt(double(grayFrameThreshB),10) <= gaussThresh);
 
 % First let's do frames out of bounds
 zero_frames = Xpix == 0 | Ypix == 0 ;
@@ -461,7 +459,8 @@ if any(auto_frames)
 end
 
 if auto_thresh_flag==1
-numPasses=2;
+numPasses=2;    
+skipped=[];
 for pass=1:numPasses
     %pass 1 skip where bad, pass 2 run skipped, manual correct if still bad
     ManualCorrFig=figure('name','ManualCorrFig'); imagesc(flipud(v0)); title('Auto correcting, please wait')
@@ -469,7 +468,7 @@ for pass=1:numPasses
     %p = ProgressBar(100/resol);
     update_inc = round(length(auto_frames)/(100/resol));
     total=0;
-    skipped=[];
+
     for corrFrame=1:length(auto_frames)
         fixedThisFrameFlag=0;
         %if overwriteManualFlag==1 && definitelyGood(auto_frames(corrFrame))==0 %This probably isn't right
@@ -485,20 +484,14 @@ for pass=1:numPasses
                 [stats.MajorAxisLength] > 10 & ...
                 [stats.MinorAxisLength] > 10);
             stats=stats(MouseBlob)
+
             %}
-            %{
-            %lower Area lower limit, add an upper limit
-            %add: centroid in a VERY rough area that is below threshold
-            %conditional: if couldn't find a blob, accept smaller blob if
-            %previous position was user-corrected
-            %manual corrected redo condition: part of high velocity jump
-                %should get caught during auto-high vel check, so don't
-                %allow manual exception during that
-            %}
-        grayFrameThresh=rgb2gray(flipud(v)) < grayThresh; %flipud
-        grayGaussThresh=imgaussfilt(double(grayFrameThresh),10) > gaussThresh;
-        grayStats = regionprops(grayGaussThresh & maze,'centroid','area'); %flipped
-        %here eliminate blobs that are also in expectedBkgBlobs
+        grayFrameThresh = rgb2gray(flipud(v)) < grayThresh; %flipud
+        grayGaussThresh = imgaussfilt(double(grayFrameThresh),10) > gaussThresh;
+        maybeMouseGray = grayGaussThresh & maze & expectedBlobs; %To handle background gray
+        grayStats = regionprops(maybeMouseGray,'centroid','area'); %flipped
+        grayStats = grayStats([grayStats.Area]>grayBlobArea);
+        
         possible=[];
         if ~isempty(grayStats) && ~isempty(stats) %what if one is empty?
             for statsInd=1:length(stats)
@@ -537,61 +530,17 @@ for pass=1:numPasses
                     fixedThisFrameFlag=0;
                 end
             elseif size(possible,1)>1 
-%{ 
-%I think here               
-                %this should be a callable function
                 %more than one blob will and thresh agree on
-                skipThisStep=0;
-                if auto_frames(corrFrame) > 1 && any(skipped==auto_frames(corrFrame)-1)==0 %Look at adjacent frames
-                    %not the first frame and we didn't skip the last one
-                    adjacentX = xAVI(auto_frames(corrFrame)-1);
-                    adjacentY = yAVI(auto_frames(corrFrame)-1);
-                elseif auto_frames(corrFrame) > length(xAVI) && any(skipped==auto_frames(corrFrame)+1)==0 ...
-                    && any(auto_frames(corr_frame+1)==auto_frames(corrFrame)+1)==0
-                    %not the last frame and next frame doesn't need to be corrected or was skipped                
-                    adjacentX = xAVI(auto_frames(corrFrame)+1);
-                    adjacentY = yAVI(auto_frames(corrFrame)+1);
-                elseif auto_frames(corrFrame)==1 
-                    [xm,ym]=ManualOnlyCorr;
-                    skipThisStep=1;
-                elseif pass==1 %no usable frames
-                    skipped = [skipped; auto_frames(corrFrame)];%#ok<AGROW>
-                    skipThisStep=1;
-                    fixedThisFrameFlag=0;
-                elseif pass==2 && auto_frames(corrFrame)==1
-                    % [xm,ym] = EnhancedManualCorrect;
-                    %skipThisStep=1;
-                else 
-                    disp('missed something somewhere...')
-                    huh=[huh; auto_frames(corrFrame)]; %#ok<AGROW>
-                end
-Through here can be turned into a function
-%}                     
-                if skipThisStep==0
-                    %This little bit would need to be generalized
-                    for posNum=1:size(possible,1)
+
+                for posNum=1:size(possible,1)
                         putativeMouseX(posNum) = mean([stats(possible(posNum,1)).Centroid(1)...
-                            grayStats(possible(posNum,2)).Centroid(1)]); %#ok<AGROW>
+                            grayStats(possible(posNum,2)).Centroid(1)]); 
                         putativeMouseY(posNum) = mean([stats(possible(posNum,1)).Centroid(2)...
-                            grayStats(possible(posNum,2)).Centroid(2)]); %#ok<AGROW>
-                    end
-                    whichSharedMouseX = findclosest( adjacentX, putativeMouseX);
-                    whichSharedMouseY = findclosest( adjacentY, putativeMouseY);
-                    if whichSharedMouseX  == whichSharedMouseY
-                        xm=putativeMouseX(whichSharedMouseX);
-                        ym=putativeMouseY(whichSharedMouseY);
-                        fixedThisFrameFlag=1;
-                        got=[got; corrFrame]; %#ok<AGROW>
-                    else    
-                        if pass==1
-                            skipped = [skipped; auto_frames(corrFrame)]; %#ok<AGROW>
-                            fixedThisFrameFlag=0;
-                        elseif pass==2
-                            [xm,ym] = EnhancedManualCorrect; 
-                        end    
-                    end
+                            grayStats(possible(posNum,2)).Centroid(2)]); 
                 end
+                [xm, ym]=TryAdjacentFrames;
             end
+            
         else %either grayStats or will stats is empty
             %A: whichever is not, use blob closest to last known good
             if ~isempty(grayStats) && isempty(stats)
@@ -599,89 +548,35 @@ Through here can be turned into a function
             elseif isempty(grayStats) && ~isempty(stats)    
                     blobStats=stats;
             end
-%{ 
-%I think here                
-            skipThisStep=0;
 
-            if auto_frames(corrFrame) > 1 && any(skipped==auto_frames(corrFrame)-1)==0 %Look at adjacent frames
-                %not the first frame and we didn't skip the last one
-                adjacentX = xAVI(auto_frames(corrFrame)-1);
-                adjacentY = yAVI(auto_frames(corrFrame)-1);
-            elseif auto_frames(corrFrame) > length(xAVI) && any(skipped==auto_frames(corrFrame)+1)==0 ...
-                    && any(auto_frames(corr_frame+1)==auto_frames(corrFrame)+1)==0
-                %not the last frame and next frame doesn't need to be corrected or was skipped                
-                adjacentX = xAVI(auto_frames(corrFrame)+1);
-                adjacentY = yAVI(auto_frames(corrFrame)+1);
-            elseif auto_frames(corrFrame)==1
-                [xm,ym]=ManualOnlyCorr;
-                skipThisStep=1;
-            elseif pass==2 && auto_frames(corrFrame)~=1
-                [xm,ym] = EnhancedManualCorrect; 
-                skipThisStep=1;
-            elseif pass==1 %no usable frames
-                skipped = [skipped; auto_frames(corrFrame)];%#ok<AGROW>
-                fixedThisFrameFlag=0;
-                skipThisStep=1;
-            else
-                disp('missed something somewhere...')
+            for posNum=1:size(blobStats,1)
+                putativeMouseX(posNum) = blobStats(posNum).Centroid(1); 
+                putativeMouseY(posNum) = blobStats(posNum).Centroid(2); 
             end
-Through here can be turned into a function
-%}                
-            if skipThisStep==0
-                for posNum=1:size(blobStats,1)
-                        putativeMouseX(posNum) = blobStats(posNum).Centroid(1); 
-                        putativeMouseY(posNum) = blobStats(posNum).Centroid(2); 
-                end
-                    whichSharedMouseX = findclosest( adjacentX, putativeMouseX);
-                    whichSharedMouseY = findclosest( adjacentY, putativeMouseY);
-                if whichSharedMouseX  == whichSharedMouseY
-                        xm=putativeMouseX(whichSharedMouseX);
-                        ym=putativeMouseY(whichSharedMouseY);
-                        fixedThisFrameFlag=1;
-                        got=[got; corrFrame]; %#ok<AGROW>
-                elseif pass==1
-                        fixedThisFrameFlag=0;
-                        skipped = [skipped; auto_frames(corrFrame)]; %#ok<AGROW>
-                elseif auto_frames(corrFrame)==1    
-                        figure(ManualCorrFig); 
-                        imagesc(flipud(v))
-                        hold on 
-                        title('click here')
-                elseif pass>=2
-                    if corrFrame==1
-                            [xm,ym] = ginput(1);
-                            hold on
-                            plot(xm,ym,'og','MarkerSize',4,'MarkerFaceColor','g'); hold off   
-                            fixedThisFrameFlag=1;
-                            definitelyGood(auto_frames(corrFrame)) = 1;
-                            lastManualFrame=auto_frames(corrFrame);
-                    elseif corrFrame > 1
-                        [xm,ym] = EnhancedManualCorrect; 
-                    end
-                end
-            end
-        end   
-            %figure(ManualCorrFig); 
             
-       % apply corrected position to current frame
-       if fixedThisFrameFlag==1
-           xAVI(corrFrame) = xm;
-           yAVI(corrFrame) = ym;
-           Xpix(corrFrame) = ceil(xm/0.6246);
-           Ypix(corrFrame) = ceil(ym/0.6246);    
-       end
-       total=total+1;
-       if round(total/update_inc) == (total/update_inc) % Update progress bar
+            [xm, ym]=TryAdjacentFrames;
+        end   
+            
+        % apply corrected position to current frame
+        if fixedThisFrameFlag==1
+            xAVI(corrFrame) = xm;
+            yAVI(corrFrame) = ym;
+            Xpix(corrFrame) = ceil(xm/0.6246);
+            Ypix(corrFrame) = ceil(ym/0.6246);    
+        end
+        total=total+1;
+        if round(total/update_inc) == (total/update_inc) % Update progress bar
                 %p.progress;
                 %would like to have a 50% save spot...
-       end
+        end
 
     end 
     close(ManualCorrFig);    
     save Pos_temp.mat Xpix Ypix xAVI yAVI MoMtime MouseOnMazeFrame maskx v0 maze masky definitelyGood   
     p.stop;
     disp(['Completed auto-pass ' num2str(pass) ' on ' num2str(total) ' out of bounds frames'])
-end 
+end
+
 end    
 
 %% so many options
@@ -1250,6 +1145,7 @@ save Pos.mat xpos_interp ypos_interp time_interp start_time MoMtime Xpix Ypix xA
 end 
 %%
 %Functions for correcting stuff, for better organization
+%% %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 function [xm,ym]=EnhancedManualCorrect(~,~)
 global auto_frames; global corrFrame; global v; global ManualCorrFig
 global fixedThisFrameFlag; global definitelyGood; global obj
@@ -1303,7 +1199,7 @@ while intendedFrameGood==0
 end
 
 end
-
+%% %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 function [xm,ym]=ManualOnlyCorr(~,~)
 global auto_frames; global corrFrame; global v; global ManualCorrFig
 global fixedThisFrameFlag; global definitelyGood; global obj
@@ -1322,6 +1218,70 @@ fixedThisFrameFlag=1;
 lastManualFrame=auto_frames(corrFrame);
 
 end
+%% %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+function [xm, ym]=TryAdjacentFrames(~,~)
+                
+global putativeMouseX; global putativeMouseY
+global auto_frames; global corrFrame; global skipped; 
+global xAVI; global yAVI; global fixedThisFrameFlag; global huh; global got
+
+skipThisStep=0;
+if auto_frames(corrFrame) > 1 && any(skipped==auto_frames(corrFrame)-1)==0 %Look at adjacent frames
+    %not the first frame and we didn't skip the last one
+    adjacentX = xAVI(auto_frames(corrFrame)-1);
+    adjacentY = yAVI(auto_frames(corrFrame)-1);
+elseif auto_frames(corrFrame) > length(xAVI) && any(skipped==auto_frames(corrFrame)+1)==0 ...
+    && any(auto_frames(corr_frame+1)==auto_frames(corrFrame)+1)==0
+    %not the last frame and next frame doesn't need to be corrected or was skipped                
+    adjacentX = xAVI(auto_frames(corrFrame)+1);
+    adjacentY = yAVI(auto_frames(corrFrame)+1);
+elseif auto_frames(corrFrame)==1 
+    [xm,ym]=ManualOnlyCorr;
+    skipThisStep=1;
+elseif pass==1 %no usable frames
+    skipped = [skipped; auto_frames(corrFrame)];
+    skipThisStep=1;
+    fixedThisFrameFlag=0;
+elseif pass==2 && auto_frames(corrFrame)~=1
+    [xm,ym] = EnhancedManualCorrect;
+    skipThisStep=1;
+else 
+    disp('missed something somewhere...')
+    huh=[huh; auto_frames(corrFrame)];
+end
+                   
+if skipThisStep==0
+    whichSharedMouseX = findclosest( adjacentX, putativeMouseX);
+    whichSharedMouseY = findclosest( adjacentY, putativeMouseY);
+    if whichSharedMouseX  == whichSharedMouseY
+        xm=putativeMouseX(whichSharedMouseX);
+        ym=putativeMouseY(whichSharedMouseY);
+        fixedThisFrameFlag=1;
+        got=[got; corrFrame]; 
+    else    
+        if pass==1
+            skipped = [skipped; auto_frames(corrFrame)]; 
+            fixedThisFrameFlag=0;
+        elseif pass>=2 && corrFrame==1
+            [xm,ym]=ManualOnlyCorr;
+        elseif pass>=2 && corrFrame~=1
+            [xm,ym] = EnhancedManualCorrect; 
+        end    
+    end
+end
+                
+end
+%% %%%%%%%%%%%%%%%%%%%%%%%%%%%%
 function CorrectTheseFrames(~,~)
 
 end
+%{
+BoneYard
+
+ = regionprops(grayGaussThreshB & maze,'centroid','area'); %flipped
+for aa=1:length(expectedBlobs); blobCenters(aa,1:2)=expectedBlobs(aa).Centroid; end
+[inBlob,onBlob] = inpolygon(blobCenters(:,1), blobCenters(:,2), maskx, masky);
+inMaze= inBlob | onBlob; %probably going to yes all of them (maze above)
+expectedBkgBlobs=expectedBlobs(inMaze);
+
+%}
