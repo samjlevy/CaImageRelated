@@ -1,5 +1,13 @@
-function [xpos_interp,ypos_interp,start_time,MoMtime,time_interp,AVItime_interp] = PreProcessMousePosition_autoSL2(varargin)
-% [xpos_interp,ypos_interp,start_time,MoMtime] = PreProcessMousePosition_auto(filepath, auto_thresh,...)
+function [xpos_interp,ypos_interp,time_interp,AVItime_interp] = PreProcessMousePosition_autoSL2(varargin)
+% Open issues: 1/11/17
+%   - High vel: what do do if correcting the same frame already (could be
+%   an issue on the frame before)
+%   - Logic for possible: could be generalized better
+%   - Video of results
+%   - Blob restrictions for will and gray
+%   - contrast adjustment
+%
+%[xpos_interp,ypos_interp,start_time,MoMtime] = PreProcessMousePosition_auto(filepath, auto_thresh,...)
 % Function to correct errors in mouse tracking.  Runs once through the
 % entire sessions automatically having you edit any events above a velocity
 % threshold (set by 'auto_thresh', suggest setting this to 0.01 or 0.02).
@@ -141,6 +149,9 @@ global update_pos_realtime
 global grayBlobArea
 global ManualCorrFig
 global overwriteManualFlag
+global velCount
+global sFrame
+global eFrame
 
 %% Get varargin
     
@@ -189,7 +200,7 @@ try
     %date = [filepath(f_s+3:f_s+4) '-' filepath(f_s+5:f_s+6) '-' filepath(f_s+7:f_s+10)];
     
     % Parse out into invididual variables
-    frame = pos_data(:,1);
+    %frame = pos_data(:,1);
     time = pos_data(:,2); % time in seconds
     Xpix = pos_data(:,3); % x position in pixels (can be adjusted to cm)
     Ypix = pos_data(:,4); % y position in pixels (can be adjusted to cm)
@@ -315,8 +326,10 @@ switch bkgChoice
         topClearFrame = readFrame(obj);
         obj.CurrentTime = (bottomClearNum-1)/obj.FrameRate;
         bottomClearFrame = readFrame(obj);
-        Top=figure('name','top'); imagesc(topClearFrame); title(['Top Clear Frame ' num2str(topClearNum)]) %#ok<NASGU>
-        Bot=figure('name','bot'); imagesc(bottomClearFrame); title(['Bottom Clear Frame ' num2str(bottomClearNum)]) %#ok<NASGU>
+        Top=figure('name','top'); imagesc(topClearFrame); %#ok<NASGU>
+            title(['Top Clear Frame ' num2str(topClearNum)]) 
+        Bot=figure('name','bot'); imagesc(bottomClearFrame); %#ok<NASGU>
+            title(['Bottom Clear Frame ' num2str(bottomClearNum)]) 
         compositeBkg=uint8(zeros(480,640,3));
         compositeBkg(1:240,:,:)=topClearFrame(1:240,:,:);
         compositeBkg(241:480,:,:)=bottomClearFrame(241:480,:,:);
@@ -355,7 +368,8 @@ while compGood==0
             hold on 
             plot([SwapX; SwapX(1)],[SwapY; SwapY(1)],'r','LineWidth',2)
             %figure(h1); %msgbox('Enter frame number of image to swap in')
-            swapInNum = input('Frame number to swap in area from ---->')%#ok<NOPRT> %might replace with 2 field dialog box
+            swapInNum = input('Frame number to swap in area from ---->')%#ok<NOPRT> 
+            %might replace with 2 field dialog box
             try 
                 close h1; 
             end
@@ -420,8 +434,8 @@ hx0 = subplot(4,3,1:3);plot(time,Xpix);xlabel('time (sec)');ylabel('x position (
     line([MoMtime MoMtime], [yl(1) yl(2)],'Color','r');axis tight;
 hy0 = subplot(4,3,4:6);plot(time,Ypix);xlabel('time (sec)');ylabel('y position (cm)');yl = get(gca,'YLim');
     line([MoMtime MoMtime], [yl(1) yl(2)],'Color','r');axis tight;
-hVel = subplot(4,3,7:12);plot(vel_init);xlabel('time (sec)');ylabel('velocity');axis tight;
-linkaxes([hx0 hy0 hVel],'x');
+hVel = subplot(4,3,7:12);plot(vel_init);xlabel('time (sec)');ylabel('velocity');axis tight; %#ok<NASGU>
+linkaxes([hx0 hy0],'x');
 hline=refline(0,auto_vel_thresh);hline.Color='r';hline.LineWidth=1.5;
 %vel = hypot(diff(Xpix),diff(Ypix))/(time(2)-time(1));
 
@@ -590,11 +604,35 @@ switch MorePoints
         close(velthreshing)
     case 'v'
         disp('auto-correcting high velocity points')
-        % Ask if auto-assist OR manual only, give estimate of how many points
-        % Go from start to end of session, or pick a region,
         % Find indices of all points above auto_vel_thresh
         % After doing the first, recalculate all and go to earliest
         % Following this to work towards end
+        doSomething=1;
+        velchoice = questdlg('How do you want to do velocity?', 'Correct high velocity',...
+            'Whole session','First 100','Select Window','Cancel','Select Window');
+        switch velchoice
+            case 'Whole session'
+                disp(['right now found ' num2str(sum(vel_init>auto_vel_thresh)) ' high velocity frames; expect more'])
+            case 'First 100'
+                velCount=0;
+            case 'Select Window'
+                [sFrame,eFrame] = SelectFrameNumbers;
+            case 'Cancel'
+                %Do nothing
+                doSomething=0;
+        end
+        if doSomething==1
+             AMchoice = questdlg('Manual only or auto-assist?', 'Auto or manual',...
+                'Auto-assist','Manual','Cancel','Auto-assist');
+            switch AMchoice
+                case 'Auto-assist'
+                    HighVelocityCorrect;
+                case 'Manual'
+                    HighVelocityCorrect;
+                case 'Cancel'
+                    %Do nothing
+            end
+        end
     case 'o'
     switch overwriteManualFlag
         case 0
@@ -667,6 +705,101 @@ end
 %%
 %Functions
 %% %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+function HighVelocityCorrect(~,~)
+global sFrame; global eFrame; global vel_init; global auto_vel_thresh;
+global velCount; global time; global Xpix; global Ypix; global corrFrame;
+global auto_frames; global velchoice; global AMchoice; global pass;
+global xAVI; global yAVI; global definitelyGood; global fixedThisFrameFlag
+
+marker = {'go' 'yo' 'ro'};
+marker_face = {'g' 'y' 'r'};
+markWith = 2; %needs to be updated...
+
+veldFrames=[];
+doneVel=0;
+while doneVel==0
+
+auto_frames=[];
+vel_init = hypot(diff(Xpix),diff(Ypix))/(time(2)-time(1));
+highVelFrames = find(vel_init>auto_vel_thresh)+1;
+theseAreOk = find(definitelyGood);
+[~,~,inHighVel] = intersect(theseAreOk,highVelFrames);
+highVelFrames(inHighVel) = [];
+
+%look at overwriteManualFlag?
+
+switch velchoice
+    case 'Whole session'
+        if any(highVelFrames)
+            auto_frames=highVelFrames(1);
+            corrFrame=1;
+        else 
+            doneVel=1;
+        end
+    case 'First 100'
+        velCount=velCount+1;
+        if velCount==101
+            doneVel=1;
+        else
+            auto_frames=highVelFrames(1);
+            corrFrame=1;
+        end
+    case 'Select Window'
+        auto_frames=highVelFrames(find(highVelFrames>=sFrame & highVelFrames<=eFrame,1,'first'));
+        corrFrame=1;
+        if isempty(auto_frames)
+            doneVel=1;
+        end
+end
+if any(auto_frames)
+    if any(veldFrames==auto_frames)
+        disp(['Uh oh, already did this frame, ' num2str(auto_frames) ', '...
+            num2str(sum(veldFrames==auto_frames)) ' times'])
+        %{
+        contchoice =  questdlg('Try it again or skip it?', 'SkipTry',...
+                            'Try','Manual','Skip','Skip');
+        switch contchoice
+            case 'Try'
+                
+            case 'Manual'
+                
+            case 'Skip'    
+                
+        end
+        %}
+    else    
+        veldFrames=[veldFrames auto_frames]; %#ok<AGROW>
+    end    
+end
+if doneVel==0
+switch AMchoice
+    case 'Auto-assist'
+            for pass=1:2
+                CorrectThisFrame;  
+            end
+    case 'Manual'
+        fixedThisFrameFlag=0;
+        [xm,ym]=EnhancedManualCorrect; 
+        
+        if fixedThisFrameFlag==1
+            xAVI(auto_frames(corrFrame)) = xm;
+            yAVI(auto_frames(corrFrame)) = ym;
+            Xpix(auto_frames(corrFrame)) = ceil(xm/0.6246);
+            Ypix(auto_frames(corrFrame)) = ceil(ym/0.6246); 
+            
+            figure(ManualCorrFig); 
+            hold on;
+            plot(xm,ym,marker{markWith},'MarkerSize',4,...
+                'MarkerFaceColor',marker_face{markWith})
+            hold off;
+        end
+end
+end
+   
+
+end
+end
+%% %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 function TryAdjacentFrames(~,~)
                 
 global putativeMouseX; global putativeMouseY
@@ -679,11 +812,17 @@ if auto_frames(corrFrame) > 1 && any(skipped==auto_frames(corrFrame)-1)==0 %Look
     %not the first frame and we didn't skip the last one
     adjacentX = xAVI(auto_frames(corrFrame)-1);
     adjacentY = yAVI(auto_frames(corrFrame)-1);
-elseif auto_frames(corrFrame) <= length(xAVI) && any(auto_frames(corr_frame+1)==auto_frames(corrFrame)+1)==0
-    %&& any(skipped==auto_frames(corrFrame)+1)==0 ...
-    %not the last frame and next frame doesn't need to be corrected
+elseif auto_frames(corrFrame)~=auto_frames(end)
+    if auto_frames(corrFrame) < length(xAVI) && any(auto_frames(corr_frame+1)==auto_frames(corrFrame)+1)==0
+        %&& any(skipped==auto_frames(corrFrame)+1)==0 ... %doesn't work w/ more than one skipped
+        %not the last frame and next frame doesn't need to be corrected
+        %this check could fail if we're on the last auto_frame
     adjacentX = xAVI(auto_frames(corrFrame)+1);
     adjacentY = yAVI(auto_frames(corrFrame)+1);
+    else
+        skipThisStep=1;
+        [xm, ym] = EnhancedManualCorrect;
+    end    
 else
     if auto_frames(corrFrame)==1
         [xm,ym]=ManualOnlyCorr;
@@ -707,17 +846,17 @@ if skipThisStep==0
     whichSharedMouseX = findclosest( adjacentX, putativeMouseX);
     whichSharedMouseY = findclosest( adjacentY, putativeMouseY);
     if whichSharedMouseX  == whichSharedMouseY
-        xm=putativeMouseX(whichSharedMouseX);
-        ym=putativeMouseY(whichSharedMouseY);
-        fixedThisFrameFlag=1;
-        got=[got; corrFrame]; 
+        xm = putativeMouseX(whichSharedMouseX);
+        ym = putativeMouseY(whichSharedMouseY);
+        fixedThisFrameFlag = 1;
+        got = [got; corrFrame]; 
     else    
         if pass==1
             skipped = [skipped; auto_frames(corrFrame)]; 
             fixedThisFrameFlag=0;
         elseif pass>=2 && corrFrame==1 %this shouldn't happen
             disp('this shouldn"t happen')
-            [xm,ym]=ManualOnlyCorr;
+            [xm, ym] = ManualOnlyCorr;
         elseif pass>=2 && corrFrame~=1
             [xm,ym] = EnhancedManualCorrect; 
         end    
@@ -767,10 +906,10 @@ while intendedFrameGood==0
             title(['click here, backed up to ' num2str(lastManualFrame) ' from ' num2str(intendedFrameNum)])
             [xm,ym] = ginput(1);
             hold on; plot(xm,ym,'oy','MarkerSize',4,'MarkerFaceColor','g'); hold off
-            xAVI(corrFrame) = xm;
-            yAVI(corrFrame) = ym;
-            Xpix(corrFrame) = ceil(xm/0.6246);
-            Ypix(corrFrame) = ceil(ym/0.6246);
+            xAVI(lastManualFrame) = xm;
+            yAVI(lastManualFrame) = ym;
+            Xpix(lastManualFrame) = ceil(xm/0.6246);
+            Ypix(lastManualFrame) = ceil(ym/0.6246);
             definitelyGood(lastManualFrame) = 1; %just in case
             obj.CurrentTime = (intendedFrameNum-1)/aviSR;
             intendedFrame = readFrame(obj);
@@ -821,15 +960,9 @@ sFrame = max([1, sFrame]); %makesure we're not too early
 end
 %% %%%%%%%%%%%%%%%%%%%%%%%%%%%%
 function CorrectTheseFrames(~,~)
-%main frame correcting code here
-global auto_frames; global corrFrame; global v; global ManualCorrFig;
-global fixedThisFrameFlag; global obj; global markWith; global v0;
-global xAVI; global yAVI; global Xpix; global Ypix; global maze;
-global pass; global aviSR; global expectedBlobs; global update_pos_realtime;
-global grayBlobArea
-
-marker = {'go' 'yo' 'ro'};
-marker_face = {'g' 'y' 'r'};
+%main frame-correcting code here
+global auto_frames; global corrFrame; global ManualCorrFig; global skipped;
+global markWith; global v0; global Xpix; global Ypix; global pass;
 
 skipped=[];
 ManualCorrFig=figure('name','ManualCorrFig'); imagesc(flipud(v0)); title('Auto correcting, please wait')
@@ -842,40 +975,83 @@ for pass=1:numPasses
     total=0;
     bounds=[0 floor(length(auto_frames)/3) 2*floor(length(auto_frames)/3)];
 
-for corrFrame=1:length(auto_frames)   
-%if overwriteManualFlag==1 || definitelyGood(auto_frames(corrFrame))==0
-%should everything in this if be a function? might be useful for adapting
-%velocity autocorrect
+    for corrFrame=1:length(auto_frames)   
+        if overwriteManualFlag==1 || definitelyGood(auto_frames(corrFrame))==0
+            markWith=sum(corrFrame>bounds);
+            CorrectThisFrame;
+        end 
 
-    fixedThisFrameFlag=0;
-    markWith=sum(corrFrame>bounds);
-    obj.CurrentTime=(auto_frames(corrFrame)-1)/aviSR;
-    v = readFrame(obj);
-    if update_pos_realtime==1
-       figure(ManualCorrFig);
-       hold off; imagesc(flipud(v)); hold on
-       title(['Auto correcting frame ' num2str(auto_frames(corrFrame)) ', please wait'])
-       if Xpix(auto_frames(corrFrame)) ~= 0 && Ypix(auto_frames(corrFrame)) ~= 0
-           plot(xAVI(auto_frames(corrFrame)),yAVI(auto_frames(corrFrame)),marker{markWith},'MarkerSize',4);
-       end    
-    end
+        total=total+1;
+        if round(total/update_inc) == (total/update_inc) % Update progress bar
+            p.progress;
+        end
+    end 
+    
+    close(ManualCorrFig);    
+    SaveTemp;
+    p.stop;
+
+    %Update position and velocity figure;
+    figure(PosAndVel);
+    hx0 = subplot(4,3,1:3);plot(time,Xpix);xlabel('time (sec)');ylabel('x position (cm)');yl = get(gca,'YLim');
+        line([MoMtime MoMtime], [yl(1) yl(2)],'Color','r');axis tight;
+    hy0 = subplot(4,3,4:6);plot(time,Ypix);xlabel('time (sec)');ylabel('y position (cm)');yl = get(gca,'YLim');
+        line([MoMtime MoMtime], [yl(1) yl(2)],'Color','r');axis tight;
+    hVel = subplot(4,3,7:12);plot(vel_init);xlabel('time (sec)');ylabel('velocity');axis tight;
+    linkaxes([hx0 hy0 hVel],'x');
+    hline=refline(0,auto_vel_thresh);hline.Color='r';hline.LineWidth=1.5;
+    
+    switch pass
+        case 1
+            disp(['Completed auto-pass ' num2str(pass) ' on ' num2str(total) ' out of bounds frames'])
+            auto_frames=skipped; %and can't have any skipped in round 2
+        case 2
+            disp('something about the frames you helped correct, human')
+    end 
+
+end
+
+end
+%% %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+function CorrectThisFrame(~,~)
+global auto_frames; global corrFrame; global v; global ManualCorrFig;
+global fixedThisFrameFlag; global obj; global markWith; global v0;
+global xAVI; global yAVI; global Xpix; global Ypix; global maze; global got;
+global pass; global aviSR; global expectedBlobs; global update_pos_realtime;
+global grayBlobArea; global skipped; global putativeMouseX; global putativeMouseY;
+
+marker = {'go' 'yo' 'ro'};
+marker_face = {'g' 'y' 'r'};
+
+fixedThisFrameFlag=0;
+    
+obj.CurrentTime=(auto_frames(corrFrame)-1)/aviSR;
+v = readFrame(obj);
+if update_pos_realtime==1
+    figure(ManualCorrFig);
+    hold off; imagesc(flipud(v)); hold on
+    title(['Auto correcting frame ' num2str(auto_frames(corrFrame)) ', please wait'])
+    if Xpix(auto_frames(corrFrame)) ~= 0 && Ypix(auto_frames(corrFrame)) ~= 0
+        plot(xAVI(auto_frames(corrFrame)),yAVI(auto_frames(corrFrame)),marker{markWith},'MarkerSize',4);
+    end    
+end
             
-    %Will's version, background image subtraction
-    d = imgaussfilt(flipud(rgb2gray(v0-v)),10);
-    stats = regionprops(d>willThresh & maze,'area','centroid','majoraxislength','minoraxislength');%flipped %'solidity'
-    MouseBlob = [stats.Area] > 250 & ... %[stats.Area] < 3500...
-                [stats.MajorAxisLength] > 10 & ...
-                [stats.MinorAxisLength] > 10;
-    stats=stats(MouseBlob);
+%Will's version, background image subtraction
+d = imgaussfilt(flipud(rgb2gray(v0-v)),10);
+stats = regionprops(d>willThresh & maze,'area','centroid','majoraxislength','minoraxislength');%flipped %'solidity'
+MouseBlob = [stats.Area] > 250 & ... %[stats.Area] < 3500...
+            [stats.MajorAxisLength] > 10 & ...
+            [stats.MinorAxisLength] > 10;
+stats=stats(MouseBlob);
         
-    %Sam's gray version
-    grayFrameThresh = rgb2gray(flipud(v)) < grayThresh; %flipud
-    grayGaussThresh = imgaussfilt(double(grayFrameThresh),10) > gaussThresh;
-    maybeMouseGray = grayGaussThresh & maze & expectedBlobs; %To handle background gray
-    grayStats = regionprops(maybeMouseGray,'centroid','area','majoraxislength','minoraxislength'); %flipped
-    grayStats = grayStats( [grayStats.Area] > grayBlobArea &...
-                               [grayStats.MajorAxisLength] > 15 &...
-                               [grayStats.MinorAxisLength] > 15);
+%Sam's gray version
+grayFrameThresh = rgb2gray(flipud(v)) < grayThresh; %flipud
+grayGaussThresh = imgaussfilt(double(grayFrameThresh),10) > gaussThresh;
+maybeMouseGray = grayGaussThresh & maze & expectedBlobs; %To handle background gray
+grayStats = regionprops(maybeMouseGray,'centroid','area','majoraxislength','minoraxislength'); %flipped
+grayStats = grayStats( [grayStats.Area] > grayBlobArea &...
+                       [grayStats.MajorAxisLength] > 15 &...
+                       [grayStats.MinorAxisLength] > 15);
         %{
           lengthStats=3;
           lengthGrayStats=5;
@@ -901,8 +1077,9 @@ for corrFrame=1:length(auto_frames)
                                mean CentroidsUse
           possible
         %}
-    possible=[];
-    switch ~isempty(grayStats) + ~isempty(stats) 
+                       
+possible=[];
+switch ~isempty(grayStats) + ~isempty(stats) 
     case 2 %both have stuff
         for statsInd=1:length(stats)
             for grayStatsInd=1:length(grayStats)
@@ -914,13 +1091,13 @@ for corrFrame=1:length(auto_frames)
                 stats(statsInd).Centroid(2)-grayStats(grayStatsInd).Centroid(2))]; %#ok<AGROW>
             end 
         end
-        possible( possible(:,3)>distLim2, :) = []; %#ok<AGROW>
+        possible( possible(:,3)>distLim2, :) = []; 
         if size(possible,1)==1
             %Will and thresh agree on one blob
             xm=mean([stats(possible(1)).Centroid(1) grayStats(possible(2)).Centroid(1)]);
             ym=mean([stats(possible(1)).Centroid(2) grayStats(possible(2)).Centroid(2)]);
             fixedThisFrameFlag=1;
-            got=[got; corrFrame];%#ok<AGROW>
+            got=[got; corrFrame];
         elseif size(possible,1)==0 %If logic here may not be right...
             if length(stats)==1 && length(grayStats)>1 %DON'T LIKE THIS
                     xm = stats.Centroid(1);
@@ -939,7 +1116,7 @@ for corrFrame=1:length(auto_frames)
                         [xm,ym] = EnhancedManualCorrect;
                 elseif pass==1 && auto_frames(corrFrame)~=1
                         %Here too?
-                        skipped = [skipped; auto_frames(corrFrame)]; %#ok<AGROW>
+                        skipped = [skipped; auto_frames(corrFrame)]; 
                         fixedThisFrameFlag=0;
                 end    
             end
@@ -947,9 +1124,9 @@ for corrFrame=1:length(auto_frames)
             %more than one blob will and thresh agree on
             for posNum=1:size(possible,1)
                 putativeMouseX(posNum) = mean([stats(possible(posNum,1)).Centroid(1)...
-                    grayStats(possible(posNum,2)).Centroid(1)]);  %#ok<AGROW>
+                    grayStats(possible(posNum,2)).Centroid(1)]); 
                 putativeMouseY(posNum) = mean([stats(possible(posNum,1)).Centroid(2)...
-                    grayStats(possible(posNum,2)).Centroid(2)]);  %#ok<AGROW>
+                    grayStats(possible(posNum,2)).Centroid(2)]); 
             end
                 
             TryAdjacentFrames;
@@ -973,56 +1150,29 @@ for corrFrame=1:length(auto_frames)
         case 0 %isempty(grayStats) && isempty(stats)
             switch pass
                 case 1
-                    skipped = [skipped; auto_frames(corrFrame)]; %#ok<AGROW>
+                    skipped = [skipped; auto_frames(corrFrame)]; 
                 case 2
                     [xm,ym] = EnhancedManualCorrect;
             end
-    end   
+end   
             
-        % apply corrected position to current frame
-        if fixedThisFrameFlag==1
-            xAVI(corrFrame) = xm;
-            yAVI(corrFrame) = ym;
-            Xpix(corrFrame) = ceil(xm/0.6246);
-            Ypix(corrFrame) = ceil(ym/0.6246); 
+    % apply corrected position to current frame
+    if fixedThisFrameFlag==1
+        xAVI(auto_frames(corrFrame)) = xm;
+        yAVI(auto_frames(corrFrame)) = ym;
+        Xpix(auto_frames(corrFrame)) = ceil(xm/0.6246);
+        Ypix(auto_frames(corrFrame)) = ceil(ym/0.6246); 
             
-            figure(ManualCorrFig); 
-            hold on;
-            plot(xm,ym,marker{markWith},'MarkerSize',4,...
-                    'MarkerFaceColor',marker_face{markWith})
-            hold off;
+        figure(ManualCorrFig); 
+        hold on;
+        plot(xm,ym,marker{markWith},'MarkerSize',4,...
+            'MarkerFaceColor',marker_face{markWith})
+        hold off;
+        if update_pos_realtime==1
+            pause(0.25)
         end
-%end %overWriteManual Flag        
-
-    total=total+1;
-    if round(total/update_inc) == (total/update_inc) % Update progress bar
-        p.progress;
     end
-
-end 
-close(ManualCorrFig);    
-SaveTemp;
-p.stop;
-
-%Update position and velocity figure;
-figure(PosAndVel);
-hx0 = subplot(4,3,1:3);plot(time,Xpix);xlabel('time (sec)');ylabel('x position (cm)');yl = get(gca,'YLim');
-    line([MoMtime MoMtime], [yl(1) yl(2)],'Color','r');axis tight;
-hy0 = subplot(4,3,4:6);plot(time,Ypix);xlabel('time (sec)');ylabel('y position (cm)');yl = get(gca,'YLim');
-    line([MoMtime MoMtime], [yl(1) yl(2)],'Color','r');axis tight;
-hVel = subplot(4,3,7:12);plot(vel_init);xlabel('time (sec)');ylabel('velocity');axis tight;
-linkaxes([hx0 hy0 hVel],'x');
-hline=refline(0,auto_vel_thresh);hline.Color='r';hline.LineWidth=1.5;
-    
-switch pass
-    case 1
-        disp(['Completed auto-pass ' num2str(pass) ' on ' num2str(total) ' out of bounds frames'])
-        auto_frames=skipped; %and can't have any skipped in round 2
-    case 2
-        disp('something about the frames you helped correct, human')
-end 
-
-end
+ 
 
 end
 %% %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -1047,10 +1197,10 @@ for corrFrame=1:length(auto_frames)
     [xm,ym]=EnhancedManualCorrect;   
             
     if fixedThisFrameFlag==1
-        xAVI(corrFrame) = xm;
-        yAVI(corrFrame) = ym;
-        Xpix(corrFrame) = ceil(xm/0.6246);
-        Ypix(corrFrame) = ceil(ym/0.6246);
+        xAVI(auto_frames(corrFrame)) = xm;
+        yAVI(auto_frames(corrFrame)) = ym;
+        Xpix(auto_frames(corrFrame)) = ceil(xm/0.6246);
+        Ypix(auto_frames(corrFrame)) = ceil(ym/0.6246);
                 
         figure(ManualCorrFig); 
         hold on;
