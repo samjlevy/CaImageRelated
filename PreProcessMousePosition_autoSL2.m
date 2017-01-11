@@ -6,6 +6,9 @@ function [xpos_interp,ypos_interp,time_interp,AVItime_interp] = PreProcessMouseP
 %   - Video of results
 %   - Blob restrictions for will and gray
 %   - contrast adjustment
+%   - select points by midpoint between frames to help catch not high
+%   velocity wrong things
+%   - marker style/color in velocity thing    
 %
 %[xpos_interp,ypos_interp,start_time,MoMtime] = PreProcessMousePosition_auto(filepath, auto_thresh,...)
 % Function to correct errors in mouse tracking.  Runs once through the
@@ -710,6 +713,7 @@ global sFrame; global eFrame; global vel_init; global auto_vel_thresh;
 global velCount; global time; global Xpix; global Ypix; global corrFrame;
 global auto_frames; global velchoice; global AMchoice; global pass;
 global xAVI; global yAVI; global definitelyGood; global fixedThisFrameFlag
+global PosAndVel;
 
 marker = {'go' 'yo' 'ro'};
 marker_face = {'g' 'y' 'r'};
@@ -795,7 +799,15 @@ switch AMchoice
         end
 end
 end
-   
+
+PosAndVel=figure('name','Position and Velocity');
+hx0 = subplot(4,3,1:3);plot(time,Xpix);xlabel('time (sec)');ylabel('x position (cm)');yl = get(gca,'YLim');
+    line([MoMtime MoMtime], [yl(1) yl(2)],'Color','r');axis tight;
+hy0 = subplot(4,3,4:6);plot(time,Ypix);xlabel('time (sec)');ylabel('y position (cm)');yl = get(gca,'YLim');
+    line([MoMtime MoMtime], [yl(1) yl(2)],'Color','r');axis tight;
+hVel = subplot(4,3,7:12);plot(vel_init);xlabel('time (sec)');ylabel('velocity');axis tight; %#ok<NASGU>
+linkaxes([hx0 hy0],'x');
+hline=refline(0,auto_vel_thresh);hline.Color='r';hline.LineWidth=1.5;
 
 end
 end
