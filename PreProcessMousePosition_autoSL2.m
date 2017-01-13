@@ -8,7 +8,12 @@ function [xpos_interp,ypos_interp,time_interp,AVItime_interp] = PreProcessMouseP
 %   - contrast adjustment
 %   - select points by midpoint between frames to help catch not high
 %   velocity wrong things
-%   - marker style/color in velocity thing    
+%   - marker style/color in velocity thing   
+%   - could add a generous 'Will's blobs have to be in a grayish region'
+%   to prevent using dividers, etc. as blobs
+%   - bring back cluster thresh to allow for more frequent saving
+%   - velocity threshold may not be working right
+%   - something wrong with ManualCorrFig being created multiple times
 %
 %[xpos_interp,ypos_interp,start_time,MoMtime] = PreProcessMousePosition_auto(filepath, auto_thresh,...)
 % Function to correct errors in mouse tracking.  Runs once through the
@@ -162,12 +167,13 @@ global vel_init
 global auto_vel_thresh
 global velchoice
 global AMchoice
-
+global corrDefGoodFlag
 %% Get varargin
     
 update_pos_realtime = 1; % Default setting
 %epoch_length_lim = 200; % default
 max_pixel_jump = 45;
+corrDefGoodFlag = 0;
 overwriteManualFlag=0;
 for j = 1:length(varargin)
     if strcmpi('filepath', varargin{j})
@@ -441,14 +447,7 @@ else
     close(velthreshing)
 end
 
-PosAndVel=figure('name','Position and Velocity');
-hx0 = subplot(4,3,1:3);plot(time,Xpix);xlabel('time (sec)');ylabel('x position (cm)');yl = get(gca,'YLim');
-    line([MoMtime MoMtime], [yl(1) yl(2)],'Color','r');axis tight;
-hy0 = subplot(4,3,4:6);plot(time,Ypix);xlabel('time (sec)');ylabel('y position (cm)');yl = get(gca,'YLim');
-    line([MoMtime MoMtime], [yl(1) yl(2)],'Color','r');axis tight;
-hVel = subplot(4,3,7:12);plot(vel_init);xlabel('time (sec)');ylabel('velocity');axis tight; %#ok<NASGU>
-linkaxes([hx0 hy0],'x');
-hline=refline(0,auto_vel_thresh);hline.Color='r';hline.LineWidth=1.5;
+UpdatePosAndVel;
 %vel = hypot(diff(Xpix),diff(Ypix))/(time(2)-time(1));
 
 %% All the rest...
@@ -537,8 +536,15 @@ switch MorePoints
         auto_frames=sFrame:eFrame;
         
         disp(['You are currently editing from ' num2str(sFrame/aviSR) ...
-            ' sec to ' num2str(eFrame/aviSR) ' sec.'])
-        
+            ' sec to ' num2str(eFrame/aviSR) ' sec, ' num2str(length(auto_frames)) ' frames'])
+        manChoice = questdlg('Redo definitely good frames?','Redo DefGood',...
+                    'Yes','No','No');
+                switch manChoice
+                    case 'Yes'
+                        corrDefGoodFlag=1;
+                    case 'No'
+                        corrDefGoodFlag=0;
+                end
         CorrectManualFrames;
     case 'p'
         disp('correcting by position')
@@ -551,11 +557,21 @@ switch MorePoints
         auto_frames=find(editLogical);
         hold on
         plot(xAVI(editLogical),yAVI(editLogical),'.r')
-        poschoice = questdlg('Edit these points?', 'Edit by position','Auto-assist','Manual','No','Manual');
+        poschoice = questdlg(['Edit these ' num2str(length(auto_frames)) ' points?'],...
+            'Edit by position','Auto-assist','Manual','No','Manual');
         switch poschoice
             case 'Auto-assist'
+                numPasses=2;
                 CorrectTheseFrames;
             case 'Manual'
+                manChoice = questdlg('Redo definitely good frames?','Redo DefGood',...
+                    'Yes','No','No');
+                switch manChoice
+                    case Yes
+                        corrDefGoodFlag=1;
+                    case No
+                        corrDefGoodFlag=0;
+                end        
                 CorrectManualFrames;
             case 'No'
                 %Do nothing
@@ -733,7 +749,7 @@ while doneVel==0
 
 auto_frames=[];
 vel_init = hypot(diff(Xpix),diff(Ypix))/(time(2)-time(1));
-highVelFrames = find(vel_init>auto_vel_thresh)+1;
+highVelFrames = find(vel_init>auto_vel_thresh);
 theseAreOk = find(definitelyGood);
 [~,~,inHighVel] = intersect(theseAreOk,highVelFrames);
 highVelFrames(inHighVel) = [];
@@ -750,14 +766,17 @@ switch velchoice
         end
     case 'First 100'
         velCount=velCount+1;
-        if velCount==101
+        if velCount>=101
             doneVel=1;
         else
-            auto_frames=highVelFrames(1);
-            corrFrame=1;
+            if any(highVelFrames)
+                auto_frames=highVelFrames(1);
+                corrFrame=1;
+            end    
         end
     case 'Select Window'
-        auto_frames=highVelFrames(find(highVelFrames>=sFrame & highVelFrames<=eFrame,1,'first'));
+        theseFrames=highVelFrames>=sFrame & highVelFrames<=eFrame;
+        auto_frames=highVelFrames(find(theseFrames,1,'first'));
         corrFrame=1;
         if isempty(auto_frames)
             doneVel=1;
@@ -779,11 +798,29 @@ if any(auto_frames)
                 
         end
         %}
+        obj.CurrentTime=(auto_frames(corrFrame)-1)/aviSR;
+        v = readFrame(obj);
+        fixedThisFrameFlag=0;
+        [xm,ym]=EnhancedManualCorrect; 
+        
+        if fixedThisFrameFlag==1
+            xAVI(auto_frames(corrFrame)) = xm;
+            yAVI(auto_frames(corrFrame)) = ym;
+            Xpix(auto_frames(corrFrame)) = ceil(xm/0.6246);
+            Ypix(auto_frames(corrFrame)) = ceil(ym/0.6246); 
+            
+            figure(ManualCorrFig); 
+            hold on;
+            plot(xm,ym,marker{markWith},'MarkerSize',4,...
+                'MarkerFaceColor',marker_face{markWith})
+            hold off;
+        end    
     else    
         veldFrames=[veldFrames auto_frames]; %#ok<AGROW>
     end    
 end
 if doneVel==0
+if any(auto_frames)    
 switch AMchoice
     case 'Auto-assist'
             for pass=1:2
@@ -810,18 +847,11 @@ switch AMchoice
         end
 end
 end
+end
 
 end
 
-figure(PosAndVel);
-hx0 = subplot(4,3,1:3);plot(time,Xpix);xlabel('time (sec)');ylabel('x position (cm)');yl = get(gca,'YLim');
-    line([MoMtime MoMtime], [yl(1) yl(2)],'Color','r');axis tight;
-hy0 = subplot(4,3,4:6);plot(time,Ypix);xlabel('time (sec)');ylabel('y position (cm)');yl = get(gca,'YLim');
-    line([MoMtime MoMtime], [yl(1) yl(2)],'Color','r');axis tight;
-hVel = subplot(4,3,7:12);plot(vel_init);xlabel('time (sec)');ylabel('velocity');axis tight; %#ok<NASGU>
-linkaxes([hx0 hy0],'x');
-hline=refline(0,auto_vel_thresh);hline.Color='r';hline.LineWidth=1.5;
-
+UpdatePosAndVel;
 
 end
 %% %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -888,7 +918,7 @@ if skipThisStep==0
         if pass==1
             skipped = [skipped; auto_frames(corrFrame)]; 
             fixedThisFrameFlag=0;
-        elseif pass>=2 && corrFrame==1 %this shouldn't happen
+        elseif pass>=2 && auto_frames(corrFrame)==1 %this shouldn't happen
             disp('this shouldn"t happen')
             [xm, ym] = ManualOnlyCorr;
         elseif pass>=2 && corrFrame~=1
@@ -996,9 +1026,8 @@ end
 function CorrectTheseFrames(~,~)
 %main frame-correcting code here
 global auto_frames; global corrFrame; global ManualCorrFig; global skipped;
-global markWith; global v0; global Xpix; global Ypix; global pass; global numPasses;
-global overwriteManualFlag; global definitelyGood; global PosAndVel; global time;
-global MoMtime; global vel_init; global auto_vel_thresh;
+global markWith; global v0; global pass; global numPasses;
+global overwriteManualFlag; global definitelyGood;
 
 skipped=[];
 ManualCorrFig=figure('name','ManualCorrFig'); imagesc(flipud(v0)); title('Auto correcting, please wait')
@@ -1010,7 +1039,7 @@ for pass=1:numPasses
     update_inc = round(length(auto_frames)/(100/resol));
     total=0;
     bounds=[0 floor(length(auto_frames)/3) 2*floor(length(auto_frames)/3)];
-
+    
     for corrFrame=1:length(auto_frames)   
         if overwriteManualFlag==1 || definitelyGood(auto_frames(corrFrame))==0
             markWith=sum(corrFrame>bounds);
@@ -1027,15 +1056,7 @@ for pass=1:numPasses
     SaveTemp;
     p.stop;
 
-    %Update position and velocity figure;
-    figure(PosAndVel);
-    hx0 = subplot(4,3,1:3);plot(time,Xpix);xlabel('time (sec)');ylabel('x position (cm)');yl = get(gca,'YLim');
-        line([MoMtime MoMtime], [yl(1) yl(2)],'Color','r');axis tight;
-    hy0 = subplot(4,3,4:6);plot(time,Ypix);xlabel('time (sec)');ylabel('y position (cm)');yl = get(gca,'YLim');
-        line([MoMtime MoMtime], [yl(1) yl(2)],'Color','r');axis tight;
-    hVel = subplot(4,3,7:12);plot(vel_init);xlabel('time (sec)');ylabel('velocity');axis tight;
-    linkaxes([hx0 hy0],'x');
-    hline=refline(0,auto_vel_thresh);hline.Color='r';hline.LineWidth=1.5;
+    UpdatePosAndVel
     
     switch pass
         case 1
@@ -1222,7 +1243,7 @@ end
 function CorrectManualFrames(~,~)
 global obj; global aviSR; global v; global ManualCorrFig; global markWith;
 global xAVI; global yAVI; global Xpix; global Ypix; global fixedThisFrameFlag;
-global auto_frames; global corrFrame
+global auto_frames; global corrFrame; global corrDefGoodFlag; global definitelyGood
 
 marker = {'go' 'yo' 'ro'};
 marker_face = {'g' 'y' 'r'};
@@ -1236,9 +1257,10 @@ for corrFrame=1:length(auto_frames)
     %if Xpix(auto_frames(corrFrame)) ~= 0 && Ypix(auto_frames(corrFrame)) ~= 0
     %       plot(xAVI(auto_frames(corrFrame)),yAVI(auto_frames(corrFrame)),marker{markWith},'MarkerSize',4);
     %end       
-            
-    [xm,ym]=EnhancedManualCorrect;   
-            
+    if corrDefGoodFlag==1 || definitelyGood(auto_frames(corrFrame))==0        
+        [xm,ym]=EnhancedManualCorrect;   
+    end        
+    
     if fixedThisFrameFlag==1
         xAVI(auto_frames(corrFrame)) = xm;
         yAVI(auto_frames(corrFrame)) = ym;
@@ -1252,7 +1274,31 @@ for corrFrame=1:length(auto_frames)
         hold off;
     end    
 end
-        
+ 
+UpdatePosAndVel;
+
+end
+%% %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+function UpdatePosAndVel(~,~)
+global PosAndVel; global vel_init; global time; global Xpix; global Ypix;
+global MoMtime; global auto_vel_thresh;
+
+try
+    figure(PosAndVel);
+catch
+    PosAndVel=figure('name','Position and Velocity');
+end
+vel_init = hypot(diff(Xpix),diff(Ypix))/(time(2)-time(1));
+hx0 = subplot(4,3,1:3);plot(time,Xpix);xlabel('time (sec)');ylabel('x position (cm)');yl = get(gca,'YLim');
+    line([MoMtime MoMtime], [yl(1) yl(2)],'Color','r');axis tight;
+hy0 = subplot(4,3,4:6);plot(time,Ypix);xlabel('time (sec)');ylabel('y position (cm)');yl = get(gca,'YLim');
+    line([MoMtime MoMtime], [yl(1) yl(2)],'Color','r');axis tight;
+hVel = subplot(4,3,7:12);plot(vel_init);xlabel('time (sec)');ylabel('velocity');axis tight; %#ok<NASGU>
+velInds=1:length(vel_init);
+hold on 
+plot(velInds(vel_init>auto_vel_thresh),vel_init(vel_init>auto_vel_thresh),'or'); hold off
+linkaxes([hx0 hy0],'x');
+hline=refline(0,auto_vel_thresh);hline.Color='r';hline.LineWidth=1.5;
 end
 %% %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 function SaveTemp(~,~)
