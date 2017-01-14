@@ -14,6 +14,7 @@ function [xpos_interp,ypos_interp,time_interp,AVItime_interp] = PreProcessMouseP
 %   - bring back cluster thresh to allow for more frequent saving
 %   - velocity threshold may not be working right
 %   - something wrong with ManualCorrFig being created multiple times
+%   - high velocity detect getting stuck at points
 %
 %[xpos_interp,ypos_interp,start_time,MoMtime] = PreProcessMousePosition_auto(filepath, auto_thresh,...)
 % Function to correct errors in mouse tracking.  Runs once through the
@@ -152,7 +153,7 @@ global got
 global skipped
 global xm
 global ym
-global PosAndVel
+global bounds
 global expectedBlobs
 global time
 global update_pos_realtime
@@ -192,7 +193,7 @@ for j = 1:length(varargin)
         max_pixel_jump = varargin{j+1};
     end
 end
-
+%%
 if ~exist('filepath','var')
     [DVTfile, DVTpath] = uigetfile('*.DVT', 'Select DVT file');
     filepath = fullfile(DVTpath, DVTfile);
@@ -260,6 +261,7 @@ if exist('Pos_temp.mat','file') || exist('Pos.mat','file')
         close(h1);
     end
 else
+    definitelyGood = Xpix*0;
     h1 = implay(avi_filepath);
     MouseOnMazeFrame = input('on what frame number does Mr. Mouse arrive on the maze??? --->');
     MoMtime = MouseOnMazeFrame*0.03+time(1) %#ok<NOPRT>
@@ -455,7 +457,6 @@ if ~exist('Pos_temp.mat','file')
     save Pos_temp.mat Xpix Ypix xAVI yAVI MoMtime MouseOnMazeFrame maze v0 maskx masky 
 end 
 
-definitelyGood = Xpix*0;
 willThresh=20;
 grayThresh = 115; 
 gaussThresh = 0.2;
@@ -520,7 +521,10 @@ try
 catch
     ManualCorrFig=figure('name','ManualCorrFig'); 
     imagesc(flipud(v0)); title('Auto correcting, please wait')
-end    
+end 
+
+UpdatePosAndVel;
+
 switch MorePoints
     case 'y'
         disp('attempt auto')
@@ -567,9 +571,9 @@ switch MorePoints
                 manChoice = questdlg('Redo definitely good frames?','Redo DefGood',...
                     'Yes','No','No');
                 switch manChoice
-                    case Yes
+                    case 'Yes'
                         corrDefGoodFlag=1;
-                    case No
+                    case 'No'
                         corrDefGoodFlag=0;
                 end        
                 CorrectManualFrames;
@@ -641,6 +645,7 @@ switch MorePoints
             case 'Whole session'
                 disp(['right now found ' num2str(sum(vel_init>auto_vel_thresh)) ' high velocity frames; expect more'])
             case 'First 100'
+                bounds(1:33)=1; bounds(34:66)=2; bounds(67:101)=3;
                 velCount=0;
             case 'Select Window'
                 [sFrame,eFrame] = SelectFrameNumbers;
@@ -735,24 +740,36 @@ global sFrame; global eFrame; global vel_init; global auto_vel_thresh;
 global velCount; global time; global Xpix; global Ypix; global corrFrame;
 global auto_frames; global velchoice; global AMchoice; global pass;
 global xAVI; global yAVI; global definitelyGood; global fixedThisFrameFlag
-global PosAndVel; global skipped; global ManualCorrFig; global MoMtime;
-global v; global obj; global xm; global ym; global aviSR;
+global bounds; global skipped; global ManualCorrFig; global MoMtime;
+global v; global obj; global xm; global ym; global aviSR; global markWith
 
 marker = {'go' 'yo' 'ro'};
 marker_face = {'g' 'y' 'r'};
-markWith = 2; %needs to be updated...
+markWith = 3; %needs to be updated...
 
 veldFrames=[];
 doneVel=0;
 skipped=[];
+manChoice = questdlg('Redo definitely good frames?','Redo DefGood',...
+                    'Yes','No','No');
 while doneVel==0
 
+
 auto_frames=[];
+%velInds=1:length(vel_init);
 vel_init = hypot(diff(Xpix),diff(Ypix))/(time(2)-time(1));
 highVelFrames = find(vel_init>auto_vel_thresh);
-theseAreOk = find(definitelyGood);
-[~,~,inHighVel] = intersect(theseAreOk,highVelFrames);
-highVelFrames(inHighVel) = [];
+
+switch manChoice
+    case 'Yes'                
+        %corrDefGoodFlag=1;
+    case 'No'
+        %corrDefGoodFlag=0;
+        theseAreOk = find(definitelyGood);
+        [~,~,inHighVel] = intersect(theseAreOk,highVelFrames);
+        highVelFrames(inHighVel) = [];
+end
+
 
 %look at overwriteManualFlag?
 
@@ -766,6 +783,7 @@ switch velchoice
         end
     case 'First 100'
         velCount=velCount+1;
+        markWith=bounds(velCount);
         if velCount>=101
             doneVel=1;
         else
@@ -774,6 +792,7 @@ switch velchoice
                 corrFrame=1;
             end    
         end
+        
     case 'Select Window'
         theseFrames=highVelFrames>=sFrame & highVelFrames<=eFrame;
         auto_frames=highVelFrames(find(theseFrames,1,'first'));
@@ -781,23 +800,32 @@ switch velchoice
         if isempty(auto_frames)
             doneVel=1;
         end
-end
-if any(auto_frames)
-    if any(veldFrames==auto_frames)
-        disp(['Uh oh, already did this frame, ' num2str(auto_frames) ', '...
-            num2str(sum(veldFrames==auto_frames)) ' times'])
-        %{
-        contchoice =  questdlg('Try it again or skip it?', 'SkipTry',...
-                            'Try','Manual','Skip','Skip');
-        switch contchoice
-            case 'Try'
-                
-            case 'Manual'
-                
-            case 'Skip'    
-                
+end    
+%{
+    else    
+        veldFrames=[veldFrames auto_frames]; %#ok<AGROW>
+    end   
+        
+    
+        obj.CurrentTime=(auto_frames(corrFrame)-1)/aviSR;
+        v = readFrame(obj);
+        fixedThisFrameFlag=0;
+        [xm,ym]=EnhancedManualCorrect; 
+        if fixedThisFrameFlag==1
+            xAVI(auto_frames(corrFrame)) = xm;
+            yAVI(auto_frames(corrFrame)) = ym;
+            Xpix(auto_frames(corrFrame)) = ceil(xm/0.6246);
+            Ypix(auto_frames(corrFrame)) = ceil(ym/0.6246); 
+            
+            figure(ManualCorrFig); 
+            hold on;
+            plot(xm,ym,marker{markWith},'MarkerSize',4,...
+                'MarkerFaceColor',marker_face{markWith})
+            hold off;
         end
-        %}
+        veldFrames=[veldFrames auto_frames]; %#ok<AGROW>    
+    
+        auto_frames = intendedFrame;
         obj.CurrentTime=(auto_frames(corrFrame)-1)/aviSR;
         v = readFrame(obj);
         fixedThisFrameFlag=0;
@@ -815,19 +843,67 @@ if any(auto_frames)
                 'MarkerFaceColor',marker_face{markWith})
             hold off;
         end    
-    else    
-        veldFrames=[veldFrames auto_frames]; %#ok<AGROW>
-    end    
-end
-if doneVel==0
-if any(auto_frames)    
-switch AMchoice
+          
+        veldFrames=[veldFrames auto_frames]; %#ok<AGROW>    
+        %}
+ veldFrames=[veldFrames auto_frames]; %#ok<AGROW>        
+if doneVel==0 && any(auto_frames)
+    
+    switch AMchoice
     case 'Auto-assist'
-            for pass=1:2
-                CorrectThisFrame;  
+        if sum(veldFrames==auto_frames)==1
+            
+        elseif sum(veldFrames==auto_frames)==2
+
+        elseif sum(veldFrames==auto_frames)>=3
+            
+        end    
+            pass=1;
+            skipped=[];
+            CorrectThisFrame;  
+            if any(skipped)
+                [xm,ym]=EnhancedManualCorrect; 
+        
+                if fixedThisFrameFlag==1
+                    xAVI(auto_frames(corrFrame)) = xm;
+                    yAVI(auto_frames(corrFrame)) = ym;
+                    Xpix(auto_frames(corrFrame)) = ceil(xm/0.6246);
+                    Ypix(auto_frames(corrFrame)) = ceil(ym/0.6246); 
+            
+                end   
             end
     case 'Manual'
+        if sum(veldFrames==auto_frames)==1
+       %expected
+        end
+    if sum(veldFrames==auto_frames)==2
+        %disp(['Uh oh, already did this frame, ' num2str(auto_frames) ', '...
+        %    num2str(sum(veldFrames==auto_frames))-1 ' times'])
         
+        auto_frames=auto_frames+1;
+        veldFrames=[veldFrames auto_frames]; %#ok<AGROW>
+        %{
+            
+            %}
+    end
+    if sum(veldFrames==auto_frames)>=3
+            disp(['Uh oh, already did this frame, ' num2str(auto_frames) ', '...
+            num2str(sum(veldFrames==auto_frames)-1) ' times'])
+        contchoice =  questdlg('Try it again or skip it?', 'SkipTry',...
+                            'Next','Previous','Save','Next');
+            switch contchoice
+            case 'Next'
+                intendedFrame=auto_frames;
+                auto_frames=intendedFrame+1;
+            case 'Previous'
+                intendedFrame=auto_frames;
+                auto_frames=intendedFrame-1;
+
+            case 'Save'    
+                SaveTemp;
+            end
+        %veldFrames=[veldFrames auto_frames]; %#ok<AGROW>    
+    end
         obj.CurrentTime=(auto_frames(corrFrame)-1)/aviSR;
         v = readFrame(obj);
         fixedThisFrameFlag=0;
@@ -839,17 +915,17 @@ switch AMchoice
             Xpix(auto_frames(corrFrame)) = ceil(xm/0.6246);
             Ypix(auto_frames(corrFrame)) = ceil(ym/0.6246); 
             
-            figure(ManualCorrFig); 
-            hold on;
-            plot(xm,ym,marker{markWith},'MarkerSize',4,...
-                'MarkerFaceColor',marker_face{markWith})
-            hold off;
+            %figure(ManualCorrFig); 
+            %hold on;
+            %plot(xm,ym,marker{markWith},'MarkerSize',4,...
+            %    'MarkerFaceColor',marker_face{markWith})
+            %hold off;
         end
-end
+    end
+
 end
 end
 
-end
 
 UpdatePosAndVel;
 
@@ -936,15 +1012,21 @@ global xAVI; global yAVI; global Xpix; global Ypix;
 global lastManualFrame; global aviSR; global markWith
 
 marker = {'go' 'yo' 'ro'};
+marker_face = {'g' 'y' 'r'};
 
 intendedFrame=v;
 intendedFrameNum=auto_frames(corrFrame);
 intendedFrameGood=0;
-while intendedFrameGood==0
-    figure(ManualCorrFig);
+while intendedFrameGood == 0
+    try
+        figure(ManualCorrFig);
+    catch
+        ManualCorrFig=figure('name','ManualCorrFig'); imagesc(flipud(v0)); %title('Auto correcting, please wait')
+    end
     imagesc(flipud(intendedFrame))
     title(['click here, frame ' num2str(auto_frames(corrFrame))])
     if Xpix(intendedFrameNum) ~= 0 && Ypix(intendedFrameNum) ~= 0
+        figure(ManualCorrFig);
         hold on   
         plot(xAVI(intendedFrameNum),yAVI(intendedFrameNum),marker{markWith},'MarkerSize',4);
         hold off
@@ -954,7 +1036,7 @@ while intendedFrameGood==0
     switch button
         case 1 %left click
             %this point is good, use the xm ym
-            hold on; plot(xm,ym,'og','MarkerSize',4,'MarkerFaceColor','g');hold off;
+            hold on; plot(xm,ym,marker{markWith},'MarkerSize',4,'MarkerFaceColor',marker_face{markWith});hold off;
             title('Auto correcting, please wait')
             definitelyGood(auto_frames(corrFrame)) = 1;
             fixedThisFrameFlag=1;
@@ -1289,12 +1371,13 @@ catch
     PosAndVel=figure('name','Position and Velocity');
 end
 vel_init = hypot(diff(Xpix),diff(Ypix))/(time(2)-time(1));
+velInds=1:length(vel_init);
 hx0 = subplot(4,3,1:3);plot(time,Xpix);xlabel('time (sec)');ylabel('x position (cm)');yl = get(gca,'YLim');
     line([MoMtime MoMtime], [yl(1) yl(2)],'Color','r');axis tight;
 hy0 = subplot(4,3,4:6);plot(time,Ypix);xlabel('time (sec)');ylabel('y position (cm)');yl = get(gca,'YLim');
     line([MoMtime MoMtime], [yl(1) yl(2)],'Color','r');axis tight;
-hVel = subplot(4,3,7:12);plot(vel_init);xlabel('time (sec)');ylabel('velocity');axis tight; %#ok<NASGU>
-velInds=1:length(vel_init);
+hVel = subplot(4,3,7:12);plot(velInds,vel_init);xlabel('time (sec)');ylabel('velocity');axis tight; %#ok<NASGU>
+
 hold on 
 plot(velInds(vel_init>auto_vel_thresh),vel_init(vel_init>auto_vel_thresh),'or'); hold off
 linkaxes([hx0 hy0],'x');
