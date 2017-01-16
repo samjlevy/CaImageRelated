@@ -15,6 +15,8 @@ function [xpos_interp,ypos_interp,time_interp,AVItime_interp] = PreProcessMouseP
 %   - velocity threshold may not be working right
 %   - something wrong with ManualCorrFig being created multiple times
 %   - high velocity detect getting stuck at points
+%   - how similar is blob to blob correlating to good position on an
+%   adjacent frame?
 %
 %[xpos_interp,ypos_interp,start_time,MoMtime] = PreProcessMousePosition_auto(filepath, auto_thresh,...)
 % Function to correct errors in mouse tracking.  Runs once through the
@@ -750,15 +752,19 @@ markWith = 3; %needs to be updated...
 veldFrames=[];
 doneVel=0;
 skipped=[];
+skipThese=[];
 manChoice = questdlg('Redo definitely good frames?','Redo DefGood',...
                     'Yes','No','No');
 while doneVel==0
 
-
+correctThis=1;
 auto_frames=[];
 %velInds=1:length(vel_init);
 vel_init = hypot(diff(Xpix),diff(Ypix))/(time(2)-time(1));
 highVelFrames = find(vel_init>auto_vel_thresh);
+inHV=[];
+[~,~,inHV] = intersect(skipThese,highVelFrames);
+highVelFrames(inHV)=[];
 
 switch manChoice
     case 'Yes'                
@@ -852,12 +858,43 @@ if doneVel==0 && any(auto_frames)
     switch AMchoice
     case 'Auto-assist'
         if sum(veldFrames==auto_frames)==1
-            
+            %expected, it's fine
         elseif sum(veldFrames==auto_frames)==2
-
-        elseif sum(veldFrames==auto_frames)>=3
-            
-        end    
+            auto_frames=auto_frames+1;
+            %veldFrames=[veldFrames auto_frames]; 
+        elseif sum(veldFrames==auto_frames)==3
+            disp(['Uh oh, already did this frame, ' num2str(auto_frames) ', '...
+            num2str(sum(veldFrames==auto_frames)-1) ' times'])
+            contchoice =  questdlg('Try it again or skip it?', 'SkipTry',...
+                            'End','PrevNext','Save','End');
+            switch contchoice
+            case 'End'
+                correctThis=0;
+                doneVel=1;
+            case 'PrevNext'
+                intendedFrame=auto_frames;
+                auto_frames=[intendedFrame-1 intendedFrame+1];
+                for corrFrame=1:2
+                    obj.CurrentTime=(auto_frames(corrFrame)-1)/aviSR;
+                    v = readFrame(obj);
+                    fixedThisFrameFlag=0;
+                    [xm,ym]=EnhancedManualCorrect;
+                    if fixedThisFrameFlag==1
+                        xAVI(auto_frames(corrFrame)) = xm;
+                        yAVI(auto_frames(corrFrame)) = ym;
+                        Xpix(auto_frames(corrFrame)) = ceil(xm/0.6246);
+                        Ypix(auto_frames(corrFrame)) = ceil(ym/0.6246);
+                    end
+                end
+                correctThis=0;
+            case 'Save'    
+                SaveTemp;
+            end
+        elseif sum(veldFrames==auto_frames)>=4
+            skipThese=[skipThese auto_frames];
+            correctThis=0;    
+        end
+        if correctThis==1
             pass=1;
             skipped=[];
             CorrectThisFrame;  
@@ -872,6 +909,7 @@ if doneVel==0 && any(auto_frames)
             
                 end   
             end
+        end    
     case 'Manual'
         if sum(veldFrames==auto_frames)==1
        %expected
@@ -890,20 +928,33 @@ if doneVel==0 && any(auto_frames)
             disp(['Uh oh, already did this frame, ' num2str(auto_frames) ', '...
             num2str(sum(veldFrames==auto_frames)-1) ' times'])
         contchoice =  questdlg('Try it again or skip it?', 'SkipTry',...
-                            'Next','Previous','Save','Next');
+                            'End','PrevNext','Save','End');
             switch contchoice
-            case 'Next'
+            case 'End'
+                correctThis=0;
+                doneVel=1;
+            case 'PrevNext'
                 intendedFrame=auto_frames;
-                auto_frames=intendedFrame+1;
-            case 'Previous'
-                intendedFrame=auto_frames;
-                auto_frames=intendedFrame-1;
-
+                auto_frames=[intendedFrame-1 intendedFrame+1];
+                for corrFrame=1:2
+                    obj.CurrentTime=(auto_frames(corrFrame)-1)/aviSR;
+                    v = readFrame(obj);
+                    fixedThisFrameFlag=0;
+                    [xm,ym]=EnhancedManualCorrect;
+                    if fixedThisFrameFlag==1
+                        xAVI(auto_frames(corrFrame)) = xm;
+                        yAVI(auto_frames(corrFrame)) = ym;
+                        Xpix(auto_frames(corrFrame)) = ceil(xm/0.6246);
+                        Ypix(auto_frames(corrFrame)) = ceil(ym/0.6246);
+                    end
+                end
+                correctThis=0;
             case 'Save'    
                 SaveTemp;
             end
         %veldFrames=[veldFrames auto_frames]; %#ok<AGROW>    
     end
+        if correctThis==1
         obj.CurrentTime=(auto_frames(corrFrame)-1)/aviSR;
         v = readFrame(obj);
         fixedThisFrameFlag=0;
@@ -920,6 +971,7 @@ if doneVel==0 && any(auto_frames)
             %plot(xm,ym,marker{markWith},'MarkerSize',4,...
             %    'MarkerFaceColor',marker_face{markWith})
             %hold off;
+        end
         end
     end
 
