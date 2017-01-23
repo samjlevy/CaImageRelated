@@ -1,8 +1,12 @@
-function [xpos_interp,ypos_interp,time_interp,AVItime_interp] = PreProcessMousePosition_autoSL2(varargin)
+function [xpos_interp,ypos_interp,time_interp,AVItime_interp] = PreProcessMousePosition_autoSL2(varargin);
 % Open issues: 1/11/17
-%   - High vel: what do do if correcting the same frame already (could be
-%   an issue on the frame before)
+%   - Expected region: use breakdown from DNMPparse to descripe expected
+%   regions: start of session, load those, for each region have user
+%   describe (roipoly) where this region is, then add this in addition to
+%   maze when describing possible blob locations
 %   - Logic for possible: could be generalized better
+%   - Check for an adjacent definitelyGood frame, use that to limit
+%   possible blobs
 %   - Video of results
 %   - Blob restrictions for will and gray
 %   - contrast adjustment
@@ -17,6 +21,9 @@ function [xpos_interp,ypos_interp,time_interp,AVItime_interp] = PreProcessMouseP
 %   - high velocity detect getting stuck at points
 %   - how similar is blob to blob correlating to good position on an
 %   adjacent frame?
+%   - reject blobs found near current location
+%   - other exclude regions (known bad locations)
+%   - update 0,0 message, show figure of those points
 %
 %[xpos_interp,ypos_interp,start_time,MoMtime] = PreProcessMousePosition_auto(filepath, auto_thresh,...)
 % Function to correct errors in mouse tracking.  Runs once through the
@@ -806,53 +813,9 @@ switch velchoice
         if isempty(auto_frames)
             doneVel=1;
         end
-end    
-%{
-    else    
-        veldFrames=[veldFrames auto_frames]; %#ok<AGROW>
-    end   
-        
-    
-        obj.CurrentTime=(auto_frames(corrFrame)-1)/aviSR;
-        v = readFrame(obj);
-        fixedThisFrameFlag=0;
-        [xm,ym]=EnhancedManualCorrect; 
-        if fixedThisFrameFlag==1
-            xAVI(auto_frames(corrFrame)) = xm;
-            yAVI(auto_frames(corrFrame)) = ym;
-            Xpix(auto_frames(corrFrame)) = ceil(xm/0.6246);
-            Ypix(auto_frames(corrFrame)) = ceil(ym/0.6246); 
-            
-            figure(ManualCorrFig); 
-            hold on;
-            plot(xm,ym,marker{markWith},'MarkerSize',4,...
-                'MarkerFaceColor',marker_face{markWith})
-            hold off;
-        end
-        veldFrames=[veldFrames auto_frames]; %#ok<AGROW>    
-    
-        auto_frames = intendedFrame;
-        obj.CurrentTime=(auto_frames(corrFrame)-1)/aviSR;
-        v = readFrame(obj);
-        fixedThisFrameFlag=0;
-        [xm,ym]=EnhancedManualCorrect; 
-        
-        if fixedThisFrameFlag==1
-            xAVI(auto_frames(corrFrame)) = xm;
-            yAVI(auto_frames(corrFrame)) = ym;
-            Xpix(auto_frames(corrFrame)) = ceil(xm/0.6246);
-            Ypix(auto_frames(corrFrame)) = ceil(ym/0.6246); 
-            
-            figure(ManualCorrFig); 
-            hold on;
-            plot(xm,ym,marker{markWith},'MarkerSize',4,...
-                'MarkerFaceColor',marker_face{markWith})
-            hold off;
-        end    
-          
-        veldFrames=[veldFrames auto_frames]; %#ok<AGROW>    
-        %}
- veldFrames=[veldFrames auto_frames]; %#ok<AGROW>        
+end
+
+veldFrames=[veldFrames auto_frames]; %#ok<AGROW>
 if doneVel==0 && any(auto_frames)
     
     switch AMchoice
@@ -875,6 +838,7 @@ if doneVel==0 && any(auto_frames)
                 intendedFrame=auto_frames;
                 auto_frames=[intendedFrame-1 intendedFrame+1];
                 for corrFrame=1:2
+                    if definitelyGood(auto_frames(corrFrame)==0
                     obj.CurrentTime=(auto_frames(corrFrame)-1)/aviSR;
                     v = readFrame(obj);
                     fixedThisFrameFlag=0;
@@ -884,6 +848,7 @@ if doneVel==0 && any(auto_frames)
                         yAVI(auto_frames(corrFrame)) = ym;
                         Xpix(auto_frames(corrFrame)) = ceil(xm/0.6246);
                         Ypix(auto_frames(corrFrame)) = ceil(ym/0.6246);
+                    end
                     end
                 end
                 correctThis=0;
@@ -1367,7 +1332,7 @@ end
             'MarkerFaceColor',marker_face{markWith})
         hold off;
         if update_pos_realtime==1
-            pause(0.10)
+           % pause(0.10)
         end
     end
  
@@ -1390,7 +1355,8 @@ for corrFrame=1:length(auto_frames)
     markWith=sum(corrFrame>bounds);
     %if Xpix(auto_frames(corrFrame)) ~= 0 && Ypix(auto_frames(corrFrame)) ~= 0
     %       plot(xAVI(auto_frames(corrFrame)),yAVI(auto_frames(corrFrame)),marker{markWith},'MarkerSize',4);
-    %end       
+    %end  
+    fixedThisFrameFlag=0;
     if corrDefGoodFlag==1 || definitelyGood(auto_frames(corrFrame))==0        
         [xm,ym]=EnhancedManualCorrect;   
     end        

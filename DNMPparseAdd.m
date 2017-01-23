@@ -10,38 +10,7 @@ function DNMPparseAdd
 %save it.
 
 %This function is very rough right now
-
-%Get video we're working on
-fcnLoadVideo;
-
-%Get which timestamp we're adding
-addingStr = {'LapNumber', 'LapStart', 'LiftBarrier', 'LeaveMaze',...
-       'StartHomecage', 'LeaveHomecage', 'ForcedDir',...
-       'FreeDir', 'TrialType', 'TrialDir', 'ForcedEnterChoice',...
-       'ForcedLeaveChoice', 'FreeEnterChoice', 'FreeLeaveChoice', 'Other...'};
-   
-[addingVal,~] = listdlg('PromptString','Which are we adding:',...
-                'SelectionMode','single',...
-                'ListString',addingStr);
-            
-addingType=addingStr{1,addingVal};
-
-%Get array of anchor timestamps and adjustment
-[FileName,PathName] = uigetfile(FilterSpec)
-
-adjustInt = 0;
-while adjustInt==0
-    adjustment = inputdlg('How many frames forward or back?','Adjustment');
-    adjustment=str2double(adjustment{1,1});
-    switch rem(adjustment,1)
-        case 1
-            adjustInt=1;
-        case 0
-            adjustInt=0;
-            disp('Whole number, please')
-    end        
-end
-%Build the gui here
+%% 
 global miscVar
 global ParsedFrames
 global videoFig
@@ -61,8 +30,59 @@ miscVar.buttonLeftEdge=570;
 miscVar.upperLimit=miscVar.panelHeight-120;
 miscVar.buttonWidth=150;
 miscVar.buttonHeight=30;
+miscVar.Gray=[0.94,0.94,0.94];
+miscVar.Red=[1,0.5,0.5];
+miscVar.Green = [0.5 1 0.5];                                            
 
+fcnLoadVideo;
 
+%Get which timestamp we're adding
+addingStr = {'LapNumber', 'LapStart', 'LiftBarrier', 'LeaveMaze',...
+       'StartHomecage', 'LeaveHomecage', 'ForcedDir',...
+       'FreeDir', 'TrialType', 'TrialDir', 'ForcedEnterChoice',...
+       'ForcedLeaveChoice', 'FreeEnterChoice', 'FreeLeaveChoice', 'Other...'};
+   
+[addingVal,~] = listdlg('PromptString','Which are we adding:',...
+                'SelectionMode','single',...
+                'ListString',addingStr);
+
+addingType=addingStr{1,addingVal};
+
+if strcmpi(addingType,'Other...')
+    %name your own timestamp!
+end
+
+%Assume we're going on an excel sheet
+[xlFile, xlPath, ~] = uigetfile({'*.xlsx', 'Excel Files'; '*.xls', 'Excel Files'}, 'Select previously saved sheet: ');
+[frames, txt] = xlsread(fullfile(xlPath,xlFile), 1);
+options = txt(1,1:end);
+[anchorTypeVal,~] = listdlg('PromptString','Which does it follow?',...
+                    'SelectionMode','single','ListString',options);
+miscVar.anchorFrames = frames(:,anchorTypeVal);      
+                
+adjustInt = 0;
+while adjustInt==0
+    miscVar.adjustment = inputdlg('Jump how many frames?','Adjustment');
+    miscVar.adjustment = str2double(miscVar.adjustment{1,1});
+    switch rem(adjustment,1)==0
+        case 1
+            adjustInt=1;
+        case 0
+            adjustInt=0;
+            disp('Whole number, please')
+    end        
+end
+plusminus = questdlg('Forward or back?', 'Forward or back?', ...
+	'Forward','Back','Forward');
+switch plusminus
+    case 'Forward'
+        %do nothing
+    case 'Back'
+        miscVar.adjustment = miscVar.adjustment*-1;
+end
+
+% Figure buttons
+figure(videoFig.videoPanel);
 videoFig.AddButton = uicontrol('Style','pushbutton','String',addingType,...
                            'Position',[miscVar.buttonLeftEdge,miscVar.upperLimit,...
                            miscVar.buttonWidth,miscVar.buttonHeight],...
@@ -82,11 +102,14 @@ videoFig.SaveQuitButton = uicontrol('Style','pushbutton','String','SAVE & QUIT',
                            'Position',[miscVar.buttonLeftEdge,miscVar.upperLimit-150,...
                            miscVar.buttonWidth,miscVar.buttonHeight],...
                            'Callback',{@fcnSaveQuitButton}); 
-                                             
+                       
+miscVar.currentEvent=1;
+frameSet(miscVar.anchorFrames(miscVar.currentEvent));
+videoFig.AddButton.BackgroundColor=miscVar.Red;
 
-%Loop through all anchors, going to next when current frame selected 
-doneFinding=0;
-anchorNum=1;
+end
+%%
+%{
 while doneFinding==0 
     %set current frame number, don't forget step back, etc. 
     frameSet(anchorArr(anchorNum)+adjustment);
@@ -105,30 +128,103 @@ end
 %maybe parse trials needs to be generalized to find string names for
 %columns, ask for and add bonus columns regardless of format; 
 %dealing with this all as a struct might be better
-end
-
+%}
+%% Functions to run this ish
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 function fcnAddButton
 %set current frame as 
+global ParsedFrames
+global videoFig
+global miscVar
+
+ParsedFrames.AddingThis{miscVar.currentEvent,1} = miscVar.frameNum;
+disp([' Entered event number ' num2str(miscVar.currentEvent) ' as frame# ' num2str(ParsedFrames.AddingThis{miscVar.currentEvent,1})])
+videoFig.AddButton.BackgroundColor=miscVar.Gray;
+
 end
 
 function fcnNextButton
+global miscVar
+global videoFig
+
+if miscVar.currentEvent < length(miscVar.anchorFrames)
+    miscVar.currentEvent = miscVar.currentEvent + 1;
+    frameSet(miscVar.anchorFrames(miscVar.currentEvent + miscVar.adjustment));
+    videoFig.AddButton.BackgroundColor = miscVar.Red;
+else
+    disp('Already at last event')
+end
 
 end
 
 function fcnPreviousButton
+global miscVar
+global videoFig
+
+if miscVar.currentEvent > 1
+    miscVar.currentEvent = miscVar.currentEvent - 1;
+    frameSet(miscVar.anchorFrames(miscVar.currentEvent + miscVar.adjustment));
+    videoFig.AddButton.BackgroundColor = miscVar.Red;
+else
+    disp('Already at event 1')   
+end
 
 end
 
 function fcnSaveQuitButton
+global ParsedFrames
+global miscVar
+disp('Save sheet')
+
+for laps=1:(size(ParsedFrames.AddingThis,1)-1);
+    ParsedFrames.LapNumber{laps+1,1}=laps;
+end
+
+try 
+    realTable=table(ParsedFrames.LapNumber,...
+                ParsedFrames.AddingThis);
+catch 
+    save 'luckyYou.mat' 'ParsedFrames'
+    disp('saved what you had')
+    %Error handling!
+end            
+             
+undecided=0; saveNow=0;
+while undecided==0
+    saveName = inputdlg('Name to save as:','Save Name',[1 40],{'DNMPadd1.xlsx'});             
+    if exist(fullfile(miscVar.PathName,saveName{1}),'file')==2
+      filechoice = questdlg('File already exists!', 'File exists',...
+                              'Replace','New name','Cancel','Replace');
+        switch filechoice
+            case 'Replace'
+                undecided=1; saveNow=1;
+            case 'New name'
+                undecided=0;
+            case 'Cancel'
+                undecided=1; saveNow=1;
+        end
+    else 
+        disp('File does not exist.  Writing new file')
+        undecided = 1; saveNow = 1;
+    end
+end
+if saveNow==1;
+    try
+        xlswrite(fullfile(miscVar.PathName,saveName{1}),table2cell(realTable));
+    catch
+        disp('Some saving error')   
+    end    
+end
+
+return
 
 end
 
 function frameSet(jumpToFrame)
 global miscVar
-global ParsedFrames
 global videoFig
 global video
+
 
 miscVar.frameNum = jumpToFrame - 1;
 video.CurrentTime = miscVar.frameNum/video.FrameRate;
@@ -165,7 +261,6 @@ end
 function keyPress(~, e)%src
 
 global miscVar
-global videoFig
 global video
 
 %pause(0.001)
@@ -174,56 +269,74 @@ global video
 switch e.Key
     case 'q' %Step back 100
         if video.currentTime > 100/video.FrameRate
+           jumpToFrame(miscVar.currentFrame - 100);
+            %{
             miscVar.frameNum = miscVar.frameNum - 101;
             video.CurrentTime = miscVar.frameNum/video.FrameRate;
             miscVar.currentFrame = readFrame(video);
             miscVar.frameNum = miscVar.frameNum + 1;
             videoFig.plotted = imagesc(miscVar.currentFrame);
             title(['Frame ' num2str(miscVar.frameNum) ' / ' num2str(miscVar.totalFrames)])
+            %}
         end
     case 'a' %Step back 10
         if video.currentTime > 10/video.FrameRate
+            jumpToFrame(miscVar.currentFrame - 10);
+            %{
             miscVar.frameNum = miscVar.frameNum - 11;
             video.CurrentTime = miscVar.frameNum/video.FrameRate;
             miscVar.currentFrame = readFrame(video);
             miscVar.frameNum = miscVar.frameNum + 1;
             videoFig.plotted = imagesc(miscVar.currentFrame);
             title(['Frame ' num2str(miscVar.frameNum) ' / ' num2str(miscVar.totalFrames)])
+            %}
         end
     case 's'   %Step back
         %can't do frame 0/1
         if video.currentTime > 1/video.FrameRate
+            jumpToFrame(miscVar.currentFrame - 1);
+            %{
             miscVar.frameNum = miscVar.frameNum - 2;
             video.CurrentTime = miscVar.frameNum/video.FrameRate;
             miscVar.currentFrame = readFrame(video);
             miscVar.frameNum = miscVar.frameNum + 1;
             videoFig.plotted = imagesc(miscVar.currentFrame);
             title(['Frame ' num2str(miscVar.frameNum) ' / ' num2str(miscVar.totalFrames)])
+            %}
         end
     case 'd' %Step forward 1
         if video.currentTime+1 <= miscVar.totalFrames
+            jumpToFrame(miscVar.currentFrame + 1);
+            %{
             miscVar.currentFrame = readFrame(video);
             miscVar.frameNum = miscVar.frameNum+1;
             videoFig.plotted = imagesc(miscVar.currentFrame);
             title(['Frame ' num2str(miscVar.frameNum) ' / ' num2str(miscVar.totalFrames)])
+            %}
         end
     case 'f' %Step forward 10  
         if video.currentTime+10 <= miscVar.totalFrames
+            jumpToFrame(miscVar.currentFrame + 10);
+            %{
             miscVar.frameNum = miscVar.frameNum + 9;
             video.CurrentTime = miscVar.frameNum/video.FrameRate;
             miscVar.currentFrame = readFrame(video);
             miscVar.frameNum = miscVar.frameNum + 1;
             videoFig.plotted = imagesc(miscVar.currentFrame);
             title(['Frame ' num2str(miscVar.frameNum) ' / ' num2str(miscVar.totalFrames)])
+            %}
         end
     case 'r' %Step forward 100
         if video.currentTime+1 <= miscVar.totalFrames
+            jumpToFrame(miscVar.currentFrame + 100)
+            %{
             miscVar.frameNum = miscVar.frameNum + 99;
             video.CurrentTime = miscVar.frameNum/video.FrameRate;
             miscVar.currentFrame = readFrame(video);
             miscVar.frameNum = miscVar.frameNum + 1;
             videoFig.plotted = imagesc(miscVar.currentFrame);
             title(['Frame ' num2str(miscVar.frameNum) ' / ' num2str(miscVar.totalFrames)])
+            %}
         end    
     case 'space'    
         disp('Fake player start/stop')
