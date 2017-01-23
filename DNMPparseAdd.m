@@ -1,15 +1,14 @@
 function DNMPparseAdd      
 %Function for adding an event in the parser based on input array of times
 %User dictates which type they're adding, then inputs an array of times 
-%this function uses as the 'anchor', jumps to those points (+/- some amout
+%this function uses as the 'anchor', jumps to those points (+/- some amount
 %of time, saves selected frame number as the new type.
 %E.G., need to add timestamp for the choice point? Input array of time
 %leaving the start area, then adjust frame estimate for say 2s worth of
 %frames, parser will jump through video to input timestamps (leave start area),
 %forward/backward 60 frames, leave it to user to find the exact frame and 
 %save it.
-
-%This function is very rough right now
+%Saving to XLS formatting isn't quite right
 %% 
 global miscVar
 global ParsedFrames
@@ -40,15 +39,16 @@ fcnLoadVideo;
 addingStr = {'LapNumber', 'LapStart', 'LiftBarrier', 'LeaveMaze',...
        'StartHomecage', 'LeaveHomecage', 'ForcedDir',...
        'FreeDir', 'TrialType', 'TrialDir', 'ForcedEnterChoice',...
-       'ForcedLeaveChoice', 'FreeEnterChoice', 'FreeLeaveChoice', 'Other...'};
+       'ForcedLeaveChoice', 'FreeEnterChoice', 'FreeLeaveChoice',...
+       'ForcedReward', 'FreeReward', 'Other...'};
    
 [addingVal,~] = listdlg('PromptString','Which are we adding:',...
                 'SelectionMode','single',...
                 'ListString',addingStr);
 
-addingType=addingStr{1,addingVal};
+miscVar.addingType=addingStr{1,addingVal};
 
-if strcmpi(addingType,'Other...')
+if strcmpi(miscVar.addingType,'Other...')
     %name your own timestamp!
 end
 
@@ -64,7 +64,7 @@ adjustInt = 0;
 while adjustInt==0
     miscVar.adjustment = inputdlg('Jump how many frames?','Adjustment');
     miscVar.adjustment = str2double(miscVar.adjustment{1,1});
-    switch rem(adjustment,1)==0
+    switch rem(miscVar.adjustment,1)==0
         case 1
             adjustInt=1;
         case 0
@@ -83,7 +83,7 @@ end
 
 % Figure buttons
 figure(videoFig.videoPanel);
-videoFig.AddButton = uicontrol('Style','pushbutton','String',addingType,...
+videoFig.AddButton = uicontrol('Style','pushbutton','String',miscVar.addingType,...
                            'Position',[miscVar.buttonLeftEdge,miscVar.upperLimit,...
                            miscVar.buttonWidth,miscVar.buttonHeight],...
                            'Callback',{@fcnAddButton});
@@ -104,7 +104,7 @@ videoFig.SaveQuitButton = uicontrol('Style','pushbutton','String','SAVE & QUIT',
                            'Callback',{@fcnSaveQuitButton}); 
                        
 miscVar.currentEvent=1;
-frameSet(miscVar.anchorFrames(miscVar.currentEvent));
+frameSet(miscVar.anchorFrames(miscVar.currentEvent) + miscVar.adjustment);
 videoFig.AddButton.BackgroundColor=miscVar.Red;
 
 end
@@ -131,7 +131,7 @@ end
 %}
 %% Functions to run this ish
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-function fcnAddButton
+function fcnAddButton(~,~)
 %set current frame as 
 global ParsedFrames
 global videoFig
@@ -143,13 +143,13 @@ videoFig.AddButton.BackgroundColor=miscVar.Gray;
 
 end
 
-function fcnNextButton
+function fcnNextButton(~,~)
 global miscVar
 global videoFig
 
 if miscVar.currentEvent < length(miscVar.anchorFrames)
     miscVar.currentEvent = miscVar.currentEvent + 1;
-    frameSet(miscVar.anchorFrames(miscVar.currentEvent + miscVar.adjustment));
+    frameSet(miscVar.anchorFrames(miscVar.currentEvent) + miscVar.adjustment);
     videoFig.AddButton.BackgroundColor = miscVar.Red;
 else
     disp('Already at last event')
@@ -157,7 +157,7 @@ end
 
 end
 
-function fcnPreviousButton
+function fcnPreviousButton(~,~)
 global miscVar
 global videoFig
 
@@ -171,18 +171,18 @@ end
 
 end
 
-function fcnSaveQuitButton
+function fcnSaveQuitButton(~,~)
 global ParsedFrames
 global miscVar
 disp('Save sheet')
 
-for laps=1:(size(ParsedFrames.AddingThis,1)-1);
-    ParsedFrames.LapNumber{laps+1,1}=laps;
+for laps=1:(size(ParsedFrames.AddingThis,1));
+    ParsedFrames.LapNumber{laps,1}=laps;
 end
 
 try 
     realTable=table(ParsedFrames.LapNumber,...
-                ParsedFrames.AddingThis);
+                ParsedFrames.AddingThis, 'VariableNames',{'Lap number', miscVar.addingType});
 catch 
     save 'luckyYou.mat' 'ParsedFrames'
     disp('saved what you had')
@@ -216,6 +216,7 @@ if saveNow==1;
     end    
 end
 
+close(videoFig.videoPanel)
 return
 
 end
@@ -269,7 +270,7 @@ global video
 switch e.Key
     case 'q' %Step back 100
         if video.currentTime > 100/video.FrameRate
-           jumpToFrame(miscVar.currentFrame - 100);
+           frameSet(miscVar.frameNum - 100);
             %{
             miscVar.frameNum = miscVar.frameNum - 101;
             video.CurrentTime = miscVar.frameNum/video.FrameRate;
@@ -281,7 +282,7 @@ switch e.Key
         end
     case 'a' %Step back 10
         if video.currentTime > 10/video.FrameRate
-            jumpToFrame(miscVar.currentFrame - 10);
+            frameSet(miscVar.frameNum - 10);
             %{
             miscVar.frameNum = miscVar.frameNum - 11;
             video.CurrentTime = miscVar.frameNum/video.FrameRate;
@@ -294,7 +295,7 @@ switch e.Key
     case 's'   %Step back
         %can't do frame 0/1
         if video.currentTime > 1/video.FrameRate
-            jumpToFrame(miscVar.currentFrame - 1);
+            frameSet(miscVar.frameNum - 1);
             %{
             miscVar.frameNum = miscVar.frameNum - 2;
             video.CurrentTime = miscVar.frameNum/video.FrameRate;
@@ -306,7 +307,7 @@ switch e.Key
         end
     case 'd' %Step forward 1
         if video.currentTime+1 <= miscVar.totalFrames
-            jumpToFrame(miscVar.currentFrame + 1);
+            frameSet(miscVar.frameNum + 1);
             %{
             miscVar.currentFrame = readFrame(video);
             miscVar.frameNum = miscVar.frameNum+1;
@@ -316,7 +317,7 @@ switch e.Key
         end
     case 'f' %Step forward 10  
         if video.currentTime+10 <= miscVar.totalFrames
-            jumpToFrame(miscVar.currentFrame + 10);
+            frameSet(miscVar.frameNum + 10);
             %{
             miscVar.frameNum = miscVar.frameNum + 9;
             video.CurrentTime = miscVar.frameNum/video.FrameRate;
@@ -328,7 +329,7 @@ switch e.Key
         end
     case 'r' %Step forward 100
         if video.currentTime+1 <= miscVar.totalFrames
-            jumpToFrame(miscVar.currentFrame + 100)
+            frameSet(miscVar.frameNum + 100)
             %{
             miscVar.frameNum = miscVar.frameNum + 99;
             video.CurrentTime = miscVar.frameNum/video.FrameRate;
