@@ -1,5 +1,7 @@
 %% Maybe better to step back and do the calcs from the beginning
 % from DNMP_parse_trials
+correctOnlyFlag=1; %right now pulls out correct trials, doesn't yet segregate 
+%incorrect trials for their own analysis
 
 xls_sheet_num=1;
 xls_bonus_sheet_num=1;
@@ -50,7 +52,7 @@ delay_start = bonusFrames(:,2);
 delay_end = free_start;
 forced_end = delay_start;
 free_end = leave_maze;
-
+  
 %% logicals for lap type
 right_trials_forced = strcmpi(txt(2:end,7),'R');
     delay_following_r = right_trials_forced;
@@ -64,37 +66,42 @@ correct_trials = right_trials_forced & left_trials_free | ...
     left_trials_forced & right_trials_free;
 
 %% get some frame numbers 
-forced_r_start = forced_start(right_trials_forced);%.*correct_trials;
-forced_r_end = forced_end(right_trials_forced);
-forced_l_start = forced_start(left_trials_forced);
-forced_l_end = forced_end(left_trials_forced);
-free_r_start = free_start(right_trials_free);
-free_r_end = free_end(right_trials_free);
-free_l_start = free_start(left_trials_free);
-free_l_end = free_end(left_trials_free);
-delay_afterl_start = delay_start(left_trials_forced);
-delay_afterl_end = delay_end(left_trials_forced);
-delay_afterr_start = delay_start(right_trials_forced);
-delay_afterr_end = delay_end(right_trials_forced);
+if correctOnlyFlag==0
+    correct_trials(:)=1;
+end
+
+forced_r_start = forced_start(right_trials_forced & correct_trials);
+forced_r_end = forced_end(right_trials_forced & correct_trials);
+forced_l_start = forced_start(left_trials_forced & correct_trials);
+forced_l_end = forced_end(left_trials_forced & correct_trials);
+free_r_start = free_start(right_trials_free & correct_trials);
+free_r_end = free_end(right_trials_free & correct_trials);
+free_l_start = free_start(left_trials_free & correct_trials);
+free_l_end = free_end(left_trials_free & correct_trials);
+delay_afterl_start = delay_start(left_trials_forced & correct_trials);
+delay_afterl_end = delay_end(left_trials_forced & correct_trials);
+delay_afterr_start = delay_start(right_trials_forced & correct_trials);
+delay_afterr_end = delay_end(right_trials_forced & correct_trials);
 %cage epochs too
 %also need reward get
 %%
-blockTypes={'forced r', 'forced l', 'free r', 'free l'};
+blockTypes={'forced r', 'free r', 'forced l',  'free l'};
             %'delay after r', 'delay after l', 'choice after r', 'choice after l'}; 
 
-blocksLeft=[-1 1 -1 1];%0 1 0 0]; %1 = left, -1 = r, 0 = don't use
-blocksForced=[1 1 -1 -1];%0 0 0 0]; %not sure how to handle these 
+blocksLeft=[-1 -1 1 1];%0 1 0 0]; %1 = left, -1 = r, 0 = don't use
+blocksForced=[1 -1 1 -1];%0 0 0 0]; %not sure how to handle these 
     %1 = forced, -1 = unforced, 0 = don't use
 
 trial_block_inds=cell(1,4);
 trial_block_inds{1,1}=[forced_r_start, forced_r_end];
-trial_block_inds{1,2}=[forced_l_start, forced_l_end];
-trial_block_inds{1,3}=[free_r_start, free_r_end];
+trial_block_inds{1,2}=[free_r_start, free_r_end];
+trial_block_inds{1,3}=[forced_l_start, forced_l_end];
 trial_block_inds{1,4}=[free_l_start, free_l_end];
+    
 
-%% And much later, actually plot the stuff
 
-%All cell activity
+%% Get some cell activity vectors
+%% All cell activity
 BFTindices=[];
 for blockNum=1:length(blockTypes)
     blockStart(blockNum)=length(BFTindices)+1;
@@ -108,10 +115,8 @@ end
 %Need to trim frames ends for this to work
 
 BlockedFT = FT(:,BFTindices);
-    jak.Children.XTick=blockEnd;
-    plot([blockEnd(1) blockEnd(1)],[1 1849],'r')
     
-%Number of times a cell fired on a trial, also as probability
+%% Number of times a cell fired on a trial, also as probability
 BlockedFThits = cell(1,4);
 BlockedFTprob = cell(1,4);
 for blockNum = 1:length(blockTypes)
@@ -124,8 +129,9 @@ for blockNum = 1:length(blockTypes)
    BlockedFThits{1,blockNum} = hitsHolder;
    BlockedFTprob{1,blockNum} = hitsHolder/size(trial_block_inds{1,blockNum},1);
 end
-%Should look at least something like the place field
+%Should look something like the place field
 
+%%
 %Idea:  LRselectivity = (hitsLeft-hitsRight)/totalHits
 %       STselectivity = (hitsStudy-hitsTest)/totalHits
 
@@ -139,8 +145,7 @@ STselectivity = mean(probForced,2);
 histogram(LRselectivity(LRselectivity~=0),30)
 figure; histogram(STselectivity(STselectivity~=0),30)
 
-%% Doesn't work yet
-%Threshold for selectivity, leave a batch unsorted
+%% Threshold for selectivity, leave a batch unsorted
 LRthresh=0.02; %left positive, right neg
 STthresh=0.01; %forced positive, free neg
 LeftStudySelective = find(LRselectivity > LRthresh & STselectivity > STthresh);
@@ -151,25 +156,105 @@ everythingElse = find( (LRselectivity < LRthresh & LRselectivity > -LRthresh)...
     | (STselectivity < STthresh & STselectivity > -STthresh) );
 
 SortedBlockedFT = [BlockedFT(RightStudySelective,:);...
-                   BlockedFT(LeftStudySelective,:);...
                    BlockedFT(RightTestSelective,:);...
+                   BlockedFT(LeftStudySelective,:);...
                    BlockedFT(LeftTestSelective,:);...
                    BlockedFT(everythingElse,:)];
-%Similarity by percentile rank difference
+
+SortedFT=    [FT(RightStudySelective,:);...
+              FT(RightTestSelective,:);...
+              FT(LeftStudySelective,:);...
+              FT(LeftTestSelective,:);...
+              FT(everythingElse,:)];          
+          
+%%
+sortedFig=figure; imagesc(SortedBlockedFT)
+hold on
+for block=1:length(blockEnd)-1
+    plot([blockEnd(block) blockEnd(block)],[1 size(FT,1)],'r')
+end
+heights = length(RightStudySelective);
+heights = [heights; heights(end)+length(RightTestSelective)];
+heights = [heights; heights(end)+length(LeftStudySelective)];
+heights = [heights; heights(end)+length(LeftTestSelective)];
+for type=1:4
+    plot([0 size(SortedBlockedFT,2)],[heights(type) heights(type)],'g')
+end    
+plotBlocks=[0 blockEnd];
+newXticks=plotBlocks(1:end-1)+round(diff(plotBlocks)/2);
+sortedFig.Children.XTick=newXticks;
+sortedFig.Children.XTickLabel=blockTypes;  
+
+sortedFTfig=figure; imagesc(SortedFT)
+hold on
+for type=1:4
+    plot([0 size(SortedFT,2)],[heights(type) heights(type)],'g')
+end    
+
+
+%% Get duration
+BlockedDurations = cell(1,4);
+BlockedDurationsZscore = cell(1,4);
+zerosNeeded = zeros(size(FT,1),1);
+trialEnds = 0;
+for blockNum = 1:length(blockTypes)
+    BigDurations = zeros(size(FT,1),size(trial_block_inds{1,blockNum},1));
+    disp(['Block ' num2str(blockNum)])
+    %dursHolder = zeros(size(FT,1),1);
+    for trialNum = 1:size(trial_block_inds{1,blockNum},1)
+        disp(['Trial ' num2str(trialNum)])
+        theseInds = trial_block_inds{1,blockNum}(trialNum,1):...
+           trial_block_inds{1,blockNum}(trialNum,2);
+        duration = zeros(size(FT,1),1);
+        for cell = 1:size(FT,1)
+            traceBit = [0 FT(cell,theseInds) 0]; 
+            transientStarts = find(diff(traceBit)==1);
+            transientEnds = find(diff(traceBit)==-1);
+            if any(transientStarts) && any(transientEnds)...
+                    && length(transientStarts)==length(transientEnds)
+                duration(cell) = sum(transientEnds - transientStarts);
+            end    
+        end
+        BigDurations(:,trialNum) = duration;
+    end
+    BlockedDurations{1,blockNum} = BigDurations;
+    BlockedDurationsZscore{1,blockNum} = zscore(BigDurations,[],2); 
+end
+
+%% Similarity matrix
+coefMat=zeros(4,4); pMat=zeros(4,4); checkMat=zeros(4,4);
+for blockType=1:4
+    for compBlock=1:4
+        [r,p]=corrcoef(BlockedDurationsZscore{1,blockType}(1:max(heights),:),...
+                       BlockedDurationsZscore{1,compBlock}(1:max(heights),:));
+        coefMat(blockType,compBlock)=r(1,2);
+        pMat(blockType,compBlock)=p(1,2);
+        checkMat(blockType,compBlock)=blockType*compBlock;
+    end
+end
+
+for blockType=1:4
+    for compBlock=1:4
+        [r,p]=corrcoef(mean(BlockedDurations{1,blockType},2),...
+                       mean(BlockedDurations{1,compBlock},2));
+        coefMat(blockType,compBlock)=r(1,2);
+        pMat(blockType,compBlock)=p(1,2);
+        checkMat(blockType,compBlock)=blockType*compBlock;
+    end
+end
+%{
+%% Similarity by percentile rank difference
 
 
 %vertical shuffle of cells:
     %breakdown by correct/incorrect
     
-%Get duration
-traceBit=FT(cell,theseInds);
-transientStarts=find(diff(traceBit)==1);
-transientEnds=find(diff(traceBit)==-1);
+
 %need to handle when uneven number
 
 
-%z score all of these?
-
+%z score all of these? yes
+output = zscore(input,[],2); %this is how Sam did it
 
 
 %statistical significance: shuffle trials into new blocks
@@ -214,9 +299,13 @@ end
     exclude_frames_raw=inc_free_r;
     exclude_frames=[];
     exclude_aligned = exclude_frames_raw - FToffset + 2;
-    exclude_aligned = exclude_aligned(exclude_aligned > 0); % Get rid of any negative values (corresponding to times before the mouse was on the maze)
-    exclude_frames = [exclude_frames, exclude_aligned]; % concatenate to exclude_frames 
-    exclude_frames = exclude_frames(exclude_frames <= length(x_adj_cm));%sometimes come up with frames longer than FT
+    exclude_aligned = exclude_aligned(exclude_aligned > 0); 
+% Get rid of any negative values 
+(corresponding to times before the mouse was on the maze)
+    exclude_frames = [exclude_frames, exclude_aligned]; 
+% concatenate to exclude_frames 
+    exclude_frames = exclude_frames(exclude_frames <= length(x_adj_cm));
+%sometimes come up with frames longer than FT
 figure;
 plot(x_adj_cm,y_adj_cm,'.k')
 hold on
@@ -236,4 +325,5 @@ cage_leave = AVI_to_brain_frame(cage_leave, AVItime_interp);
         cage_start(end) = []; end
 delay_start = AVI_to_brain_frame(delay_start, AVItime_interp);
 delay_end = free_start;
+%}
 %}
