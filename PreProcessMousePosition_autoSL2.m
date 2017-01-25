@@ -137,47 +137,18 @@ if ~isempty(strfind(version,'R2016a'))
     return
 end
 %% Need these for better organization
-global obj
-global aviSR
-global auto_frames
-global corrFrame
-global xAVI
-global yAVI
-global Xpix
-global Ypix
-global definitelyGood
-global fixedThisFrameFlag
-global numPasses
-global v
-global maskx
-global masky
-global v0
-global maze
-global lastManualFrame; lastManualFrame=[];
-global grayThresh
-global gaussThresh
-global willThresh
-global distLim2
-global got
-global skipped
-global xm
-global ym
-global bounds
-global expectedBlobs
-global time
-global update_pos_realtime
-global grayBlobArea
-global ManualCorrFig
-global overwriteManualFlag
-global velCount
-global sFrame
-global eFrame
-global MoMtime
-global vel_init
-global auto_vel_thresh
-global velchoice
-global AMchoice
-global corrDefGoodFlag
+global obj; global aviSR; global auto_frames; global corrFrame;
+global xAVI; global yAVI; global Xpix; global Ypix; global definitelyGood;
+global fixedThisFrameFlag; global numPasses; global v; global maskx;
+global masky; global v0; global maze; global lastManualFrame; lastManualFrame=[];
+global grayThresh; global gaussThresh; global willThresh; global distLim2;
+global got; global skipped; global xm; global ym; global bounds;
+global expectedBlobs; global time; global update_pos_realtime; global grayBlobArea;
+global ManualCorrFig; global overwriteManualFlag; global velCount; global sFrame;
+global eFrame; global MoMtime; global vel_init; global auto_vel_thresh;
+global velchoice; global AMchoice; global corrDefGoodFlag; global elChoiceFlag;
+global elVector; global mazeEl;
+
 %% Get varargin
     
 update_pos_realtime = 1; % Default setting
@@ -460,6 +431,17 @@ end
 
 UpdatePosAndVel;
 %vel = hypot(diff(Xpix),diff(Ypix))/(time(2)-time(1));
+
+%% Expected location
+elChoice = questdlg('Expected locations?', 'Expected locations', ...
+	'Yes','No','Yes');
+switch elChoice
+    case 'Yes'
+        elChoiceFlag=1;
+        getELvector;
+    case 'No'
+        elChoiceFlag=0;
+end
 
 %% All the rest...
 if ~exist('Pos_temp.mat','file')
@@ -769,7 +751,6 @@ auto_frames=[];
 %velInds=1:length(vel_init);
 vel_init = hypot(diff(Xpix),diff(Ypix))/(time(2)-time(1));
 highVelFrames = find(vel_init>auto_vel_thresh);
-inHV=[];
 [~,~,inHV] = intersect(skipThese,highVelFrames);
 highVelFrames(inHV)=[];
 
@@ -838,7 +819,7 @@ if doneVel==0 && any(auto_frames)
                 intendedFrame=auto_frames;
                 auto_frames=[intendedFrame-1 intendedFrame+1];
                 for corrFrame=1:2
-                    if definitelyGood(auto_frames(corrFrame)==0
+                    if definitelyGood(auto_frames(corrFrame))==0
                     obj.CurrentTime=(auto_frames(corrFrame)-1)/aviSR;
                     v = readFrame(obj);
                     fixedThisFrameFlag=0;
@@ -856,7 +837,7 @@ if doneVel==0 && any(auto_frames)
                 SaveTemp;
             end
         elseif sum(veldFrames==auto_frames)>=4
-            skipThese=[skipThese auto_frames];
+            skipThese=[skipThese auto_frames]; %#ok<AGROW>
             correctThis=0;    
         end
         if correctThis==1
@@ -943,7 +924,6 @@ if doneVel==0 && any(auto_frames)
 end
 end
 
-
 UpdatePosAndVel;
 
 end
@@ -952,17 +932,15 @@ function TryAdjacentFrames(~,~)
                 
 global putativeMouseX; global putativeMouseY
 global auto_frames; global corrFrame; global skipped; global pass;
-global xAVI; global yAVI; global fixedThisFrameFlag; global huh; global got
+global xAVI; global yAVI; global fixedThisFrameFlag; global huh; %global got
 global xm; global ym; 
 
 skipThisStep=0;
 if auto_frames(corrFrame) > 1 && any(skipped==auto_frames(corrFrame)-1)==0 %Look at adjacent frames
     %not the first frame and we didn't skip the last one
-    %disp('pip')
     adjacentX = xAVI(auto_frames(corrFrame)-1);
     adjacentY = yAVI(auto_frames(corrFrame)-1);
 elseif auto_frames(corrFrame)~=auto_frames(end)
-    %disp('pop')
     if auto_frames(corrFrame) < length(xAVI) && any(auto_frames(corrFrame+1)==auto_frames(corrFrame)+1)==0
         %&& any(skipped==auto_frames(corrFrame)+1)==0 ... %doesn't work w/ more than one skipped
         %not the last frame and next frame doesn't need to be corrected
@@ -980,7 +958,6 @@ elseif auto_frames(corrFrame)~=auto_frames(end)
         end
     end    
 else
-    %disp('pap')
     if auto_frames(corrFrame)==1
         [xm,ym]=ManualOnlyCorr;
         skipThisStep=1;
@@ -1006,7 +983,7 @@ if skipThisStep==0
         xm = putativeMouseX(whichSharedMouseX);
         ym = putativeMouseY(whichSharedMouseY);
         fixedThisFrameFlag = 1;
-        got = [got; corrFrame]; 
+        %got = [got; corrFrame]; 
     else    
         if pass==1
             skipped = [skipped; auto_frames(corrFrame)]; 
@@ -1176,12 +1153,15 @@ global xAVI; global yAVI; global Xpix; global Ypix; global maze; global got;
 global pass; global aviSR; global expectedBlobs; global update_pos_realtime;
 global grayBlobArea; global skipped; global putativeMouseX; global putativeMouseY;
 global willThresh; global grayThresh; global gaussThresh; global distLim2;
-global xm; global ym; 
+global xm; global ym; global elChoiceFlag; global elVector; global mazeEl
 
 xm=[]; ym=[];
 marker = {'go' 'yo' 'ro'};
 marker_face = {'g' 'y' 'r'};
 
+if elChoiceFlag==1
+    maze = mazeEl( elVector( auto_frames(corrFrame) ) ).maze;
+end
 fixedThisFrameFlag=0;
     
 obj.CurrentTime=(auto_frames(corrFrame)-1)/aviSR;
@@ -1382,7 +1362,7 @@ end
 function UpdatePosAndVel(~,~)
 global PosAndVel; global vel_init; global time; global Xpix; global Ypix;
 global MoMtime; global auto_vel_thresh;
-
+    
 try
     figure(PosAndVel);
 catch
@@ -1410,7 +1390,116 @@ global maze; global expectedBlobs; global v0;
 save Pos_temp.mat Xpix Ypix xAVI yAVI MoMtime MouseOnMazeFrame maskx v0 maze masky definitelyGood expectedBlobs   
 disp('Saved!')
 end
+%% %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+function getELvector(~,~)
+global elVector; global elChoiceFlag; global xAVI; global v0; global mazeEl;
+global maze; global maskx; global masky;
+
+%right now only built for dnmp
+
+%doneLoading=0;
+%while doneLoading==0
+    [xlsPath, xlsFile] = uigetfile('*.xls', 'Select file with behavior times');
+    [frames, txt] = xlsread(fullfile(xlsPath,xlsFile), 1);
+    
+    str = {'cage epochs', 'left trials', 'right trials', 'delay period'...
+           'center stem'};
+    [s,v] = listdlg('PromptString','Select expected locations:',...
+                'SelectionMode','multiple',...
+                'ListString',str);
+
+    %could load different frames and txt as successive entries in structs
+    %search txt struct (for structlevel..., for txt length...)
+    %to identify frames struct locations of timestampts needed
+%end   
+
+    right_trials_forced = strcmpi(txt(2:end,7),'R');
+    right_trials_free = strcmpi(txt(2:end,8),'R');
+    left_trials_forced = strcmpi(txt(2:end,7),'L'); 
+    left_trials_free = strcmpi(txt(2:end,8),'L');
+    
+    %delay_start = bonusFrames(:,2);
+    %delay_end = free_start;        
+    
+    forced_start = frames(:,2);
+    free_start = frames(:,3);
+    for aa=s; ds(aa)=strcmpi('center stem',str{aa}); end %#ok<AGROW>
+    if any(ds)
+        forced_end = delay_start;
+    else 
+        forced_end = free_start;
+    end
+    free_end = frames(:,4);
+    cage_start = frames(:,5);
+    cage_leave = frames(2:end,6);
+    
+    right_trials=[forced_start(right_trials_forced), forced_end(right_trials_forced);...
+                  free_start(right_trials_free), free_end(right_trials_free)];  
+    left_trials=[forced_start(left_trials_forced), forced_end(left_trials_forced);...
+                  free_start(left_trials_free), free_end(left_trials_free)];  
+    cage_epochs=[cage_start, cage_leave];
+    
+    %choice dlg here for are you done loading excel files
+    %not sure how to deal with more than one yet...
+         
+    %are we looking at the center stem? (this way for generalized)
+    for aa=s; cs(aa)=strcmpi('center stem',str{aa}); end %#ok<AGROW>
+    if any(cs); disp('sorry, center stem not implemented yet'); s(s==find(cs))=[]; end
+     
+if v==0
+    elChoiceFlag=0;
+else
+    elVector=ones(length(xAVI),1);
+    mazeEl(1).maze=maze; mazeEl(1).maskx=maskx; mazeEl(2).masky=masky
+    for mazeUp=1:length(s)
+        mazeElInd=mazeUp+1;
+        
+        switch str{s(mazeUp)}
+            case 'cage epochs' 
+                for bb=1:length(cage_epochs)
+                    elVector(cage_epochs(bb,1):cage_epochs(bb,2)) = mazeElInd;
+                end    
+            case'left trials'
+                for bb=1:length(left_trials)
+                    elVector(left_trials(bb,1):left_trials(bb,2)) = mazeElInd;
+                end
+            case 'right trials' 
+                for bb=1:length(right_trials)
+                    elVector(right_trials(bb,1):right_trials(bb,2)) = mazeElInd;
+                end
+            case 'delay period'
+                %unfinished
+            case 'center stem'
+                %unfinished
+        end
+        
+        mazeMaskGood=0;
+        while mazeMaskGood==0
+            MazeFig=figure('name', 'Expected Location Mask'); imagesc(flipud(v0));
+            title(['Draw position mask for ' str{s(mazeUp)}]);
+            [mazeEl(mazeElInd).maze, mazeEl(mazeElInd).maskX, mazeEl(mazeElInd).maskY] = roipoly;
+            hold on; plot([mazeEl(mazeElInd).maskx; mazeEl(mazeElInd).maskx(1)],...
+                [mazeEl(mazeElInd).masky; mazeEl(mazeElInd).masky(1)],'r','LineWidth',2); hold off 
+
+            mchoice = questdlg(['Is this ' str{s(mazeUp)} ' mask good?'], ...
+                                'Maze Mask', 'Yes','No redraw','Yes');
+            switch mchoice
+                case 'Yes'
+                    disp('Proceeding with this mask')
+                    mazeMaskGood=1;
+                case 'No redraw'
+                    mazeMaskGood=0;
+            end
+        end 
+        close(MazeFig)
+    end
+end 
+
+
+end
 %%
+
+
 %{
 BoneYard
 
