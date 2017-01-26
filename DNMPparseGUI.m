@@ -6,6 +6,13 @@ function DNMPparseGUI( ~,~ )
 % on figure for going between frames to work. If lap number button is red, click it to 
 % start logging on that lap number
 
+%Probably best to generalize button layout, button callbacks (with input to
+%the return function), saving
+%               for buttonCol=1:length(miscVar.buttonsInUse)
+%                   eval(['videoFig.',miscVar.buttonsInUse{buttonCol},'.BackgroundColor=miscVar.Red;'])
+%               end
+%       this may work to put in buttons generalizedly, though even more
+%       eval stuff to get button properties...
 %%
 global miscVar
 global ParsedFrames
@@ -35,7 +42,7 @@ miscVar.LapsWorkedOn=[];
 
 videoFig.LapNumberButton = uicontrol('Style','pushbutton','String','LAP NUMBER',...
                            'Position',[miscVar.buttonLeftEdge+60,miscVar.upperLimit+50,miscVar.buttonWidth,30],...
-                           'Callback',{@fcnLapNumberButton},'BackgroundColor',miscVar.Gray);
+                           'Callback',{@fcnLapNumberButton},'BackgroundColor',miscVar.Red);
 miscVar.LapNumber=1;                       
 
 videoFig.LapNumberBox = uicontrol('Style','edit','string','1',...
@@ -73,19 +80,22 @@ end
 
 switch miscVar.sessionClass
     case 1
-        miscVar.buttonsInUse={'LapStartButton';'EnterDelayButton';...
-                               'LiftBarrierButton';'LeaveMazeButton';
-                               'StartHomecageButton';'LeaveHomecageButton';'ForcedTrialDirButton';...
-                               'FreeTrialDirButton';'ForcedRewardButton';'FreeRewardButton';...
-                               'FreeChoiceButton';'ForcedChoiceButton'}; 
-bs=0;                           
+        miscVar.buttonsInUse={'LapStartButton'; 'ForcedChoiceLeaveButton';...
+                              'ForcedTrialDirButton'; 'ForcedRewardButton';...
+                              'EnterDelayButton'; 'LiftBarrierButton';...
+                              'FreeChoiceLeaveButton'; 'FreeTrialDirButton';
+                              'FreeRewardButton'; 'LeaveMazeButton';...
+                               'StartHomecageButton';'LeaveHomecageButton'};
+bs=0;                       
+%bs=-1; bt=1;
+%if mod(bt,2)==1; left=miscVar.buttonLeftEdge; bs=bs+1; elseif mod(bt,2)==0; left=miscVar.buttonSecondCol; end
 videoFig.LapStartButton = uicontrol('Style','pushbutton','String','LAP START',...
                            'Position',[miscVar.buttonLeftEdge,miscVar.upperLimit - miscVar.buttonStepDown*bs,miscVar.buttonWidth,30],...
                            'Callback',{@fcnLapStartButton});
-                       
-videoFig.ForcedChoiceButton = uicontrol('Style','pushbutton','String','FORCED CHOICE',...
+%bt=bt+1;                       
+videoFig.ForcedChoiceLeaveButton = uicontrol('Style','pushbutton','String','FORCED CHOICE LEAVE',...
                              'Position',[miscVar.buttonSecondCol,miscVar.upperLimit - miscVar.buttonStepDown*bs,miscVar.buttonWidth,30],...
-                             'Callback',{@fcnForcedChoiceButton});   
+                             'Callback',{@fcnForcedChoiceLeaveButton});   
 bs=bs+1;
 videoFig.ForcedTrialDirButton = uicontrol('Style','pushbutton','String','FORCED TRIAL DIR',...
                                 'Position',[miscVar.buttonLeftEdge,miscVar.upperLimit - miscVar.buttonStepDown*bs,...
@@ -109,9 +119,9 @@ videoFig.LiftBarrierButton = uicontrol('Style','pushbutton','String','LIFT BARRI
                              'Position',[miscVar.buttonLeftEdge,miscVar.upperLimit - miscVar.buttonStepDown*bs,...
                              miscVar.buttonWidth,30], 'Callback',{@fcnLiftBarrierButton});
                          
-videoFig.FreeChoiceButton = uicontrol('Style','pushbutton','String','FREE CHOICE',...
+videoFig.FreeChoiceLeaveButton = uicontrol('Style','pushbutton','String','FREE CHOICE LEAVE',...
                              'Position',[miscVar.buttonSecondCol,miscVar.upperLimit - miscVar.buttonStepDown*bs,130,30],...
-                             'Callback',{@fcnFreeChoiceButton}); 
+                             'Callback',{@fcnFreeChoiceLeaveButton}); 
                          
 bs=bs+1;
 videoFig.FreeTrialDirButton = uicontrol('Style','pushbutton','String','FREE TRIAL DIR',...
@@ -143,16 +153,21 @@ videoFig.LeaveHomecageButton = uicontrol('Style','pushbutton','String','LEAVE HO
 
 headings={'Trial #'; 'Start on maze (start of Forced'; 'Lift barrier (start of free choice)';...
             'Leave maze'; 'Start in homecage'; 'Leave homecage'; 'Forced Trial Type (L/R)';...
-            'Free Trial Choice (L/R)'; 'Enter Delay'};
-ParsedFrames.LapNumber={headings{1}};        
-ParsedFrames.LapStart={headings{2}}; 
-ParsedFrames.LiftBarrier={headings{3}};
-ParsedFrames.LeaveMaze={headings{4}};
-ParsedFrames.StartHomecage={headings{5}};
-ParsedFrames.LeaveHomecage={headings{6}};
-ParsedFrames.ForcedDir={headings{7}};
-ParsedFrames.FreeDir={headings{8}};
-ParsedFrames.EnterDelay={headings{9}};
+            'Free Trial Choice (L/R)'; 'Enter Delay'; 'Forced Choice'; 'Free Choice'; 'Forced Reward'; 'Free Reward'};
+        
+ParsedFrames.LapNumber=headings(1);        
+ParsedFrames.LapStart=headings(2);
+ParsedFrames.LiftBarrier=headings(3);
+ParsedFrames.LeaveMaze=headings(4);
+ParsedFrames.StartHomecage=headings(5);
+ParsedFrames.LeaveHomecage=headings(6);
+ParsedFrames.ForcedDir=headings(7);
+ParsedFrames.FreeDir=headings(8);
+ParsedFrames.EnterDelay=headings(9);
+ParsedFrames.ForcedChoiceLeave=headings(10);
+ParsedFrames.FreeChoiceLeave=headings(11);
+ParsedFrames.ForcedReward=headings(12);
+ParsedFrames.FreeReward=headings(13);
                          
 
 %% Layout for ForcedUnforced
@@ -203,20 +218,24 @@ videoFig.PopTrialDir = uicontrol('Style','popup',...
 headings={'Trial #'; 'Start on maze (start of Forced'; 'Enter delay';...
             'Leave maze'; 'Start in homecage'; 'Leave homecage'; 'Trial Type (FORCED/FREE)';...
             'Trial Dir (L/R)'};
-ParsedFrames.LapNumber={headings{1}};        
-ParsedFrames.LapStart={headings{2}}; 
-ParsedFrames.EnterDelay={headings{3}};
-ParsedFrames.LeaveMaze={headings{4}};
-ParsedFrames.StartHomecage={headings{5}};
-ParsedFrames.LeaveHomecage={headings{6}};
-ParsedFrames.TrialType={headings{7}};
-ParsedFrames.TrialDir={headings{8}};
-ParsedFrames.ForcedChoice={headings{9}};
-ParsedFrames.FreeChoice={headings{10}};
-ParsedFrames.ForcedReward={headings{11}};
-ParsedFrames.FreeReward={headings{12}};
 
+%{
+ParsedFrames.TrialType=headings(7);
 
+ParsedFrames.LapNumber=headings(1);        
+ParsedFrames.LapStart=headings(2);
+ParsedFrames.LiftBarrier=headings(3);
+ParsedFrames.LeaveMaze=headings(4);
+ParsedFrames.StartHomecage=headings(5);
+ParsedFrames.LeaveHomecage=headings(6);
+ParsedFrames.ForcedDir=headings(7);
+ParsedFrames.FreeDir=headings(8);
+ParsedFrames.EnterDelay=headings(9);
+ParsedFrames.ForcedChoice=headings(10);
+ParsedFrames.FreeChoice=headings(11);
+ParsedFrames.ForcedReward=headings(12);
+ParsedFrames.FreeReward=headings(13);
+%}
     case 3
         disp('Sorry bro')
 end
@@ -326,6 +345,28 @@ if miscVar.VideoLoadedFlag==1
     videoFig.LapStartButton.BackgroundColor=miscVar.Gray;
 end
 end
+function fcnForcedChoiceLeaveButton(~,~)
+disp('Forced Choice Leave')
+global miscVar
+global ParsedFrames
+global videoFig
+if miscVar.VideoLoadedFlag==1
+    ParsedFrames.ForcedChoiceLeave{miscVar.LapNumber+1,1}=miscVar.frameNum;
+    disp(num2str(ParsedFrames.ForcedChoiceLeave{miscVar.LapNumber+1,1}))
+    videoFig.ForcedChoiceLeaveButton.BackgroundColor=miscVar.Gray;
+end
+end
+function fcnForcedRewardButton(~,~)
+disp('Enter Delay')
+global miscVar
+global ParsedFrames
+global videoFig
+if miscVar.VideoLoadedFlag==1
+    ParsedFrames.ForcedReward{miscVar.LapNumber+1,1}=miscVar.frameNum;
+    disp(num2str(ParsedFrames.ForcedReward{miscVar.LapNumber+1,1}))
+    videoFig.ForcedRewardButton.BackgroundColor=miscVar.Gray;
+end
+end
 function fcnEnterDelayButton(~,~)
 disp('Enter Delay')
 global miscVar
@@ -346,6 +387,28 @@ if miscVar.VideoLoadedFlag==1
     ParsedFrames.LiftBarrier{miscVar.LapNumber+1,1}=miscVar.frameNum;
     disp(num2str(ParsedFrames.LiftBarrier{miscVar.LapNumber+1,1}))
     videoFig.LiftBarrierButton.BackgroundColor=miscVar.Gray;
+end
+end
+function fcnFreeChoiceLeaveButton(~,~)
+disp('Free Choice Leave')
+global miscVar
+global ParsedFrames
+global videoFig
+if miscVar.VideoLoadedFlag==1
+    ParsedFrames.FreeChoiceLeave{miscVar.LapNumber+1,1}=miscVar.frameNum;
+    disp(num2str(ParsedFrames.FreeChoiceLeave{miscVar.LapNumber+1,1}))
+    videoFig.FreeChoiceLeaveButton.BackgroundColor=miscVar.Gray;
+end
+end
+function fcnFreeRewardButton(~,~)
+disp('Free Reward')
+global miscVar
+global ParsedFrames
+global videoFig
+if miscVar.VideoLoadedFlag==1
+    ParsedFrames.ForcedReward{miscVar.LapNumber+1,1}=miscVar.frameNum;
+    disp(num2str(ParsedFrames.FreeReward{miscVar.LapNumber+1,1}))
+    videoFig.FreeRewardButton.BackgroundColor=miscVar.Gray;
 end
 end
 function fcnLeaveMazeButton(~,~)
@@ -510,7 +573,12 @@ switch miscVar.sessionClass
     case 1
 realTable=table(ParsedFrames.LapNumber,...
                 ParsedFrames.LapStart,...
+                ParsedFrames.ForcedChoiceLeave,...
+                ParsedFrames.ForcedReward,...
+                ParsedFrames.EnterDelay,...
                 ParsedFrames.LiftBarrier,...
+                ParsedFrames.FreeChoiceLeave,...
+                ParsedFrames.FreeReward,...
                 ParsedFrames.LeaveMaze,...
                 ParsedFrames.StartHomecage,...
                 ParsedFrames.LeaveHomecage,...
@@ -525,8 +593,8 @@ realTable=table(ParsedFrames.LapNumber,...
                 ParsedFrames.TrialType,...
                 ParsedFrames.TrialDir);       
 end        
-bonusTable=table(ParsedFrames.LapNumber,...
-              ParsedFrames.EnterDelay);
+%bonusTable=table(ParsedFrames.LapNumber,...
+%              ParsedFrames.EnterDelay);
 catch 
     save 'luckyYou.mat' 'ParsedFrames'
     disp('saved what you had')
@@ -555,9 +623,12 @@ end
 if saveNow==1;
     try
         xlswrite(fullfile(miscVar.PathName,saveName{1}),table2cell(realTable));
+        if exist('bonusTable','var')
         xlswrite(fullfile(miscVar.PathName,[saveName{1}(1:end-5) '_bonus.xlsx']),table2cell(bonusTable));
+        end
     catch
         disp('Some saving error')   
+        save 'luckyYou.mat' 'ParsedFrames'
     end    
 end
 end
