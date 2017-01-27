@@ -7,7 +7,7 @@ function DNMPparseGUI( ~,~ )
 % start logging on that lap number
 
 %Probably best to generalize button layout, button callbacks (with input to
-%the return function), saving
+%the return function)
 %               for buttonCol=1:length(miscVar.buttonsInUse)
 %                   eval(['videoFig.',miscVar.buttonsInUse{buttonCol},'.BackgroundColor=miscVar.Red;'])
 %               end
@@ -138,7 +138,7 @@ videoFig.PopFreeDir = uicontrol('Style','popup',...
                              'Value', 1);                          
                          
 bs=bs+1; 
-videoFig.FreeRewardButton = uicontrol('Style','pushbutton','String','FORCED REWARD',...
+videoFig.FreeRewardButton = uicontrol('Style','pushbutton','String','FREE REWARD',...
                              'Position',[miscVar.buttonLeftEdge,miscVar.upperLimit - miscVar.buttonStepDown*bs,miscVar.buttonWidth,30],...
                              'Callback',{@fcnFreeRewardButton}); 
                          
@@ -410,7 +410,7 @@ global miscVar
 global ParsedFrames
 global videoFig
 if miscVar.VideoLoadedFlag==1
-    ParsedFrames.ForcedReward{miscVar.LapNumber+1,1}=miscVar.frameNum;
+    ParsedFrames.FreeReward{miscVar.LapNumber+1,1}=miscVar.frameNum;
     disp(num2str(ParsedFrames.FreeReward{miscVar.LapNumber+1,1}))
     videoFig.FreeRewardButton.BackgroundColor=miscVar.Gray;
 end
@@ -461,7 +461,7 @@ if miscVar.VideoLoadedFlag==1
             ParsedFrames.ForcedDir{miscVar.LapNumber+1,1}='R';
     end        
     disp(ParsedFrames.ForcedDir{miscVar.LapNumber+1,1})
-    videoFig.ForcedDirButton.BackgroundColor=miscVar.Gray;
+    videoFig.ForcedTrialDirButton.BackgroundColor=miscVar.Gray;
 end
 end
 function fcnFreeDirButton(~,~)
@@ -477,7 +477,7 @@ if miscVar.VideoLoadedFlag==1
             ParsedFrames.FreeDir{miscVar.LapNumber+1,1}='R';
     end        
     disp(ParsedFrames.FreeDir{miscVar.LapNumber+1,1})
-    videoFig.FreeDirButton.BackgroundColor=miscVar.Gray;
+    videoFig.FreeTrialDirButton.BackgroundColor=miscVar.Gray;
 end
 end
 function fcnTrialTypeButton(~,~)
@@ -569,12 +569,13 @@ function fcnSaveSheet(~,~)
 global ParsedFrames
 global miscVar
 disp('Save sheet')
-save 'ParsedFramesTest.mat' 'ParsedFrames'
+
 for laps=1:(size(ParsedFrames.LapStart,1)-1);
     ParsedFrames.LapNumber{laps+1,1}=laps;
 end  
+save 'ParsedFramesTest.mat' 'ParsedFrames'
 
-fields = fieldNames(ParsedFrames);
+fields = fieldnames(ParsedFrames);
 for i = 1:numel(fields)
     if length(ParsedFrames.(fields{i}))<=1 %fields get pre-loaded with their names
         ParsedFrames = rmfield(ParsedFrames,fields{i}); 
@@ -584,6 +585,7 @@ end
 %now can we just...?
 realTable=struct2table(ParsedFrames);
 
+%{
 %and then save?
 try 
 switch miscVar.sessionClass
@@ -616,7 +618,8 @@ catch
     save 'luckyYou.mat' 'ParsedFrames'
     disp('saved what you had')
     %Error handling!
-end            
+end    
+%}
              
 undecided=0; saveNow=0;
 while undecided==0
@@ -727,14 +730,14 @@ switch e.Key
             title(['Frame ' num2str(miscVar.frameNum) ' / ' num2str(miscVar.totalFrames)])
         end
     case 'd' %Step forward 1
-        if video.currentTime+1 <= miscVar.totalFrames
+        if video.currentTime+1 < miscVar.totalFrames
             miscVar.currentFrame = readFrame(video);
             miscVar.frameNum = miscVar.frameNum+1;
             videoFig.plotted = imagesc(miscVar.currentFrame);
             title(['Frame ' num2str(miscVar.frameNum) ' / ' num2str(miscVar.totalFrames)])
         end
     case 'f' %Step forward 10  
-        if video.currentTime+10 <= miscVar.totalFrames
+        if video.currentTime+10 < miscVar.totalFrames
             miscVar.frameNum = miscVar.frameNum + 9;
             video.CurrentTime = miscVar.frameNum/video.FrameRate;
             miscVar.currentFrame = readFrame(video);
@@ -743,7 +746,7 @@ switch e.Key
             title(['Frame ' num2str(miscVar.frameNum) ' / ' num2str(miscVar.totalFrames)])
         end
     case 'r' %Step forward 100
-        if video.currentTime+1 <= miscVar.totalFrames
+        if video.currentTime+100 < miscVar.totalFrames
             miscVar.frameNum = miscVar.frameNum + 99;
             video.CurrentTime = miscVar.frameNum/video.FrameRate;
             miscVar.currentFrame = readFrame(video);

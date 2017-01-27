@@ -1401,6 +1401,10 @@ global maze; global maskx; global masky;
 %while doneLoading==0
     [xlsPath, xlsFile] = uigetfile('*.xls', 'Select file with behavior times');
     [frames, txt] = xlsread(fullfile(xlsPath,xlsFile), 1);
+    %loop through txt adding unique names other than lap number to a list
+    %of options to choose from; maybe exclude directions from this first
+    %list
+    %direction is then an optional modifier 
     
     str = {'cage epochs', 'left trials', 'right trials', 'delay period'...
            'center stem'};
@@ -1413,6 +1417,12 @@ global maze; global maskx; global masky;
     %to identify frames struct locations of timestampts needed
 %end   
 
+
+    %Generalize all this: don't pre-determine everything, just load the
+    %parsed behavior timestamps, and until done choosing times, loop
+    %through letting user pick 2 of those by timestamp, direction (optional),
+    %then draw roipoly for that bunch, then add those to the list
+    
     right_trials_forced = strcmpi(txt(2:end,7),'R');
     right_trials_free = strcmpi(txt(2:end,8),'R');
     left_trials_forced = strcmpi(txt(2:end,7),'L'); 
