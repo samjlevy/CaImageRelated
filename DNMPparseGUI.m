@@ -12,7 +12,11 @@ function DNMPparseGUI( ~,~ )
 %                   eval(['videoFig.',miscVar.buttonsInUse{buttonCol},'.BackgroundColor=miscVar.Red;'])
 %               end
 %       this may work to put in buttons generalizedly, though even more
+%       probably need to do a preferred order for events, or at least put
+%       lap directions in odd positions so their drop down menu is on the
+%       same line
 %       eval stuff to get button properties...
+%       loading needs to get generalized too
 %%
 global miscVar
 global ParsedFrames
@@ -565,9 +569,22 @@ function fcnSaveSheet(~,~)
 global ParsedFrames
 global miscVar
 disp('Save sheet')
+save 'ParsedFramesTest.mat' 'ParsedFrames'
 for laps=1:(size(ParsedFrames.LapStart,1)-1);
     ParsedFrames.LapNumber{laps+1,1}=laps;
-end    
+end  
+
+fields = fieldNames(ParsedFrames);
+for i = 1:numel(fields)
+    if length(ParsedFrames.(fields{i}))<=1 %fields get pre-loaded with their names
+        ParsedFrames = rmfield(ParsedFrames,fields{i}); 
+    end
+end
+
+%now can we just...?
+realTable=struct2table(ParsedFrames);
+
+%and then save?
 try 
 switch miscVar.sessionClass
     case 1

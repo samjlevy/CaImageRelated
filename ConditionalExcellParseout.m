@@ -6,5 +6,10 @@ function ConditionalExcellParseout( )
 %loops through that struct to get locations of desired columns
 %might also be used to spit out conditional frame parsing based on what
 %kind of names we find (e.g., do we have start delay' or not?)
+doneLoading=0;
+while doneLoading==0
+    
+end
+
 
 end
