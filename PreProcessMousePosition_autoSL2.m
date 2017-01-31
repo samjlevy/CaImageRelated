@@ -534,12 +534,12 @@ switch MorePoints
             ' sec to ' num2str(eFrame/aviSR) ' sec, ' num2str(length(auto_frames)) ' frames'])
         manChoice = questdlg('Redo definitely good frames?','Redo DefGood',...
                     'Yes','No','No');
-                switch manChoice
-                    case 'Yes'
-                        corrDefGoodFlag=1;
-                    case 'No'
-                        corrDefGoodFlag=0;
-                end
+        switch manChoice
+            case 'Yes'
+                corrDefGoodFlag=1;
+            case 'No'
+                corrDefGoodFlag=0;
+        end
         CorrectManualFrames;
     case 'p'
         disp('correcting by position')
@@ -1397,31 +1397,99 @@ global maze; global maskx; global masky;
 
 %right now only built for dnmp
 
-%doneLoading=0;
-%while doneLoading==0
-    [xlsPath, xlsFile] = uigetfile('*.xls', 'Select file with behavior times');
-    [frames, txt] = xlsread(fullfile(xlsPath,xlsFile), 1);
-    %loop through txt adding unique names other than lap number to a list
+doneLoading=0; 
+loaded=1;
+while doneLoading==0
+    [xlsFile, xlsPath] = uigetfile('*.xlsx', 'Select file with behavior times');
+    [frameses(loaded).frames, txt(loaded).txt] = xlsread(fullfile(xlsPath,xlsFile), 1);
+    
+    %Probably time to generalize this prompt as a function
+    loadChoice = questdlg('Done loading sheets or another?','Done loading?',...
+                    'Done','Another!','Done');
+    switch loadChoice
+        case 'Done'
+            doneLoading=1;
+        case 'Another!'
+            loaded=loaded+1;
+            doneLoading=0;
+    end
+end 
+
+%doesn't give lap number column
+str = {}; frames = [];
+for lvl=1:loaded
+    str = [str txt(lvl).txt(1,2:end)];
+    frames = [frames frameses(lvl).frames(:,2:end)];
+end
+
+elVector=ones(length(xAVI),1);
+mazeEl(1).maze=maze; mazeEl(1).maskx=maskx; mazeEl(2).masky=masky
+
+%Generalize all this: don't pre-determine everything, just load the
+    %parsed behavior timestamps, and until done choosing times, loop
+    %through letting user pick 2 of those by timestamp, direction (optional),
+    %then draw roipoly for that bunch, then add those to the list
+
+doneGettingEls=0;
+mazeUp=1;
+while doneGettingEls==0
+    mazeElInd=mazeUp+1;
+    
+    selectedTwo=0;
+    while selectedTwo==0
+        [s,~] = listdlg('PromptString','A pair of timestamps:',...
+                    'SelectionMode','multiple',...
+                    'ListString',str);
+        if length(s)==2; selectedTwo=1; end
+    end
+
+    leftRight choice modifier; forced vs free issue?
+    
+    mazeMaskGood=0;
+    while mazeMaskGood==0
+        MazeFig=figure('name', 'Expected Location Mask'); imagesc(flipud(v0));
+        title(['Draw position mask for ' str{s(mazeUp)}]);
+        [mazeEl(mazeElInd).maze, mazeEl(mazeElInd).maskX, mazeEl(mazeElInd).maskY] = roipoly;
+        hold on; plot([mazeEl(mazeElInd).maskx; mazeEl(mazeElInd).maskx(1)],...
+            [mazeEl(mazeElInd).masky; mazeEl(mazeElInd).masky(1)],'r','LineWidth',2); hold off 
+
+        mchoice = questdlg(['Is this ' str{s(mazeUp)} ' mask good?'], ...
+                            'Maze Mask', 'Yes','No redraw','Yes');
+        switch mchoice
+            case 'Yes'
+                disp('Proceeding with this mask')
+                mazeMaskGood=1;
+            case 'No redraw'
+                mazeMaskGood=0;
+        end
+    end 
+    close(MazeFig)
+    
+    doneChoice = questdlg('Done with expected locations or another?','Done predicting?',...
+                    'Done','Another!','Done');
+    switch doneChoice
+        case 'Done'
+            doneGettingEls=1;
+        case 'Another!'
+            mazeUp=mazeUp+1;
+            doneGettingEls=0;
+    end    
+end
+    
+
+
+
+
+%loop through txt adding unique names other than lap number to a list
     %of options to choose from; maybe exclude directions from this first
     %list
     %direction is then an optional modifier 
     
-    str = {'cage epochs', 'left trials', 'right trials', 'delay period'...
-           'center stem'};
-    [s,v] = listdlg('PromptString','Select expected locations:',...
-                'SelectionMode','multiple',...
-                'ListString',str);
+    %str = {'cage epochs', 'left trials', 'right trials', 'delay period'...
+    %       'center stem'};
+    
 
-    %could load different frames and txt as successive entries in structs
-    %search txt struct (for structlevel..., for txt length...)
-    %to identify frames struct locations of timestampts needed
-%end   
-
-
-    %Generalize all this: don't pre-determine everything, just load the
-    %parsed behavior timestamps, and until done choosing times, loop
-    %through letting user pick 2 of those by timestamp, direction (optional),
-    %then draw roipoly for that bunch, then add those to the list
+    
     
     right_trials_forced = strcmpi(txt(2:end,7),'R');
     right_trials_free = strcmpi(txt(2:end,8),'R');
