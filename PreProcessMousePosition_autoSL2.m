@@ -233,7 +233,7 @@ if exist('Pos_temp.mat','file') || exist('Pos.mat','file')
     end
     if strcmpi(use_temp,'y')
         load(load_file);%,'Xpix', 'Ypix', 'xAVI', 'yAVI', 'MoMtime', 'MouseOnMazeFrame');
-        MoMtime %#ok<NODEF,NOPRT>
+        MoMtime %#ok<NOPRT>
     else
         h1 = implay(avi_filepath);
         MouseOnMazeFrame = input('on what frame number does Mr. Mouse arrive on the maze??? --->');
@@ -241,11 +241,14 @@ if exist('Pos_temp.mat','file') || exist('Pos.mat','file')
         close(h1);
     end
 else
-    definitelyGood = Xpix*0;
     h1 = implay(avi_filepath);
     MouseOnMazeFrame = input('on what frame number does Mr. Mouse arrive on the maze??? --->');
     MoMtime = MouseOnMazeFrame*0.03+time(1) %#ok<NOPRT>
     close(h1);
+end
+
+if ~any(definitelyGood)
+    definitelyGood = Xpix*0;
 end
 
 
@@ -254,7 +257,7 @@ end
 dummy = readFrame(obj);
 MaskFig=figure('name', 'Cage Mask'); imagesc(flipud(dummy));
 maskSwitch = exist('maskx','var') && exist('masky','var') && exist('maze','var')...
-    && any(maskx) && any(masky) && any(maze(:)) 
+    && any(maskx) && any(masky) && any(maze(:)); 
 switch maskSwitch  
     case 1
         title('Found cage mask')
@@ -438,15 +441,27 @@ elChoice = questdlg('Expected locations?', 'Expected locations', ...
 switch elChoice
     case 'Yes'
         elChoiceFlag=1;
-        getELvector;
+        if length(mazeEl)>0
+            echoice = questdlg('Found expected maze locations; use?', 'Expected locations', ...
+                               'Yes','No','Yes');
+            switch echoice
+                case 'Yes'
+                    
+                case 'No'
+                    mazeEl=[];
+                    getELvector;
+            end
+        else
+            getELvector;
+        end    
     case 'No'
         elChoiceFlag=0;
 end
 
 %% All the rest...
-if ~exist('Pos_temp.mat','file')
-    save Pos_temp.mat Xpix Ypix xAVI yAVI MoMtime MouseOnMazeFrame maze v0 maskx masky 
-end 
+%if ~exist('Pos_temp.mat','file')
+    save Pos_temp.mat Xpix Ypix xAVI yAVI MoMtime MouseOnMazeFrame maze v0 maskx masky mazeEl elVector
+%end 
 
 willThresh=20;
 grayThresh = 115; 
@@ -719,7 +734,7 @@ AVItime_interp = cellfun(@(a,b) lin_interp(time(a), AVIobjTime(a),...
 % Save all filtered data as well as raw data in case you want to go back
 % and fix an error you discover later on
 save Pos.mat xpos_interp ypos_interp time_interp start_time MoMtime Xpix Ypix xAVI yAVI MouseOnMazeFrame...
-    AVItime_interp maze v0 maskx masky definitelyGood expectedBlobs
+    AVItime_interp maze v0 maskx masky definitelyGood expectedBlobs mazeEl elVector
     
 close all 
 end
@@ -1177,6 +1192,11 @@ if update_pos_realtime==1
     if Xpix(auto_frames(corrFrame)) ~= 0 && Ypix(auto_frames(corrFrame)) ~= 0
         plot(xAVI(auto_frames(corrFrame)),yAVI(auto_frames(corrFrame)),marker{markWith},'MarkerSize',4);
     end    
+    if elChoiceFlag == 1
+        whichMaze = elVector( auto_frames(corrFrame) );
+        hold on; plot([mazeEl(whichMaze).maskx; mazeEl(whichMaze).maskx(1)],...
+            [mazeEl(whichMaze).masky; mazeEl(whichMaze).masky(1)],'r','LineWidth',1); hold off 
+    end        
 end
             
 %Will's version, background image subtraction
@@ -1385,9 +1405,9 @@ end
 function SaveTemp(~,~)
 global MoMtime; global MouseOnMazeFrame; global maskx; global masky
 global definitelyGood; global xAVI; global yAVI; global Xpix; global Ypix;
-global maze; global expectedBlobs; global v0;
+global maze; global expectedBlobs; global v0; global mazeEl; global elVector;
 
-save Pos_temp.mat Xpix Ypix xAVI yAVI MoMtime MouseOnMazeFrame maskx v0 maze masky definitelyGood expectedBlobs   
+save Pos_temp.mat Xpix Ypix xAVI yAVI MoMtime MouseOnMazeFrame maskx v0 maze masky definitelyGood expectedBlobs mazeEl elVector  
 disp('Saved!')
 end
 %% %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -1395,7 +1415,6 @@ function getELvector(~,~)
 global elVector; global elChoiceFlag; global xAVI; global v0; global mazeEl;
 global maze; global maskx; global masky;
 
-%right now only built for dnmp
 
 doneLoading=0; 
 loaded=1;
@@ -1403,7 +1422,7 @@ while doneLoading==0
     [xlsFile, xlsPath] = uigetfile('*.xlsx', 'Select file with behavior times');
     [frameses(loaded).frames, txt(loaded).txt] = xlsread(fullfile(xlsPath,xlsFile), 1);
     
-    %Probably time to generalize this prompt as a function
+
     loadChoice = questdlg('Done loading sheets or another?','Done loading?',...
                     'Done','Another!','Done');
     switch loadChoice
@@ -1416,19 +1435,15 @@ while doneLoading==0
 end 
 
 %doesn't give lap number column
-str = {}; frames = [];
+str = {}; allTxt = {}; frames = [];
 for lvl=1:loaded
     str = [str txt(lvl).txt(1,2:end)];
+    allTxt = [allTxt txt(lvl).txt(:,:)];
     frames = [frames frameses(lvl).frames(:,2:end)];
 end
 
 elVector=ones(length(xAVI),1);
-mazeEl(1).maze=maze; mazeEl(1).maskx=maskx; mazeEl(2).masky=masky
-
-%Generalize all this: don't pre-determine everything, just load the
-    %parsed behavior timestamps, and until done choosing times, loop
-    %through letting user pick 2 of those by timestamp, direction (optional),
-    %then draw roipoly for that bunch, then add those to the list
+mazeEl(1).maze=maze; mazeEl(1).maskx=maskx; mazeEl(1).masky=masky;
 
 doneGettingEls=0;
 mazeUp=1;
@@ -1442,19 +1457,40 @@ while doneGettingEls==0
                     'ListString',str);
         if length(s)==2; selectedTwo=1; end
     end
-
-    leftRight choice modifier; forced vs free issue?
+    
+    [ss,~] = listdlg('PromptString','Which comes first:',...
+                    'SelectionMode','single',...
+                    'ListString',[str(s(1)) str(s(2))]);
+    if ss==2; holder=s(1); s(1)=s(2); s(2)=holder; end
+    %Could be generalized for other markers, right now needs to read strings
+    dirChoice = questdlg('Restrict to left/right trials?','LR mod?',...
+                    'Yes','No','Yes');
+    switch dirChoice
+        case 'Yes'
+            [t,~] = listdlg('PromptString','Choose column with behavior:',...
+                    'SelectionMode','single','ListString',str);
+            
+            bChoices = unique(allTxt(2:end,t+1));
+            [flug,~] = listdlg('PromptString','Which flag:',...
+                    'SelectionMode','single','ListString',bChoices);    
+            LRmod = strcmpi(allTxt(2:end,t+1),bChoices(flug));
+                
+        case 'No'
+            LRmod = ones(size(frames,1));
+    end    
+    
+    starts = frames(:,s(1)); starts(LRmod==0)=[];
+    stops = frames(:,s(2)); stops(LRmod==0)=[];
     
     mazeMaskGood=0;
     while mazeMaskGood==0
         MazeFig=figure('name', 'Expected Location Mask'); imagesc(flipud(v0));
-        title(['Draw position mask for ' str{s(mazeUp)}]);
-        [mazeEl(mazeElInd).maze, mazeEl(mazeElInd).maskX, mazeEl(mazeElInd).maskY] = roipoly;
+        %title(['Draw position mask for ' str{s(mazeUp)}]);
+        [mazeEl(mazeElInd).maze, mazeEl(mazeElInd).maskx, mazeEl(mazeElInd).masky] = roipoly;
         hold on; plot([mazeEl(mazeElInd).maskx; mazeEl(mazeElInd).maskx(1)],...
             [mazeEl(mazeElInd).masky; mazeEl(mazeElInd).masky(1)],'r','LineWidth',2); hold off 
 
-        mchoice = questdlg(['Is this ' str{s(mazeUp)} ' mask good?'], ...
-                            'Maze Mask', 'Yes','No redraw','Yes');
+        mchoice = questdlg('Is this boundary good?', 'Maze Mask', 'Yes','No redraw','Yes');
         switch mchoice
             case 'Yes'
                 disp('Proceeding with this mask')
@@ -1464,6 +1500,11 @@ while doneGettingEls==0
         end
     end 
     close(MazeFig)
+    
+    %set vector at these frames to ref the appropriate mask
+    for tri=1:numel(starts)
+        elVector(starts(tri):stops(tri)) = mazeElInd;
+    end
     
     doneChoice = questdlg('Done with expected locations or another?','Done predicting?',...
                     'Done','Another!','Done');
@@ -1476,104 +1517,6 @@ while doneGettingEls==0
     end    
 end
     
-
-
-
-
-%loop through txt adding unique names other than lap number to a list
-    %of options to choose from; maybe exclude directions from this first
-    %list
-    %direction is then an optional modifier 
-    
-    %str = {'cage epochs', 'left trials', 'right trials', 'delay period'...
-    %       'center stem'};
-    
-
-    
-    
-    right_trials_forced = strcmpi(txt(2:end,7),'R');
-    right_trials_free = strcmpi(txt(2:end,8),'R');
-    left_trials_forced = strcmpi(txt(2:end,7),'L'); 
-    left_trials_free = strcmpi(txt(2:end,8),'L');
-    
-    %delay_start = bonusFrames(:,2);
-    %delay_end = free_start;        
-    
-    forced_start = frames(:,2);
-    free_start = frames(:,3);
-    for aa=s; ds(aa)=strcmpi('center stem',str{aa}); end %#ok<AGROW>
-    if any(ds)
-        forced_end = delay_start;
-    else 
-        forced_end = free_start;
-    end
-    free_end = frames(:,4);
-    cage_start = frames(:,5);
-    cage_leave = frames(2:end,6);
-    
-    right_trials=[forced_start(right_trials_forced), forced_end(right_trials_forced);...
-                  free_start(right_trials_free), free_end(right_trials_free)];  
-    left_trials=[forced_start(left_trials_forced), forced_end(left_trials_forced);...
-                  free_start(left_trials_free), free_end(left_trials_free)];  
-    cage_epochs=[cage_start, cage_leave];
-    
-    %choice dlg here for are you done loading excel files
-    %not sure how to deal with more than one yet...
-         
-    %are we looking at the center stem? (this way for generalized)
-    for aa=s; cs(aa)=strcmpi('center stem',str{aa}); end %#ok<AGROW>
-    if any(cs); disp('sorry, center stem not implemented yet'); s(s==find(cs))=[]; end
-     
-if v==0
-    elChoiceFlag=0;
-else
-    elVector=ones(length(xAVI),1);
-    mazeEl(1).maze=maze; mazeEl(1).maskx=maskx; mazeEl(2).masky=masky
-    for mazeUp=1:length(s)
-        mazeElInd=mazeUp+1;
-        
-        switch str{s(mazeUp)}
-            case 'cage epochs' 
-                for bb=1:length(cage_epochs)
-                    elVector(cage_epochs(bb,1):cage_epochs(bb,2)) = mazeElInd;
-                end    
-            case'left trials'
-                for bb=1:length(left_trials)
-                    elVector(left_trials(bb,1):left_trials(bb,2)) = mazeElInd;
-                end
-            case 'right trials' 
-                for bb=1:length(right_trials)
-                    elVector(right_trials(bb,1):right_trials(bb,2)) = mazeElInd;
-                end
-            case 'delay period'
-                %unfinished
-            case 'center stem'
-                %unfinished
-        end
-        
-        mazeMaskGood=0;
-        while mazeMaskGood==0
-            MazeFig=figure('name', 'Expected Location Mask'); imagesc(flipud(v0));
-            title(['Draw position mask for ' str{s(mazeUp)}]);
-            [mazeEl(mazeElInd).maze, mazeEl(mazeElInd).maskX, mazeEl(mazeElInd).maskY] = roipoly;
-            hold on; plot([mazeEl(mazeElInd).maskx; mazeEl(mazeElInd).maskx(1)],...
-                [mazeEl(mazeElInd).masky; mazeEl(mazeElInd).masky(1)],'r','LineWidth',2); hold off 
-
-            mchoice = questdlg(['Is this ' str{s(mazeUp)} ' mask good?'], ...
-                                'Maze Mask', 'Yes','No redraw','Yes');
-            switch mchoice
-                case 'Yes'
-                    disp('Proceeding with this mask')
-                    mazeMaskGood=1;
-                case 'No redraw'
-                    mazeMaskGood=0;
-            end
-        end 
-        close(MazeFig)
-    end
-end 
-
-
 end
 %%
 
