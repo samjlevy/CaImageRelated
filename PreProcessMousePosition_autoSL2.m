@@ -147,7 +147,8 @@ global expectedBlobs; global time; global update_pos_realtime; global grayBlobAr
 global ManualCorrFig; global overwriteManualFlag; global velCount; global sFrame;
 global eFrame; global MoMtime; global vel_init; global auto_vel_thresh;
 global velchoice; global AMchoice; global corrDefGoodFlag; global elChoiceFlag;
-global elVector; global mazeEl;
+global elVector; global mazeEl; global bstr; global allTxt; global bframes;
+
 
 %% Get varargin
     
@@ -264,7 +265,7 @@ switch maskSwitch
     case 0 
         title('Draw position mask');
         [maze, maskx, masky] = roipoly;        
-end 
+end
 hold on; plot([maskx; maskx(1)],[masky; masky(1)],'r','LineWidth',2)
 
 cageMaskGood=0;
@@ -460,7 +461,7 @@ end
 
 %% All the rest...
 %if ~exist('Pos_temp.mat','file')
-    save Pos_temp.mat Xpix Ypix xAVI yAVI MoMtime MouseOnMazeFrame maze v0 maskx masky mazeEl elVector
+    SaveTemp;
 %end 
 
 willThresh=20;
@@ -474,6 +475,10 @@ skipped=[];
 %Expected gray blobs to exclude
 grayFrameThreshB=rgb2gray(flipud(v0)) < grayThresh; %flipud
 expectedBlobs=logical(imgaussfilt(double(grayFrameThreshB),10) <= gaussThresh);
+
+%if ~exist('Pos_temp.mat','file')
+    SaveTemp;
+%end 
 
 % First let's do frames out of bounds
 %Maybe make this an option?
@@ -505,6 +510,7 @@ optionsText={'y - attempt auto, manual when missed';...
              't - reset auto-velocity threshold';...
              'v - run auto on high velocity points';...
              'o - change AOM flag';...
+             'l - edit expected locations';...
              's - save work';...
              'q - save, finalize and quit';...
              ' ';...
@@ -678,6 +684,8 @@ switch MorePoints
             overwriteManualFlag=0 %#ok<NOPRT>
             disp('auto-overwrites-manual is now DISABLED')
     end
+    case 'l'
+        editELvectors;
     case 's'
         SaveTemp;
     case 'q'
@@ -734,7 +742,7 @@ AVItime_interp = cellfun(@(a,b) lin_interp(time(a), AVIobjTime(a),...
 % Save all filtered data as well as raw data in case you want to go back
 % and fix an error you discover later on
 save Pos.mat xpos_interp ypos_interp time_interp start_time MoMtime Xpix Ypix xAVI yAVI MouseOnMazeFrame...
-    AVItime_interp maze v0 maskx masky definitelyGood expectedBlobs mazeEl elVector
+    AVItime_interp maze v0 maskx masky definitelyGood expectedBlobs mazeEl elVector bstr allTxt bframes
     
 close all 
 end
@@ -1141,9 +1149,11 @@ for pass=1:numPasses
         if round(total/update_inc) == (total/update_inc) % Update progress bar
             p.progress;
         end
-    end 
+    end
     
+    try
     close(ManualCorrFig);    
+    end
     SaveTemp;
     p.stop;
 
@@ -1406,15 +1416,16 @@ function SaveTemp(~,~)
 global MoMtime; global MouseOnMazeFrame; global maskx; global masky
 global definitelyGood; global xAVI; global yAVI; global Xpix; global Ypix;
 global maze; global expectedBlobs; global v0; global mazeEl; global elVector;
+global bstr; global allTxt; global bframes;
 
-save Pos_temp.mat Xpix Ypix xAVI yAVI MoMtime MouseOnMazeFrame maskx v0 maze masky definitelyGood expectedBlobs mazeEl elVector  
+save Pos_temp.mat Xpix Ypix xAVI yAVI MoMtime MouseOnMazeFrame maskx v0 maze masky definitelyGood expectedBlobs mazeEl elVector bstr allTxt bframes 
 disp('Saved!')
 end
 %% %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 function getELvector(~,~)
 global elVector; global elChoiceFlag; global xAVI; global v0; global mazeEl;
-global maze; global maskx; global masky;
-
+global maze; global maskx; global masky; global bstr; global allTxt; global bframes;
+global mazeElInd;
 
 doneLoading=0; 
 loaded=1;
@@ -1435,11 +1446,11 @@ while doneLoading==0
 end 
 
 %doesn't give lap number column
-str = {}; allTxt = {}; frames = [];
+bstr = {}; allTxt = {}; bframes = [];
 for lvl=1:loaded
-    str = [str txt(lvl).txt(1,2:end)];
+    bstr = [bstr txt(lvl).txt(1,2:end)];
     allTxt = [allTxt txt(lvl).txt(:,:)];
-    frames = [frames frameses(lvl).frames(:,2:end)];
+    bframes = [bframes frameses(lvl).frames(:,2:end)];
 end
 
 elVector=ones(length(xAVI),1);
@@ -1449,18 +1460,139 @@ doneGettingEls=0;
 mazeUp=1;
 while doneGettingEls==0
     mazeElInd=mazeUp+1;
+
+    addAnElMask;
     
+    doneChoice = questdlg('Done with expected locations or another?','Done predicting?',...
+                    'Done','Another!','Done');
+    switch doneChoice
+        case 'Done'
+            doneGettingEls=1;
+        case 'Another!'
+            mazeUp=mazeUp+1;
+            doneGettingEls=0;
+    end    
+end
+    
+end
+%% %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+function editELvectors(~,~)
+global elVector; global elChoiceFlag; global xAVI; global v0; global mazeEl;
+global maze; global maskx; global masky; global mazeElInd
+
+doneWithEl=0;
+while doneWithEl==0
+    for figg = 1:length(mazeEl)
+        figure; imagesc(flipud(v0)); 
+        hold on; plot([mazeEl(figg).maskx; mazeEl(figg).maskx(1)],...
+            [mazeEl(figg).masky; mazeEl(figg).masky(1)],'r','LineWidth',1); hold off 
+        switch figg==1
+            case 1
+                title('mazeEl index #1 original maze mask')
+            case 0
+                title(['mazeEl index # ' num2str(figg)])    
+        end
+    end
+    
+    disp('d, delete; e, edit; a, enable/disable; r, redraw original maze mask; h, add a mask')
+    disp('also, close expected figures before making a choice')
+    editEl = input('Is there a flaw that needs to be corrected?','s');
+    switch editEl
+        case 'e' %edit one of them
+            editThis = input('enter num of expected location to redraw') %#ok<NOPRT>
+            if strcmpi(class(editThis),'double')
+            if editThis > 1 && editThis <= length(mazeEl)
+                mazeMaskGood=0;
+                while mazeMaskGood==0
+                    MazeFig=figure('name', 'Expected Location Mask'); imagesc(flipud(v0));
+                    title(['Draw position mask for ' num2str(editThis)]);
+                    [mazeEl(editThis).maze, mazeEl(editThis).maskx, mazeEl(editThis).masky] = roipoly;
+                        hold on; plot([mazeEl(editThis).maskx; mazeEl(editThis).maskx(1)],...
+                        [mazeEl(editThis).masky; mazeEl(editThis).masky(1)],'r','LineWidth',1); hold off 
+
+                    mchoice = questdlg('Is this boundary good?', 'Maze Mask', 'Yes','No redraw','Yes');
+                    switch mchoice
+                        case 'Yes'
+                            disp('Proceeding with this mask')
+                            mazeMaskGood=1;
+                        case 'No redraw'
+                            mazeMaskGood=0;
+                    end
+                end 
+                close(MazeFig)
+            end
+            end
+        case 'd' %delete one of them
+            deleteThis = input('enter num of expected location to delete') %#ok<NOPRT>
+            if strcmpi(class(deleteThis),'double')
+            if deleteThis > 1 && deleteThis <= length(mazeEl)
+                mazeEl(deleteThis)=[];
+                elVector(elVector==deleteThis)=1;
+                elVector(elVector>deleteThis)=elVector(elVector>deleteThis)-1;
+                disp(['deleted expected location ' num2str(deleteThis) ', those points reset to original mask'])
+            elseif deleteThis == 1
+                disp('Nope, that is the original maze mask')
+            end
+            end
+        case 'a' %enable/disable using maze expected locations
+            switch elChoiceFlag
+                case 1
+                    elChoiceFlag=0; disp('expected locations disabled')
+                case 0
+                    elChoiceFlag=1; disp('expected locations enabled')
+            end
+        case 'r' %redraw original maze mask
+            MaskFig=figure('name', 'Cage Mask'); imagesc(flipud(v0));
+            title('Draw position mask');
+            [maze, maskx, masky] = roipoly;
+            hold on; plot([maskx; maskx(1)],[masky; masky(1)],'r','LineWidth',2)
+
+            cageMaskGood=0;
+            while cageMaskGood==0
+                figure(MaskFig); title('Cage Mask')
+                choice = questdlg('Is this cage mask good?', ...
+                'Cage Mask', ...
+                'Yes','No redraw','Yes');
+                switch choice
+                    case 'Yes'
+                    disp('Proceeding with this cage mask')
+                    cageMaskGood=1;
+                    case 'No redraw'
+                        figure(MaskFig); imagesc(flipud(dummy));
+                        title('Draw position mask');
+                        [maze, maskx, masky] = roipoly;
+                        hold on; plot([maskx; maskx(1)],[masky; masky(1)],'r','LineWidth',2)
+                        cageMaskGood=0;       
+                end
+            end 
+            close(MaskFig)
+            mazeEl(1).maze=maze; mazeEl(1).maskx=maskx; mazeEl(1).masky=masky;
+            disp('Redid original maze mask')
+        case 'h' %add a mask
+            mazeElInd=length(mazeEl)+1;
+            addAnElMask;
+    end            
+    
+end
+
+end
+%% %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+function addAnElMask(~,~)
+ global elVector; global elChoiceFlag; global xAVI; global v0; global mazeEl;
+global maze; global maskx; global masky; global bstr; global allTxt; global bframes;  
+global mazeElInd; 
+
     selectedTwo=0;
     while selectedTwo==0
         [s,~] = listdlg('PromptString','A pair of timestamps:',...
                     'SelectionMode','multiple',...
-                    'ListString',str);
+                    'ListString',bstr);
         if length(s)==2; selectedTwo=1; end
     end
     
     [ss,~] = listdlg('PromptString','Which comes first:',...
                     'SelectionMode','single',...
-                    'ListString',[str(s(1)) str(s(2))]);
+                    'ListString',[bstr(s(1)) bstr(s(2))]);
     if ss==2; holder=s(1); s(1)=s(2); s(2)=holder; end
     %Could be generalized for other markers, right now needs to read strings
     dirChoice = questdlg('Restrict to left/right trials?','LR mod?',...
@@ -1468,7 +1600,7 @@ while doneGettingEls==0
     switch dirChoice
         case 'Yes'
             [t,~] = listdlg('PromptString','Choose column with behavior:',...
-                    'SelectionMode','single','ListString',str);
+                    'SelectionMode','single','ListString',bstr);
             
             bChoices = unique(allTxt(2:end,t+1));
             [flug,~] = listdlg('PromptString','Which flag:',...
@@ -1476,11 +1608,11 @@ while doneGettingEls==0
             LRmod = strcmpi(allTxt(2:end,t+1),bChoices(flug));
                 
         case 'No'
-            LRmod = ones(size(frames,1));
+            LRmod = ones(size(bframes,1));
     end    
     
-    starts = frames(:,s(1)); starts(LRmod==0)=[];
-    stops = frames(:,s(2)); stops(LRmod==0)=[];
+    starts = bframes(:,s(1)); starts(LRmod==0)=[];
+    stops = bframes(:,s(2)); stops(LRmod==0)=[];
     
     mazeMaskGood=0;
     while mazeMaskGood==0
@@ -1488,7 +1620,7 @@ while doneGettingEls==0
         %title(['Draw position mask for ' str{s(mazeUp)}]);
         [mazeEl(mazeElInd).maze, mazeEl(mazeElInd).maskx, mazeEl(mazeElInd).masky] = roipoly;
         hold on; plot([mazeEl(mazeElInd).maskx; mazeEl(mazeElInd).maskx(1)],...
-            [mazeEl(mazeElInd).masky; mazeEl(mazeElInd).masky(1)],'r','LineWidth',2); hold off 
+            [mazeEl(mazeElInd).masky; mazeEl(mazeElInd).masky(1)],'r','LineWidth',1); hold off 
 
         mchoice = questdlg('Is this boundary good?', 'Maze Mask', 'Yes','No redraw','Yes');
         switch mchoice
@@ -1505,18 +1637,6 @@ while doneGettingEls==0
     for tri=1:numel(starts)
         elVector(starts(tri):stops(tri)) = mazeElInd;
     end
-    
-    doneChoice = questdlg('Done with expected locations or another?','Done predicting?',...
-                    'Done','Another!','Done');
-    switch doneChoice
-        case 'Done'
-            doneGettingEls=1;
-        case 'Another!'
-            mazeUp=mazeUp+1;
-            doneGettingEls=0;
-    end    
-end
-    
 end
 %%
 
