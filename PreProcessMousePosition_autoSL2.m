@@ -1,9 +1,6 @@
 function [xpos_interp,ypos_interp,time_interp,AVItime_interp] = PreProcessMousePosition_autoSL2(varargin);
 % Open issues: 1/11/17
-%   - Expected region: use breakdown from DNMPparse to descripe expected
-%   regions: start of session, load those, for each region have user
-%   describe (roipoly) where this region is, then add this in addition to
-%   maze when describing possible blob locations
+%   
 %   - Logic for possible: could be generalized better
 %   - Check for an adjacent definitelyGood frame, use that to limit
 %   possible blobs
