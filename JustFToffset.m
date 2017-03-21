@@ -44,7 +44,10 @@ switch useXml
         elseif sum(strcmpi('FT',names))==1    
             FT=FTstuff.PSAbool;
         else
-            %which is it? need lstdlg on struct fields
+            names = fieldnames(FTstuff);
+            [s,~] = listdlg('PromptString','Which field:','SelectionMode','single',...
+                'ListString',names);
+            eval(['FT = FTstuff.' names{s} ';'])
         end
         
         FTlength = size(FT,2);

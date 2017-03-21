@@ -736,10 +736,11 @@ ypos_interp = cellfun(@(a,b) lin_interp(time(a), Ypix_filt(a),...
 AVItime_interp = cellfun(@(a,b) lin_interp(time(a), AVIobjTime(a),...
     b),time_index,time_test_cell);
 
+DVTtime=time;
 % Save all filtered data as well as raw data in case you want to go back
 % and fix an error you discover later on
 save Pos.mat xpos_interp ypos_interp time_interp start_time MoMtime Xpix Ypix xAVI yAVI MouseOnMazeFrame...
-    AVItime_interp maze v0 maskx masky definitelyGood expectedBlobs mazeEl elVector bstr allTxt bframes
+    AVItime_interp maze v0 maskx masky definitelyGood expectedBlobs mazeEl elVector bstr allTxt bframes DVTtime
     
 close all 
 end

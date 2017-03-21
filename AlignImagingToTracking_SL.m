@@ -4,20 +4,28 @@ function AlignImagingToTracking_SL(varargin)
 % usable frame. This is all based on time from the DVT and assumed-equal
 % timing in the imaging file
 
-disp('NEEDS TESTING, probably need to make some fake vectors')
-
-load Pos.mat Xpix_filt Ypix_filt
+load Pos.mat DVTtime Xpix_filt Ypix_filt
+time=DVTtime;
 %load Pos.mat Xpix Ypix
 
 fps_brainimage = 20;
-brainFrameRate = 1/fps_brainImage;
+%brainFrameRate = 1/fps_brainimage;
 TrackingLength = length(Xpix_filt);
 
 if ~exist('file','FToffsetSam')
+    disp('Didn"t find Sam"s FToffset, running it now')
     [~, ~, ~ ] = JustFToffset;
 end
 load FToffsetSam.mat
 
+FTfileMaybe = dir('FinalOutput.mat');
+if length(FTfileMaybe) ~= 1
+    disp('Did not find 1 FT/PSAbool file. Show me where it is')
+    [FTfile,~] = uigetfile('*.mat','Select file with FT/PSAbool');
+else 
+    FTfile = FTfileMaybe.name;
+end
+        
 FTstuff = load(FTfile);
 names = fieldnames(FTstuff);
 if sum(strcmpi('PSAbool',names))==1
@@ -25,7 +33,10 @@ if sum(strcmpi('PSAbool',names))==1
 elseif sum(strcmpi('FT',names))==1    
     FT=FTstuff.PSAbool;
 else
-    %which is it? need lstdlg
+    names = fieldnames(FTstuff);
+    [s,~] = listdlg('PromptString','Which field:','SelectionMode','single',...
+                'ListString',names);
+    eval(['FT = FTstuff.' names{s} ';'])
 end
         
 FTlength = size(FT,2);
