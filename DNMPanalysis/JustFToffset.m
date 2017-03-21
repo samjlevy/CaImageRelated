@@ -2,8 +2,8 @@ function [FToffset, LastUsable, whichEndsFirst ] = JustFToffset(varargin)
 %Sam's version of getting FToffset.Does not use MoMtime, uses entirety of
 %tracking. Last usable is the last usable frame of which ever is longer,
 %indicated as the opposite of whichever is indicated by whichEndsFirst. 
-%This is all based on time from the DVT and assumed-equal timing in the 
-%imaging file.
+%This is all based on the assumption that time from the DVT (column 2) is 
+%accurate and assumed-equal timing in the imaging file.
 
 disp('NEEDS TESTING')
 
@@ -85,7 +85,7 @@ switch PlexEndsAfterImaging > 0
         LastUsable = find(time >= brainTime(end), 1, 'first');
 end        
 
-save FToffsetSam.mat FToffset LastUsable whichEndsFirst
+save FToffsetSam.mat FToffset LastUsable whichEndsFirst FTlength brainTime time
 
 %FToffset = ceil(time(1)*fps_brainimage)/(1/fps_brainimage);
 

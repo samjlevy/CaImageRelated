@@ -676,7 +676,7 @@ while undecided==0
         undecided = 1; saveNow = 1;
     end
 end
-if saveNow==1;
+if saveNow==1
     try
         xlswrite(fullfile(miscVar.PathName,saveName{1}),table2cell(realTable));
         if exist('bonusTable','var')

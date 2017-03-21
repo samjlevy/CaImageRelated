@@ -1,5 +1,6 @@
 % should do this after PreProcessMousePosition_auto, before
 % AlignImagingToTracking
+% This is mean to auto-parse laps
 cd(C:\Users\samwi_000\Documents\Lab\bits160831)
 
 [AVIfile, AVIpath] = uigetfile('*.avi');
