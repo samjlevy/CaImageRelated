@@ -42,6 +42,12 @@ bonusFrames(:,2:end) =...
 disp('Using cheater edge trimming')
 %% parse spreadsheets
 num_brain_frames = length(AVItime_interp);
+columnLabel = {'Start on maze (start of Forced', 'Lift barrier (start of free choice)',...
+               'Leave maze', 'Start in homecage', 'Leave homecage',...
+               'Forced Trial Type (L/R)', 'Free Trial Choice (L/R)',...
+               'Enter Delay', 'Forced Choice', 'Free Choice',...  
+               'Forced Reward', 'Free Reward'};
+[ framesLabelIndex ] = ConditionalExcellParseout( txt, columnLabel);
 blocks = frames(:,1);
 forced_start = frames(:,2);
 free_start = frames(:,3);
@@ -52,6 +58,7 @@ delay_start = bonusFrames(:,2);
 delay_end = free_start;
 forced_end = delay_start;
 free_end = leave_maze;
+
   
 %% logicals for lap type
 right_trials_forced = strcmpi(txt(2:end,7),'R');

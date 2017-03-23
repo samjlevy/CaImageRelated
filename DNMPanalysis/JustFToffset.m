@@ -5,13 +5,16 @@ function [FToffset, LastUsable, whichEndsFirst ] = JustFToffset(varargin)
 %This is all based on the assumption that time from the DVT (column 2) is 
 %accurate and assumed-equal timing in the imaging file.
 
-disp('NEEDS TESTING')
+%disp('NEEDS TESTING')
 
 useXml = 0;
+overwrite_existing = 0;
 for aa=1:length(varargin)
     if strcmp(varargin{aa},'xml_file')
         xml_file = varargin{aa+1};
         useXml = 1;
+    elseif strcmp(varargin{aa},'overwrite_existing')    
+        overwrite_existing = varargin{aa+1};
     end
 end    
 

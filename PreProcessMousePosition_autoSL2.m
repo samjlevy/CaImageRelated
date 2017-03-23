@@ -1492,9 +1492,9 @@ while doneWithEl==0
         end
     end
     
-    disp('d, delete; e, edit; a, enable/disable; r, redraw original maze mask; h, add a mask')
+    disp('d, delete; e, edit; a, enable/disable; r, redraw original maze mask; h, add a mask; n, done')
     disp('also, close expected figures before making a choice')
-    editEl = input('Is there a flaw that needs to be corrected?','s');
+    editEl = input('How to edit expected location vectors?','s');
     switch editEl
         case 'e' %edit one of them
             editThis = input('enter num of expected location to redraw') %#ok<NOPRT>
@@ -1569,6 +1569,8 @@ while doneWithEl==0
         case 'h' %add a mask
             mazeElInd=length(mazeEl)+1;
             addAnElMask;
+        case 'n'
+            doneWithEl=1; 
     end            
     
 end
