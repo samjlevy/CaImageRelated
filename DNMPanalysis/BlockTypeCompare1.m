@@ -6,14 +6,14 @@ correctOnlyFlag=1; %right now pulls out correct trials, doesn't yet segregate
 xls_sheet_num=1;
 xls_bonus_sheet_num=1;
 
-folderUse='D:\bits160831\';
-%folderUse='C:\MasterData\InUse\Polaris_160831\';
+%folderUse='D:\bits160831\';
+folderUse='C:\MasterData\InUse\Polaris_160831\';
 
-xls_path=fullfile(folderUse,'DNMPsheet.xlsx');
-xls_bonus_path=fullfile(folderUse,'DNMPbonus.xlsx');
+xls_path=fullfile(folderUse,'Polaris_160831DNMPsheet.xlsx');
+%xls_bonus_path=fullfile(folderUse,'DNMPbonus.xlsx');
 
 [frames, txt] = xlsread(xls_path, xls_sheet_num);
-[bonusFrames, bonusTxt] = xlsread(xls_bonus_path, xls_bonus_sheet_num);
+%[bonusFrames, bonusTxt] = xlsread(xls_bonus_path, xls_bonus_sheet_num);
 
 pos_file_fullpath=fullfile(folderUse,'Pos.mat');%NOT pos_align
 load(pos_file_fullpath,'time_interp','AVItime_interp')
@@ -31,6 +31,7 @@ longBrainOffset(longBrainOffset<1) = 1;
 longBrainOffset(longBrainOffset>length(x_adj_cm)) = length(x_adj_cm);
 frames(:,2:end) = reshape(longBrainOffset,[size(frames,1),size(frames,2)-1]);
 
+%{
 longBonusFrames = bonusFrames(:,2:end); 
 longBonusBrainFrames = AVI_to_brain_frame(longBonusFrames(:), AVItime_interp);
 longBonusBrainOffset = longBonusBrainFrames - FToffset + 2;
@@ -38,7 +39,7 @@ longBonusBrainOffset(longBonusBrainOffset<1) = 1;
 longBonusBrainOffset(longBonusBrainOffset>length(x_adj_cm)) = length(x_adj_cm);
 bonusFrames(:,2:end) =...
     reshape(longBonusBrainOffset, [size(bonusFrames,1), size(bonusFrames,2)-1]);
-
+%}
 disp('Using cheater edge trimming')
 %% parse spreadsheets
 num_brain_frames = length(AVItime_interp);
@@ -54,7 +55,7 @@ free_start = frames(:,3);
 leave_maze = frames(:,4);
 cage_start = frames(:,5);
 cage_leave = frames(2:end,6);
-delay_start = bonusFrames(:,2);
+delay_start = frames(:,9);
 delay_end = free_start;
 forced_end = delay_start;
 free_end = leave_maze;
@@ -192,11 +193,11 @@ newXticks=plotBlocks(1:end-1)+round(diff(plotBlocks)/2);
 sortedFig.Children.XTick=newXticks;
 sortedFig.Children.XTickLabel=blockTypes;  
 
-sortedFTfig=figure; imagesc(SortedFT)
-hold on
-for type=1:4
-    plot([0 size(SortedFT,2)],[heights(type) heights(type)],'g')
-end    
+%sortedFTfig=figure; imagesc(SortedFT)
+%hold on
+%for type=1:4
+%    plot([0 size(SortedFT,2)],[heights(type) heights(type)],'g')
+%end    
 
 
 %% Get duration
