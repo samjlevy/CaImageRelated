@@ -16,7 +16,16 @@ for label=1:size(frames,2)
         || any(strfind(txt{1,label},'Trial #')); %#ok<AGROW>
 end    
 
-load(pos_file,'xAVI','yAVI')
+try
+    load(pos_file,'xAVI','yAVI')
+catch
+    inThisFile = whos('-file',pos_file);
+    for ff=1:length(inThisFile); bitNames{ff} = inThisFile(ff).name; end;
+    [s,v] = listdlg('PromptString','Select x/y positions:',...
+                'ListString',bitNames);
+            
+    %have user pick the pair of x and y positions
+end
 
 %msgbox('Click next to bad points, click outside for next')
 
