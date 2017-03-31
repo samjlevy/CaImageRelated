@@ -290,7 +290,7 @@ if ~exist('v0','var') || any(v0(:))==0 %need the any since declaring as global
 bkgChoice = questdlg('Supply/Load background image or composite?', ...
 	'Background Image', ...
 	'Load','Frame #','Composite','Composite');
-switch bkgChoice
+    switch bkgChoice
     case 'Load'    
         [backgroundImage,bkgpath]=uigetfile('Select background image');
         load(fullfile(bkgpath,backgroundImage))
@@ -336,8 +336,8 @@ switch bkgChoice
         compositeBkg(241:480,:,:)=bottomClearFrame(241:480,:,:);
         close Top; close Bot;
         backgroundFrame=figure('name','backgroundFrame'); imagesc(compositeBkg); title('Composite Background Image')
-end
-elseif exist ('v0','var') 
+    end
+elseif ~isempty(v0) 
     backgroundImage=v0; 
     backgroundFrame=figure('name','backgroundFrame'); imagesc(backgroundImage); title('Background Image')
     %should have checker for is it right orientation
@@ -1556,7 +1556,7 @@ while doneWithEl==0
                     disp('Proceeding with this cage mask')
                     cageMaskGood=1;
                     case 'No redraw'
-                        figure(MaskFig); imagesc(flipud(dummy));
+                        figure(MaskFig); imagesc(flipud(v0));
                         title('Draw position mask');
                         [maze, maskx, masky] = roipoly;
                         hold on; plot([maskx; maskx(1)],[masky; masky(1)],'r','LineWidth',2)

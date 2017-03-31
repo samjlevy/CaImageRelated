@@ -84,9 +84,11 @@ end
 
 switch miscVar.sessionClass
     case 1
-        miscVar.buttonsInUse={'LapStartButton'; 'ForcedChoiceLeaveButton';...
+        miscVar.buttonsInUse={'LapStartButton'; 'ForcedChoiceEnter';...
+                              'ForcedChoiceLeaveButton'; 'ForcedChoiceEnterButton';...
                               'ForcedTrialDirButton'; 'ForcedRewardButton';...
                               'EnterDelayButton'; 'LiftBarrierButton';...
+                              'FreeChoiceEnterButton';...
                               'FreeChoiceLeaveButton'; 'FreeTrialDirButton';
                               'FreeRewardButton'; 'LeaveMazeButton';...
                                'StartHomecageButton';'LeaveHomecageButton'};
@@ -96,10 +98,20 @@ bs=0;
 videoFig.LapStartButton = uicontrol('Style','pushbutton','String','LAP START',...
                            'Position',[miscVar.buttonLeftEdge,miscVar.upperLimit - miscVar.buttonStepDown*bs,miscVar.buttonWidth,30],...
                            'Callback',{@fcnLapStartButton});
-%bt=bt+1;                       
-videoFig.ForcedChoiceLeaveButton = uicontrol('Style','pushbutton','String','FORCED CHOICE LEAVE',...
+%bt=bt+1; 
+videoFig.ForcedChoiceEnterButton = uicontrol('Style','pushbutton','String','FORCED CHOICE ENTER',...
                              'Position',[miscVar.buttonSecondCol,miscVar.upperLimit - miscVar.buttonStepDown*bs,miscVar.buttonWidth,30],...
-                             'Callback',{@fcnForcedChoiceLeaveButton});   
+                             'Callback',{@fcnForcedChoiceEnterButton});   
+
+bs=bs+1;                         
+videoFig.ForcedChoiceLeaveButton = uicontrol('Style','pushbutton','String','FORCED CHOICE LEAVE',...
+                             'Position',[miscVar.buttonLeftEdge,miscVar.upperLimit - miscVar.buttonStepDown*bs,miscVar.buttonWidth,30],...
+                             'Callback',{@fcnForcedChoiceLeaveButton});  
+                         
+videoFig.ForcedRewardButton = uicontrol('Style','pushbutton','String','FORCED REWARD',...
+                             'Position',[miscVar.buttonSecondCol,miscVar.upperLimit - miscVar.buttonStepDown*bs,miscVar.buttonWidth,30],...
+                             'Callback',{@fcnForcedRewardButton}); 
+                         
 bs=bs+1;
 videoFig.ForcedTrialDirButton = uicontrol('Style','pushbutton','String','FORCED TRIAL DIR',...
                                 'Position',[miscVar.buttonLeftEdge,miscVar.upperLimit - miscVar.buttonStepDown*bs,...
@@ -111,18 +123,19 @@ videoFig.PopForcedDir = uicontrol('Style','popup',...
                              'Value', 1);
                          
 bs=bs+1;
-videoFig.ForcedRewardButton = uicontrol('Style','pushbutton','String','FORCED REWARD',...
-                             'Position',[miscVar.buttonLeftEdge,miscVar.upperLimit - miscVar.buttonStepDown*bs,miscVar.buttonWidth,30],...
-                             'Callback',{@fcnForcedRewardButton}); 
-
 videoFig.EnterDelayButton = uicontrol('Style','pushbutton','String','ENTER DELAY',...
-                             'Position',[miscVar.buttonSecondCol,miscVar.upperLimit - miscVar.buttonStepDown*bs, miscVar.buttonWidth,30],...
+                             'Position',[miscVar.buttonLeftEdge,miscVar.upperLimit - miscVar.buttonStepDown*bs, miscVar.buttonWidth,30],...
                              'Callback',{@fcnEnterDelayButton});
-bs=bs+1;                         
+                       
 videoFig.LiftBarrierButton = uicontrol('Style','pushbutton','String','LIFT BARRIER',...
-                             'Position',[miscVar.buttonLeftEdge,miscVar.upperLimit - miscVar.buttonStepDown*bs,...
+                             'Position',[miscVar.buttonSecondCol,miscVar.upperLimit - miscVar.buttonStepDown*bs,...
                              miscVar.buttonWidth,30], 'Callback',{@fcnLiftBarrierButton});
-                         
+
+bs=bs+1;                           
+videoFig.FreeChoiceEnterButton = uicontrol('Style','pushbutton','String','FREE CHOICE ENTER',...
+                             'Position',[miscVar.buttonLeftEdge,miscVar.upperLimit - miscVar.buttonStepDown*bs,130,30],...
+                             'Callback',{@fcnFreeChoiceEnterButton});
+
 videoFig.FreeChoiceLeaveButton = uicontrol('Style','pushbutton','String','FREE CHOICE LEAVE',...
                              'Position',[miscVar.buttonSecondCol,miscVar.upperLimit - miscVar.buttonStepDown*bs,130,30],...
                              'Callback',{@fcnFreeChoiceLeaveButton}); 
@@ -156,24 +169,28 @@ videoFig.LeaveHomecageButton = uicontrol('Style','pushbutton','String','LEAVE HO
                              miscVar.buttonWidth,30], 'Callback',{@fcnLeaveHomecageButton});
                         
 
-headings={'Trial #'; 'Start on maze (start of Forced'; 'Lift barrier (start of free choice)';...
-            'Leave maze'; 'Start in homecage'; 'Leave homecage'; 'Forced Trial Type (L/R)';...
-            'Free Trial Choice (L/R)'; 'Enter Delay'; 'Forced Choice'; 'Free Choice'; 'Forced Reward'; 'Free Reward'};
-        
-ParsedFrames.LapNumber=headings(1);        
-ParsedFrames.LapStart=headings(2);
-ParsedFrames.LiftBarrier=headings(3);
-ParsedFrames.LeaveMaze=headings(4);
-ParsedFrames.StartHomecage=headings(5);
-ParsedFrames.LeaveHomecage=headings(6);
-ParsedFrames.ForcedDir=headings(7);
-ParsedFrames.FreeDir=headings(8);
-ParsedFrames.EnterDelay=headings(9);
-ParsedFrames.ForcedChoiceLeave=headings(10);
-ParsedFrames.FreeChoiceLeave=headings(11);
-ParsedFrames.ForcedReward=headings(12);
-ParsedFrames.FreeReward=headings(13);
-                         
+headings={'Trial #'; 'Start on maze (start of Forced'; 'Forced Stem End'; 'Forced Choice';... 
+                     'Forced Trial Type (L/R)'; 'Forced Reward'; 'Enter Delay';...
+                     'Lift barrier (start of free choice)'; 'Free Stem End';...
+                     'Free Choice'; 'Free Trial Choice (L/R)'; 'Free Reward';...
+                     'Leave maze'; 'Start in homecage'; 'Leave homecage'};
+               
+d=1;        
+ParsedFrames.LapNumber=headings(d); d=d+1;       
+ParsedFrames.LapStart=headings(d); d=d+1;
+ParsedFrames.ForcedChoiceEnter=headings(d); d=d+1;
+ParsedFrames.ForcedChoiceLeave=headings(d); d=d+1;
+ParsedFrames.ForcedDir=headings(d); d=d+1;
+ParsedFrames.ForcedReward=headings(d); d=d+1;
+ParsedFrames.EnterDelay=headings(d); d=d+1;
+ParsedFrames.LiftBarrier=headings(d); d=d+1;
+ParsedFrames.FreeChoiceEnter=headings(d); d=d+1;
+ParsedFrames.FreeChoiceLeave=headings(d); d=d+1;
+ParsedFrames.FreeDir=headings(d); d=d+1;
+ParsedFrames.FreeReward=headings(d); d=d+1;
+ParsedFrames.LeaveMaze=headings(d); d=d+1;
+ParsedFrames.StartHomecage=headings(d); d=d+1;
+ParsedFrames.LeaveHomecage=headings(d); 
 
 %% Layout for ForcedUnforced
     case 2
@@ -256,7 +273,7 @@ ParsedFrames.EnterDelay=headings(10);
         disp('Sorry bro')
 end
 %%
-miscVar.controlButtonHeight=95;                         
+miscVar.controlButtonHeight=65;                         
 videoFig.LoadVideoButton = uicontrol('Style','pushbutton','String','LOAD VIDEO',...
                              'Position',[miscVar.buttonLeftEdge,miscVar.controlButtonHeight,...
                              miscVar.buttonWidth,30],'Callback',{@fcnLoadVideo}); 
@@ -273,7 +290,7 @@ videoFig.JumpFrameButton = uicontrol('Style','pushbutton','String','JUMP TO FRAM
 videoFig.LoadSheetExcel = uicontrol('Style','pushbutton','String','LOAD SHEET',...                         
                              'Position',[miscVar.buttonSecondCol,miscVar.controlButtonHeight - miscVar.buttonStepDown*1,...
                              miscVar.buttonWidth,30],'Callback',{@fcnLoadSheet});     
-                         
+%{                         
 videoFig.fakePlay = uicontrol('Style','pushbutton','String','PLAY',...
                         'Position',[miscVar.buttonLeftEdge,miscVar.controlButtonHeight - miscVar.buttonStepDown*2,...
                         miscVar.buttonWidth,30], 'BackgroundColor',miscVar.Gray,'Callback',{@fcnFakePlayer});
@@ -282,7 +299,7 @@ videoFig.PopFakePlaySpeed = uicontrol('Style','popup',...
                              'Position',[miscVar.buttonLeftEdge+130+10,miscVar.controlButtonHeight - miscVar.buttonStepDown*2-7,95,30],...
                              'string',{'          1x   ';'         2x   ';'         4x   ';'        10x   '},...
                              'Value', 1,'Callback',{@fcnSetFakePlaySpeed}); 
-                         
+%}                         
 %%
 
 
@@ -320,7 +337,6 @@ catch
     msgbox('Lap number must be an integer.', 'Error','error');
     videoFig.LapNumberBox.BackgroundColor=miscVar.Red;
 end
-videoFig;
 
 end
 function fcnLapNumberPlus(~,~)
@@ -359,6 +375,17 @@ if miscVar.VideoLoadedFlag==1
     ParsedFrames.LapStart{miscVar.LapNumber+1,1}=miscVar.frameNum;
     disp(num2str(ParsedFrames.LapStart{miscVar.LapNumber+1,1}))
     videoFig.LapStartButton.BackgroundColor=miscVar.Gray;
+end
+end
+function fcnForcedChoiceEnterButton(~,~)
+disp('Forced Choice Leave')
+global miscVar
+global ParsedFrames
+global videoFig
+if miscVar.VideoLoadedFlag==1
+    ParsedFrames.ForcedChoiceEnter{miscVar.LapNumber+1,1}=miscVar.frameNum;
+    disp(num2str(ParsedFrames.ForcedChoiceEnter{miscVar.LapNumber+1,1}))
+    videoFig.ForcedChoiceEnterButton.BackgroundColor=miscVar.Gray;
 end
 end
 function fcnForcedChoiceLeaveButton(~,~)
@@ -415,6 +442,17 @@ if miscVar.VideoLoadedFlag==1
     ParsedFrames.LiftBarrier{miscVar.LapNumber+1,1}=miscVar.frameNum;
     disp(num2str(ParsedFrames.LiftBarrier{miscVar.LapNumber+1,1}))
     videoFig.LiftBarrierButton.BackgroundColor=miscVar.Gray;
+end
+end
+function fcnFreeChoiceEnterButton(~,~)
+disp('Free Choice Enter')
+global miscVar
+global ParsedFrames
+global videoFig
+if miscVar.VideoLoadedFlag==1
+    ParsedFrames.FreeChoiceEnter{miscVar.LapNumber+1,1}=miscVar.frameNum;
+    disp(num2str(ParsedFrames.FreeChoiceEnter{miscVar.LapNumber+1,1}))
+    videoFig.FreeChoiceEnterButton.BackgroundColor=miscVar.Gray;
 end
 end
 function fcnFreeChoiceLeaveButton(~,~)
@@ -606,7 +644,7 @@ global ParsedFrames
 global miscVar
 disp('Save sheet')
 
-for laps=1:(size(ParsedFrames.LapStart,1)-1);
+for laps=1:(size(ParsedFrames.LapStart,1)-1)
     ParsedFrames.LapNumber{laps+1,1}=laps;
 end  
 save 'ParsedFramesTest.mat' 'ParsedFrames'

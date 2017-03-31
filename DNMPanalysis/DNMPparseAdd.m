@@ -38,8 +38,8 @@ fcnLoadVideo;
 %Get which timestamp we're adding
 addingStr = {'LapNumber', 'LapStart', 'LiftBarrier', 'LeaveMaze',...
        'StartHomecage', 'LeaveHomecage', 'ForcedDir',...
-       'FreeDir', 'TrialType', 'TrialDir', 'ForcedEnterChoice',...
-       'ForcedLeaveChoice', 'FreeEnterChoice', 'FreeLeaveChoice',...
+       'FreeDir', 'TrialType', 'TrialDir', 'ForcedChoiceEnter',...
+       'ForcedLeaveChoice', 'FreeChoiceEnter', 'FreeLeaveChoice',...
        'ForcedReward', 'FreeReward', 'Other...'};
    
 [addingVal,~] = listdlg('PromptString','Which are we adding:',...
@@ -174,20 +174,25 @@ end
 function fcnSaveQuitButton(~,~)
 global ParsedFrames
 global miscVar
+global videoFig
 disp('Save sheet')
 
-for laps=1:(size(ParsedFrames.AddingThis,1));
-    ParsedFrames.LapNumber{laps,1}=laps;
+realCell{1,1} = 'Lap number';
+realCell{1,2} = miscVar.addingType;
+for laps=1:size(ParsedFrames.AddingThis,1)
+    realCell{laps+1,1}=laps;
+    realCell{laps+1,2} = ParsedFrames.AddingThis{laps};
 end
+%realCell = {ParsedFrames.LapNumber, ParsedFrames.AddThing}
 
-try 
-    realTable=table(ParsedFrames.LapNumber,...
-                ParsedFrames.AddingThis, 'VariableNames',{'Lap number', miscVar.addingType});
-catch 
+%try 
+%    realTable=table(ParsedFrames.LapNumber,...
+               % ParsedFrames.AddThing);
+%catch 
     save 'luckyYou.mat' 'ParsedFrames'
     disp('saved what you had')
     %Error handling!
-end            
+%end            
              
 undecided=0; saveNow=0;
 while undecided==0
@@ -208,9 +213,9 @@ while undecided==0
         undecided = 1; saveNow = 1;
     end
 end
-if saveNow==1;
+if saveNow==1
     try
-        xlswrite(fullfile(miscVar.PathName,saveName{1}),table2cell(realTable));
+        xlswrite(fullfile(miscVar.PathName,saveName{1}),realCell)
     catch
         disp('Some saving error')   
     end    
