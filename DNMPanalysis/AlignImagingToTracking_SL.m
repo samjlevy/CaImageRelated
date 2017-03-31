@@ -4,15 +4,15 @@ function AlignImagingToTracking_SL(varargin)
 % usable frame. This is all based on time from the DVT and assumed-equal
 % timing in the imaging file
 
-load Pos.mat DVTtime Xpix_filt Ypix_filt
+load Pos.mat DVTtime Xpix Ypix%Xpix_filt Ypix_filt
 time=DVTtime;
 %load Pos.mat Xpix Ypix
 
 fps_brainimage = 20;
 %brainFrameRate = 1/fps_brainimage;
-TrackingLength = length(Xpix_filt);
+TrackingLength = length(Xpix);
 
-if ~exist('file','FToffsetSam')
+if ~exist('FToffsetSam.mat','file')
     disp('Didn"t find Sam"s FToffset, running it now')
     [~, ~, ~ ] = JustFToffset;
 end
@@ -56,10 +56,10 @@ end
 %Interpolate 
 %vq = interp1(x,v,xq)
 brainX = interp1( time(TrackingUse(1):TrackingUse(2)),...
-                  Xpix_filt(TrackingUse(1):TrackingUse(2)),...
+                  Xpix(TrackingUse(1):TrackingUse(2)),...
                   brainTime(FTuse(1):FTuse(2)));
 brainY = interp1( time(TrackingUse(1):TrackingUse(2)),...
-                  Ypix_filt(TrackingUse(1):TrackingUse(2)),...
+                  Ypix(TrackingUse(1):TrackingUse(2)),...
                   brainTime(FTuse(1):FTuse(2)));
               
 FTuseIndices = FTuse(1):FTuse(2);

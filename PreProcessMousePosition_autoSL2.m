@@ -130,7 +130,7 @@ if fixedThisFrameFlag==1
 %}
 
 if ~isempty(strfind(version,'R2016a'))
-    disp('Sorry, 2016a not going to work; use 2015b or earlier')
+    disp('Sorry, 2016a not going to work; use 2016b')
     return
 end
 %% Need these for better organization
