@@ -19,7 +19,8 @@ end
 load('Pos_brain.mat')
 load('FinalOutput.mat', 'PSAbool')
 xls_file = dir('*BrainTime.xlsx');
-[frames, txt] = xlsread(fullfile(xls_file.folder,xls_file.name), 1);
+%[frames, txt] = xlsread(fullfile(xls_file.folder,xls_file.name), 1);
+[frames, txt] = xlsread(xls_file.name, 1);
 %% Stem Only:
 %Get Trial timestamps
 forced_starts = CondExcelParseout(frames, txt, 'Start on maze (start of Forced', 0);
@@ -42,7 +43,7 @@ correct_trials = right_forced & left_free | ...
     left_forced & right_free;
 allGood = GoodLaps & correct_trials;
 
-%Plot of FT sorted this way
+%get block of FT sorted by stem trial type
 forced_r_stem = [forced_starts(allGood & right_forced), forced_stem_ends(allGood & right_forced)];
 forced_l_stem = [forced_starts(allGood & left_forced), forced_stem_ends(allGood & left_forced)];
 free_r_stem = [free_starts(allGood & right_free), free_stem_ends(allGood & right_free)];
@@ -53,17 +54,45 @@ free_l_stem = [free_starts(allGood & left_free), free_stem_ends(allGood & left_f
 [ FrLindices, FrLedges ] = BlockOfFTindices( free_l_stem(:,1), free_l_stem(:,2));
 
 blockedFTstem = PSAbool(:,[FoRindices, FrRindices, FoLindices, FrLindices]);  
-blockedFTstemEdges = [1 FoRedges(end)];
-blockedFTstemEdges = [blockedFTstemEdges blockedFTstemEdges(end)+FrRedges(end)];
-blockedFTstemEdges = [blockedFTstemEdges blockedFTstemEdges(end)+FoLedges(end)]; 
-blockedFTstemEdges = [blockedFTstemEdges blockedFTstemEdges(end)+FrLedges(end)];
 
-[ hits ] = HitsThisBlock (starts, stops, FT);
-totalHits = sum(hits,2);
+%Get hit probability per trial type
+[hitsForcedRight, totalHitsFoR ] = HitsThisBlock (forced_r_stem(:,1), forced_r_stem(:,2), PSAbool);
+forcedRightHitProb = totalHitsFoR/size(forced_r_stem,1);
+[hitsFreeRight, totalHitsFrR ] = HitsThisBlock (free_r_stem(:,1), free_r_stem(:,2), PSAbool);
+freeRightHitProb = totalHitsFrR/size(free_r_stem,1);
+[hitsForcedLeft, totalHitsFoL ] = HitsThisBlock (forced_l_stem(:,1), forced_l_stem(:,2), PSAbool);
+forcedLeftHitProb = totalHitsFoL/size(forced_l_stem,1);
+[hitsFreeLeft, totalHitsFrL ] = HitsThisBlock (free_l_stem(:,1), free_l_stem(:,2), PSAbool);
+freeLeftHitProb = totalHitsFrL/size(free_l_stem,1);
 
+totalHits = totalHitsFoR + totalHitsFrR +...
+            totalHitsFoL + totalHitsFrL;
+LRhitSelectivity = ((totalHitsFoR + totalHitsFrR) - ...
+                    (totalHitsFoL + totalHitsFrL)) ./ totalHits;
+ForcedFreeHITselectivity = ((totalHitsFrR + totalHitsFrL) -...
+                        (totalHitsFoR + totalHitsFoL)) ./ totalHits;
 
+%Get transient durations per trial type
+[durFoR, totalDurFoR] = DurationsThisBlock(forced_r_stem(:,1), forced_r_stem(:,2), PSAbool);
+[durFrR, totalDurFrR] = DurationsThisBlock(free_r_stem(:,1), free_r_stem(:,2), PSAbool);
+[durFoL, totalDurFoL] = DurationsThisBlock(forced_l_stem(:,1), forced_l_stem(:,2), PSAbool);
+[durFrL, totalDurFrL] = DurationsThisBlock(free_l_stem(:,1), free_l_stem(:,2), PSAbool);
 
+totalDurAll = totalDurFoR + totalDurFrR + totalDurFoL + totalDurFrL;
+LRdurSelectivity = ((totalDurFoR + totalDurFrR) - (totalDurFoL + totalDurFrL)) ./ totalDurAll;
+ForcedFreeDurSelectivity = ((totalDurFrR + totalDurFrL) - (totalDurFoR + totalDurFoL)) ./ totalDurAll;
 
+%Duration-based correlation coefficients
+%Rows are observations, columns are cells; but running in corrcoef transposed?
+totalDurationVector = [totalDurFoR'; totalDurFrR'; totalDurFoL'; totalDurFrL'];
+[totalDurCorrs, totalDurPs] = corrcoef(totalDurationVector');
+
+trialDurationVector = [durFoR'; durFrR'; durFoL'; durFrL']; 
+[trialDurCorrs, trialDurPs] = corrcoef(trialDurationVector');
+trialBounds = [1 size(durFoR,2)];
+trialBounds = [trialBounds trialBounds(end)+1 trialBounds(end)+size(durFrR,2)];
+trialBounds = [trialBounds trialBounds(end)+1 trialBounds(end)+size(durFoL,2)];
+trialBounds = [trialBounds trialBounds(end)+1 trialBounds(end)+size(durFrL,2)];
 %% Demo figs
 figure; imagesc(PSAbool); title('Raw Data, with stem time indicated')
 for trial = find(allGood)
@@ -73,7 +102,8 @@ for trial = find(allGood)
     plot( [free_starts(trial) free_starts(trial)], [0 size(PSAbool,1)],'m' )
     plot( [free_stem_ends(trial) free_stem_ends(trial)], [0 size(PSAbool,1)],'y' )
 end    
-    
+
+%X/Y with stem points highlighted
 figure;
 plot (brainX, brainY, '.k','MarkerSize',3)
 hold on
@@ -83,24 +113,37 @@ plot( brainX(free_starts(allGood)), brainY(free_starts(allGood)), '.m','MarkerSi
 plot( brainX(free_stem_ends(allGood)), brainY(free_stem_ends(allGood)), '.y','MarkerSize',15)
 title('X/Y positions, with stem time indicated')
 
+
+%lap blocks explanation
+blockedFTstemEdges = [1 FoRedges(end)];
+blockedFTstemEdges = [blockedFTstemEdges blockedFTstemEdges(end)+FrRedges(end)];
+blockedFTstemEdges = [blockedFTstemEdges blockedFTstemEdges(end)+FoLedges(end)]; 
+blockedFTstemEdges = [blockedFTstemEdges blockedFTstemEdges(end)+FrLedges(end)];
+lapEdges = FoRedges(2:end);
+lapEdges = [lapEdges FrEdges(2:end)+lapEdges(end)];
+lapEdges = [lapEdges FoLedges(2:end)+lapEdges(end)];
+lapEdges = [lapEdges FrLedges(2:end)+lapEdges(end)];
 stemFig=figure; imagesc(blockedFTstem); title('Stem Data only, sorted')
 stemFig.Children.XTick = ceil(diff(blockedFTstemEdges,1)/2) + blockedFTstemEdges(1:4); 
 stemFig.Children.XTickLabel = {'Forced Right', 'Free Right', 'Forced Left', 'Free Left'};
 for edge=2:5
-hold on    
-plot([blockedFTstemEdges(edge) blockedFTstemEdges(edge)], [0 size(PSAbool,1)],'g')
+    hold on    
+    plot([blockedFTstemEdges(edge) blockedFTstemEdges(edge)], [0 size(PSAbool,1)],'g')
+end
+for lapEdge=lapEdges
+    hold on
+    plot([lapEdges(lapEdge), lapEdges(lapEdge)], [0 size(PSAbool,1)],'r')
 end
 
+%hit selectivity
+figure; histogram(LRhitSelectivity,20); title('Left/Right hit selectivity')
+figure; histogram(ForcedFreeHITselectivity,20); title('Forced/Free hit selectivity')
+figure; plot(LRhitSelectivity, ForcedFreeHITselectivity,'.'); title('X: LR, Y: FoFr')
 
-Need:
-      forced stem l/r
-      forced to reward l/r
-      forced to delay l/r
-      delay following l/r
-      free stem l/r
-      free arm l/r
-      cage following l/r
-      correct/wrong 1/0 vector
-      
-Selectivity for forced/free
-Selectivity for l/r
+%firing duration selectivity
+figure; histogram(LRdurSelectivity,20); title('Left/Right duration selectivity')
+figure; histogram(ForcedFreeDurSelectivity,20); title('Forced/Free duration selectivity')
+figure; plot(LRdurSelectivity, ForcedFreeDurSelectivity,'.','MarkerSize',12); title('X: LR, Y: FoFr')
+
+
+
