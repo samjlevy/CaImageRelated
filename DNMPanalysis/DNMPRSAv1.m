@@ -1,5 +1,6 @@
-function [ trialTypeCorrs, thisCorrs ] = DNMPRSAv1( corrMat ) 
+function [ trialTypeCorrs, thisCorrs ] = DNMPRSAv1( corrMat, trialBounds) 
 %Trial-by-trial correlations
+%trialBounds = reshape(trialBounds,[2, 4])
 
 rowColPairs = [ 1 1; 1 2; 1 3; 1 4; 
                      2 2; 2 3; 2 4; 

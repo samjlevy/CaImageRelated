@@ -88,7 +88,7 @@ totalDurationVector = [totalDurFoR'; totalDurFrR'; totalDurFoL'; totalDurFrL'];
 [totalDurCorrs, totalDurPs] = corrcoef(totalDurationVector');
 
 trialDurationVector = [durFoR'; durFrR'; durFoL'; durFrL']; 
-[trialDurCorrs, trialDurPs] = corrcoef(trialDurationVector');
+[trialDurCorrs2, trialDurPs2] = corrcoef(trialDurationVector');
 trialBounds = [1 size(durFoR,2)];
 trialBounds = [trialBounds trialBounds(end)+1 trialBounds(end)+size(durFrR,2)];
 trialBounds = [trialBounds trialBounds(end)+1 trialBounds(end)+size(durFoL,2)];
@@ -120,7 +120,7 @@ blockedFTstemEdges = [blockedFTstemEdges blockedFTstemEdges(end)+FrRedges(end)];
 blockedFTstemEdges = [blockedFTstemEdges blockedFTstemEdges(end)+FoLedges(end)]; 
 blockedFTstemEdges = [blockedFTstemEdges blockedFTstemEdges(end)+FrLedges(end)];
 lapEdges = FoRedges(2:end);
-lapEdges = [lapEdges FrEdges(2:end)+lapEdges(end)];
+lapEdges = [lapEdges FrRedges(2:end)+lapEdges(end)];
 lapEdges = [lapEdges FoLedges(2:end)+lapEdges(end)];
 lapEdges = [lapEdges FrLedges(2:end)+lapEdges(end)];
 stemFig=figure; imagesc(blockedFTstem); title('Stem Data only, sorted')
