@@ -22,8 +22,8 @@ NumShuffles = 10; % For starters
 
 save_append = {'_forced_left1cmbins.mat', '_free_left1cmbins.mat',...
               '_forced_right1cmbins.mat', '_free_right1cmbins.mat',...
-              'PlaceMaps_on_maze1cmbins.mat'};
-name_append = {'forced_l', 'forced_r', 'free_l', 'free_r', 'on_maze'};
+              '_maze1cmbins.mat'};
+name_append = {'forced_l', 'free_l', 'forced_r', 'free_r', 'on_maze'};
 
 for k=1:length(save_append)-1
 MD(1).exclude_frames = stem_exclude.(name_append{k});

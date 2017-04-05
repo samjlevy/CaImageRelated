@@ -7,47 +7,34 @@ plot_trace = 0;
 %sesh = MD(293);
 rot_degrees = -90; % How much to rotate the TMaps
 rot_amt = rot_degrees/90;
-IChack = false;
-if IChack
-    plot_pval = false;
-end
 
 trial_types = {'Forced L', 'Forced R', 'Free L', 'Free R'}; % {'Forced','Free'};
-file_name_append = {'_forced_left025bins.mat', '_forced_right025bins.mat', '_free_left025bins.mat', '_free_right025bins.mat'}; %{'_forced.mat','_free.mat'}; % Must match block types above
-stats_name_append = {'_forced_l.mat', '_forced_r.mat', '_free_l.mat', '_free_r.mat'};
+file_name_append = {'_forced_left1cmbins.mat', '_forced_right1cmbins.mat',...
+    '_free_left1cmbins.mat', '_free_right1cmbins.mat'}; %{'_forced.mat','_free.mat'}; % Must match block types above
+stats_name_append = file_name_append;%{'_forced_l1cm.mat', '_forced_r.mat', '_free_l.mat', '_free_r.mat'};
 plot_file = 'PFcompare_wpvalues_rot';
 
 %% Plot actual comparisons
 
 % load all the variables
-if ~IChack
-    if plot_trace==1
-        load(fullfile(sesh.Location,'NormTraces.mat'),'trace');
-    end
-    load(fullfile(sesh.Location,'FinalOutput.mat'),'PSAbool');
-    FT=PSAbool;
-elseif IChack
-    disp('Using data from ICout_hack.mat and NormTraces_hack.mat')
-    load(fullfile(sesh.Location,'NormTraces_hack.mat'),'trace');
-%     load(fullfile(sesh.Location,'ICout_hack.mat'),'FT');
-end
+load('Pos_align.mat')
+%load(exclude_frames.mat)
 %numFrames_full = size(trace,2);
-numFrames_full = length(on_maze_exclude);
+numFrames_full = size(PSAbool,2);
 
 % load on_off_ind.mat
 load(fullfile(sesh.Location,'exclude_frames.mat'),'on_maze_exclude');
-on_maze_log_full = exc_to_inc(on_maze_exclude,numFrames_full);
+on_maze_log_full = exc_to_inc(logical(on_maze_exclude),numFrames_full);
 
 trials = load(fullfile(pMapsLocation,['PlaceMaps' file_name_append{1}]),'TMap_gauss',...
-    'RunOccMap','pval','isrunning','FToffset','FT');
-FT = trials(1).FT;
-FToffset = trials(1).FToffset;
+    'RunOccMap','pval','isrunning');
 isrunning_all = false(size(trials(1).isrunning));
-NumNeurons = length(trials(1).TMap_gauss);
-NumFrames = size(FT,2);
+NumNeurons = size(PSAbool,1);
+NumFrames = size(PSAbool,2);
+
 for k = 2:length(trial_types)
     trials(k) = load(fullfile(pMapsLocation,['PlaceMaps' file_name_append{k}]),'TMap_gauss',...
-        'RunOccMap','pval','isrunning','FToffset','FT');
+        'RunOccMap','pval','isrunning');
     isrunning_all = isrunning_all | trials(k).isrunning;
 end
 
@@ -56,13 +43,14 @@ end
 % off_maze_log(off_maze_ind) = true;
 
 for k = 1:length(trial_types)
-    load(fullfile(pMapsLocation,['PFstats' stats_name_append{k}]),'PFnumhits');
-    trials(k).PFnumhits = PFnumhits;
+    load(fullfile(pMapsLocation,['PlaceFieldStats' stats_name_append{k}]),'PFnHits');
+    trials(k).PFnumhits = PFnHits;
 end
 if plot_trace==1
 trace_use = trace(:,FToffset-1:end);
 end
-on_maze_log = on_maze_log_full(1,FToffset-1:end);
+%on_maze_log = on_maze_log_full(1,FToffset-1:end);
+on_maze_log = on_maze_log_full;
 
 figure(543)
 set(gcf,'Position',[1 41 1920 964]);
