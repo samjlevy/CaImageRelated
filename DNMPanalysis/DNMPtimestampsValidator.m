@@ -16,9 +16,9 @@ for label=1:size(frames,2)
         || any(strfind(txt{1,label},'Trial #')); %#ok<AGROW>
 end    
 
-%try
-%    load(pos_file,'xAVI','yAVI')
-%catch
+try
+    load(pos_file); xAVI = x; yAVI = y;
+catch
     load(pos_file);
     inThisFile = whos('-file',pos_file);
     for ff=1:length(inThisFile); bitNames{ff} = inThisFile(ff).name; end;
@@ -28,8 +28,11 @@ end
                 'ListString',{bitNames{s(1)}; bitNames{s(2)}}); 
     eval([ 'xAVI = ' bitNames{s(whichX)} ]);
     eval([ 'yAVI = ' bitNames{s(s~=s(whichX))} ]);
-%end
+end
 
+if ~exist('FToffset','var')
+    FToffset = 0;
+end    
 %msgbox('Click next to bad points, click outside for next') 
     
     
@@ -40,7 +43,7 @@ for framesColumn = checkThese
     hold off
     plot( xAVI, yAVI, '.k','MarkerSize',3)
     hold on
-    theseFrames = (frames(:,framesColumn));
+    theseFrames = (frames(:,framesColumn)) - FToffset;
     theseX = xAVI(theseFrames(theseFrames<length(xAVI)));
     theseY = yAVI(theseFrames(theseFrames<length(yAVI)));
     plot( theseX, theseY, '.r','MarkerSize',15)

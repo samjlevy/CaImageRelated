@@ -17,8 +17,8 @@ MDSL(i).Session = 1;
 MDSL(i).Env = 'Continuous T Maze';
 MDSL(i).Room = '201a - 2015';
 MDSL(i).RecordStartTime = '05:17:49.39 PM';
-if strcmp(userstr,'Sam')
-    MDSL(i).Location = 'C:\MasterData\InUse\Polaris_160831';
+if strcmp(userstr,'sam')
+    MDSL(i).Location = 'G:\Polaris\Polaris_160831';
 elseif strcmp(userstr,'SamLaptop')
     MDSL(i).Location = 'D:\Polaris_160831';
 elseif strcmp(userstr,'mouseimage')
@@ -113,8 +113,8 @@ MDSL(i).Session = 1;
 MDSL(i).Env = 'Continuous T Maze';
 MDSL(i).Room = '201a - 2015';
 MDSL(i).RecordStartTime = '04:08:50.10 PM';
-if strcmp(userstr,'Sam')
-    MDSL(i).Location = 'E:\SLIDE\Polaris\Polaris_160825';
+if strcmp(userstr,'sam')
+    MDSL(i).Location = 'G:\Polaris\Polaris_160825';
 elseif strcmp(userstr,'mouseimage')
     MDSL(i).Location = 'F:\Polaris\Polaris_160825';
 end

@@ -5,7 +5,13 @@ function AlignImagingToTracking_SL(varargin)
 % timing in the imaging file
 
 load Pos.mat DVTtime Xpix Ypix%Xpix_filt Ypix_filt
-time=DVTtime;
+if ~exist('DVTtime','var')
+    [DVTfile, DVTpath] = uigetfile('*.DVT', 'Select DVT file');
+    pos_data = importdata(fullfile(DVTpath, DVTfile));
+    time = pos_data(:,2);
+else    
+    time=DVTtime;
+end    
 %load Pos.mat Xpix Ypix
 
 fps_brainimage = 20;
@@ -14,7 +20,7 @@ TrackingLength = length(Xpix);
 
 if ~exist('FToffsetSam.mat','file')
     disp('Didn"t find Sam"s FToffset, running it now')
-    [~, ~, ~ ] = JustFToffset;
+    [~, ~, ~ ] = JustFToffset; %FToffset LastUsable whichEndsFirst FTlength brainTime time
 end
 load FToffsetSam.mat
 
@@ -49,20 +55,23 @@ switch whichEndsFirst
         TrackingUse = [1 LastUsable];
     case 'tracking'
         %LastUsable is a frame for FT (i.e., FToffsetRear)
-        TrackingUse = [1 TrackingLength];
         FTuse = [FToffset LastUsable];
+        TrackingUse = [1 TrackingLength];
 end
 
 %Interpolate 
 %vq = interp1(x,v,xq)
-brainX = interp1( time(TrackingUse(1):TrackingUse(2)),...
+x = interp1( time(TrackingUse(1):TrackingUse(2)),...
                   Xpix(TrackingUse(1):TrackingUse(2)),...
                   brainTime(FTuse(1):FTuse(2)));
-brainY = interp1( time(TrackingUse(1):TrackingUse(2)),...
+y = interp1( time(TrackingUse(1):TrackingUse(2)),...
                   Ypix(TrackingUse(1):TrackingUse(2)),...
                   brainTime(FTuse(1):FTuse(2)));
               
-FTuseIndices = FTuse(1):FTuse(2);
+brain_time = brainTime(FTuse(1):FTuse(2));
+              
+PSAboolUseIndices = FTuse(1):FTuse(2);
+PSAboolAdjusted = FT(:,PSAboolUseIndices);
 
-save Pos_brain.mat brainX brainY FTuseIndices              
+save Pos_brain.mat x y PSAboolUseIndices PSAboolAdjusted brain_time            
 end

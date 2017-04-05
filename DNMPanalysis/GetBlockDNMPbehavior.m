@@ -1,9 +1,9 @@
-function [start_stop_struct, include_struct] = GetBlockDNMPbehavior( frames, txt, block_type, sessionLength)
+function [start_stop_struct, include_struct, exclude_struct] = GetBlockDNMPbehavior( frames, txt, block_type, sessionLength)
 %Returns frame numbers for what block you want, asking for what type of
 %timestamps
 includeBlank = zeros(1, sessionLength);
 
-[right_forced, left_forced, right_free, left_free] = DNMPtrialDurections(frames, txt);
+[right_forced, left_forced, right_free, left_free] = DNMPtrialDirections(frames, txt);
 
 switch block_type
     case 'stem_only'
@@ -27,6 +27,9 @@ switch block_type
     case 'cage'
         [ starts ] = CondExcelParseout( frames, txt, 'Start in homecage', 0);
         [ stops ] = CondExcelParseout( frames, txt, 'Leave homecage', 0);
+    case 'on_maze'
+        [ starts ] = CondExcelParseout( frames, txt, 'Start on maze (start of Forced', 0);
+        [ stops ] = CondExcelParseout( frames, txt, 'Leave maze');
 end
 
 switch block_type
@@ -43,27 +46,32 @@ switch block_type
         include_struct.forced_r = includeBlank;
         for aa = 1:length(start_stop_struct.forced_r_start)
             include_struct.forced_r(start_stop_struct.forced_r_start(aa):start_stop_struct.forced_r_stop(aa)) = 1;
+            exclude_struct.forced_r = include_struct.forced_r == 0;
         end 
         include_struct.free_r = includeBlank;
         for bb = 1:length(start_stop_struct.free_r_start)
-            include_struct.forced_r(start_stop_struct.free_r_start(aa):start_stop_struct.free_r_stop(bb)) = 1;
+            include_struct.free_r(start_stop_struct.free_r_start(bb):start_stop_struct.free_r_stop(bb)) = 1;
+            exclude_struct.free_r = include_struct.free_r == 0;
         end 
         include_struct.forced_l = includeBlank;
         for cc = 1:length(start_stop_struct.forced_l_start)
             include_struct.forced_l(start_stop_struct.forced_l_start(cc):start_stop_struct.forced_l_stop(cc)) = 1;
+            exclude_struct.forced_l = include_struct.forced_l == 0;
         end
         include_struct.free_l = includeBlank;
         for dd = 1:length(start_stop_struct.free_l_start)
-            include_struct.forced_l(start_stop_struct.free_l_start(dd):start_stop_struct.free_l_stop(dd)) = 1;
+            include_struct.free_l(start_stop_struct.free_l_start(dd):start_stop_struct.free_l_stop(dd)) = 1;
+            exclude_struct.free_l = include_struct.free_l == 0;
         end 
         
-    case {'delay', 'cage'}
+    case {'delay', 'cage', 'on_maze'}
         start_stop_struct.starts = starts;
         start_stop_struct.stops = stops;
         
         include_struct.free_l = includeBlank;
-        for ee = 1:legnth(starts)
+        for ee = 1:length(starts)
             include_struct.include(start_stop_struct.starts(ee):start_stop_struct.stops(ee)) = 1;
+            exclude_struct.exclude = include_struct.include == 0;
         end
 end
 

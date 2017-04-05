@@ -16,7 +16,7 @@ newFrames = frames;
 for column = (1+strcmpi(txt{1,1},'Trial #')):size(txt,2)
     if ~isnan(frames(:,column))
        for row = 1:size(frames,1)
-           newFrames(row, column) = findclosest(time(frames(row, column)), brainTime);
+           newFrames(row, column) = findclosest(time(frames(row, column)), brainTime) - FToffset;
        end
     end
 end

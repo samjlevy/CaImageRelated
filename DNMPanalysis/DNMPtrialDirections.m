@@ -1,4 +1,4 @@
-function [right_forced, left_forced, right_free, left_free] = DNMPtrialDurections(frames, txt)
+function [right_forced, left_forced, right_free, left_free] = DNMPtrialDirections(frames, txt)
 
 forced_direction = CondExcelParseout(frames, txt, 'Forced Trial Type (L/R)', 1);
 right_forced = strcmpi(forced_direction,'R');
