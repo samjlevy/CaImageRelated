@@ -29,7 +29,7 @@ free_starts = CondExcelParseout(frames, txt, 'Lift barrier (start of free choice
 free_stem_ends = CondExcelParseout(frames, txt, 'FreeChoiceEnter', 0);
 
 %Trial directions
-[right_forced, left_forced, right_free, left_free] = DNMPtrialDurections(frames, txt)
+[right_forced, left_forced, right_free, left_free] = DNMPtrialDirections(frames, txt);
 
 %Good lap timestamps (video too short, FT too short, etc.)
 tooLong = frames >= FTuseIndices(end);

@@ -3,42 +3,45 @@ function DNMPplaceFields1(varargin)
 %current directory, nothing fancy
 RoomStr = '201a - 2015';
 load 'Pos_align.mat'
-load('FinalOutput.mat','PSAbool')
+%load('FinalOutput.mat','PSAbool')
 
 xls_file = dir('*BrainTime.xlsx');
 [frames, txt] = xlsread(xls_file.name, 1);
 
 [stem_frame_bouds, stem_include, stem_exclude] =...
-    GetBlockDNMPbehavior( frames, txt, 'stem_only', length(x));
+    GetBlockDNMPbehavior( frames, txt, 'stem_only', 58149);
 [~, ~, maze_exclude] =...
-    GetBlockDNMPbehavior( frames, txt, 'on_maze', length(x));
+    GetBlockDNMPbehavior( frames, txt, 'on_maze', 58149);
 on_maze_exclude = maze_exclude.exclude;
 save exclude_frames.mat on_maze_exclude
 
 neuron_input = 'FinalOutput.mat';
-cmperbin = 0.25;
+cmperbin = 1;
 minspeed = 7;
 NumShuffles = 10; % For starters
 
-save_names = {'PlaceMaps_forced_left025bins.mat', 'PlaceMaps_free_left025bins.mat',...
-              'PlaceMaps_forced_right025bins.mat', 'PlaceMaps_free_right025bins.mat',...
-              'PlaceMaps_on_maze025bins.mat'};
+save_append = {'_forced_left1cmbins.mat', '_free_left1cmbins.mat',...
+              '_forced_right1cmbins.mat', '_free_right1cmbins.mat',...
+              'PlaceMaps_on_maze1cmbins.mat'};
 name_append = {'forced_l', 'forced_r', 'free_l', 'free_r', 'on_maze'};
 
-for k=1:length(save_names)-1
-CalculatePlacefields(RoomStr,'exclude_frames_raw',stem_exclude.(name_append{k}),...
-                'alt_inputs',neuron_input,'man_savename',save_names{k},...
-                'half_window',0,'minspeed',minspeed,'cmperbin',cmperbin,...
-                'NumShuffles',NumShuffles,'calc_half',1);
+for k=1:length(save_append)-1
+MD(1).exclude_frames = stem_exclude.(name_append{k});
+PlacefieldsSL(MD(1),'exclude_frames',stem_exclude.(name_append{k}),...
+                'aligned',true,'minspeed',minspeed,'cmperbin',cmperbin,...
+                'B',NumShuffles);
+
+PlacefieldStats(MD(1))
+
+movefile('Placefields.mat',strcat('PlaceMaps',save_append{k}))
+movefile('PlacefieldStats.mat',strcat('PlaceFieldStats',save_append{k}))
 end            
 
 k=5;
-CalculatePlacefields(RoomStr,'exclude_frames_raw',on_maze_exclude,...
-                'alt_inputs',neuron_input,'man_savename',save_names{k},...
-                'half_window',0,'minspeed',minspeed,'cmperbin',cmperbin,...
-                'NumShuffles',NumShuffles,'calc_half',1);
+PlacefieldsSL(MD(1),'exclude_frames',on_maze_exclude,...
+                'aligned',true,'minspeed',minspeed,'cmperbin',cmperbin,...
+                'B',NumShuffles);
+PlacefieldStats(MD(1))
 
-for k = 1:length(save_names)
-    disp(['Running PFstats for ' name_append{k} ' session.'])
-    PFstats(0, 'alt_file_use', save_names{k}, ['_' name_append{k}])
-end
+movefile('Placefields.mat',strcat('PlaceMaps',save_append{k}))
+movefile('PlacefieldStats.mat',strcat('PlaceFieldStats',save_append{k}))

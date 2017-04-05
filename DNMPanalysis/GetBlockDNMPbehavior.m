@@ -34,7 +34,7 @@ end
 
 switch block_type
     case {'stem_only', 'arm_min', 'whole_arm'}
-        start_stop_struct.forced_r_start = forced_stops(right_forced);
+        start_stop_struct.forced_r_start = forced_starts(right_forced);
         start_stop_struct.forced_r_stop = forced_stops(right_forced);
         start_stop_struct.free_r_start = free_starts(right_free);
         start_stop_struct.free_r_stop = free_stops(right_free);
@@ -46,22 +46,26 @@ switch block_type
         include_struct.forced_r = includeBlank;
         for aa = 1:length(start_stop_struct.forced_r_start)
             include_struct.forced_r(start_stop_struct.forced_r_start(aa):start_stop_struct.forced_r_stop(aa)) = 1;
-            exclude_struct.forced_r = include_struct.forced_r == 0;
+            include_struct.forced_r = logical(include_struct.forced_r);
+            exclude_struct.forced_r = double(include_struct.forced_r == 0);
         end 
         include_struct.free_r = includeBlank;
         for bb = 1:length(start_stop_struct.free_r_start)
             include_struct.free_r(start_stop_struct.free_r_start(bb):start_stop_struct.free_r_stop(bb)) = 1;
-            exclude_struct.free_r = include_struct.free_r == 0;
+            include_struct.free_r = logical(include_struct.free_r);
+            exclude_struct.free_r = double(include_struct.free_r == 0);
         end 
         include_struct.forced_l = includeBlank;
         for cc = 1:length(start_stop_struct.forced_l_start)
             include_struct.forced_l(start_stop_struct.forced_l_start(cc):start_stop_struct.forced_l_stop(cc)) = 1;
-            exclude_struct.forced_l = include_struct.forced_l == 0;
+            include_struct.forced_l = logical(include_struct.forced_l);
+            exclude_struct.forced_l = double(include_struct.forced_l == 0);
         end
         include_struct.free_l = includeBlank;
         for dd = 1:length(start_stop_struct.free_l_start)
             include_struct.free_l(start_stop_struct.free_l_start(dd):start_stop_struct.free_l_stop(dd)) = 1;
-            exclude_struct.free_l = include_struct.free_l == 0;
+            include_struct.free_l = logical(include_struct.free_l);
+            exclude_struct.free_l = double(include_struct.free_l == 0);
         end 
         
     case {'delay', 'cage', 'on_maze'}
@@ -71,7 +75,8 @@ switch block_type
         include_struct.free_l = includeBlank;
         for ee = 1:length(starts)
             include_struct.include(start_stop_struct.starts(ee):start_stop_struct.stops(ee)) = 1;
-            exclude_struct.exclude = include_struct.include == 0;
+            include_struct.include = logical(include_struct.include);
+            exclude_struct.exclude = double(include_struct.include == 0);
         end
 end
 
