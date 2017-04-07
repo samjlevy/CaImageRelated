@@ -113,7 +113,7 @@ end
 
 %% Control comparisons
 
-load(fullfile(sesh.Location,'PlaceMapsv2_onmaze.mat'),'TMap_half',...
+load(fullfile(sesh.Location,'PlaceMaps_on_maze1cmbins.mat'),'TMap_unsmoothed',...
     'RunOccMap')
 title_str_append = {' 1st half Trials', ' 2nd half Trials'};
 
@@ -125,7 +125,7 @@ for j = 1:NumNeurons
     
     for k = 1:2
         subplot(1,2,k)
-        [~, nan_map] = make_nan_TMap(RunOccMap,TMap_half(k).TMap_gauss{j},...
+        [~, nan_map] = make_nan_TMap(RunOccMap,TMap_unsmoothed(k).TMap_gauss{j},...
             'perform_smooth',1);
         imagesc_nan(nan_map,cm,[1 1 1]);
         title(['Neuron ' num2str(j) title_str_append{k}])
