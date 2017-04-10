@@ -19,6 +19,7 @@ end
 try
     load(pos_file); xAVI = x; yAVI = y;
 catch
+    %['xAVI','yAVI'] = Reloader(pos_file,'Select x/y positions') 
     load(pos_file);
     inThisFile = whos('-file',pos_file);
     for ff=1:length(inThisFile); bitNames{ff} = inThisFile(ff).name; end;

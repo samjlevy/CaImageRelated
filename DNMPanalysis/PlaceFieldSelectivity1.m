@@ -52,30 +52,56 @@ title('Relationship of left/right and forced/free?')
 
 %Forced to free distances
 %load placefield centroids
-FoLcentroids = ; FoRcentroids = ; FrLcentroids = ; FrRcentroids = ;
-numPlacefields = size(FoLcentroids,2);
+FoLstats = load('PlaceFieldStats_forced_left1cmbins.mat'); 
+FrLstats = load('PlaceFieldStats_free_left1cmbins.mat'); 
+FoRstats = load('PlaceFieldStats_forced_right1cmbins.mat'); 
+FrRstats = load('PlaceFieldStats_free_right1cmbins.mat'); 
+FoLcentroids = FoLstats.PFcentroids; FrLcentroids = FrLstats.PFcentroids;
+FoRcentroids = FoRstats.PFcentroids; FrRcentroids = FrRstats.PFcentroids;
+mostCells = max([size(FoLcentroids,2) size(FoRcentroids,2)...
+                 size(FrLcentroids,2) size(FrRcentroids,2)]);
+[FoLcentroids, FoRcentroids, FrLcentroids, FrRcentroids] =...
+    CellArrayEqualizer (FoLcentroids, FoRcentroids, FrLcentroids, FrRcentroids);  
+
+
+numPlacefields = size(FoLcentroids,1);
 LRmatches = cell(numPlacefields*2,1); FoFrmatches = cell(numPlacefields*2,1);
 LRmatchesExclusive = cell(numPlacefields*2,1); FoFrmatchesExclusive = cell(numPlacefields*2,1);
-for PFrow = 1:numPlaceFields
-    [ LRmatches{PFrow,1}, LRmatchesExclusive{PFrow,1} ] = MatchCentroids (FoLcentroids, PFrow, FoRcentroids, PFrow);
-    [ FoFrmatches{PFrow,1}, FoFrmatchesExclusive{PFrow,1} ] = MatchCentroids (FoLcentroids, PFrow, FrLcentroids, PFrow);
+for PFrow = 1:numPlacefields
+    if any([FoLcentroids{PFrow,:}]) && any([FoRcentroids{PFrow,:}])
+        [LRmatches{PFrow,1}, LRmatchesExclusive{PFrow,1}]...
+            = MatchCentroids (FoLcentroids, PFrow, FoRcentroids, PFrow);
+    end
+    if any([FoLcentroids{PFrow,:}]) && any([FrLcentroids{PFrow,:}])
+        [FoFrmatches{PFrow,1}, FoFrmatchesExclusive{PFrow,1}]...
+            = MatchCentroids (FoLcentroids, PFrow, FrLcentroids, PFrow);
+    end
 end
-for PFrow = 1:numPlaceFields
-    [ LRmatches{PFrow+numPlaceFields,1}, LRmatchesExclusive{PFrow+numPlaceFields,1} ]...
+for PFrow = 1:numPlacefields
+    if any([FrLcentroids{PFrow,:}]) && any([FrRcentroids{PFrow,:}])
+    [LRmatches{PFrow+numPlacefields,1}, LRmatchesExclusive{PFrow+numPlacefields,1}]...
         = MatchCentroids (FrLcentroids, PFrow, FrRcentroids, PFrow);
-    [ FoFrmatches{PFrow+numPlaceFields,1}, FoFrmatchesExclusive{PFrow+numPlaceFields,1} ]...
+    end
+    if any([FoRcentroids{PFrow,:}]) && any([FrRcentroids{PFrow,:}])
+    [FoFrmatches{PFrow+numPlacefields,1}, FoFrmatchesExclusive{PFrow+numPlacefields,1}]...
         = MatchCentroids (FoRcentroids, PFrow, FrRcentroids, PFrow);
+    end
 end
 FoCentroids = [FoLcentroids; FoRcentroids]; FrCentroids = [FrLcentroids; FrRcentroids];
 Lcentroids = [FoLcentroids; FrLcentroids]; Rcentroids = [FoRcentroids; FrRcentroids];
 
-LRdistances{PFpair,1} = CentroidDistances(Lcentroids, Rcentroids, LRmatches);
-LRdistancesExclusive{PFpair,1} = CentroidDistances(Lcentroids, Rcentroids, LRmatchesExclusive);
-FoFrDistances{PFpair,1} = CentroidDistances(FoCentroids, FrCentroids, FoFrmatches);
-FoFrDistancesExclusive{PFpair,1} = CentroidDistances(FoCentroids, FrCentroids, FoFrmatchesExclusive);
-    
-    
-    
+LRdistances = CentroidDistances(Lcentroids, Rcentroids, LRmatches);
+LRdistancesExclusive = CentroidDistances(Lcentroids, Rcentroids, LRmatchesExclusive);
+FoFrDistances = CentroidDistances(FoCentroids, FrCentroids, FoFrmatches);
+FoFrDistancesExclusive = CentroidDistances(FoCentroids, FrCentroids, FoFrmatchesExclusive);
+
+LRexclusiveLoss = sum(sum(LRdistances>0)) - sum(sum(LRdistancesExclusive>0));
+FoFrexclusiveLoss = sum(sum(FoFrDistances>0)) - sum(sum(FoFrDistancesExclusive>0));
+
+figure; histogram(LRdistancesExclusive(LRdistancesExclusive~=0),15)
+title('L/R remapping distances'); xlabel('cm change'); ylabel('count')
+figure; histogram(FoFrDistancesExclusive(FoFrDistancesExclusive~=0),15)
+title('Forced/Free remapping distances'); xlabel('cm change'); ylabel('count')
     
     
     

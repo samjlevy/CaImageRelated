@@ -18,20 +18,22 @@ end
 isCentroid2 = find(centroids2(:,1));
 
 %Which goes with which?
-for cc = isCentroid2
-[idx(cc), distance(cc)] = findclosest2D(centroids1(isCentroid1,1), centroids1(isCentroid1,2),...
-                          centroids2(cc,1), centroids2(cc,2));
+for cc = 1:length(isCentroid2)
+[idx(cc), distance(cc)] = findclosest2D(centroids1(isCentroid1,1),...
+                                        centroids1(isCentroid1,2),...
+                                        centroids2(isCentroid2(cc),1),...
+                                        centroids2(isCentroid2(cc),2));
 end
 indices = idx;
 
 %What if they both assign to the same?
 exclusive = zeros(length(isCentroid2),1);
-for dd = isCentroid1
-    if sum(idx==dd) > 1
-        [~, closer]  = min(distance(idx==dd));
-        exclusive(closer) = dd;
+for dd = 1:length(isCentroid1)
+    if sum(idx==isCentroid1(dd)) > 1
+        [~, closer]  = min(distance(idx==isCentroid1(dd)));
+        exclusive(closer) = isCentroid1(dd);
     else
-        exclusive(idx==dd) = idx(idx==dd);
+        exclusive(idx==isCentroid1(dd)) = idx(idx==isCentroid1(dd));
     end
 end    
    
