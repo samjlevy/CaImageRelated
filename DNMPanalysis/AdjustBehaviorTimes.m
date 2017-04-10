@@ -34,6 +34,11 @@ theseY = y_adj_cm(theseFrames);
 
 prepositions = {'Rightmost', 'Leftmost', 'Highest', 'Lowest',...
                 'Earlier', 'Latest','AlignToGInput','AlignToFrame'};
+            
+if strcmpi('AlignToFrame',relation)
+    [useCol,~]  = listdlg('PromptString','Which frames adjust to?','ListString',txt(1,:));
+    %now what?
+end
    
 figure(505); 
 plot( x_adj_cm, y_adj_cm, '.k','MarkerSize',3)
