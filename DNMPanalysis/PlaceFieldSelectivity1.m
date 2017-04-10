@@ -45,10 +45,42 @@ title(['Left(-) / Right(+) selectivity distribution, ' num2str(thisUse) ' cells'
 
 figure; histogram(abs(FoFrselectivity(thisUse)),20)%& FoFrselectivity~=0
 howManyThere = sum(moreThan1 & FoFrselectivity~=0);
-title('Forced(-) / Free(+) selectivity distribution, ' num2str(thisUse) ' cells'])
+title(['Forced(-) / Free(+) selectivity distribution, ' num2str(thisUse) ' cells'])
 
 figure; plot(LRselectivity, FoFrselectivity, '.')
 title('Relationship of left/right and forced/free?')
 
+%Forced to free distances
+%load placefield centroids
+FoLcentroids = ; FoRcentroids = ; FrLcentroids = ; FrRcentroids = ;
+numPlacefields = size(FoLcentroids,2);
+LRmatches = cell(numPlacefields*2,1); FoFrmatches = cell(numPlacefields*2,1);
+LRmatchesExclusive = cell(numPlacefields*2,1); FoFrmatchesExclusive = cell(numPlacefields*2,1);
+for PFrow = 1:numPlaceFields
+    [ LRmatches{PFrow,1}, LRmatchesExclusive{PFrow,1} ] = MatchCentroids (FoLcentroids, PFrow, FoRcentroids, PFrow);
+    [ FoFrmatches{PFrow,1}, FoFrmatchesExclusive{PFrow,1} ] = MatchCentroids (FoLcentroids, PFrow, FrLcentroids, PFrow);
+end
+for PFrow = 1:numPlaceFields
+    [ LRmatches{PFrow+numPlaceFields,1}, LRmatchesExclusive{PFrow+numPlaceFields,1} ]...
+        = MatchCentroids (FrLcentroids, PFrow, FrRcentroids, PFrow);
+    [ FoFrmatches{PFrow+numPlaceFields,1}, FoFrmatchesExclusive{PFrow+numPlaceFields,1} ]...
+        = MatchCentroids (FoRcentroids, PFrow, FrRcentroids, PFrow);
+end
+FoCentroids = [FoLcentroids; FoRcentroids]; FrCentroids = [FrLcentroids; FrRcentroids];
+Lcentroids = [FoLcentroids; FrLcentroids]; Rcentroids = [FoRcentroids; FrRcentroids];
 
+LRdistances{PFpair,1} = CentroidDistances(Lcentroids, Rcentroids, LRmatches);
+LRdistancesExclusive{PFpair,1} = CentroidDistances(Lcentroids, Rcentroids, LRmatchesExclusive);
+FoFrDistances{PFpair,1} = CentroidDistances(FoCentroids, FrCentroids, FoFrmatches);
+FoFrDistancesExclusive{PFpair,1} = CentroidDistances(FoCentroids, FrCentroids, FoFrmatchesExclusive);
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
 
