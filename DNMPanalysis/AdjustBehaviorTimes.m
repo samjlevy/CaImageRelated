@@ -77,7 +77,7 @@ anchorFrames = [frames(:,btwn(whichFirst)) frames(:,btwn(btwn~=btwn(whichFirst))
 %                    'Forward','Backward','Forward'); %and don't need this
 newFrame=theseFrames;
 for adjustLap = 1:length(theseFrames)
-    if adjustLap~=anchorLap
+    if adjustLap~=anchorLap %can't have anchor lap if generalize with other relations
         goodInds = anchorFrames(adjustLap,1):anchorFrames(adjustLap,2);
         [adjustThisMuch, ~] = findclosest2D(x_adj_cm(goodInds), y_adj_cm(goodInds),...
             anchorXY(1), anchorXY(2));
