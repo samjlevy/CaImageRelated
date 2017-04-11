@@ -1,4 +1,5 @@
 function [ indices, exclusive ] = MatchCentroids (PFcentroids1, row1, PFcentroids2, row2)
+%Does a row at a time, should be rebuilt to loop the entire thing
 
 %Initial setup. Fuck cell arrays
 centroids1 = zeros(size(PFcentroids1,2),2);

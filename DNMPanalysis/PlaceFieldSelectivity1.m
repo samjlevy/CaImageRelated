@@ -52,18 +52,22 @@ title('Relationship of left/right and forced/free?')
 
 %Forced to free distances
 %load placefield centroids
-FoLstats = load('PlaceFieldStats_forced_left1cmbins.mat'); 
-FrLstats = load('PlaceFieldStats_free_left1cmbins.mat'); 
-FoRstats = load('PlaceFieldStats_forced_right1cmbins.mat'); 
-FrRstats = load('PlaceFieldStats_free_right1cmbins.mat'); 
-FoLcentroids = FoLstats.PFcentroids; FrLcentroids = FrLstats.PFcentroids;
-FoRcentroids = FoRstats.PFcentroids; FrRcentroids = FrRstats.PFcentroids;
+FoL.stats = load('PlaceFieldStats_forced_left1cmbins.mat'); 
+FrL.stats = load('PlaceFieldStats_free_left1cmbins.mat'); 
+FoR.stats = load('PlaceFieldStats_forced_right1cmbins.mat'); 
+FrR.stats = load('PlaceFieldStats_free_right1cmbins.mat'); 
+FoL.maps = load('PlaceMaps_forced_left1cmbins.mat'); 
+FrL.maps = load('PlaceMaps_free_left1cmbins.mat'); 
+FoR.maps = load('PlaceMaps_forced_right1cmbins.mat'); 
+FrR.maps = load('PlaceMaps_free_right1cmbins.mat'); 
+FoLcentroids = FoL.stats.PFcentroids; FrLcentroids = FrL.stats.PFcentroids;
+FoRcentroids = FoR.stats.PFcentroids; FrRcentroids = FrR.stats.PFcentroids;
 mostCells = max([size(FoLcentroids,2) size(FoRcentroids,2)...
                  size(FrLcentroids,2) size(FrRcentroids,2)]);
 [FoLcentroids, FoRcentroids, FrLcentroids, FrRcentroids] =...
     CellArrayEqualizer (FoLcentroids, FoRcentroids, FrLcentroids, FrRcentroids);  
 
-
+%Build out to function
 numPlacefields = size(FoLcentroids,1);
 LRmatches = cell(numPlacefields*2,1); FoFrmatches = cell(numPlacefields*2,1);
 LRmatchesExclusive = cell(numPlacefields*2,1); FoFrmatchesExclusive = cell(numPlacefields*2,1);
@@ -87,6 +91,11 @@ for PFrow = 1:numPlacefields
         = MatchCentroids (FoRcentroids, PFrow, FrRcentroids, PFrow);
     end
 end
+
+%LRmatchesBest[CentroidsA, CentroidsB, matches] = MatchCentroidsBest...
+%    (PFcentroidsA, bestPFA, PFcentroidsB, bestPFB)
+
+
 FoCentroids = [FoLcentroids; FoRcentroids]; FrCentroids = [FrLcentroids; FrRcentroids];
 Lcentroids = [FoLcentroids; FrLcentroids]; Rcentroids = [FoRcentroids; FrRcentroids];
 
@@ -102,6 +111,60 @@ figure; histogram(LRdistancesExclusive(LRdistancesExclusive~=0),15)
 title('L/R remapping distances'); xlabel('cm change'); ylabel('count')
 figure; histogram(FoFrDistancesExclusive(FoFrDistancesExclusive~=0),15)
 title('Forced/Free remapping distances'); xlabel('cm change'); ylabel('count')
+
+%This needs to be built out into a function
+LROverlap=cell(numPlacefields*2,size(FoRcentroids,2));
+for PFthis = 1:numPlaceFields
+    theseMatches = [LRmatchesExclusive{PFthis,1}];
+    if ~isempty(theseMatches)
+        for match=1:length(theseMatches)
+            if theseMatches(match)~=0
+                FoLfield = FoL.maps.TMap_unsmoothed{1,theseMatches(match)};
+                FoRfield = FoR.maps.TMap_unsmoothed{1,match};
+                [LROverlap(PFthis,match), pctA(PFthis,match), pctB(PFthis,match)]...
+                    = PlaceFieldOverlap(FoLfield, FoRfield);
+            end
+        end
+    end
+    FoFrMatch = [FoFrmatchesExclusive{PFthis,1}];
+    if ~isempty(FoFrMatch)
+        for matched=1:length(FoFrMatch)
+            if FoFrMatch(match)~=0
+                FoLfield = FoL.stats.PFpixels{1,FoFrMatch(match)};
+                FrLfield = FrL.stats.PFpixels{1,match};
+                [FoFrOverlap(PFthis), pctA(PFthis), pctB(PFthis)]...
+                    = PlaceFieldOverlap(FoLfield, FrLfield);
+            end
+        end
+    end
+end
+for PFthis = 1:numPlaceFields
+    theseMatches = [LRmatchesExclusive{PFthis+numPlaceFields,1}];
+    if ~isempty(theseMatches)
+        for matched=1:length(theseMatches)
+            if theseMatches(match)~=0
+                FrLfield = FoL.stats.PFpixels{1,theseMatches(match)};
+                FrRfield = FoL.stats.PFpixels{1,match};
+                [FoFrOverlap(PFthis+numPlaceFields),...
+                    pctA(PFthis+numPlaceFields), pctB(PFthis+numPlaceFields)]...
+                    = PlaceFieldOverlap(FrLfield, FrRfield);
+            end
+        end
+    end
+    FoFrMatch = [FoFrmatchesExclusive{PFthis+numPlaceFields,1}];
+    if ~isempty(FoFrMatch)
+        for matched=1:length(FoFrMatch)
+            if FoFrMatch(match)~=0
+                FoRfield = FoR.stats.PFpixels{1,FoFrMatch(match)};
+                FrRfield = FrR.stats.PFpixels{1,match};
+                [FoFrOverlap(PFthis+numPlaceFields),...
+                    pctA(PFthis+numPlaceFields), pctB(PFthis+numPlaceFields)]...
+                    = PlaceFieldOverlap(FoRfield, FrRfield);
+            end
+        end
+    end
+end
+    
     
 
     
