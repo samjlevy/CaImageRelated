@@ -1,4 +1,4 @@
-function [isInPF, PFxBin, PFyBin]=CentroidInPlaceField(centroid, placeField)
+function [isInPF, PFxBin, PFyBin, sloppy]=CentroidInPlaceField(centroid, placeField)
 
 xYes = any(placeField,1); xMids = find(xYes);
 yYes = any(placeField,1); yMids = find(yYes);
@@ -11,13 +11,13 @@ yYesEdges = [yYesEdges yYesEdges(end)+1];
 if (centroid(1) >= min(xYesEdges) && centroid(1) <= max(xYesEdges))... 
     && (centroid(2) >= min(yYesEdges) && centroid(2) <= max(yYesEdges))
     disp('yea good')
-    isInPF = 1;
+    sloppy = 1;
 else 
     disp('sorry bro')
-    isInPF = 0;
+    sloppy = 0;
 end
 
-if isInPF == 1
+if sloppy == 1
 xLeftEdge = find(centroid(1) > xYesEdges,1,'Last');
 xRightEdge = find(centroid(1) < xYesEdges,1,'First');
 if xLeftEdge + 1 == xRightEdge

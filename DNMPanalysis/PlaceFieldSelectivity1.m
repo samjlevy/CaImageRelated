@@ -103,6 +103,7 @@ title('L/R remapping distances'); xlabel('cm change'); ylabel('count')
 figure; histogram(FoFrDistancesExclusive(FoFrDistancesExclusive~=0),15)
 title('Forced/Free remapping distances'); xlabel('cm change'); ylabel('count')
     
+
     
     
     
