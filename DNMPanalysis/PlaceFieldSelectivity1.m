@@ -52,14 +52,22 @@ title('Relationship of left/right and forced/free?')
 
 %Forced to free distances
 %load placefield centroids
-FoL.stats = load('PlaceFieldStats_forced_left1cmbins.mat'); 
-FrL.stats = load('PlaceFieldStats_free_left1cmbins.mat'); 
-FoR.stats = load('PlaceFieldStats_forced_right1cmbins.mat'); 
-FrR.stats = load('PlaceFieldStats_free_right1cmbins.mat'); 
-FoL.maps = load('PlaceMaps_forced_left1cmbins.mat'); 
-FrL.maps = load('PlaceMaps_free_left1cmbins.mat'); 
-FoR.maps = load('PlaceMaps_forced_right1cmbins.mat'); 
-FrR.maps = load('PlaceMaps_free_right1cmbins.mat'); 
+files.stats.FoL = 'PlaceFieldStats_forced_left1cmbins.mat';
+files.stats.FoR = 'PlaceFieldStats_forced_right1cmbins.mat';
+files.stats.FrL = 'PlaceFieldStats_free_left1cmbins.mat';
+files.stats.FrR = 'PlaceFieldStats_free_right1cmbins.mat';
+files.maps.FoL = 'PlaceMaps_forced_left1cmbins.mat';
+files.maps.FoR = 'PlaceMaps_forced_right1cmbins.mat'; 
+files.maps.FrL = 'PlaceMaps_free_left1cmbins.mat';
+files.maps.FrR = 'PlaceMaps_free_right1cmbins.mat';
+FoL.stats = load(files.stats.FoL); 
+FrL.stats = load(files.stats.FrL); 
+FoR.stats = load(files.stats.FoR); 
+FrR.stats = load(files.stats.FrR); 
+FoL.maps = load(files.maps.FoL); 
+FrL.maps = load(files.maps.FrL); 
+FoR.maps = load(files.maps.FoR); 
+FrR.maps = load(files.maps.FrR); 
 FoLcentroids = FoL.stats.PFcentroids; FrLcentroids = FrL.stats.PFcentroids;
 FoRcentroids = FoR.stats.PFcentroids; FrRcentroids = FrR.stats.PFcentroids;
 mostCells = max([size(FoLcentroids,2) size(FoRcentroids,2)...
@@ -114,6 +122,7 @@ title('Forced/Free remapping distances'); xlabel('cm change'); ylabel('count')
 
 %This needs to be built out into a function
 LROverlap=cell(numPlacefields*2,size(FoRcentroids,2));
+FoFrOverlap=cell(numPlacefields*2,size(FoRcentroids,2));
 for PFthis = 1:numPlaceFields
     theseMatches = [LRmatchesExclusive{PFthis,1}];
     if ~isempty(theseMatches)
@@ -166,9 +175,18 @@ for PFthis = 1:numPlaceFields
 end
     
     
+%Rate remapping
+[PFepochPSA] = PFepochToPSAtime ( place_stats_file, isRunningInds, pos_file )
+allPFtime = AllTimeInField (place_maps_file, place_stats_file)
 
-    
-    
+
+%Need to do
+% - check that adjusted brain behavior times worked
+% - re-validate everything above with new place fields
+% - check PF time things (PFepochToPSAtime, AllTimeInField) worked
+% - adapt hit rate, duration, etc. for PF time
+% - validate PFoverlaps, make some figures
+% - dist of PF overlaps against centroid distance
     
     
     

@@ -27,8 +27,8 @@ catch
                 'ListString',bitNames);
     [whichX, ~] = listdlg('PromptString','Which is the X vector?',...
                 'ListString',{bitNames{s(1)}; bitNames{s(2)}}); 
-    eval([ 'xAVI = ' bitNames{s(whichX)} ]);
-    eval([ 'yAVI = ' bitNames{s(s~=s(whichX))} ]);
+    eval([ 'xAVI = ' bitNames{s(whichX)} ';' ]);
+    eval([ 'yAVI = ' bitNames{s(s~=s(whichX))} ';' ]);
 end
 
 if ~exist('FToffset','var')

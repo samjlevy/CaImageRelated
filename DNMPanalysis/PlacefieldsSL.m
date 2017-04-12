@@ -48,6 +48,7 @@ function PlacefieldsSL(MD,varargin)
     ip.addParameter('aligned',true,@(x) islogical(x));
     ip.addParameter('Pos_data','Pos_align.mat',@(x) ischar(x));
     ip.addParameter('Tenaspis_data','FinalOutput.mat',@(x) ischar(x)); 
+    ip.addParameter('save_append',[],@(x) ischar(x));
     
     ip.parse(MD,varargin{:});
     
@@ -87,6 +88,10 @@ function PlacefieldsSL(MD,varargin)
     good(logical(exclude_frames)) = false;
     isrunning = good;                                   %Running frames that were not excluded. 
     isrunning(velocity < minspeed) = false;
+    if sum(isrunning) < 0.33*length(isrunning)
+        disp(['Warning: only ' num2str(sum(isrunning))...
+            ' isrunning out of ' num2str(length(isrunning))])  
+    end
     
 %% Get occupancy map. 
     lims = [xmin xmax;
@@ -94,11 +99,20 @@ function PlacefieldsSL(MD,varargin)
     [OccMap,RunOccMap,xEdges,yEdges,xBin,yBin] = ...
         MakeOccMap(x,y,lims,good,isrunning,cmperbin);
 
-    %Don't need non-isrunning epochs anymore. 
+    % Sam's whole session xBin
+    TotalOccMap = histcounts2(x,y,xEdges,yEdges); 
+    [TotalRunOccMap,~,~,xBinTotal,yBinTotal] =...
+        histcounts2(x,y,xEdges,yEdges); 
+    
+    %Don't need non-isrunning epochs anymore.
+    runningInds = find(isrunning);
     x = x(isrunning);
     y = y(isrunning);
     PSAbool = logical(PSAbool(:,isrunning));
     nGood = length(x); 
+
+
+    
     
 %% Construct place field and compute mutual information.
     %Preallocate.
@@ -152,7 +166,10 @@ function PlacefieldsSL(MD,varargin)
     end
     p.stop; 
     
-    save('Placefields.mat','OccMap','RunOccMap','TCounts','TMap_gauss',...
+    save_append = ip.Results.save_append;
+    savename = ['Placefields' save_append '.mat'];
+    save(savename,'OccMap','RunOccMap','TCounts','TMap_gauss',...
         'TMap_unsmoothed','minspeed','isrunning','cmperbin','exclude_frames',...
-        'xEdges','yEdges','xBin','yBin','pval'); 
+        'xEdges','yEdges','xBin','yBin','pval','TotalOccMap','TotalRunOccMap',...
+        'xBinTotal','yBinTotal','runningInds'); 
 end

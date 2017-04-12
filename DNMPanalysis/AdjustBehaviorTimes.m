@@ -17,7 +17,9 @@ catch
     eval([ 'x_adj_cm = ' bitNames{s(whichX)} ]);
     eval([ 'y_adj_cm = ' bitNames{s(s~=s(whichX))} ]);
 end
-
+if ~exist('column_fix', 'var')
+    [column_fix,~]  = listdlg('PromptString','Which frames to adjust?','ListString',txt(1,:));
+end    
 switch class(column_fix)
     case {'double','single','int'}
         column_fix = double(column_fix);
@@ -28,6 +30,7 @@ switch class(column_fix)
             end
         end    
 end
+
 theseFrames = (frames(:,column_fix));
 theseX = x_adj_cm(theseFrames);
 theseY = y_adj_cm(theseFrames);
@@ -43,9 +46,10 @@ end
 figure(505); 
 plot( x_adj_cm, y_adj_cm, '.k','MarkerSize',3)
 title('Original positions'); hold on
-plot( theseX, theseY, '.r','MarkerSize',15)
+plot( theseX, theseY, '.r','MarkerSize',12)
 title([txt{1,column_fix} ', zoom now'])
 
+anchorLap = 0;
 switch relation
     case {'rightmost', 'leftmost', 'highest', 'lowest'}
         switch relation
@@ -61,30 +65,37 @@ switch relation
         anchorXY = [x_adj_cm(theseFrames(anchorLap)), y_adj_cm(theseFrames(anchorLap))];
     case 'AlignToGInput'
         disp('Not yet implemented')
-        %[xin, yin]=ginput(1);
+        [anchorXY(1), anchorXY(2)]=ginput(1);
         %[whichRel, ~] = listdlg('PromptString','Which is this?',...
         %        'ListString',{'rightmost', 'leftmost','highest','lowest'});
         %switch again?
+        hold on
+        plot(anchorXY(1),anchorXY(2),'.y','MarkerSize',12)
     case {'Earlier', 'Latest','AlignToFrame'}
         disp('Not yet implemented')
 end      
 
 [btwn,~]  = listdlg('PromptString','Adjust between which times?','ListString',txt(1,:));    
+anchorFrames(:,1) = frames(:,btwn(1)); anchorFrames(:,1) = frames(:,btwn(1)); 
+%if sum(anchorFrames(1:10,2)>anchorFrames(1:10,1))~=10
+%    anchorFrames = [anchorFrames(:,2) anchorFrames(:,1)];
+%end    
 [whichFirst, ~] = listdlg('PromptString','Which comes first?',...
-    'ListString',{txt{1,btwn(1)}; txt{1,btwn(2)}});    
+    'ListString',{txt{1,btwn(1)}; txt{1,btwn(2)}}); 
 anchorFrames = [frames(:,btwn(whichFirst)) frames(:,btwn(btwn~=btwn(whichFirst)))];   
 %adjustDir = questdlg('Which direction from timestamp?',	'Adjust Dir', ...
 %                    'Forward','Backward','Forward'); %and don't need this
 newFrame=theseFrames;
-for adjustLap = 1:length(theseFrames)
-    if adjustLap~=anchorLap %can't have anchor lap if generalize with other relations
-        goodInds = anchorFrames(adjustLap,1):anchorFrames(adjustLap,2);
+laps = frames(:,1); useLaps = laps(laps~=anchorLap);
+for adjustLap = 1:length(useLaps)
+    %if adjustLap~=anchorLap %can't have anchor lap if generalize with other relations
+        goodInds = anchorFrames(useLaps(adjustLap),1):anchorFrames(useLaps(adjustLap),2);
         [adjustThisMuch, ~] = findclosest2D(x_adj_cm(goodInds), y_adj_cm(goodInds),...
             anchorXY(1), anchorXY(2));
         
         %adjustThisMuch = find(x_adj_cm(anchorFrames(adjustLap):end) < anchorPoint, 1, 'first');  
-        newFrame(adjustLap) = anchorFrames(adjustLap,1) + adjustThisMuch - 1;
-    end
+        newFrame(useLaps(adjustLap)) = anchorFrames(useLaps(adjustLap),1) + adjustThisMuch - 1;
+    %end
 end
 newFrame(newFrame > length(x_adj_cm)) = length(x_adj_cm);
             
@@ -92,11 +103,17 @@ figure(555);
 plot( x_adj_cm, y_adj_cm, '.k','MarkerSize',3)
 title('Adjusted positions, anchor in red'); hold on
 plot(x_adj_cm(newFrame),y_adj_cm(newFrame),'.y','MarkerSize',12)
-plot(theseX(anchorLap),theseY(anchorLap),'.r','MarkerSize',12)    
+plot(anchorXY(1),anchorXY(2),'.r','MarkerSize',12)    
 
 frames(:,column_fix) = newFrame;
 [newAll] = CombineForExcel(frames, txt);
 saveName = [xls_file(1:end-5) '_Adjusted.xlsx'];
+if strcmpi(xls_file(end-12:end-5),'adjusted')
+    reuse = input('Overwrite existing adjusted file? (0/1)') %#ok<NOPRT>
+    switch reuse
+        case 1
+            xlswrite( xls_file, newAll);
+        case 0
 if ~exist(saveName,'file')
     xlswrite( saveName, newAll);
 else   
@@ -108,6 +125,7 @@ else
         case 1
             xlswrite( saveName, newAll);
     end
-end         
+end        
+    end
             
 end
