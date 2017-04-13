@@ -74,9 +74,11 @@ switch block_type
         
         include_struct.free_l = includeBlank;
         for ee = 1:length(starts)
+            if ~isnan(start_stop_struct.starts(ee)) && ~isnan(start_stop_struct.stops(ee))
             include_struct.include(start_stop_struct.starts(ee):start_stop_struct.stops(ee)) = 1;
             include_struct.include = logical(include_struct.include);
             exclude_struct.exclude = double(include_struct.include == 0);
+            end
         end
 end
 
