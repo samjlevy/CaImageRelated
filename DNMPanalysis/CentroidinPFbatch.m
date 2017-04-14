@@ -1,4 +1,4 @@
-function[AinB, BinA, inBoth]=CentroidinPFbatch...
+function[AinB, BinA, inBoth, inEither]=CentroidinPFbatch...
     (CentroidsA, CentroidsB, PFsA, PFsB, matches,arenaSize)
 
 numCells=size(CentroidsA,1);
@@ -6,6 +6,7 @@ numFields=size(CentroidsA,2);
 
 AinB = NaN(numCells,numFields);
 BinA = NaN(numCells,numFields);
+inEither = zeros(numCells,numFields);
 
 %Need to do both directions,
 for thisCell = 1:numCells
@@ -22,6 +23,10 @@ for thisCell = 1:numCells
                 (centroidA, placeFieldB,arenaSize);
             [BinA(thisCell,match), ~, ~, ~]=CentroidInPlaceField...
                 (centroidB, placeFieldA,arenaSize);
+            
+            inEither(thisCell,match) =... 
+                AinB(thisCell,match)+BinA(thisCell,match);
+            
         end
     end
     end

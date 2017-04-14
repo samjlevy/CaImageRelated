@@ -16,8 +16,8 @@ AfoundinB = ismember(PlacefieldA, PlacefieldB);
 BfoundinA = ismember(PlacefieldB, PlacefieldA);
 
 %Overlap
-pctA = sum(AfoundinB)/length(fieldIndsA);
-pctB = sum(BfoundinA)/length(fieldIndsB);
+pctA = sum(AfoundinB)/length(PlacefieldA);
+pctB = sum(BfoundinA)/length(PlacefieldB);
 
 %Total shared ove
 sharedArea = ismember(PlacefieldA(AfoundinB),PlacefieldB(BfoundinA));
@@ -34,7 +34,15 @@ pctOfSmaller = strict/min([length(PlacefieldA) length(PlacefieldB)]);
 %Barea = RoughArea(BLeft, BRight, BTop, BBottom);
 
 %??? Big conditional list to get arrangemend of boundaries
-
+%{
+AoverB(FieldB)=1;
+AoverB(FieldA)=0.5;
+AoverB(FieldA(AfoundinB))=0.75
+figure; imagesc(AoverB)
+hold on
+plot(Acentroid(1),Acentroid(2),'*g')
+plot(Bcentroid(1),Bcentroid(2),'*b')
+%}
 end
 function [xLeft, xRight, yTop, yBottom] = RoughBoundaries(placeField)
 xYes = any(placeField,1); xMids = find(xYes);
