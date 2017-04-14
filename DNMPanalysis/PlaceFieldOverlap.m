@@ -1,26 +1,30 @@
-function [strict, pctA, pctB] = PlaceFieldOverlap(PlacefieldA, PlacefieldB)
+function [strict, pctOfSmaller] = PlaceFieldOverlap(PlacefieldA, PlacefieldB)
+%pctA, pctB
 %Placefields are TMaps, assumes  
 %Strict is bins in the TMap, rough is blocking them into squares overlap
 %pct1/2 are percent of the field in the other
 
 %Get indices where the placefield exists
-fieldIndsA = find(~isnan(PlacefieldA));
-fieldIndsB = find(~isnan(PlacefieldB));
+%fieldIndsA = find(~isnan(PlacefieldA));
+%fieldIndsB = find(~isnan(PlacefieldB));
 
 %Which are found in the other
-AfoundinB = ismember(fieldIndsA, fieldIndsB);
-BfoundinA = ismember(fieldIndsB, fieldIndsA);
+%AfoundinB = ismember(fieldIndsA, fieldIndsB);
+%BfoundinA = ismember(fieldIndsB, fieldIndsA);
 
-%AfoundinB = ismember(PlacefieldA, PlacefieldB);
-%BfoundinA = ismember(PlacefieldB, PlacefieldA);
+AfoundinB = ismember(PlacefieldA, PlacefieldB);
+BfoundinA = ismember(PlacefieldB, PlacefieldA);
 
 %Overlap
 pctA = sum(AfoundinB)/length(fieldIndsA);
 pctB = sum(BfoundinA)/length(fieldIndsB);
 
 %Total shared ove
-sharedArea = ismember(fieldIndsA(AfoundinB),fieldIndsB(BfoundinA));
+sharedArea = ismember(PlacefieldA(AfoundinB),PlacefieldB(BfoundinA));
 strict = sum(sharedArea);
+
+%percentage area of smaller field; could redo as pct of better pf
+pctOfSmaller = strict/min([length(PlacefieldA) length(PlacefieldB)]); 
 
 %Rough; actually harder than strict
 %[ALeft, ARight, ATop, ABottom] = RoughBoundaries(PlacefieldA);

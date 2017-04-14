@@ -54,6 +54,7 @@ title('Relationship of left/right and forced/free?')
 
 orders = {'forced before free, left before right'};
 
+%Load stuff
 files.stats.FoL = 'PlaceStats_forced_left_1cm.mat';
 files.stats.FoR = 'PlaceStats_forced_right_1cm.mat';
 files.stats.FrL = 'PlaceStats_free_left_1cm.mat';
@@ -73,12 +74,13 @@ mostCells = max([size(FoLcentroids,2) size(FoRcentroids,2)...
 [FoLcentroids, FoRcentroids, FrLcentroids, FrRcentroids] =...
     CellArrayEqualizer (FoLcentroids, FoRcentroids, FrLcentroids, FrRcentroids);  
 
-
+%Bin centroids by type
 FoCentroids = [FoLcentroids; FoRcentroids]; FrCentroids = [FrLcentroids; FrRcentroids];
 Lcentroids = [FoLcentroids; FrLcentroids]; Rcentroids = [FoRcentroids; FrRcentroids];
 
 numPlacefields = size(FoLcentroids,1);
-
+fieldDims=size(FoL.maps.TotalRunOccMap);
+%Match placefields across conditions by proximity
 [LRmatches, LRmatchesExclusive]=MatchCentroidsBatch(Lcentroids, Rcentroids);
 [FoFrmatches, FoFrmatchesExclusive]=MatchCentroidsBatch(FoCentroids, FrCentroids);
 
@@ -86,11 +88,12 @@ thereWasRemapping = ~cellfun(@isempty,LRmatches);
 %LRmatchesBest[CentroidsA, CentroidsB, matches] = MatchCentroidsBest...
 %    (PFcentroidsA, bestPFA, PFcentroidsB, bestPFB)
 
+%Centroid distances
 LRdistances = CentroidDistances(Lcentroids, Rcentroids, LRmatches);
 LRdistancesExclusive = CentroidDistances(Lcentroids, Rcentroids, LRmatchesExclusive);
 FoFrDistances = CentroidDistances(FoCentroids, FrCentroids, FoFrmatches);
 FoFrDistancesExclusive = CentroidDistances(FoCentroids, FrCentroids, FoFrmatchesExclusive);
-
+    %Attrition?
 LRexclusiveLoss = sum(sum(LRdistances>0)) - sum(sum(LRdistancesExclusive>0));
 FoFrexclusiveLoss = sum(sum(FoFrDistances>0)) - sum(sum(FoFrDistancesExclusive>0));
 
@@ -99,6 +102,7 @@ title('L/R remapping distances'); xlabel('cm change'); ylabel('count')
 figure; histogram(FoFrDistancesExclusive(FoFrDistancesExclusive~=0),15)
 title('Forced/Free remapping distances'); xlabel('cm change'); ylabel('count')
 
+%Place field overlap
 [FoL.stats.PFpixels,FrL.stats.PFpixels,FoR.stats.PFpixels,FrR.stats.PFpixels ]...
     = CellArrayEqualizer...
     (FoL.stats.PFpixels,FrL.stats.PFpixels,FoR.stats.PFpixels,FrR.stats.PFpixels);
@@ -106,11 +110,22 @@ Lpixels = [FoL.stats.PFpixels; FrL.stats.PFpixels];
 Rpixels = [FoR.stats.PFpixels; FrR.stats.PFpixels];
 Fopixels = [FoL.stats.PFpixels; FoR.stats.PFpixels];
 Frpixels = [FrL.stats.PFpixels; FrR.stats.PFpixels];
-[LRoverlaps, pctsL, pctsR]=PFoverLapBatch(Lpixels, Rpixels, LRmatches);
-[LRoverlapsE, pctsLE, pctsRE]=PFoverLapBatch(Lpixels, Rpixels, LRmatchesExclusive);
-[FoFroverlaps, pctsFo, pctsFr]=PFoverLapBatch(Fopixels, Frpixels, FoFrmatches);
-[FoFroverlapsE, pctsFoE, pctsFrE]=PFoverLapBatch(Fopixels, Frpixels, FoFrmatchesExclusive);
-    
+[LRoverlaps, pctLR]=PFoverLapBatch(Lpixels, Rpixels, LRmatches);
+[LRoverlapsE, pctsLRE]=PFoverLapBatch(Lpixels, Rpixels, LRmatchesExclusive);
+[FoFroverlaps, pctsFoFr]=PFoverLapBatch(Fopixels, Frpixels, FoFrmatches);
+[FoFroverlapsE, pctsFoFrE]=PFoverLapBatch(Fopixels, Frpixels, FoFrmatchesExclusive);
+
+%Centroid in other field
+[LinR, RinL, LRinBoth]=CentroidinPFbatch...
+    (Lcentroids, Rcentroids, Lpixels, Rpixels, LRmatches,fieldDims);
+[LinRR, RinLR, LRinBothR]=CentroidinPFbatch...
+    (Lcentroids, Rcentroids, Lpixels, Rpixels, LRmatchesExclusive,fieldDims);
+[FoinFr, FrinFo, FoFrinBoth]=CentroidinPFbatch...
+    (FoCentroids, FrCentroids, Fopixels, Frpixels, FoFrmatches,fieldDims);
+[FoinFrE, FrinFoE, FoFrinBothE]=CentroidinPFbatch...
+    (FoCentroids, FrCentroids, Fopixels, Frpixels, FoFrmatchesExclusive,fieldDims);
+
+
 %Rate remapping
 [PFepochPSA] = PFepochToPSAtime ( place_stats_file, isRunningInds, pos_file )
 allPFtime = AllTimeInField (place_maps_file, place_stats_file)
@@ -121,6 +136,7 @@ allPFtime = AllTimeInField (place_maps_file, place_stats_file)
 % - adapt hit rate, duration, etc. for PF time
 % - validate PFoverlaps, make some figures
 % - dist of PF overlaps against centroid distance
+% - linearize fields: bin across y coordinate
     
     
     

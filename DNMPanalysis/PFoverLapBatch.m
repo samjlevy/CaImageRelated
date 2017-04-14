@@ -5,9 +5,12 @@ numCells = size(matches,1);
 width = max([size(PlacefieldsA,2) size(PlacefieldsB,2)]);
 
 %overlaps = cell(numCells,width);
+%pctsA = cell(numCells,width);
+%pctsB = cell(numCells,width);
+
 overlaps=NaN(numCells,width);
-pctsA = cell(numCells,width);
-pctsB = cell(numCells,width);
+pctsA=NaN(numCells,width);
+pctsB=NaN(numCells,width);
 
 
 for thisCell = 1:numCells
@@ -18,7 +21,7 @@ for thisCell = 1:numCells
                 FieldA = PlacefieldsA{thisCell,theseMatches(match)};
                 FieldB = PlacefieldsB{thisCell,match};
                 [overlaps(thisCell,match),...
-                    pctsA{thisCell,match},pctsB{thisCell,match}] = ...
+                    pctsA(thisCell,match), pctsB(thisCell,match)] = ...
                     PlaceFieldOverlap(FieldA, FieldB);
             end
         end
