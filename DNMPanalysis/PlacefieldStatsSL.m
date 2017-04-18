@@ -93,7 +93,7 @@ function PlacefieldStats(md)
             PFnEpochs(n,p) = size(PFepochs{n,p},1);
             
             PFactive{n,p} = zeros(PFnEpochs(n,p),1);
-            PFtotalActive = [];
+            PFtotalActive{n,p} = [];
             for epoch=1:PFnEpochs(n,p)
                 %Start and stop indices for traversal.
                 s = PFepochs{n,p}(epoch,1);

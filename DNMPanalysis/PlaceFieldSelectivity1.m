@@ -77,9 +77,10 @@ mostCells = max([size(FoLcentroids,2) size(FoRcentroids,2)...
     FrL.stats.PFcentroids, FrR.stats.PFcentroids] =...
     CellArrayEqualizer (FoL.stats.PFcentroids, FoR.stats.PFcentroids,...
     FrL.stats.PFcentroids, FrR.stats.PFcentroids);
-[FoL.stats.PFpcthits, FrL.stats.PFpcthits,FoR.stats.PFpcthits, FrR.stats.PFpcthits]...
-    =CellArrayEqualizer(FoL.stats.PFpcthits, FrL.stats.PFpcthits,...
-                        FoR.stats.PFpcthits, FrR.stats.PFpcthits);
+[FoL.stats.allActivity, FrL.stats.allActivity,...
+    FoR.stats.allActivity, FrR.stats.allActivity]...
+    =CellArrayEqualizer(FoL.stats.allActivity, FrL.stats.allActivity,...
+    FoR.stats.allActivity, FrR.stats.allActivity);
 
 %Bin centroids by type
 FoCentroids = [FoL.stats.PFcentroids; FoR.stats.PFcentroids]; 
@@ -147,7 +148,7 @@ title('Forced > Free place remapping')
 %Rate remapping
 %[PFepochPSA] = PFepochToPSAtime ( place_stats_file, isRunningInds, pos_file )
 %allPFtime = AllTimeInField (place_maps_file, place_stats_file)
-
+%{
 [LRdiff, LRpct] = dumbRateRemapping([FoL.stats.PFpcthits; FrL.stats.PFpcthits],...
                         [FoR.stats.PFpcthits; FrR.stats.PFpcthits], LRmatchesExclusive);
 [FoFrdiff, FoFrpct] = dumbRateRemapping([FoL.stats.PFpcthits; FoR.stats.PFpcthits],...
@@ -160,7 +161,19 @@ title('Forced > Free place remapping')
                         [FoR.stats.PFactivePSA; FrR.stats.PFactivePSA], LRmatchesExclusive);
 [FoFrdiff, FoFrpct] = dumbRateRemapping([FoL.stats.PFactivePSA; FoR.stats.PFactivePSA],...
                         [FrL.stats.PFactivePSA; FrR.stats.PFactivePSA],FoFrmatchesExclusive);
-                 
+%}
+
+[FoL.stats.allActivity, FoL.stats.meanActivity]=dumbRates(FoL.stats.PFactivePSA);
+[FoR.stats.allActivity, FoR.stats.meanActivity]=dumbRates(FoR.stats.PFactivePSA);
+[FrL.stats.allActivity, FrL.stats.meanActivity]=dumbRates(FrL.stats.PFactivePSA);
+[FrR.stats.allActivity, FrR.stats.meanActivity]=dumbRates(FrR.stats.PFactivePSA);
+
+[LRdiff, LRpct] = dumbRateRemapping([FoL.stats.allActivity; FrL.stats.allActivity],...
+                        [FoR.stats.allActivity; FrR.stats.allActivity], LRmatchesExclusive);
+[FoFrdiff, FoFrpct] = dumbRateRemapping([FoL.stats.allActivity; FoR.stats.allActivity],...
+                        [FrL.stats.allActivity; FrR.stats.allActivity],FoFrmatchesExclusive);
+    
+
 %Need to do
 % - check PF time things (PFepochToPSAtime, AllTimeInField) worked
 % - adapt hit rate, duration, etc. for PF time
