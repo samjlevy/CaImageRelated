@@ -86,7 +86,7 @@ function PlacefieldStats(md)
         for p=1:nPFs(n)
             %For each place field, find when the mouse was in it.
             inPF = ismember(linInd,PFpixels{n,p});
-            PFepochRaw{n,p} = inPF;
+            PFepochRaw{n,p} = inPF; %indices within ~exclude_frames
             
             %Get traversal indices.
             PFepochs{n,p} = NP_FindSupraThresholdEpochs(inPF,eps,0);
@@ -99,7 +99,8 @@ function PlacefieldStats(md)
                 e = PFepochs{n,p}(epoch,2);
                 
                 %Get activations during traversal epochs.
-                PFactive{n,p}(epoch) = any(PSAbool(n,s:e));                             
+                PFactive{n,p}(epoch) = any(PSAbool(n,s:e));
+                PFactivePSA{n,p}{epoch,1} = PSAbool(n,s:e);
             end
         end
         
@@ -118,5 +119,5 @@ function PlacefieldStats(md)
     PFpcthits = PFnHits./PFnEpochs;
      
     save('PlacefieldStats.mat','PFpcthits','PFnHits','PFnEpochs','PFepochs',...
-        'PFcentroids','PFpixels','PFarea','bestPF','PFepochRaw','-v7.3');
+        'PFcentroids','PFpixels','PFarea','bestPF','PFepochRaw','PFactivePSA','-v7.3');
 end

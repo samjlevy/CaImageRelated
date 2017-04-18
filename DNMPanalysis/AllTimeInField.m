@@ -5,6 +5,7 @@ function [allPFtime, onsAndOffs] = AllTimeInField (place_maps_file, place_stats_
 load(place_maps_file,'TMap_gauss','xBinTotal','yBinTotal')
 load(place_stats_file,'PFpixels')
 
+%Can probably rebin in here for y-coord only for remapping
 linIndTotal = sub2ind(size(TMap_gauss{1}),xBinTotal,yBinTotal);
 
 if nargin==3 && exist('placeField','var')

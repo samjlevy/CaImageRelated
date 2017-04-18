@@ -73,12 +73,23 @@ mostCells = max([size(FoLcentroids,2) size(FoRcentroids,2)...
                  size(FrLcentroids,2) size(FrRcentroids,2)]);
 [FoLcentroids, FoRcentroids, FrLcentroids, FrRcentroids] =...
     CellArrayEqualizer (FoLcentroids, FoRcentroids, FrLcentroids, FrRcentroids);  
+[FoL.stats.PFcentroids, FoR.stats.PFcentroids,...
+    FrL.stats.PFcentroids, FrR.stats.PFcentroids] =...
+    CellArrayEqualizer (FoL.stats.PFcentroids, FoR.stats.PFcentroids,...
+    FrL.stats.PFcentroids, FrR.stats.PFcentroids);
+[FoL.stats.PFpcthits, FrL.stats.PFpcthits,FoR.stats.PFpcthits, FrR.stats.PFpcthits]...
+    =CellArrayEqualizer(FoL.stats.PFpcthits, FrL.stats.PFpcthits,...
+                        FoR.stats.PFpcthits, FrR.stats.PFpcthits);
 
 %Bin centroids by type
-FoCentroids = [FoLcentroids; FoRcentroids]; FrCentroids = [FrLcentroids; FrRcentroids];
-Lcentroids = [FoLcentroids; FrLcentroids]; Rcentroids = [FoRcentroids; FrRcentroids];
+FoCentroids = [FoL.stats.PFcentroids; FoR.stats.PFcentroids]; 
+FrCentroids = [FrL.stats.PFcentroids; FrR.stats.PFcentroids];
+Lcentroids = [FoL.stats.PFcentroids; FrL.stats.PFcentroids]; 
+Rcentroids = [FoR.stats.PFcentroids; FrR.stats.PFcentroids];
+%FoCentroids = [FoLcentroids; FoRcentroids]; FrCentroids = [FrLcentroids; FrRcentroids];
+%Lcentroids = [FoLcentroids; FrLcentroids]; Rcentroids = [FoRcentroids; FrRcentroids];
 
-numPlacefields = size(FoLcentroids,1);
+numPlacefields = size(FoL.stats.PFcentroids,1);
 fieldDims=size(FoL.maps.TotalRunOccMap);
 %Match placefields across conditions by proximity
 [LRmatches, LRmatchesExclusive]=MatchCentroidsBatch(Lcentroids, Rcentroids);
@@ -128,14 +139,19 @@ Frpixels = [FrL.stats.PFpixels; FrR.stats.PFpixels];
 %Plot something:
 LRplace = CentroidOverlapPlot(LRdistances, LRoverlaps, LReither);
 LRplaceE = CentroidOverlapPlot(LRdistancesExclusive, LRoverlapsE, LReitherE);
+title('Left > Right place remapping')
 FoFrplace = CentroidOverlapPlot(FoFrDistances, FoFroverlaps, FoFreither);
 FoFrplaceE = CentroidOverlapPlot(FoFrDistancesExclusive, FoFroverlapsE, FoFreitherE);
-
+title('Forced > Free place remapping')
 
 %Rate remapping
-[PFepochPSA] = PFepochToPSAtime ( place_stats_file, isRunningInds, pos_file )
-allPFtime = AllTimeInField (place_maps_file, place_stats_file)
+%[PFepochPSA] = PFepochToPSAtime ( place_stats_file, isRunningInds, pos_file )
+%allPFtime = AllTimeInField (place_maps_file, place_stats_file)
 
+[LRdiff, LRpct] = dumbRateRemapping([FoL.stats.PFpcthits; FrL.stats.PFpcthits],...
+                        [FoR.stats.PFpcthits; FrR.stats.PFpcthits], LRmatchesExclusive);
+[FoFrdiff, FoFrpct] = dumbRateRemapping([FoL.stats.PFpcthits; FoR.stats.PFpcthits],...
+                        [FrL.stats.PFpcthits; FrR.stats.PFpcthits],FoFrmatchesExclusive);
 
 %Need to do
 % - check PF time things (PFepochToPSAtime, AllTimeInField) worked
