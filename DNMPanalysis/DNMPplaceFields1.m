@@ -4,7 +4,7 @@ function DNMPplaceFields1(varargin)
 RoomStr = '201a - 2015';
 load 'Pos_align.mat'
 %load('FinalOutput.mat','PSAbool')
-load('Pos_align.mat')
+
 
 xls_file = dir('*BrainTime_Adjusted.xlsx');
 [frames, txt] = xlsread(xls_file.name, 1);
@@ -35,7 +35,7 @@ PlacefieldsSL(MD(1),'exclude_frames',stem_exclude.(name_append{k}),...
                 'aligned',true,'minspeed',minspeed,'cmperbin',cmperbin,...
                 'B',NumShuffles);%,'save_append',save_append{k}
 
-PlacefieldStats(MD(1))
+PlacefieldStatsSL(MD(1))
 
 movefile('Placefields.mat',strcat('PlaceMaps',save_append{k}))
 movefile('PlacefieldStats.mat',strcat('PlaceStats',save_append{k}))

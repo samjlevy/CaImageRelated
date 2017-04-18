@@ -9,8 +9,8 @@ rot_degrees = -90; % How much to rotate the TMaps
 rot_amt = rot_degrees/90;
 
 trial_types = {'Forced L', 'Forced R', 'Free L', 'Free R'}; % {'Forced','Free'};
-file_name_append = {'_forced_left1cmbins.mat', '_forced_right1cmbins.mat',...
-    '_free_left1cmbins.mat', '_free_right1cmbins.mat'}; %{'_forced.mat','_free.mat'}; % Must match block types above
+file_name_append = {'_forced_left_1cm.mat', '_forced_right_1cm.mat',...
+    '_free_left_1cm.mat', '_free_right_1cm.mat'}; %{'_forced.mat','_free.mat'}; % Must match block types above
 stats_name_append = file_name_append;%{'_forced_l1cm.mat', '_forced_r.mat', '_free_l.mat', '_free_r.mat'};
 plot_file = 'PFcompare_wpvalues_rot';
 
@@ -43,7 +43,7 @@ end
 % off_maze_log(off_maze_ind) = true;
 
 for k = 1:length(trial_types)
-    load(fullfile(pMapsLocation,['PlaceFieldStats' stats_name_append{k}]),'PFnHits');
+    load(fullfile(pMapsLocation,['PlaceStats' stats_name_append{k}]),'PFnHits');
     trials(k).PFnumhits = PFnHits;
 end
 if plot_trace==1
