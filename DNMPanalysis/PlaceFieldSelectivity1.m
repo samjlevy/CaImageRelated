@@ -152,7 +152,15 @@ title('Forced > Free place remapping')
                         [FoR.stats.PFpcthits; FrR.stats.PFpcthits], LRmatchesExclusive);
 [FoFrdiff, FoFrpct] = dumbRateRemapping([FoL.stats.PFpcthits; FoR.stats.PFpcthits],...
                         [FrL.stats.PFpcthits; FrR.stats.PFpcthits],FoFrmatchesExclusive);
+                    
+[LRdiff, LRpct]=dumbMoreRateRemapping([FoL.stats.PFpcthits; FrL.stats.PFpcthits],...
+                        [FoR.stats.PFpcthits; FrR.stats.PFpcthits], matches)                    
 
+[LRdiff, LRpct] = dumbRateRemapping([FoL.stats.PFactivePSA; FrL.stats.PFactivePSA],...
+                        [FoR.stats.PFactivePSA; FrR.stats.PFactivePSA], LRmatchesExclusive);
+[FoFrdiff, FoFrpct] = dumbRateRemapping([FoL.stats.PFactivePSA; FoR.stats.PFactivePSA],...
+                        [FrL.stats.PFactivePSA; FrR.stats.PFactivePSA],FoFrmatchesExclusive);
+                 
 %Need to do
 % - check PF time things (PFepochToPSAtime, AllTimeInField) worked
 % - adapt hit rate, duration, etc. for PF time
