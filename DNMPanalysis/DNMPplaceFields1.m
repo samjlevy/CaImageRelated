@@ -33,7 +33,7 @@ PlacefieldsSL(MD(1),'exclude_frames',stem_exclude.(name_append{k}),...
                 'aligned',true,'minspeed',minspeed,'cmperbin',cmperbin,...
                 'B',NumShuffles);%,'save_append',save_append{k}
 
-PlacefieldStats(MD(1))
+PlacefieldStatsSL(MD(1))
 
 movefile('Placefields.mat',strcat('PlaceMaps',save_append{k}))
 movefile('PlacefieldStats.mat',strcat('PlaceStats',save_append{k}))

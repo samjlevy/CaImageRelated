@@ -93,6 +93,7 @@ function PlacefieldStats(md)
             PFnEpochs(n,p) = size(PFepochs{n,p},1);
             
             PFactive{n,p} = zeros(PFnEpochs(n,p),1);
+            PFtotalActive = [];
             for epoch=1:PFnEpochs(n,p)
                 %Start and stop indices for traversal.
                 s = PFepochs{n,p}(epoch,1);
@@ -101,6 +102,7 @@ function PlacefieldStats(md)
                 %Get activations during traversal epochs.
                 PFactive{n,p}(epoch) = any(PSAbool(n,s:e));
                 PFactivePSA{n,p}{epoch,1} = PSAbool(n,s:e);
+                PFtotalActive{n,p} = PFtotalActive{n,p} + sum(PFactivePSA{n,p}{epoch,1});
             end
         end
         
@@ -119,5 +121,6 @@ function PlacefieldStats(md)
     PFpcthits = PFnHits./PFnEpochs;
      
     save('PlacefieldStats.mat','PFpcthits','PFnHits','PFnEpochs','PFepochs',...
-        'PFcentroids','PFpixels','PFarea','bestPF','PFepochRaw','PFactivePSA','-v7.3');
+        'PFcentroids','PFpixels','PFarea','bestPF','PFepochRaw','PFactivePSA',...
+        'PFtotalActive','-v7.3');
 end
