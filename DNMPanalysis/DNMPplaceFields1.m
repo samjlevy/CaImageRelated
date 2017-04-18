@@ -4,8 +4,6 @@ function DNMPplaceFields1(varargin)
 RoomStr = '201a - 2015';
 load 'Pos_align.mat'
 %load('FinalOutput.mat','PSAbool')
-load('Pos_align.mat')
-
 xls_file = dir('*BrainTime_Adjusted.xlsx');
 [frames, txt] = xlsread(xls_file.name, 1);
 
