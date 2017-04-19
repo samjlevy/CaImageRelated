@@ -17,14 +17,14 @@ save stem_bounds.mat stem_frame_bounds
 save stem_include.mat stem_include
 
 neuron_input = 'FinalOutput.mat';
-cmperbin = 1;
+cmperbin = 2;
 minspeed = 2.25;
 NumShuffles = 100; % For starters
 
 
-save_append = {'_forced_left_1cm.mat', '_free_left_1cm.mat',...
-              '_forced_right_1cm.mat', '_free_right_1cm.mat',...
-              '_onmaze1cmbins.mat'};
+save_append = {'_forced_left_2cm.mat', '_free_left_2cm.mat',...
+              '_forced_right_2cm.mat', '_free_right_2cm.mat',...
+              '_onmaze_2cm.mat'};
 name_append = {'forced_l', 'free_l', 'forced_r', 'free_r', 'on_maze'};
 
 for k=1:length(save_append)-1

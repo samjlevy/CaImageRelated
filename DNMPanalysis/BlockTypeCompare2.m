@@ -16,9 +16,8 @@ for session = 1:length(SessionsToRun)
     ParsedFramesToBrainFrames ( xlsFiles.name )
 end
 
-load('Pos_brain.mat')
-load('FinalOutput.mat', 'PSAbool')
-xls_file = dir('*BrainTime.xlsx');
+load('Pos_align.mat')
+xls_file = dir('*BrainTime_Adjusted.xlsx');
 %[frames, txt] = xlsread(fullfile(xls_file.folder,xls_file.name), 1);
 [frames, txt] = xlsread(xls_file.name, 1);
 %% Stem Only:
@@ -32,7 +31,7 @@ free_stem_ends = CondExcelParseout(frames, txt, 'FreeChoiceEnter', 0);
 [right_forced, left_forced, right_free, left_free] = DNMPtrialDirections(frames, txt);
 
 %Good lap timestamps (video too short, FT too short, etc.)
-tooLong = frames >= FTuseIndices(end);
+tooLong = frames >= length(speed);%FTuseIndices(end)
 GoodLaps = any(tooLong,2) == 0;
 correct_trials = right_forced & left_free | ...
     left_forced & right_free;
@@ -97,6 +96,7 @@ for trial = find(allGood)
     plot( [free_starts(trial) free_starts(trial)], [0 size(PSAbool,1)],'m' )
     plot( [free_stem_ends(trial) free_stem_ends(trial)], [0 size(PSAbool,1)],'y' )
 end    
+brainX = x_adj_cm; brainY = y_adj_cm;
 
 %X/Y with stem points highlighted
 figure;
@@ -140,5 +140,9 @@ figure; histogram(LRdurSelectivity,20); title('Left/Right duration selectivity')
 figure; histogram(ForcedFreeDurSelectivity,20); title('Forced/Free duration selectivity')
 figure; plot(LRdurSelectivity, ForcedFreeDurSelectivity,'.','MarkerSize',12); title('X: LR, Y: FoFr')
 
+%To do statistical significance: shuffle trial labels and redo correlation
+%matrices, see how existing correlation compares do those:
+%effectiveness: rate how much shuffled correlation looks like original (how
+%many trials of one type are in each new block)
 
 

@@ -55,14 +55,15 @@ title('Relationship of left/right and forced/free?')
 orders = {'forced before free, left before right'};
 
 %Load stuff
-files.stats.FoL = 'PlaceStats_forced_left_1cm.mat';
-files.stats.FoR = 'PlaceStats_forced_right_1cm.mat';
-files.stats.FrL = 'PlaceStats_free_left_1cm.mat';
-files.stats.FrR = 'PlaceStats_free_right_1cm.mat';
-files.maps.FoL = 'PlaceMaps_forced_left_1cm.mat';
-files.maps.FoR = 'PlaceMaps_forced_right_1cm.mat'; 
-files.maps.FrL = 'PlaceMaps_free_left_1cm.mat';
-files.maps.FrR = 'PlaceMaps_free_right_1cm.mat';
+binsize=2;
+files.stats.FoL = ['PlaceStats_forced_left_' num2str(binsize) 'cm.mat'];
+files.stats.FoR = ['PlaceStats_forced_right_' num2str(binsize) 'cm.mat'];
+files.stats.FrL = ['PlaceStats_free_left_' num2str(binsize) 'cm.mat'];
+files.stats.FrR = ['PlaceStats_free_right_' num2str(binsize) 'cm.mat'];
+files.maps.FoL = ['PlaceMaps_forced_left_' num2str(binsize) 'cm.mat'];
+files.maps.FoR = ['PlaceMaps_forced_right_' num2str(binsize) 'cm.mat']; 
+files.maps.FrL = ['PlaceMaps_free_left_' num2str(binsize) 'cm.mat'];
+files.maps.FrR = ['PlaceMaps_free_right_' num2str(binsize) 'cm.mat'];
 FoL.stats = load(files.stats.FoL);  FrL.stats = load(files.stats.FrL); 
 FoR.stats = load(files.stats.FoR);  FrR.stats = load(files.stats.FrR); 
 FoL.maps = load(files.maps.FoL);    FrL.maps = load(files.maps.FrL); 
@@ -73,14 +74,7 @@ mostCells = max([size(FoLcentroids,2) size(FoRcentroids,2)...
                  size(FrLcentroids,2) size(FrRcentroids,2)]);
 [FoLcentroids, FoRcentroids, FrLcentroids, FrRcentroids] =...
     CellArrayEqualizer (FoLcentroids, FoRcentroids, FrLcentroids, FrRcentroids);  
-[FoL.stats.PFcentroids, FoR.stats.PFcentroids,...
-    FrL.stats.PFcentroids, FrR.stats.PFcentroids] =...
-    CellArrayEqualizer (FoL.stats.PFcentroids, FoR.stats.PFcentroids,...
-    FrL.stats.PFcentroids, FrR.stats.PFcentroids);
-[FoL.stats.allActivity, FrL.stats.allActivity,...
-    FoR.stats.allActivity, FrR.stats.allActivity]...
-    =CellArrayEqualizer(FoL.stats.allActivity, FrL.stats.allActivity,...
-    FoR.stats.allActivity, FrR.stats.allActivity);
+[FoL.stats,FoR.stats,FrL.stats,FrR.stats] = StructEqualizer(FoL.stats,FoR.stats,FrL.stats,FrR.stats);
 
 %Bin centroids by type
 FoCentroids = [FoL.stats.PFcentroids; FoR.stats.PFcentroids]; 
@@ -146,40 +140,15 @@ FoFrplaceE = CentroidOverlapPlot(FoFrDistancesExclusive, FoFroverlapsE, FoFreith
 title('Forced > Free place remapping')
 
 %Rate remapping
-%[PFepochPSA] = PFepochToPSAtime ( place_stats_file, isRunningInds, pos_file )
-%allPFtime = AllTimeInField (place_maps_file, place_stats_file)
-%{
-[LRdiff, LRpct] = dumbRateRemapping([FoL.stats.PFpcthits; FrL.stats.PFpcthits],...
-                        [FoR.stats.PFpcthits; FrR.stats.PFpcthits], LRmatchesExclusive);
-[FoFrdiff, FoFrpct] = dumbRateRemapping([FoL.stats.PFpcthits; FoR.stats.PFpcthits],...
-                        [FrL.stats.PFpcthits; FrR.stats.PFpcthits],FoFrmatchesExclusive);
-                    
-[LRdiff, LRpct]=dumbMoreRateRemapping([FoL.stats.PFpcthits; FrL.stats.PFpcthits],...
-                        [FoR.stats.PFpcthits; FrR.stats.PFpcthits], matches)                    
+posThresh = 3; hitThresh=3;
 
-[LRdiff, LRpct] = dumbRateRemapping([FoL.stats.PFactivePSA; FrL.stats.PFactivePSA],...
-                        [FoR.stats.PFactivePSA; FrR.stats.PFactivePSA], LRmatchesExclusive);
-[FoFrdiff, FoFrpct] = dumbRateRemapping([FoL.stats.PFactivePSA; FoR.stats.PFactivePSA],...
-                        [FrL.stats.PFactivePSA; FrR.stats.PFactivePSA],FoFrmatchesExclusive);
-%}
+rateDiffAB = PFrateChangeBatch...
+    (FoL, FoR, LRmatchesExclusive(1:numPlaceFields,:), hitThresh, posThresh);
 
-[FoL.stats.allActivity, FoL.stats.meanActivity]=dumbRates(FoL.stats.PFactivePSA);
-[FoR.stats.allActivity, FoR.stats.meanActivity]=dumbRates(FoR.stats.PFactivePSA);
-[FrL.stats.allActivity, FrL.stats.meanActivity]=dumbRates(FrL.stats.PFactivePSA);
-[FrR.stats.allActivity, FrR.stats.meanActivity]=dumbRates(FrR.stats.PFactivePSA);
-
-[LRdiff, LRpct] = dumbRateRemapping([FoL.stats.allActivity; FrL.stats.allActivity],...
-                        [FoR.stats.allActivity; FrR.stats.allActivity], LRmatchesExclusive);
-[FoFrdiff, FoFrpct] = dumbRateRemapping([FoL.stats.allActivity; FoR.stats.allActivity],...
-                        [FrL.stats.allActivity; FrR.stats.allActivity],FoFrmatchesExclusive);
-    
-
-%Need to do
-% - check PF time things (PFepochToPSAtime, AllTimeInField) worked
-% - adapt hit rate, duration, etc. for PF time
-% - validate PFoverlaps, make some figures
-% - dist of PF overlaps against centroid distance
-% - linearize fields: bin across y coordinate
+%To do: 
+% - get FT inds of PF epochs
+% - function for getting fluoresence intensity values
+% - fluorescence place fields
     
     
     
@@ -209,3 +178,32 @@ for PFrow = 1:numPlacefields
 end
 %}
 
+%[PFepochPSA] = PFepochToPSAtime ( place_stats_file, isRunningInds, pos_file )
+%allPFtime = AllTimeInField (place_maps_file, place_stats_file)
+%{
+[LRdiff, LRpct] = dumbRateRemapping([FoL.stats.PFpcthits; FrL.stats.PFpcthits],...
+                        [FoR.stats.PFpcthits; FrR.stats.PFpcthits], LRmatchesExclusive);
+[FoFrdiff, FoFrpct] = dumbRateRemapping([FoL.stats.PFpcthits; FoR.stats.PFpcthits],...
+                        [FrL.stats.PFpcthits; FrR.stats.PFpcthits],FoFrmatchesExclusive);
+                    
+[LRdiff, LRpct]=dumbMoreRateRemapping([FoL.stats.PFpcthits; FrL.stats.PFpcthits],...
+                        [FoR.stats.PFpcthits; FrR.stats.PFpcthits], matches)                    
+
+[LRdiff, LRpct] = dumbRateRemapping([FoL.stats.PFactivePSA; FrL.stats.PFactivePSA],...
+                        [FoR.stats.PFactivePSA; FrR.stats.PFactivePSA], LRmatchesExclusive);
+[FoFrdiff, FoFrpct] = dumbRateRemapping([FoL.stats.PFactivePSA; FoR.stats.PFactivePSA],...
+                        [FrL.stats.PFactivePSA; FrR.stats.PFactivePSA],FoFrmatchesExclusive);
+
+
+[FoL.stats.allActivity, FoL.stats.meanActivity]=dumbRates(FoL.stats.PFactivePSA);
+[FoR.stats.allActivity, FoR.stats.meanActivity]=dumbRates(FoR.stats.PFactivePSA);
+[FrL.stats.allActivity, FrL.stats.meanActivity]=dumbRates(FrL.stats.PFactivePSA);
+[FrR.stats.allActivity, FrR.stats.meanActivity]=dumbRates(FrR.stats.PFactivePSA);
+
+[LRdiff, LRpct] = dumbRateRemapping([FoL.stats.allActivity; FrL.stats.allActivity],...
+                        [FoR.stats.allActivity; FrR.stats.allActivity], LRmatchesExclusive);
+[FoFrdiff, FoFrpct] = dumbRateRemapping([FoL.stats.allActivity; FoR.stats.allActivity],...
+                        [FrL.stats.allActivity; FrR.stats.allActivity],FoFrmatchesExclusive);
+%}    
+
+%Need to do
