@@ -3,8 +3,8 @@ function rateDiffAB = PFrateChangeBatch(PlaceFieldsA, PlaceFieldsB, matches, hit
 [GoodOccMap]=GoodOccMapShared...
     ( PlaceFieldsA.maps.RunOccMap, PlaceFieldsB.maps.RunOccMap, posThresh);
 
-useCellsA = CellsAboveThresh(PlaceFieldsA.maps.PFnHits, hitThresh);
-useCellsB = CellsAboveThresh(PlaceFieldsB.maps.PFnHits, hitThresh);
+useCellsA = CellsAboveThresh(PlaceFieldsA.stats.PFnHits, hitThresh);
+useCellsB = CellsAboveThresh(PlaceFieldsB.stats.PFnHits, hitThresh);
 allUseCells = useCellsA & useCellsB;
 
 %Rates for both blocks
@@ -13,7 +13,7 @@ allUseCells = useCellsA & useCellsB;
 
 rateDiffAB = nan(size(allUseCells));
 
-numCells = size(useAllCells,1);
+numCells = size(allUseCells,1);
 for thisCell = 1:numCells
     theseMatches = [matches{thisCell,1}];
     if ~isempty(theseMatches)

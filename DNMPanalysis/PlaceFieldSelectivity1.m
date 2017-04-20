@@ -142,9 +142,29 @@ title('Forced > Free place remapping')
 %Rate remapping
 posThresh = 3; hitThresh=3;
 
-rateDiffAB = PFrateChangeBatch...
-    (FoL, FoR, LRmatchesExclusive(1:numPlaceFields,:), hitThresh, posThresh);
+rateDiffLR(1:numPlacefields,:) = PFrateChangeBatch...
+    (FoL, FoR, LRmatchesExclusive(1:numPlacefields,:), hitThresh, posThresh);
+rateDiffLR((1:numPlacefields)+numPlacefields,:) = PFrateChangeBatch...
+    (FrL, FrR, LRmatchesExclusive((1:numPlacefields)+numPlacefields,:), hitThresh, posThresh);
+rateDiffFoFr(1:numPlacefields,:) = PFrateChangeBatch...
+    (FoL, FrL, FoFrmatchesExclusive(1:numPlacefields,:), hitThresh, posThresh);
+rateDiffFoFr((1:numPlacefields)+numPlacefields,:) = PFrateChangeBatch...
+    (FoR, FrR, FoFrmatchesExclusive((1:numPlacefields)+numPlacefields,:), hitThresh, posThresh);
 
+figure; histogram(abs(rateDiffFoFr),0:0.1:1); title('Forced/Free rate changes')
+figure; histogram(abs(rateDiffLR),0:0.1:1); title('Left/Right rate changes')
+
+load('FinalOutput.mat','NeuronTraces');
+LPtraces = NeuronTraces.LPtrace;
+
+fluorDiffLR(1:numPlacefields,:) = PFfluorDiffBatch...
+    (FoL, FoR, LPtraces, LRmatchesExclusive(1:numPlacefields,:), hitThresh, posThresh);
+fluorDiffLR((1:numPlacefields)+numPlacefields,:) = PFfluorDiffBatch...
+    (FrL, FrR, LPtraces, LRmatchesExclusive((1:numPlacefields)+numPlacefields,:), hitThresh, posThresh);
+fluorDiffFoFr(1:numPlacefields,:) = PFfluorDiffBatch...
+    (FoL, FrL, LPtraces, FoFrmatchesExclusive(1:numPlacefields,:), hitThresh, posThresh);
+fluorDiffFoFr((1:numPlacefields)+numPlacefields,:) = PFfluorDiffBatch...
+    (FoR, FrR, LPtraces, FoFrmatchesExclusive((1:numPlacefields)+numPlacefields,:), hitThresh, posThresh);
 %To do: 
 % - get FT inds of PF epochs
 % - function for getting fluoresence intensity values
