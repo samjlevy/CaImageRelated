@@ -68,23 +68,19 @@ FoL.stats = load(files.stats.FoL);  FrL.stats = load(files.stats.FrL);
 FoR.stats = load(files.stats.FoR);  FrR.stats = load(files.stats.FrR); 
 FoL.maps = load(files.maps.FoL);    FrL.maps = load(files.maps.FrL); 
 FoR.maps = load(files.maps.FoR);    FrR.maps = load(files.maps.FrR); 
-FoLcentroids = FoL.stats.PFcentroids; FrLcentroids = FrL.stats.PFcentroids;
-FoRcentroids = FoR.stats.PFcentroids; FrRcentroids = FrR.stats.PFcentroids;
-mostCells = max([size(FoLcentroids,2) size(FoRcentroids,2)...
-                 size(FrLcentroids,2) size(FrRcentroids,2)]);
-[FoLcentroids, FoRcentroids, FrLcentroids, FrRcentroids] =...
-    CellArrayEqualizer (FoLcentroids, FoRcentroids, FrLcentroids, FrRcentroids);  
 [FoL.stats,FoR.stats,FrL.stats,FrR.stats] = StructEqualizer(FoL.stats,FoR.stats,FrL.stats,FrR.stats);
 
+numPlacefields = size(FoL.stats.PFcentroids,1);
+
+mostCells = max([size(FoLcentroids,2) size(FoRcentroids,2)...
+                 size(FrLcentroids,2) size(FrRcentroids,2)]);
+             
 %Bin centroids by type
 FoCentroids = [FoL.stats.PFcentroids; FoR.stats.PFcentroids]; 
 FrCentroids = [FrL.stats.PFcentroids; FrR.stats.PFcentroids];
 Lcentroids = [FoL.stats.PFcentroids; FrL.stats.PFcentroids]; 
 Rcentroids = [FoR.stats.PFcentroids; FrR.stats.PFcentroids];
-%FoCentroids = [FoLcentroids; FoRcentroids]; FrCentroids = [FrLcentroids; FrRcentroids];
-%Lcentroids = [FoLcentroids; FrLcentroids]; Rcentroids = [FoRcentroids; FrRcentroids];
 
-numPlacefields = size(FoL.stats.PFcentroids,1);
 fieldDims=size(FoL.maps.TotalRunOccMap);
 %Match placefields across conditions by proximity
 [LRmatches, LRmatchesExclusive]=MatchCentroidsBatch(Lcentroids, Rcentroids);
@@ -165,12 +161,43 @@ fluorDiffFoFr(1:numPlacefields,:) = PFfluorDiffBatch...
     (FoL, FrL, LPtraces, FoFrmatchesExclusive(1:numPlacefields,:), hitThresh, posThresh);
 fluorDiffFoFr((1:numPlacefields)+numPlacefields,:) = PFfluorDiffBatch...
     (FoR, FrR, LPtraces, FoFrmatchesExclusive((1:numPlacefields)+numPlacefields,:), hitThresh, posThresh);
-%To do: 
-% - get FT inds of PF epochs
-% - function for getting fluoresence intensity values
-% - fluorescence place fields
-    
-    
+
+
+% Population Vectors
+[PixCorrFoLR, pvalFoLR] = PopVectorCorr(FoL, FoR, posThresh);
+[PixCorrFrLR, pvalFrLR] = PopVectorCorr(FrL, FrR, posThresh);
+
+[PixCorrLFoFr, pvalLFoFr] = PopVectorCorr(FoL, FrL, posThresh);
+[PixCorrRFoFr, pvalRFoFr] = PopVectorCorr(FoR, FrR, posThresh);
+
+[PixCorrLFoRFr, pvalLFoRFr] = PopVectorCorr(FoL, FrR, posThresh);
+[PixCorrRFoLFr, pvalRFoLFr] = PopVectorCorr(FoR, FrL, posThresh);
+
+
+figure;
+subplot(2,2,1)
+histogram(PixCorrFoLR, 0:0.05:1); title('PV corr, Forced L>R')
+ylabel('Frequency')
+subplot(2,2,2)
+histogram(PixCorrFrLR, 0:0.05:1); title('PV corr, Free L>R')
+subplot(2,2,3)
+histogram(PixCorrLFoFr, 0:0.05:1); title('PV corr, Left Forced>Free')
+ylabel('Frequency')
+xlabel('Corr coeff')
+subplot(2,2,4)
+histogram(PixCorrRFoFr, 0:0.05:1); title('PV corr, Right Forced>Free')
+xlabel('Corr coeff')
+
+figure; 
+subplot(2,2,[1 2])
+histogram([PixCorrFoLR; PixCorrFrLR],0:0.05:1)
+title('PV correlation Left to Right')
+ylabel('Frequency')
+subplot(2,2,[3 4])
+histogram([PixCorrLFoFr; PixCorrRFoFr],0:0.05:1)  
+title('PV correlation Forced to Free')
+ylabel('Frequency')
+xlabel('Corr coeff')
     
 %Boneyard
 %{
