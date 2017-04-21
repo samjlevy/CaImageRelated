@@ -147,9 +147,12 @@ rateDiffFoFr(1:numPlacefields,:) = PFrateChangeBatch...
 rateDiffFoFr((1:numPlacefields)+numPlacefields,:) = PFrateChangeBatch...
     (FoR, FrR, FoFrmatchesExclusive((1:numPlacefields)+numPlacefields,:), hitThresh, posThresh);
 
-figure; histogram(abs(rateDiffFoFr),0:0.1:1); title('Forced/Free rate changes')
-figure; histogram(abs(rateDiffLR),0:0.1:1); title('Left/Right rate changes')
+figure; histogram(abs(rateDiffFoFr),0:0.05:1); title('Forced/Free rate changes')
+xlabel('Difference / Sum'); ylabel('Frequency')
+figure; histogram(abs(rateDiffLR),0:0.05:1); title('Left/Right rate changes')
+xlabel('Difference / Sum'); ylabel('Frequency')
 
+%Fluoresence rate mapping
 load('FinalOutput.mat','NeuronTraces');
 LPtraces = NeuronTraces.LPtrace;
 
@@ -161,6 +164,11 @@ fluorDiffFoFr(1:numPlacefields,:) = PFfluorDiffBatch...
     (FoL, FrL, LPtraces, FoFrmatchesExclusive(1:numPlacefields,:), hitThresh, posThresh);
 fluorDiffFoFr((1:numPlacefields)+numPlacefields,:) = PFfluorDiffBatch...
     (FoR, FrR, LPtraces, FoFrmatchesExclusive((1:numPlacefields)+numPlacefields,:), hitThresh, posThresh);
+
+figure; histogram(abs(rateDiffFoFr),0:0.05:1); title('Forced/Free fluoresence changes')
+xlabel('Difference / Sum'); ylabel('Frequency')
+figure; histogram(abs(rateDiffLR),0:0.05:1); title('Left/Right fluoresence changes')
+xlabel('Difference / Sum'); ylabel('Frequency')
 
 
 % Population Vectors

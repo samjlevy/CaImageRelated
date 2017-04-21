@@ -9,7 +9,7 @@ allEpoch = [];
 for epoch = 1:size(PFocc,1)
     allEpoch = [allEpoch PFocc(epoch,1):PFocc(epoch,2)];
 end
-PFinPSAboolInds2 = runningInds(allEpoch);
+PFinPSAboolInds = runningInds(allEpoch);
 
 allPFfluor = LPtrace(PFinPSAboolInds);  
 
