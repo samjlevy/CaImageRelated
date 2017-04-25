@@ -62,3 +62,13 @@ figure; histogram(abs(LRpct),20)
 title('Percent change in remapping L/R')
 figure; histogram(abs(FoFrpct),20)
 title('Percent change in remapping Forced/Free')
+
+
+LPtrace = NeuronTraces.LPtrace(75,:);
+LPtrace = LPtrace(PSAboolUseIndices);
+figure; plot(LPtrace)
+hold on
+plot(find(PSAbool(75,:)),LPtrace(find(PSAbool(75,:))),'*g')
+plot(FrL.maps.runningInds,LPtrace(FrL.maps.runningInds),'om')
+plot(FrR.maps.runningInds,LPtrace(FrR.maps.runningInds),'or')
+title('Trace for Cell 5; green = Cell firing, purple/red different conditions')

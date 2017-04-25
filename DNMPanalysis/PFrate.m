@@ -1,13 +1,12 @@
-function [PFrate, GoodPFpixels, rateDist] = PFrate( PFpixels, TMap_gauss, GoodOccMap)
+function [PFrate, rateDist] = PFrate( TMap_gauss, GoodOccMap)
 %occ map is linear ind
-%PFpixels is linear ind
-%TMap_gauss is not
+%TMap_gauss is not 
 
-GoodPFpixels = PFpixels(ismember(PFpixels, GoodOccMap));
-
-rateDist = TMap_gauss(GoodPFpixels);
+rateDist = TMap_gauss(GoodOccMap);
 
 PFrate = mean(rateDist);
+
+if isnan(PFrate), PFrate = 0; end 
 
 end
 

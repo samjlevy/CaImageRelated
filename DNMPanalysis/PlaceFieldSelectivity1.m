@@ -55,7 +55,10 @@ title('Relationship of left/right and forced/free?')
 orders = {'forced before free, left before right'};
 
 %Load stuff
+load('Pos_align.mat','PSAbool'); 
 binsize=2;
+%FoL.statsFile...
+%FoL.mapsFile...
 files.stats.FoL = ['PlaceStats_forced_left_' num2str(binsize) 'cm.mat'];
 files.stats.FoR = ['PlaceStats_forced_right_' num2str(binsize) 'cm.mat'];
 files.stats.FrL = ['PlaceStats_free_left_' num2str(binsize) 'cm.mat'];
@@ -70,11 +73,29 @@ FoL.maps = load(files.maps.FoL);    FrL.maps = load(files.maps.FrL);
 FoR.maps = load(files.maps.FoR);    FrR.maps = load(files.maps.FrR); 
 [FoL.stats,FoR.stats,FrL.stats,FrR.stats] = StructEqualizer(FoL.stats,FoR.stats,FrL.stats,FrR.stats);
 
-numPlacefields = size(FoL.stats.PFcentroids,1);
+numPFs = size(FoL.stats.PFcentroids,1);
 
-mostCells = max([size(FoLcentroids,2) size(FoRcentroids,2)...
-                 size(FrLcentroids,2) size(FrRcentroids,2)]);
-             
+%Cell activity per condition?
+[conditionHits, isActive] = CellsInConditions(PSAbool, FoL, FoR, FrL, FrR);
+figure; histogram(conditionHits(conditionHits<100 & conditionHits > 0),0:5:90)
+hold on; mn = mean(conditionHits(conditionHits>0));
+plot([mn mn],[0 80],'r','LineWidth',2)
+title('Hits in a condition, all cells by all conditions')
+xlabel('Number of hits')
+activeConds = sum(isActive,2);
+figure; h=histogram(activeConds,-0.5:1:4.5);
+h.Parent.XTick=0:1:4;
+title('Cells with >0 hits/condition')
+xlabel('Conditions with a hit')
+ylabel('Number of cells')
+aboveThresh = conditionHits > 5;
+condAboveThresh = sum(aboveThresh,2);
+figure; h2 = histogram(activeConds,-0.5:1:4.5);
+h2.Parent.XTick=0:1:4;
+title('Cells with >5 hits/condition')
+xlabel('Conditions above thresh')
+ylabel('Number of cells')
+
 %Bin centroids by type
 FoCentroids = [FoL.stats.PFcentroids; FoR.stats.PFcentroids]; 
 FrCentroids = [FrL.stats.PFcentroids; FrR.stats.PFcentroids];
@@ -138,38 +159,15 @@ title('Forced > Free place remapping')
 %Rate remapping
 posThresh = 3; hitThresh=3;
 
-rateDiffLR(1:numPlacefields,:) = PFrateChangeBatch...
-    (FoL, FoR, LRmatchesExclusive(1:numPlacefields,:), hitThresh, posThresh);
-rateDiffLR((1:numPlacefields)+numPlacefields,:) = PFrateChangeBatch...
-    (FrL, FrR, LRmatchesExclusive((1:numPlacefields)+numPlacefields,:), hitThresh, posThresh);
-rateDiffFoFr(1:numPlacefields,:) = PFrateChangeBatch...
-    (FoL, FrL, FoFrmatchesExclusive(1:numPlacefields,:), hitThresh, posThresh);
-rateDiffFoFr((1:numPlacefields)+numPlacefields,:) = PFrateChangeBatch...
-    (FoR, FrR, FoFrmatchesExclusive((1:numPlacefields)+numPlacefields,:), hitThresh, posThresh);
+rateDiffLR = PFrateChangeBatch(FoL, FoR, hitThresh, posThresh);
+rateDiffLR = [rateDiffLR; PFrateChangeBatch(FrL, FrR, hitThresh, posThresh)];
+rateDiffFoFr = PFrateChangeBatch(FoL, FrL, hitThresh, posThresh);
+rateDiffFoFr = [rateDiffFoFr; PFrateChangeBatch(FoR, FrR, hitThresh, posThresh)];
 
 figure; histogram(abs(rateDiffFoFr),0:0.05:1); title('Forced/Free rate changes')
 xlabel('Difference / Sum'); ylabel('Frequency')
 figure; histogram(abs(rateDiffLR),0:0.05:1); title('Left/Right rate changes')
 xlabel('Difference / Sum'); ylabel('Frequency')
-
-%Fluoresence rate mapping
-load('FinalOutput.mat','NeuronTraces');
-LPtraces = NeuronTraces.LPtrace;
-
-fluorDiffLR(1:numPlacefields,:) = PFfluorDiffBatch...
-    (FoL, FoR, LPtraces, LRmatchesExclusive(1:numPlacefields,:), hitThresh, posThresh);
-fluorDiffLR((1:numPlacefields)+numPlacefields,:) = PFfluorDiffBatch...
-    (FrL, FrR, LPtraces, LRmatchesExclusive((1:numPlacefields)+numPlacefields,:), hitThresh, posThresh);
-fluorDiffFoFr(1:numPlacefields,:) = PFfluorDiffBatch...
-    (FoL, FrL, LPtraces, FoFrmatchesExclusive(1:numPlacefields,:), hitThresh, posThresh);
-fluorDiffFoFr((1:numPlacefields)+numPlacefields,:) = PFfluorDiffBatch...
-    (FoR, FrR, LPtraces, FoFrmatchesExclusive((1:numPlacefields)+numPlacefields,:), hitThresh, posThresh);
-
-figure; histogram(abs(rateDiffFoFr),0:0.05:1); title('Forced/Free fluoresence changes')
-xlabel('Difference / Sum'); ylabel('Frequency')
-figure; histogram(abs(rateDiffLR),0:0.05:1); title('Left/Right fluoresence changes')
-xlabel('Difference / Sum'); ylabel('Frequency')
-
 
 % Population Vectors
 [PixCorrFoLR, pvalFoLR] = PopVectorCorr(FoL, FoR, posThresh);
@@ -209,9 +207,28 @@ xlabel('Corr coeff')
     
 %Boneyard
 %{
-LRmatches = cell(numPlacefields*2,1); FoFrmatches = cell(numPlacefields*2,1);
-LRmatchesExclusive = cell(numPlacefields*2,1); FoFrmatchesExclusive = cell(numPlacefields*2,1);
-for PFrow = 1:numPlacefields
+%Fluoresence rate mapping
+load('FinalOutput.mat','NeuronTraces');
+LPtraces = NeuronTraces.LPtrace;
+
+fluorDiffLR(1:numPFs,:) = PFfluorDiffBatch...
+    (FoL, FoR, LPtraces, LRmatchesExclusive(1:numPFs,:), hitThresh, posThresh);
+fluorDiffLR((1:numPFs)+numPFs,:) = PFfluorDiffBatch...
+    (FrL, FrR, LPtraces, LRmatchesExclusive((1:numPFs)+numPFs,:), hitThresh, posThresh);
+fluorDiffFoFr(1:numPFs,:) = PFfluorDiffBatch...
+    (FoL, FrL, LPtraces, FoFrmatchesExclusive(1:numPFs,:), hitThresh, posThresh);
+fluorDiffFoFr((1:numPFs)+numPFs,:) = PFfluorDiffBatch...
+    (FoR, FrR, LPtraces, FoFrmatchesExclusive((1:numPFs)+numPFs,:), hitThresh, posThresh);
+
+figure; histogram(abs(rateDiffFoFr),0:0.05:1); title('Forced/Free fluoresence changes')
+xlabel('Difference / Sum'); ylabel('Frequency')
+figure; histogram(abs(rateDiffLR),0:0.05:1); title('Left/Right fluoresence changes')
+xlabel('Difference / Sum'); ylabel('Frequency')
+%}
+%{
+LRmatches = cell(numPFs*2,1); FoFrmatches = cell(numPFs*2,1);
+LRmatchesExclusive = cell(numPFs*2,1); FoFrmatchesExclusive = cell(numPFs*2,1);
+for PFrow = 1:numPFs
     if any([FoLcentroids{PFrow,:}]) && any([FoRcentroids{PFrow,:}])
         [LRmatches{PFrow,1}, LRmatchesExclusive{PFrow,1}]...
             = MatchCentroids (FoLcentroids, PFrow, FoRcentroids, PFrow);
@@ -221,13 +238,13 @@ for PFrow = 1:numPlacefields
             = MatchCentroids (FoLcentroids, PFrow, FrLcentroids, PFrow);
     end
 end
-for PFrow = 1:numPlacefields
+for PFrow = 1:numPFs
     if any([FrLcentroids{PFrow,:}]) && any([FrRcentroids{PFrow,:}])
-    [LRmatches{PFrow+numPlacefields,1}, LRmatchesExclusive{PFrow+numPlacefields,1}]...
+    [LRmatches{PFrow+numPFs,1}, LRmatchesExclusive{PFrow+numPFs,1}]...
         = MatchCentroids (FrLcentroids, PFrow, FrRcentroids, PFrow);
     end
     if any([FoRcentroids{PFrow,:}]) && any([FrRcentroids{PFrow,:}])
-    [FoFrmatches{PFrow+numPlacefields,1}, FoFrmatchesExclusive{PFrow+numPlacefields,1}]...
+    [FoFrmatches{PFrow+numPFs,1}, FoFrmatchesExclusive{PFrow+numPFs,1}]...
         = MatchCentroids (FoRcentroids, PFrow, FrRcentroids, PFrow);
     end
 end

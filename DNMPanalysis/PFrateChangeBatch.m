@@ -1,33 +1,34 @@
-function rateDiffAB = PFrateChangeBatch(PlaceFieldsA, PlaceFieldsB, matches, hitThresh, posThresh)
+function rateDiffAB = PFrateChangeBatch(PFsA, PFsB, hitThresh, posThresh)
+%numCells = size(PFsA.stats.PFnHits,1);
+try
+    load('Pos_align.mat','PSAbool')
+catch
+    [FileName,PathName] = uigetfile('Gimme file with PSAbool');
+    load(fullfile(PathName,FileName),'PSAbool')
+end
 
-[GoodOccMap]=GoodOccMapShared...
-    ( PlaceFieldsA.maps.RunOccMap, PlaceFieldsB.maps.RunOccMap, posThresh);
+[GoodOccMap]=GoodOccMapShared(PFsA.maps.RunOccMap, PFsB.maps.RunOccMap, posThresh);
 
-useCellsA = CellsAboveThresh(PlaceFieldsA.stats.PFnHits, hitThresh);
-useCellsB = CellsAboveThresh(PlaceFieldsB.stats.PFnHits, hitThresh);
-allUseCells = useCellsA & useCellsB;
+[GoodCellsA, activeCellsA] = CellsAboveThresh2(PSAbool, PFsA, hitThresh, GoodOccMap);
+[GoodCellsB, activeCellsB] = CellsAboveThresh2(PSAbool, PFsB, hitThresh, GoodOccMap);
+allUseCells = (GoodCellsA .* activeCellsB) | (GoodCellsB .* activeCellsA);
+%allUseCells = logical(ones(numCells,1));
 
 %Rates for both blocks
-[PFratesA, GoodPFpixelsA, rateDistA] = PFrateBatch(PlaceFieldsA, GoodOccMap);
-[PFratesB, GoodPFpixelsB, rateDistB] = PFrateBatch(PlaceFieldsB, GoodOccMap);
+[PFratesA, ~] = PFrateBatch(PFsA, GoodOccMap);
+[PFratesB, ~] = PFrateBatch(PFsB, GoodOccMap);
 
-rateDiffAB = nan(size(allUseCells));
+rateDiffAB = (PFratesA(allUseCells) - PFratesB(allUseCells))...
+    ./(PFratesA(allUseCells) + PFratesB(allUseCells));
 
-numCells = size(allUseCells,1);
-for thisCell = 1:numCells
-    theseMatches = [matches{thisCell,1}];
-    if ~isempty(theseMatches)
-        for match = 1:length(theseMatches)
-            if theseMatches(match)~=0 %...
-                %&& useCellsA(thisCell,theseMatches(match))...
-                %&& useCellsB(thisCell,match)
-                rateA = PFratesA(thisCell,theseMatches(match));
-                rateB = PFratesB(thisCell,match);
-                rateDiffAB(thisCell,theseMatches(match)) = ...
-                    (rateB - rateA) / (rateB + rateA);
-            end
-        end
-    end
-end
+%rateDiffAB = zeros(numCells,1);
+
+%for thisCell = 1:numCells
+%    if allUseCells(thisCell) == 1
+%        rateA = PFratesA(thisCell);
+%        rateB = PFratesB(thisCell);
+%        rateDiffAB(thisCell) = (rateB - rateA) / (rateB + rateA);
+%    end
+%end
 
 end
