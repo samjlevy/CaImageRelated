@@ -42,6 +42,10 @@ StructEqualizer
     %appropriate to make arrays the same size
 CellsInConditions
     %Tells how many hits per cell per condition
+PFspatialCorrBatch
+    % Spatial correlation: compares TMap_gauss within a cell across
+    % conditions in good pixels; excludes cells that don't meet a firing
+    % rate threshold, or arent active in the other condition
 PFrateChangeBatch(PFsA, PFsB, hitThresh, posThresh) 
     %Calculates rate changes by getting means of TMap_gauss for shared 
     %pixels above position threshold
