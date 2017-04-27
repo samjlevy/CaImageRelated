@@ -56,6 +56,12 @@ orders = {'forced before free, left before right'};
 
 %Load stuff
 load('Pos_align.mat','PSAbool'); 
+load('stem_bounds.mat')
+FoL.epochs = stem_frame_bounds.forced_l;
+FoR.epochs = stem_frame_bounds.forced_r;
+FrL.epochs = stem_frame_bounds.free_l;
+FrR.epochs = stem_frame_bounds.free_r;
+
 binsize = 2;
 posThresh = 3; 
 hitThresh = 5;
@@ -74,6 +80,19 @@ FoR.stats = load(files.stats.FoR);  FrR.stats = load(files.stats.FrR);
 FoL.maps = load(files.maps.FoL);    FrL.maps = load(files.maps.FrL); 
 FoR.maps = load(files.maps.FoR);    FrR.maps = load(files.maps.FrR); 
 [FoL.stats,FoR.stats,FrL.stats,FrR.stats] = StructEqualizer(FoL.stats,FoR.stats,FrL.stats,FrR.stats);
+
+files.stats.allL = ['PlaceStats_allLeft_' num2str(binsize) 'cm.mat'];
+files.stats.allR = ['PlaceStats_allRight_' num2str(binsize) 'cm.mat'];
+files.stats.allFo = ['PlaceStats_allForced_' num2str(binsize) 'cm.mat'];
+files.stats.allFr = ['PlaceStats_allFree_' num2str(binsize) 'cm.mat'];
+files.maps.allL = ['PlaceMaps_allLeft_' num2str(binsize) 'cm.mat'];
+files.maps.allR = ['PlaceMaps_allRight_' num2str(binsize) 'cm.mat']; 
+files.maps.allFo = ['PlaceMaps_allForced_' num2str(binsize) 'cm.mat'];
+files.maps.allFr = ['PlaceMaps_allFree_' num2str(binsize) 'cm.mat'];
+allL.stats = load(files.stats.allL);  allFo.stats = load(files.stats.allFo); 
+allR.stats = load(files.stats.allR);  allFr.stats = load(files.stats.allFr); 
+allL.maps = load(files.maps.allL);    allFo.maps = load(files.maps.allFo); 
+allR.maps = load(files.maps.allR);    allFr.maps = load(files.maps.allFr); 
 
 numPFs = size(FoL.stats.PFcentroids,1);
 
@@ -106,29 +125,79 @@ xlabel('Conditions with >5 hits')
 ylabel('Number of cells')
 
 %Placefield correlations
-[LRcorrs, LRpvals] = PFspatialCorrBatch(FoL, FoR, posThresh, spikeThresh);
-[LRcorrs2, LRpvals2] = PFspatialCorrBatch(FrL, FrR, posThresh, spikeThresh);
+[LRcorrs, LRpvals] = PFspatialCorrBatch(FoL, FoR, posThresh, hitThresh);
+[LRcorrs2, LRpvals2] = PFspatialCorrBatch(FrL, FrR, posThresh, hitThresh);
 LRspatialCorrs = [LRcorrs; LRcorrs2];
-[FoFrcorrs, FoFrpvals] = PFspatialCorrBatch(FoL, FrL, posThresh, spikeThresh);
-[FoFrcorrs2, FoFrpvals2] = PFspatialCorrBatch(FoR, FrR, posThresh, spikeThresh);
+[FoFrcorrs, FoFrpvals] = PFspatialCorrBatch(FoL, FrL, posThresh, hitThresh);
+[FoFrcorrs2, FoFrpvals2] = PFspatialCorrBatch(FoR, FrR, posThresh, hitThresh);
 FoFrspatialCorrs = [FoFrcorrs; FoFrcorrs2];
 
-figure; histogram(LRcorrs,0:0.05:1);
-title(['Left/Right spatial correlations, n=' num2str(length(LRspatialCorrs))])
+figure;
+subplot(2,2,1)
+histogram(LRcorrs, 0:0.05:1); title('160831 Spatial corr, Forced L/Free R')
+ylabel('Frequency')
+subplot(2,2,2)
+histogram(LRcorrs2, 0:0.05:1); title('160831 Spatial corr, Free L/Free R')
+subplot(2,2,3)
+histogram(FoFrcorrs, 0:0.05:1); title('160831 Spatial corr, Forced L/Free L')
+ylabel('Frequency')
+xlabel('Spatial corr')
+subplot(2,2,4)
+histogram(FoFrcorrs2, 0:0.05:1); title('160831 Spatial corr, Forced R/Free R')
+xlabel('Spatial corr')
+
+figure; 
+subplot(2,2,[1 2])
+histogram(LRspatialCorrs,0:0.05:1);
+title(['160831 Left/Right spatial correlations, n=' num2str(length(LRspatialCorrs))])
+xlabel('Spatial correlation'); ylabel('Frequency')
+subplot(2,2,[3 4])
+histogram(FoFrspatialCorrs,0:0.05:1); 
+title(['160831 Forced/Free spatial correlations n=' num2str(length(FoFrspatialCorrs))])
+xlabel('Spatial correlation'); ylabel('Frequency')
+
+[allLRcorrs, allLRpvals] = PFspatialCorrBatch(allL, allR, posThresh, hitThresh);
+[allFoFrcorrs, allFoFrpvals] = PFspatialCorrBatch(allFo, allFr, posThresh, hitThresh);
+
+figure;
+subplot(2,2,[1 2]) 
+histogram(allLRcorrs,0:0.05:1);
+title(['All Left/Right spatial correlations, n=' num2str(length(allLRcorrs))])
 xlabel('PF correlation'); ylabel('Frequency')
-figure; histogram(FoFrcorrs,0:0.05:1); 
-title(['Forced/Free spatial correlations n=' num2str(length(FoFrspatialCorrs))])
+figure; 
+subplot(2,2,[3 4]) 
+histogram(allFoFrcorrs,0:0.05:1); 
+title(['All Forced/Free spatial correlations n=' num2str(length(allFoFrcorrs))])
 xlabel('PF correlation'); ylabel('Frequency')
 
-%Rate remapping
+% Rate remapping
 rateDiffLR = PFrateChangeBatch(FoL, FoR, hitThresh, posThresh);
-rateDiffLR = [rateDiffLR; PFrateChangeBatch(FrL, FrR, hitThresh, posThresh)];
+rateDiffLR2 = PFrateChangeBatch(FrL, FrR, hitThresh, posThresh);
+LRrateDiffs = [rateDiffLR; rateDiffLR2];
 rateDiffFoFr = PFrateChangeBatch(FoL, FrL, hitThresh, posThresh);
-rateDiffFoFr = [rateDiffFoFr; PFrateChangeBatch(FoR, FrR, hitThresh, posThresh)];
+rateDiffFoFr2 = PFrateChangeBatch(FoR, FrR, hitThresh, posThresh);
+FoFrrateDiffs = [rateDiffFoFr; rateDiffFoFr2];
 
-figure; histogram(abs(rateDiffFoFr),0:0.05:1); title('Forced/Free rate changes')
+figure;
+subplot(2,2,1)
+histogram(abs(rateDiffLR), 0:0.05:1); title('160831 Rate diff Forced L/Free R')
+ylabel('Frequency')
+subplot(2,2,2)
+histogram(abs(rateDiffLR2), 0:0.05:1); title('160831 Rate diff Free L/Free R')
+subplot(2,2,3)
+histogram(abs(rateDiffFoFr), 0:0.05:1); title('160831 Rate diff Forced L/Free L')
+ylabel('Frequency')
+xlabel('Rage change')
+subplot(2,2,4)
+histogram(abs(rateDiffFoFr2), 0:0.05:1); title('160831 Rate diff Forced R/Free R')
+xlabel('Rage change')
+
+figure; 
+subplot(2,2,[1 2])
+histogram(abs(LRrateDiffs),0:0.05:1); title('160831 Forced/Free Rate Changes')
 xlabel('Difference / Sum'); ylabel('Frequency')
-figure; histogram(abs(rateDiffLR),0:0.05:1); title('Left/Right rate changes')
+subplot(2,2,[3 4])
+histogram(abs(FoFrrateDiffs),0:0.05:1); title('160831 Left/Right Rate Changes')
 xlabel('Difference / Sum'); ylabel('Frequency')
 
 % Population Vectors
@@ -144,26 +213,26 @@ xlabel('Difference / Sum'); ylabel('Frequency')
 
 figure;
 subplot(2,2,1)
-histogram(PixCorrFoLR, 0:0.05:1); title('PV corr, Forced L>R')
+histogram(abs(PixCorrFoLR), 0:0.05:1); title('160831 PV corr, Forced L/Forced R')
 ylabel('Frequency')
 subplot(2,2,2)
-histogram(PixCorrFrLR, 0:0.05:1); title('PV corr, Free L>R')
+histogram(abs(PixCorrFrLR), 0:0.05:1); title('160831 PV corr, Free L/Free R')
 subplot(2,2,3)
-histogram(PixCorrLFoFr, 0:0.05:1); title('PV corr, Left Forced>Free')
+histogram(abs(PixCorrLFoFr), 0:0.05:1); title('160831 PV corr, Forced L/Free L')
 ylabel('Frequency')
 xlabel('Corr coeff')
 subplot(2,2,4)
-histogram(PixCorrRFoFr, 0:0.05:1); title('PV corr, Right Forced>Free')
+histogram(abs(PixCorrRFoFr), 0:0.05:1); title('160831 PV corr, Forced L/Free L')
 xlabel('Corr coeff')
 
 figure; 
 subplot(2,2,[1 2])
-histogram([PixCorrFoLR; PixCorrFrLR],0:0.05:1)
-title('PV correlation Left to Right')
+histogram(abs([PixCorrFoLR; PixCorrFrLR]),0:0.05:1)
+title('160831 PV correlation Left to Right')
 ylabel('Frequency')
 subplot(2,2,[3 4])
-histogram([PixCorrLFoFr; PixCorrRFoFr],0:0.05:1)  
-title('PV correlation Forced to Free')
+histogram(abs([PixCorrLFoFr; PixCorrRFoFr]),0:0.05:1)  
+title('160831 PV correlation Forced to Free')
 ylabel('Frequency')
 xlabel('Corr coeff')
 

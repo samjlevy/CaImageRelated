@@ -114,18 +114,21 @@ if strcmpi(xls_file(end-12:end-5),'adjusted')
         case 1
             xlswrite( xls_file, newAll);
         case 0
-if ~exist(saveName,'file')
-    xlswrite( saveName, newAll);
+            if ~exist(saveName,'file')
+                xlswrite( saveName, newAll);
+            end
+    end
 else   
-    overwrite = input('Already exists. Overwrite? (0/1)') %#ok<NOPRT>
-    switch overwrite
-        case 0
-            disp('not writing file')
-            save('luckout.mat','newFrame')
-        case 1
-            xlswrite( saveName, newAll);
-    end
+    xlswrite( saveName, newAll);
+    %overwrite = input('Already exists. Overwrite? (0/1)') %#ok<NOPRT>
+    %switch overwrite
+    %    case 0
+    %        disp('not writing file')
+    %        save('luckout.mat','newFrame')
+    %    case 1
+    %        xlswrite( saveName, newAll);
+    %end
 end        
-    end
-            
+   
+
 end

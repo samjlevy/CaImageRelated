@@ -19,8 +19,8 @@ end
 PixCorrs = nan(length(GoodPix),1);
 corrP = nan(length(GoodPix),1);
 for thisPixel = 1:length(GoodPix)
-    PVa = PopVectorsA{GoodPix(thisPixel)}(goodCells);
-    PVb = PopVectorsB{GoodPix(thisPixel)}(goodCells);
+    PVa = PopVectorsA{GoodPix(thisPixel)}(logical(goodCells));
+    PVb = PopVectorsB{GoodPix(thisPixel)}(logical(goodCells));
     [PixCorrs(thisPixel), corrP(thisPixel)] = corr(PVa, PVb);
 end
 
