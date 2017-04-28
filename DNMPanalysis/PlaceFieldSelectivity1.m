@@ -125,11 +125,11 @@ xlabel('Conditions with >5 hits')
 ylabel('Number of cells')
 
 %Placefield correlations
-[LRcorrs, LRpvals] = PFspatialCorrBatch(FoL, FoR, posThresh, hitThresh);
-[LRcorrs2, LRpvals2] = PFspatialCorrBatch(FrL, FrR, posThresh, hitThresh);
+[LRcorrs, LRpvals] = PFspatialCorrBatch(FoL, FoR, posThresh, hitThresh, PSAbool);
+[LRcorrs2, LRpvals2] = PFspatialCorrBatch(FrL, FrR, posThresh, hitThresh, PSAbool);
 LRspatialCorrs = [LRcorrs; LRcorrs2];
-[FoFrcorrs, FoFrpvals] = PFspatialCorrBatch(FoL, FrL, posThresh, hitThresh);
-[FoFrcorrs2, FoFrpvals2] = PFspatialCorrBatch(FoR, FrR, posThresh, hitThresh);
+[FoFrcorrs, FoFrpvals] = PFspatialCorrBatch(FoL, FrL, posThresh, hitThresh, PSAbool);
+[FoFrcorrs2, FoFrpvals2] = PFspatialCorrBatch(FoR, FrR, posThresh, hitThresh, PSAbool);
 FoFrspatialCorrs = [FoFrcorrs; FoFrcorrs2];
 
 figure;
@@ -156,8 +156,8 @@ histogram(FoFrspatialCorrs,0:0.05:1);
 title(['160831 Forced/Free spatial correlations n=' num2str(length(FoFrspatialCorrs))])
 xlabel('Spatial correlation'); ylabel('Frequency')
 
-[allLRcorrs, allLRpvals] = PFspatialCorrBatch(allL, allR, posThresh, hitThresh);
-[allFoFrcorrs, allFoFrpvals] = PFspatialCorrBatch(allFo, allFr, posThresh, hitThresh);
+[allLRcorrs, allLRpvals] = PFspatialCorrBatch(allL, allR, posThresh, hitThresh, PSAbool);
+[allFoFrcorrs, allFoFrpvals] = PFspatialCorrBatch(allFo, allFr, posThresh, hitThresh, PSAbool);
 
 figure;
 subplot(2,2,[1 2]) 
@@ -171,11 +171,11 @@ title(['All Forced/Free spatial correlations n=' num2str(length(allFoFrcorrs))])
 xlabel('PF correlation'); ylabel('Frequency')
 
 % Rate remapping
-rateDiffLR = PFrateChangeBatch(FoL, FoR, hitThresh, posThresh);
-rateDiffLR2 = PFrateChangeBatch(FrL, FrR, hitThresh, posThresh);
+rateDiffLR = PFrateChangeBatch(FoL, FoR, hitThresh, posThresh, PSAbool);
+rateDiffLR2 = PFrateChangeBatch(FrL, FrR, hitThresh, posThresh, PSAbool);
 LRrateDiffs = [rateDiffLR; rateDiffLR2];
-rateDiffFoFr = PFrateChangeBatch(FoL, FrL, hitThresh, posThresh);
-rateDiffFoFr2 = PFrateChangeBatch(FoR, FrR, hitThresh, posThresh);
+rateDiffFoFr = PFrateChangeBatch(FoL, FrL, hitThresh, posThresh, PSAbool);
+rateDiffFoFr2 = PFrateChangeBatch(FoR, FrR, hitThresh, posThresh, PSAbool);
 FoFrrateDiffs = [rateDiffFoFr; rateDiffFoFr2];
 
 figure;

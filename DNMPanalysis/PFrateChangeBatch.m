@@ -1,4 +1,4 @@
-function rateDiffAB = PFrateChangeBatch(PFsA, PFsB, hitThresh, posThresh)
+function rateDiffAB = PFrateChangeBatch(PFsA, PFsB, hitThresh, posThresh, PSAbool)
 %numCells = size(PFsA.stats.PFnHits,1);
 try
     load('Pos_align.mat','PSAbool')

@@ -1,4 +1,4 @@
-function [corrs, pvals] = PFspatialCorrBatch(PFsA, PFsB, posThresh, spikeThresh)
+function [corrs, pvals] = PFspatialCorrBatch(PFsA, PFsB, posThresh, spikeThresh, PSAbool)
 
 numCells = size(PFsA.stats.PFnHits,1);
 

@@ -1,4 +1,4 @@
-function PlacefieldStats(md)
+function PlacefieldStats(MD,varargin)
 %PlacefieldStats(md)
 %
 %   Calculates basic properties of place fields such as their regional
@@ -33,13 +33,25 @@ function PlacefieldStats(md)
 %       with the highest activation.
 %
 %% Set up.
-    cd(md.Location);
-    load('Placefields.mat','TMap_gauss','xBin','yBin','isrunning');
+    cd(MD.Location);
+
+    ip = inputParser;
+    ip.addRequired('MD',@(x) isstruct(x)); 
+    ip.addParameter('placefields_file','Placefields.mat',@(x) ischar(x)); 
+    ip.addParameter('save_append',[],@(x) ischar(x));
+    ip.addParameter('Pos_data','Pos_align.mat',@(x) ischar(x));
+
+    ip.parse(MD,varargin{:});
+    
+    placefields_file = ip.Results.placefields_file;
+    Pos_data = ip.Results.Pos_data;
+
+    load(placefields_file,'TMap_gauss','xBin','yBin','isrunning');
     try
         load('Pos_align.mat','PSAbool');
     catch
         load('FinalOutput.mat','PSAbool');
-        [~,~,~,PSAbool] = AlignImagingToTracking(md.Pix2CM,PSAbool,0);
+        [~,~,~,PSAbool] = AlignImagingToTracking(MD.Pix2CM,PSAbool,0);
     end
     PSAbool = PSAbool(:,isrunning);
     
@@ -120,8 +132,10 @@ function PlacefieldStats(md)
     %Number and percentage hits.
     PFnHits = cellfun(@sum,PFactive);
     PFpcthits = PFnHits./PFnEpochs;
-     
-    save('PlacefieldStats.mat','PFpcthits','PFnHits','PFnEpochs','PFepochs',...
+    
+    save_append = ip.Results.save_append;
+    savename = ['PlaceStats' save_append '.mat'];
+    save(savename,'PFpcthits','PFnHits','PFnEpochs','PFepochs',...
         'PFcentroids','PFpixels','PFarea','bestPF','PFepochRaw','PFactivePSA',...
         'PFtotalActive','-v7.3');
 end

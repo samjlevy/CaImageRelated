@@ -7,6 +7,7 @@ includeBlank = zeros(1, sessionLength);
 
 [right_forced, left_forced, right_free, left_free] = DNMPtrialDirections(frames, txt);
 
+%Get epoch boundaries
 switch block_type
     case 'stem_only'
         [ forced_starts ] = CondExcelParseout( frames, txt, 'Start on maze (start of Forced', 0 );
@@ -34,6 +35,7 @@ switch block_type
         [ stops ] = CondExcelParseout( frames, txt, 'Leave maze');
 end
 
+%Make include/exclude arrays
 switch block_type
     case {'stem_only', 'arm_min', 'whole_arm'}
         start_stop_struct.forced_r = [forced_starts(right_forced), forced_stops(right_forced)];
