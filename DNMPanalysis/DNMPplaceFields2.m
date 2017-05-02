@@ -24,6 +24,7 @@ xls_file = xls_file.name;
     GetBlockDNMPbehavior( xls_file, 'on_maze', length(x_adj_cm));
 
 [split1, split2]= SplitForSelfComp(stem_frame_bounds, 'alternate');
+save SessionHalvesEpochs.mat split1 split2
 
 spFlds = fieldnames(split1);
 for fld = 1:length(spFlds)
@@ -46,7 +47,7 @@ for cond = 1:length(spFlds)
             
     placeFile = ['Placefields' save_append '.mat'];
     
-    PlacefieldStats(session_struct,'placefields_file',placeFile);
+    PlacefieldStatsSL(session_struct,'placefields_file',placeFile,'save_append',save_append);
 end
 
 for cond = 1:length(spFlds)
@@ -58,7 +59,7 @@ for cond = 1:length(spFlds)
             
     placeFile = ['Placefields' save_append '.mat'];
     
-    PlacefieldStats(session_struct,'placefields_file',placeFile);
+    PlacefieldStatsSL(session_struct,'placefields_file',placeFile,'save_append',save_append);
 end
 
 regFlds = fieldnames(stem_exclude);

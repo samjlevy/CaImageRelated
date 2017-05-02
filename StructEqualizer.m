@@ -16,7 +16,7 @@ for fieldNum = 1:length(fields)
             '=varargin{numIn}.' fields{fieldNum} ';'])
     end
     subvarargout = subvarargin;
-    
+    %if strcmpi(fields{fieldNum},'epochs')
     [subvarargout{:}] = CellArrayEqualizer(subvarargin{:});
     
     for numOut = 1:nargin

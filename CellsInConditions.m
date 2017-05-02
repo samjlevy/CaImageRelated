@@ -1,7 +1,7 @@
 function [conditionHits, isActive] = CellsInConditions(PSAbool, varargin)
 numCells = size(PSAbool,1);
 
-conditionHits = zeros(size(varargin{1}.stats.PFnHits,1),length(varargin));
+conditionHits = zeros(numCells,length(varargin));
 for cond = 1:length(varargin)
     for thisCell = 1:numCells
         %conditionHits(thisCell,cond) =... 

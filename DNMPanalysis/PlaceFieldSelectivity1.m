@@ -79,6 +79,9 @@ FoL.stats = load(files.stats.FoL);  FrL.stats = load(files.stats.FrL);
 FoR.stats = load(files.stats.FoR);  FrR.stats = load(files.stats.FrR); 
 FoL.maps = load(files.maps.FoL);    FrL.maps = load(files.maps.FrL); 
 FoR.maps = load(files.maps.FoR);    FrR.maps = load(files.maps.FrR); 
+FoL.epochs = stem_frame_bounds.forced_l;  FrL.epochs = stem_frame_bounds.free_l;
+FoR.epochs = stem_frame_bounds.forced_r;  FrR.epochs = stem_frame_bounds.free_r;
+
 [FoL.stats,FoR.stats,FrL.stats,FrR.stats] = StructEqualizer(FoL.stats,FoR.stats,FrL.stats,FrR.stats);
 
 files.stats.allL = ['PlaceStats_allLeft_' num2str(binsize) 'cm.mat'];
@@ -99,7 +102,7 @@ numPFs = size(FoL.stats.PFcentroids,1);
 %Cell activity per condition?
 [conditionHits, isActive] = CellsInConditions(PSAbool, FoL, FoR, FrL, FrR);
 figure; 
-subplot(1,3,1)
+subplot(1,4,1)
 histogram(conditionHits(conditionHits<100 & conditionHits > 0),0:5:90)
 hold on; mn = mean(conditionHits(conditionHits>0));
 plot([mn mn],[0 80],'r','LineWidth',2)
@@ -107,22 +110,32 @@ title('Hits in a condition, all cells in each condition')
 xlabel('Number of hits')
 ylabel('Number of cells')
 activeConds = sum(isActive,2);
-subplot(1,3,2)
+subplot(1,4,2)
 h=histogram(activeConds,-0.5:1:4.5);
 h.Parent.XTick=0:1:4;
 xlim([-0.5 4.5])
 title('Cells with >0 hits/condition')
 xlabel('Conditions with a hit')
 ylabel('Number of cells')
-aboveThresh = conditionHits > 5;
+aboveThresh = conditionHits >= 5;
 condAboveThresh = sum(aboveThresh,2);
-subplot(1,3,3)
+subplot(1,4,3)
 h2 = histogram(activeConds(condAboveThresh>0),0.5:1:4.5);
 h2.Parent.XTick=0:1:4;
+xlim([0.5 4.5])
+title('Cells with >5 hits in one condition')
+xlabel('Conditions with a hit')
+ylabel('Number of cells')
+subplot(1,4,4)
+h3 = histogram(condAboveThresh(condAboveThresh>0),0.5:1:4.5);
+h3.Parent.XTick=0:1:4;
 xlim([0.5 4.5])
 title('Cells with >5 hits/condition')
 xlabel('Conditions with >5 hits')
 ylabel('Number of cells')
+
+cellsActiveAtAll = find(activeConds > 0);
+cellsWithAFiver = find(condAboveThresh > 0);
 
 %Placefield correlations
 [LRcorrs, LRpvals] = PFspatialCorrBatch(FoL, FoR, posThresh, hitThresh, PSAbool);

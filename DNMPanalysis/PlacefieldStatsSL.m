@@ -1,4 +1,4 @@
-function PlacefieldStats(MD,varargin)
+function PlacefieldStatsSL(MD,varargin)
 %PlacefieldStats(md)
 %
 %   Calculates basic properties of place fields such as their regional
