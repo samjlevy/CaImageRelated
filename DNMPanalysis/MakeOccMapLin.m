@@ -1,5 +1,5 @@
-function [OccMap,RunOccMap,xEdges,xBin] = ...
-    MakeOccMapLin(x,lims,good,isrunning,cmperbin)
+function [OccMap,RunOccMap,xBin] = ...
+    MakeOccMapLin(x,good,isrunning,xEdges)%lims,cmperbin
 %[OccMap,RunOccMap,xEdges,yEdges] = ...
 %    MakeOccMap(x,y,lims,good,isrunning,cmperbin)
 %   
@@ -26,15 +26,15 @@ function [OccMap,RunOccMap,xEdges,xBin] = ...
 %
 
 %% Extract limits.
-    xmin = lims(1);
-    xmax = lims(2); 
+%    xmin = lims(1);
+%    xmax = lims(2); 
 
 %% Make edges for hist2.
-    Xrange = xmax-xmin; 
+%    Xrange = xmax-xmin; 
     
-    nXBins = ceil(Xrange/cmperbin); 
+%    nXBins = ceil(Xrange/cmperbin); 
     
-    xEdges = (0:nXBins)*cmperbin+xmin;
+%    xEdges = (0:nXBins)*cmperbin+xmin;
  
 %% Run 2D histogram function.
     OccMap = histcounts(x(good),xEdges); 

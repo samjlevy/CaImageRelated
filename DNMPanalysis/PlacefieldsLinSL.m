@@ -50,6 +50,7 @@ function PlacefieldsLinSL(MD,varargin)
     ip.addParameter('Tenaspis_data','FinalOutput.mat',@(x) ischar(x)); 
     ip.addParameter('save_append',[],@(x) ischar(x));
     ip.addParameter('dim_use','x',@(x) ischar(x));
+    ip.addParameter('bin_edges',[],@(x) isnumeric(x));
     
     ip.parse(MD,varargin{:});
     
@@ -62,6 +63,7 @@ function PlacefieldsLinSL(MD,varargin)
     Pos_data = ip.Results.Pos_data;
     Tenaspis_data = ip.Results.Tenaspis_data;
     dim_use = ip.Results.dim_use;
+    bin_edges = ip.Results.bin_edges;
     
 %% Set up.
     if aligned
@@ -95,52 +97,48 @@ function PlacefieldsLinSL(MD,varargin)
     xmin = min(x(isrunning)); xmax = max(x(isrunning));
     %ymin = min(y(isrunning)); ymax = max(y(isrunning));
     
-    lims = [xmin xmax];
-    [OccMap,RunOccMap,xEdges,xBin] = ...
-        MakeOccMapLin(x,lims,good,isrunning,cmperbin);
-     %{
-    plot(x(isrunning),y(isrunning),'.')
-    for yy = 1:length(yEdges)
-        hold on
-        plot([xEdges(1) xEdges(end)],[yEdges(yy) yEdges(yy)],'b')
-    end
-    for xx = 1:length(xEdges)
-        hold on
-        plot([xEdges(xx) xEdges(xx)],[yEdges(1) yEdges(end)],'b')
-    end
-    plot(x(stem_frame_bounds.forced_r(:,1)),y(stem_frame_bounds.forced_r(:,1)),'.r')
-    %}
+    if isempty(bin_edges)
+        Xrange = xmax-xmin; 
+        nXBins = ceil(Xrange/cmperbin); 
+        xEdges = (0:nXBins)*cmperbin+xmin;
+    else 
+        xEdges = bin_edges;
+    end     
 
+    %lims = [xmin xmax];
+    [OccMap,RunOccMap,xBin] = MakeOccMapLin(x,good,isrunning,xEdges);%lims,,cmperbin
 
     % Sam's whole session xBin
-    TotalOccMap = histcounts2(x,y,xEdges,yEdges); 
-    [TotalRunOccMap,~,~,xBinTotal,yBinTotal] =...
-        histcounts2(x,y,xEdges,yEdges); 
+%    TotalOccMap = histcounts2(x,y,xEdges,yEdges); 
+%    [TotalRunOccMap,~,~,xBinTotal,yBinTotal] =...
+%        histcounts2(x,y,xEdges,yEdges); 
     
     %Don't need non-isrunning epochs anymore.
     runningInds = find(isrunning);
     x = x(isrunning);
-    y = y(isrunning);
     PSAbool = logical(PSAbool(:,isrunning));
     nGood = length(x); 
     
 %% Construct place field and compute mutual information.
     %Preallocate.
-    TCounts = cell(1,nNeurons);
-    TMap_gauss = cell(1,nNeurons); 
-    TMap_unsmoothed = cell(1,nNeurons); 
+    %TCounts = cell(1,nNeurons);
+    %TMap_gauss = cell(1,nNeurons); 
+    %TMap_unsmoothed = cell(1,nNeurons); 
     pos = x;
     parfor n=1:nNeurons    
         %Make place field.
-        [TMap_unsmoothed{n},TCounts{n},TMap_gauss{n}] = ...
-            MakePlacefieldLin(PSAbool(n,:),pos,xEdges,yEdges,RunOccMap,...
+        [TMap_unsmoothed(n,:),TCounts(n,:),TMap_gauss(n,:)] = ...
+            MakePlacefieldLin(PSAbool(n,:),pos,xEdges,RunOccMap,...
             'cmperbin',cmperbin,'smooth',true);
     end
     
+    
+    
     %Compute mutual information.
-    MI = spatInfo(TMap_unsmoothed,RunOccMap,PSAbool,true);
+%    MI = spatInfo(TMap_unsmoothed,RunOccMap,PSAbool,true);
     
 %% Get statistical significance of place field using mutual information.
+%{
     %Preallocate. 
     pval = nan(1,nNeurons);
     
@@ -159,27 +157,26 @@ function PlacefieldsLinSL(MD,varargin)
             shuffled = circshift(PSAbool(n,:),[0 shifts(i)]);
             
             %Make place field from shifted transient vector. 
-            rTMap{i} = MakePlacefield(shuffled,pos,xEdges,yEdges,...
+            rTMap{i} = MakePlacefieldLin(shuffled,pos,xEdges,...
                 RunOccMap,'cmperbin',cmperbin,'smooth',false); 
 
         end
 
         %Calculate mutual information of randomized vectors. 
-        rMI = spatInfo(rTMap,RunOccMap,repmat(PSAbool(n,:),[B,1]),false); 
+%        rMI = spatInfo(rTMap,RunOccMap,repmat(PSAbool(n,:),[B,1]),false); 
 
         %Get p-value. 
-        pval(n) = 1-(sum(MI(n)>rMI)/B); 
+%        pval(n) = 1-(sum(MI(n)>rMI)/B); 
         
         if round(n/updateInc) == (n/updateInc)
             p.progress;
         end
     end
     p.stop; 
-    
+%}    
     save_append = ip.Results.save_append;
     savename = ['Placefields' save_append '.mat'];
     save(savename,'OccMap','RunOccMap','TCounts','TMap_gauss',...
         'TMap_unsmoothed','minspeed','isrunning','cmperbin','exclude_frames',...
-        'xEdges','yEdges','xBin','yBin','pval','TotalOccMap','TotalRunOccMap',...
-        'xBinTotal','yBinTotal','runningInds'); 
+        'xEdges','xBin','runningInds'); %'pval',
 end

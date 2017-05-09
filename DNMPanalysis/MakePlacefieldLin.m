@@ -53,7 +53,7 @@ function [TMap_unsmoothed,TCounts,varargout] = ...
     else
         TCounts = zeros(size(RunOccMap));
     end
-        Tsum = sum(TCounts(:)); 
+    Tsum = sum(TCounts(:)); 
 
     %Normalize. 
     TMap_unsmoothed = TCounts./RunOccMap; 
@@ -62,7 +62,8 @@ function [TMap_unsmoothed,TCounts,varargout] = ...
     if smth
         %Make smoothing kernel.
         gauss_std = gauss_std/cmperbin; 
-        sm = fspecial('gaussian',[round(8*gauss_std,0),round(8*gauss_std)],gauss_std); 
+        sm = fspecial('gaussian',round(8*gauss_std),gauss_std);
+        sm = sm(round(size(sm,1)/2),:);
         
         %Smooth. 
         TMap_gauss = imfilter(TMap_unsmoothed,sm);
