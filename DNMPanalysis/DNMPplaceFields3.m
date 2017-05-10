@@ -1,5 +1,8 @@
 function DNMPplaceFields3(session_struct)%, cmperbin
 %session_struct in MD format
+%MD = MakeMouseSessionListSL2('sam');
+%session_struct = MD(1)
+
 cd(session_struct.Location)
 
 %{
@@ -43,7 +46,7 @@ for cond = 1:length(regFlds)
             
     placeFile = ['Placefields' save_append '.mat'];
     
-    %PlacefieldStatsSL(session_struct,'placefields_file',placeFile);
+    PlacefieldStatsSL(session_struct,'placefields_file',placeFile,'save_append',save_append);
 end            
 
 testFiles = {'Placefields_forced_r_2p5cm.mat', 'Placefields_forced_l_2p5cm.mat', 'Placefields_free_r_2p5cm.mat', 'Placefields_free_l_2p5cm.mat'};

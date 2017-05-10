@@ -6,9 +6,17 @@ cmperbin=2;
 load SessionHalvesEpochs.mat
 files = dir('Placefields*');
 rightcm = cellfun(@any, (strfind({files.name},[num2str(cmperbin) 'cm'])));
+rightcm = cellfun(@any, (strfind({files.name},'2p5cm')));
 pfs = cellfun(@any, (strfind({files.name},'Placefields')));
 pfFiles = find(pfs & rightcm & ([files.isdir]==0));
 placeFiles = {files(pfFiles).name};
+
+suffices = cellfun(@(x) x(13:end),placeFiles,'UniformOutput',false);
+for pf = 1:length(placeFiles)
+    thesePts = strsplit(suffices{1},'_');
+    type{pf} = 
+
+
 
 pieces = strsplit(placeFiles{1},'_');
 
@@ -17,6 +25,7 @@ isHalf = cellfun(@any, (strfind({files.name},'PT')));
 binsize = 2;
 posThresh = 3; 
 hitThresh = 5;
+numShuffles = 100;
 part = 1;
 FoL1.statsFile = ['PlaceStats_forced_l_' num2str(binsize) 'cmPT' num2str(part) '.mat'];
 FrL1.statsFile = ['PlaceStats_free_l_' num2str(binsize) 'cmPT' num2str(part) '.mat'];
@@ -58,7 +67,7 @@ load('Pos_align.mat')
 
 
 %PVcorr sefl correlations
-[PixCorrFoL, pvalFoL] = PopVectorCorr(FoL1, FoL2, posThresh);
+[PixCorrFoL, pvalFoL] = PopVectorCorr(FoL1, FoL2, posThresh, numShuffles);
 [PixCorrFoR, pvalFoR] = PopVectorCorr(FoR1, FoR2, posThresh);
 [PixCorrFrL, pvalFrL] = PopVectorCorr(FrL1, FrL2, posThresh);
 [PixCorrFrR, pvalFrR] = PopVectorCorr(FrR1, FrR2, posThresh);

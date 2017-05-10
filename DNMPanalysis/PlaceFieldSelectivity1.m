@@ -214,7 +214,7 @@ histogram(abs(FoFrrateDiffs),0:0.05:1); title('160831 Left/Right Rate Changes')
 xlabel('Difference / Sum'); ylabel('Frequency')
 
 % Population Vectors
-[PixCorrFoLR, pvalFoLR] = PopVectorCorr(FoL, FoR, posThresh);
+[PixCorrFoLR, pvalFoLR, ShuffleCorrs] = PopVectorCorr(FoL1, FoR1, posThresh, excludeSilent, numShuffles);
 [PixCorrFrLR, pvalFrLR] = PopVectorCorr(FrL, FrR, posThresh);
 
 [PixCorrLFoFr, pvalLFoFr] = PopVectorCorr(FoL, FrL, posThresh);

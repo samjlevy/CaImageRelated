@@ -45,8 +45,11 @@ function PlacefieldStatsSL(MD,varargin)
     
     placefields_file = ip.Results.placefields_file;
     Pos_data = ip.Results.Pos_data;
-
-    load(placefields_file,'TMap_gauss','xBin','yBin','isrunning');
+    
+    load(placefields_file,'TMap_gauss','xBin','isrunning');
+    try
+        load(placefields_file,'yBin')
+    end
     try
         load('Pos_align.mat','PSAbool');
     catch
@@ -77,7 +80,12 @@ function PlacefieldStatsSL(MD,varargin)
     
 %% Get epochs of place field traversal.
     %Convert to linear indices.
-    linInd = sub2ind(size(TMap_gauss{1}),xBin,yBin);
+    %linInd = sub2ind(size(TMap_gauss{1}),xBin,yBin);
+    if any([size(TMap_gauss(1,:))==1])
+        linInd = xBin;
+    else
+        linInd = sub2ind(size(TMap_gauss{1}),xBin,yBin);
+    end
     
     %Preallocate a lot of shit. 
     PFpixels = cell(nNeurons,maxNPFs);

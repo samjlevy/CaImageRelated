@@ -121,13 +121,13 @@ function PlacefieldsLinSL(MD,varargin)
     
 %% Construct place field and compute mutual information.
     %Preallocate.
-    %TCounts = cell(1,nNeurons);
-    %TMap_gauss = cell(1,nNeurons); 
-    %TMap_unsmoothed = cell(1,nNeurons); 
+    TCounts = cell(1,nNeurons);
+    TMap_gauss = cell(1,nNeurons); 
+    TMap_unsmoothed = cell(1,nNeurons); 
     pos = x;
     parfor n=1:nNeurons    
         %Make place field.
-        [TMap_unsmoothed(n,:),TCounts(n,:),TMap_gauss(n,:)] = ...
+        [TMap_unsmoothed{n},TCounts{n},TMap_gauss{n}] = ...
             MakePlacefieldLin(PSAbool(n,:),pos,xEdges,RunOccMap,...
             'cmperbin',cmperbin,'smooth',true);
     end
@@ -135,10 +135,10 @@ function PlacefieldsLinSL(MD,varargin)
     
     
     %Compute mutual information.
-%    MI = spatInfo(TMap_unsmoothed,RunOccMap,PSAbool,true);
+    [MI,Isec,Ispk,Ipos,okpix] = spatInfo(TMap_unsmoothed,RunOccMap,PSAbool,true);
     
 %% Get statistical significance of place field using mutual information.
-%{
+
     %Preallocate. 
     pval = nan(1,nNeurons);
     
@@ -163,10 +163,10 @@ function PlacefieldsLinSL(MD,varargin)
         end
 
         %Calculate mutual information of randomized vectors. 
-%        rMI = spatInfo(rTMap,RunOccMap,repmat(PSAbool(n,:),[B,1]),false); 
+        rMI = spatInfo(rTMap,RunOccMap,repmat(PSAbool(n,:),[B,1]),false); 
 
-        %Get p-value. 
-%        pval(n) = 1-(sum(MI(n)>rMI)/B); 
+        %Get p-value. MI
+        pval(n) = 1-(sum(MI(n)>rMI)/B); 
         
         if round(n/updateInc) == (n/updateInc)
             p.progress;
@@ -178,5 +178,5 @@ function PlacefieldsLinSL(MD,varargin)
     savename = ['Placefields' save_append '.mat'];
     save(savename,'OccMap','RunOccMap','TCounts','TMap_gauss',...
         'TMap_unsmoothed','minspeed','isrunning','cmperbin','exclude_frames',...
-        'xEdges','xBin','runningInds'); %'pval',
+        'xEdges','xBin','runningInds','Isec','Ispk','Ipos','okpix','pval');
 end

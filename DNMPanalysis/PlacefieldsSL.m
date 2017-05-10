@@ -128,7 +128,7 @@ function PlacefieldsSL(MD,varargin)
     end
     
     %Compute mutual information.
-    MI = spatInfo(TMap_unsmoothed,RunOccMap,PSAbool,true);
+    [MI,Isec,Ispk,Ipos,okpix] = spatInfo(TMap_unsmoothed,RunOccMap,PSAbool,true);
     
 %% Get statistical significance of place field using mutual information.
     %Preallocate. 
@@ -171,5 +171,5 @@ function PlacefieldsSL(MD,varargin)
     save(savename,'OccMap','RunOccMap','TCounts','TMap_gauss',...
         'TMap_unsmoothed','minspeed','isrunning','cmperbin','exclude_frames',...
         'xEdges','yEdges','xBin','yBin','pval','TotalOccMap','TotalRunOccMap',...
-        'xBinTotal','yBinTotal','runningInds'); 
+        'xBinTotal','yBinTotal','runningInds','MI','Isec','Ispk','Ipos','okpix'); 
 end

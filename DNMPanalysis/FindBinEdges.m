@@ -37,10 +37,10 @@ while binsGood == 0
     hold on
     plot(x_adj_cm(allStarts),y_adj_cm(allStarts),'.r')
     plot(x_adj_cm(allStops),y_adj_cm(allStops),'.g')
-    plot([binEdges(1) binEdges(1)],[min(y_adj_cm(allStarts)) max(y_adj_cm(allStarts))],'k')
-    plot([binEdges(2) binEdges(2)],[min(y_adj_cm(allStarts)) max(y_adj_cm(allStarts))],'k')
-    plot([binEdges(end-1) binEdges(end-1)],[min(y_adj_cm(allStops)) max(y_adj_cm(allStops))],'k')
-    plot([binEdges(end) binEdges(end)],[min(y_adj_cm(allStops)) max(y_adj_cm(allStops))],'k')
+    plot([binEdges(1) binEdges(1)],[min(y_adj_cm(allPos)) max(y_adj_cm(allPos))],'k')
+    plot([binEdges(2) binEdges(2)],[min(y_adj_cm(allPos)) max(y_adj_cm(allPos))],'k')
+    plot([binEdges(end-1) binEdges(end-1)],[min(y_adj_cm(allPos)) max(y_adj_cm(allPos))],'k')
+    plot([binEdges(end) binEdges(end)],[min(y_adj_cm(allPos)) max(y_adj_cm(allPos))],'k')
 
 
 
