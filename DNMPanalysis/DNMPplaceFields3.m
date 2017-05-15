@@ -31,22 +31,24 @@ save SessionHalvesEpochs.mat split1 split2
 
 FindBindEdges(pooled, x_adj_cm, anchorBin)
 
-neuron_input = 'FinalOutput.mat';
-cmperbin = 2.5;
+
+cmperbin = 2;
 minspeed = 2.25;
 NumShuffles = 100;
 regFlds = fieldnames(stem_exclude);
 for cond = 1:length(regFlds)
-    %save_append = ['_' char(regFlds{cond}) '_' num2str(cmperbin) 'cm'];
-    save_append = ['_' char(regFlds{cond}) '_2p5cm'];
+    save_append = ['_' char(regFlds{cond}) '_' num2str(cmperbin) 'cm'];
+    %save_append = ['_' char(regFlds{cond}) '_2p5cm'];
     
     PlacefieldsLinSL(session_struct,'exclude_frames',stem_exclude.(regFlds{cond}),...
                 'aligned',true,'minspeed',minspeed,'cmperbin',cmperbin,...
                 'B',NumShuffles,'save_append',save_append,'bin_edges',binEdges);
             
-    placeFile = ['Placefields' save_append '.mat'];
+    placeFile{cond} = ['Placefields' save_append '.mat'];
     
-    PlacefieldStatsSL(session_struct,'placefields_file',placeFile,'save_append',save_append);
+    PlacefieldStatsSL(session_struct,'placefields_file',placeFile{cond},'save_append',save_append);
+    
+    statsFile{cond} = ['PlaceStats' save_append '.mat'];
 end            
 
 testFiles = {'Placefields_forced_r_2p5cm.mat', 'Placefields_forced_l_2p5cm.mat', 'Placefields_free_r_2p5cm.mat', 'Placefields_free_l_2p5cm.mat'};

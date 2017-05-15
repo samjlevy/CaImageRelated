@@ -4,23 +4,10 @@ cmperbin=2;
 
 %File discovery
 load SessionHalvesEpochs.mat
-files = dir('Placefields*');
-rightcm = cellfun(@any, (strfind({files.name},[num2str(cmperbin) 'cm'])));
-rightcm = cellfun(@any, (strfind({files.name},'2p5cm')));
-pfs = cellfun(@any, (strfind({files.name},'Placefields')));
-pfFiles = find(pfs & rightcm & ([files.isdir]==0));
-placeFiles = {files(pfFiles).name};
-
-suffices = cellfun(@(x) x(13:end),placeFiles,'UniformOutput',false);
-for pf = 1:length(placeFiles)
-    thesePts = strsplit(suffices{1},'_');
-    type{pf} = 
 
 
 
-pieces = strsplit(placeFiles{1},'_');
 
-isHalf = cellfun(@any, (strfind({files.name},'PT')));
 
 binsize = 2;
 posThresh = 3; 

@@ -1,3 +1,10 @@
+cmperbin = 2;
+
+filesOut = FindPlaceFiles (cmperbin);
+
+
+
+
 FoL.statsFile = 'Placefields_forced_l_2p5cm.mat';
 FoR.statsFile = 'Placefields_forced_r_2p5cm.mat';
 FoL.mapsFile = 'Placefields_forced_l_2p5cm.mat';

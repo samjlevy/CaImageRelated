@@ -23,7 +23,7 @@ anchorBin = 2.5;
 
 ceil((xmax-xmin)/anchorBin)
 
-cmperbin = 2.5
+cmperbin = 2
 
 binsGood = 0;
 while binsGood == 0
