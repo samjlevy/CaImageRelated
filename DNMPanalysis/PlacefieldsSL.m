@@ -49,6 +49,7 @@ function PlacefieldsSL(MD,varargin)
     ip.addParameter('Pos_data','Pos_align.mat',@(x) ischar(x));
     ip.addParameter('Tenaspis_data','FinalOutput.mat',@(x) ischar(x)); 
     ip.addParameter('save_append',[],@(x) ischar(x));
+    ip.addParameter('bin_edges',[],@(x) isnumeric(x));
     
     ip.parse(MD,varargin{:});
     
@@ -60,6 +61,7 @@ function PlacefieldsSL(MD,varargin)
     aligned = ip.Results.aligned;
     Pos_data = ip.Results.Pos_data;
     Tenaspis_data = ip.Results.Tenaspis_data;
+    bin_edges = ip.Results.bin_edges;
     
 %% Set up.
     if aligned

@@ -55,3 +55,9 @@ PopVectorCorr(PFsA,PFsB,posThresh,excludeSilent)
     %with maps and stats, pos thresh is requisite numbe of hits
     %in a position bin, excludeSilent is if you want to exclude
     %cells that were silent in both conditions. 
+FindPlaceFiles
+    %Given cmperbin and which half (empty or 0 for the regular files) will
+    %return a list of place and stats files that fit that profile.
+    %Alternative is to generate list of files needed when running
+    %DNMPplaceFields
+    

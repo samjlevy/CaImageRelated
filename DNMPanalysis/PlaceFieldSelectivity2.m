@@ -5,10 +5,6 @@ cmperbin=2;
 %File discovery
 load SessionHalvesEpochs.mat
 
-
-
-
-
 binsize = 2;
 posThresh = 3; 
 hitThresh = 5;
@@ -53,7 +49,7 @@ FoR2.epochs = split2.forced_r;  FrR2.epochs = split1.free_r;
 load('Pos_align.mat')
 
 
-%PVcorr sefl correlations
+%PVcorr self correlations
 [PixCorrFoL, pvalFoL] = PopVectorCorr(FoL1, FoL2, posThresh, numShuffles);
 [PixCorrFoR, pvalFoR] = PopVectorCorr(FoR1, FoR2, posThresh);
 [PixCorrFrL, pvalFrL] = PopVectorCorr(FrL1, FrL2, posThresh);

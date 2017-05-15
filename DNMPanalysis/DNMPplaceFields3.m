@@ -98,19 +98,6 @@ PlacefieldsSL(session_struct,'exclude_frames',maze_exclude.exclude,...
 placeFile = ['Placefields' save_append '.mat'];
 PlacefieldStatsSL(session_struct,'placefields_file',placeFile);
     
-    PlacefieldStats(session_struct,'placefields_file',placeFile);
-    
-    
-%IDEA:
-%{
-- run all placefields, 
-- then dynamically find all those files with: 
-rightcm = cellfun(@any, (strfind({files.name},'2cm')))
-pfs = cellfun(@any, (strfind({files.name},'Placefields')))
-pfFiles = find(pfs & rightcm & ([files.isdir]==0));
-- then run placefieldstats on those files
-%}
-
 
 
 

@@ -1,6 +1,12 @@
 function [varargout] = StructEqualizer(varargin)
 %varargout = varargin;
 
+switch nargout~=nargin
+    case 1
+        disp('Nope, unequal nargouts and nargins')
+        return
+    case 0
+        
 fields = fieldnames(varargin{1});
 
 for fieldNum = 1:length(fields)
@@ -25,6 +31,8 @@ for fieldNum = 1:length(fields)
     end
     
     end
+end
+
 end
 
 end

@@ -1,9 +1,23 @@
-function [PopVectors] = PopVectorsMake(RateMaps, GoodPixels)
+function [PopVectors] = PopVectorsMake(RateMaps, keepNans)
 %Rate map should be TMap_unsmoothed, TMap_counts, FMap, etc.
-
+%Eliminate isnans is defaulted to yes
+%Good pixels is optional, will make a vector for every cell at every pixel , GoodPixels
+if ~exist('keepNans','var')
+    keepNans = 0;
+elseif keepNans == 1
+    keepNans = NaN;
+    disp('keeping NaNs')
+end
+    
 numCells = max([size(RateMaps)]);
+%{
+if ~exist('GoodPixels','var')
+    allPix = ones(size(RateMaps{1,1}));
+    GoodPixels = find(allPix);
+end
 
 %Preallocate
+
 PopVectors = cell(size(RateMaps{1,1}));
 blankVector = nan(numCells,1);
 [PopVectors{GoodPixels}] = deal(blankVector);
@@ -16,7 +30,12 @@ for thisCell = 1:numCells
         end
     end
 end
+%}
 
+PopVectors=reshape([RateMaps{1,:}],size(RateMaps{1},1),size(RateMaps{1},2), numCells);
+
+PopVectors(isnan(PopVectors)) = keepNans;
+    
 end
         
         
