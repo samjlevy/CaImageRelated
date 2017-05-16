@@ -144,11 +144,13 @@ global ManualCorrFig; global overwriteManualFlag; global velCount; global sFrame
 global eFrame; global MoMtime; global vel_init; global auto_vel_thresh;
 global velchoice; global AMchoice; global corrDefGoodFlag; global elChoiceFlag;
 global elVector; global mazeEl; global bstr; global allTxt; global bframes;
+global update_pos_realtime;
 
 
 %% Get varargin
     
 %epoch_length_lim = 200; % default
+update_pos_realtime = 1;
 max_pixel_jump = 45;
 corrDefGoodFlag = 0;
 overwriteManualFlag=0;
