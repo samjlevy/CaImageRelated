@@ -23,7 +23,6 @@ else
     end
 end
 
-
 [GoodPix]=GoodOccMapShared(PFsA.maps.RunOccMap, PFsB.maps.RunOccMap, posThresh); 
 
 %goodCells = ones(size(PFsA.stats.PFnHits,1),1);
@@ -39,12 +38,12 @@ for thisPixel = 1:length(GoodPix)
     [x,y]=ind2sub(size(PFsA.maps.TMap_gauss),GoodPix(thisPixel));
     PVa = reshape(PFsA.PopVectors(x,y,logical(goodCells)),1,sum(goodCells));
     PVb = reshape(PFsB.PopVectors(x,y,logical(goodCells)),1,sum(goodCells));
-    [PixCorrs(thisPixel), corrP(thisPixel)] = corr(PVa', PVb','type','Spearman');
+    PixCorrs(thisPixel) = corr(PVa', PVb'); %[ , corrP(thisPixel)] ,'type','Spearman'
 end
 
 %Shuffle trial IDs for p-val
 ShuffleCorrs = nan(length(GoodPix),numShuffles);
-%{
+
 for shuffPixel = 1:length(GoodPix)
     [x,y]=ind2sub(size(PFsA.maps.TMap_gauss),GoodPix(shuffPixel));
     PVa = PFsA.PopVectors(x,y,logical(goodCells));
@@ -60,7 +59,7 @@ for shuffPixel = 1:length(GoodPix)
         shuffledA(shuffledPVs == 1) = PVb(shuffledPVs == 1); %B
         shuffledB(shuffledPVs == 0) = PVb(shuffledPVs == 0); %B
         shuffledB(shuffledPVs == 1) = PVa(shuffledPVs == 1); %A
-        [ShuffleCorrs(shuffPixel,thisShuffle), ~] = corr(shuffledA', shuffledB','type','Spearman');
+        ShuffleCorrs(shuffPixel,thisShuffle) = corr(shuffledA', shuffledB');%,'type','Spearman'
     end
 end
 %}

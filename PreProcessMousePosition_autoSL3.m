@@ -1,4 +1,4 @@
-function [xpos_interp,ypos_interp,time_interp,AVItime_interp] = PreProcessMousePosition_autoSL2(varargin);
+function [xpos_interp,ypos_interp,time_interp,AVItime_interp] = PreProcessMousePosition_autoSL3(varargin);
 % Open issues: 1/11/17
 %   
 %   - Logic for possible: could be generalized better
@@ -20,7 +20,6 @@ function [xpos_interp,ypos_interp,time_interp,AVItime_interp] = PreProcessMouseP
 %   adjacent frame?
 %   - reject blobs found near current location
 %   - other exclude regions (known bad locations)
-%   - update 0,0 message, show figure of those points
 %
 %[xpos_interp,ypos_interp,start_time,MoMtime] = PreProcessMousePosition_auto(filepath, auto_thresh,...)
 % Function to correct errors in mouse tracking.  Runs once through the
@@ -140,7 +139,7 @@ global fixedThisFrameFlag; global numPasses; global v; global maskx;
 global masky; global v0; global maze; global lastManualFrame; lastManualFrame=[];
 global grayThresh; global gaussThresh; global willThresh; global distLim2;
 global got; global skipped; global xm; global ym; global bounds;
-global expectedBlobs; global time; global update_pos_realtime; global grayBlobArea;
+global expectedBlobs; global time; global grayBlobArea;
 global ManualCorrFig; global overwriteManualFlag; global velCount; global sFrame;
 global eFrame; global MoMtime; global vel_init; global auto_vel_thresh;
 global velchoice; global AMchoice; global corrDefGoodFlag; global elChoiceFlag;
@@ -149,7 +148,6 @@ global elVector; global mazeEl; global bstr; global allTxt; global bframes;
 
 %% Get varargin
     
-update_pos_realtime = 1; % Default setting
 %epoch_length_lim = 200; % default
 max_pixel_jump = 45;
 corrDefGoodFlag = 0;
@@ -157,9 +155,6 @@ overwriteManualFlag=0;
 for j = 1:length(varargin)
     if strcmpi('filepath', varargin{j})
         filepath = varargin{j+1};
-    end
-    if strcmpi('update_pos_realtime', varargin{j})
-        update_pos_realtime = varargin{j+1};
     end
     %if strcmpi('epoch_length_lim', varargin{j})
     %    epoch_length_lim = varargin{j+1};
@@ -191,15 +186,11 @@ cluster_thresh = 40; % For auto thresholding - any time there are events above
 % Import position data from DVT file
 try
     pos_data = importdata(filepath);
-    %f_s = max(regexp(filepath,'\'))+1;
-    %mouse_name = filepath(f_s:f_s+2);
-    %date = [filepath(f_s+3:f_s+4) '-' filepath(f_s+5:f_s+6) '-' filepath(f_s+7:f_s+10)];
-    
-    % Parse out into invididual variables
+       
     %frame = pos_data(:,1);
     time = pos_data(:,2); % time in seconds
-    Xpix = pos_data(:,3); % x position in pixels (can be adjusted to cm)
-    Ypix = pos_data(:,4); % y position in pixels (can be adjusted to cm)
+    Xpix = pos_data(:,3); 
+    Ypix = pos_data(:,4); 
 catch
     % Video.txt is there instead of Video.DVT
     pos_data = importdata('Video.txt');
@@ -302,10 +293,10 @@ bkgChoice = questdlg('Supply/Load background image or composite?', ...
             h1 = implay(avi_filepath);
         end
         bkgFrameNum = input('frame number of mouse-free background frame??? --->');
-        close(h1);
         obj.CurrentTime = (bkgFrameNum-1)/obj.FrameRate;
         backgroundImage = readFrame(obj);
         backgroundFrame=figure('name','backgroundFrame'); imagesc(backgroundImage); title('Background Image')
+        compositeBkg = backgroundImage;
         %could break here to allow fixing a piece of this one
     case 'Composite'
         try
@@ -353,6 +344,9 @@ elseif ~isempty(v0)
         end
     end     
 end     
+try %#ok<*TRYNC>
+    close(h1);
+end
 compGood=0;
 while compGood==0
     holdChoice = questdlg('Good or fix a piece?', 'Background Image', ...
@@ -364,16 +358,16 @@ while compGood==0
             end
             compGood=1;
         case 'Fix area'
+            try %#ok<*TRYNC>
+                close(h1);
+            end
             figure(backgroundFrame); title('Select area to swap out')
             [swapRegion, SwapX, SwapY] = roipoly;
             hold on 
             plot([SwapX; SwapX(1)],[SwapY; SwapY(1)],'r','LineWidth',2)
-            %figure(h1); %msgbox('Enter frame number of image to swap in')
+            h1 = implay(avi_filepath);
             swapInNum = input('Frame number to swap in area from ---->')%#ok<NOPRT> 
             %might replace with 2 field dialog box
-            try 
-                close h1; 
-            end
             obj.CurrentTime = (swapInNum-1)/obj.FrameRate;
             swapClearFrame = readFrame(obj);
             [rows,cols]=ind2sub([480,640],find(swapRegion));
@@ -381,6 +375,7 @@ while compGood==0
             figure(backgroundFrame);imagesc(compositeBkg)
             compGood=0;
             backgroundImage = compositeBkg;
+
     end
 end
 v0 = backgroundImage; %Comes out rightside up
@@ -431,8 +426,6 @@ else
 end
 
 UpdatePosAndVel;
-%vel = hypot(diff(Xpix),diff(Ypix))/(time(2)-time(1));
-
 %% Expected location
 elChoice = questdlg('Expected locations?', 'Expected locations', ...
 	'Yes','No','Yes');
@@ -473,33 +466,45 @@ skipped=[];
 grayFrameThreshB=rgb2gray(flipud(v0)) < grayThresh; %flipud
 expectedBlobs=logical(imgaussfilt(double(grayFrameThreshB),10) <= gaussThresh);
 
-%if ~exist('Pos_temp.mat','file')
-    SaveTemp;
-%end 
+SaveTemp;
 
-% First let's do frames out of bounds
-%Maybe make this an option?
 zero_frames = Xpix == 0 | Ypix == 0 ;
-%auto_zero = find(zero_frames);
+
 [in,on] = inpolygon(xAVI, yAVI, maskx, masky);
 inBounds = in | on;
 outOfBounds=inBounds==0;
-auto_logical = zero_frames | outOfBounds;
-auto_frames = find(auto_logical);
+outOfBounds(zero_frames) = 0;
+both_logical = zero_frames | outOfBounds;
 
-%First pass go for automatic detection
-if any(auto_frames)
-    zerochoice = questdlg(['Found ' num2str(sum(auto_logical)) ' points at (0, 0).'],...
-        'Fix zeros','FixEm','Skip','FixEm');
+if any(zero_frames)
+    badPoints = figure; plot(xAVI, yAVI, '.')
+    hold on
+    plot(xAVI(both_logical), yAVI(both_logical), '*r')
+    reported = {['Found ' num2str(sum(zero_frames)) ' points at (0, 0)'],...
+                           ['and ' num2str(sum(outOfBounds)) ' points out of bounds.']};
+    zerochoice = questdlg(reported,'Fix bad points',...
+                           'FixEm','Skip','FixEm');
     switch zerochoice
         case 'FixEm'
             numPasses=2;
+            fixWhich = questdlg('Fix which?','Fix bad points',...
+                           'Zeros','OutOfBounds','Both','Both');
+            switch fixWhich
+                case 'Zeros'
+                    auto_frames = find(zero_frames);
+                case 'OutOfBounds'
+                    auto_frames = find(outOfBounds);
+                case 'Both'
+                    auto_frames = find(both_logical);
+            end
+            close(badPoints);
             CorrectTheseFrames;
-        case 'No'
+        case 'Skip'
             %Do nothing
+            close(badPoints);
     end
+    
 end
-
 %% so many options
 optionsText={'y - attempt auto, manual when missed';...
              'm - all manual';...
@@ -1423,7 +1428,7 @@ end
 function getELvector(~,~)
 global elVector; global elChoiceFlag; global xAVI; global v0; global mazeEl;
 global maze; global maskx; global masky; global bstr; global allTxt; global bframes;
-global mazeElInd;
+global mazeElInd; global mazeUp
 
 doneLoading=0; 
 loaded=1;
@@ -1580,7 +1585,7 @@ end
 function addAnElMask(~,~)
  global elVector; global elChoiceFlag; global xAVI; global v0; global mazeEl;
 global maze; global maskx; global masky; global bstr; global allTxt; global bframes;  
-global mazeElInd; 
+global mazeElInd; global mazeUp; 
 
     selectedTwo=0;
     while selectedTwo==0
@@ -1606,10 +1611,14 @@ global mazeElInd;
             [flug,~] = listdlg('PromptString','Which flag:',...
                     'SelectionMode','single','ListString',bChoices);    
             LRmod = strcmpi(allTxt(2:end,t+1),bChoices(flug));
-                
+            
+            beOptions = length(bChoices) - 1;
         case 'No'
             LRmod = ones(size(bframes,1));
+            beOptions = 0;
     end    
+    
+    while beOptions >= 0
     
     starts = bframes(:,s(1)); starts(LRmod==0)=[];
     stops = bframes(:,s(2)); stops(LRmod==0)=[];
@@ -1617,7 +1626,7 @@ global mazeElInd;
     mazeMaskGood=0;
     while mazeMaskGood==0
         MazeFig=figure('name', 'Expected Location Mask'); imagesc(flipud(v0));
-        %title(['Draw position mask for ' str{s(mazeUp)}]);
+        title(['Draw position mask for ' bstr(s(1)) ' - ' bstr(s(2))]);
         [mazeEl(mazeElInd).maze, mazeEl(mazeElInd).maskx, mazeEl(mazeElInd).masky] = roipoly;
         hold on; plot([mazeEl(mazeElInd).maskx; mazeEl(mazeElInd).maskx(1)],...
             [mazeEl(mazeElInd).masky; mazeEl(mazeElInd).masky(1)],'r','LineWidth',1); hold off 
@@ -1637,8 +1646,33 @@ global mazeElInd;
     for tri=1:numel(starts)
         elVector(starts(tri):stops(tri)) = mazeElInd;
     end
+    
+    if length(beOptions) > 0
+        flugChoice = questdlg('Found more behavior flags. Do them, same bounds?', 'More flags', ...
+                              'Yes','No','Yes');  
+        switch flugChoice
+            case 'Yes'
+                bChoices(flug) = [];
+                [flug,~] = listdlg('PromptString',':',...
+                           'SelectionMode','single','ListString',bChoices);    
+                LRmod = strcmpi(allTxt(2:end,t+1),bChoices(flug));
+           
+                if length(bChoices) > 1
+                    mazeUp=mazeUp+1;
+                    mazeElInd=mazeUp+1;
+                end
+            case 'No'
+            beOptions = 0;
+        end
+    end
+    
+    beOptions = beOptions - 1;
+    
+    end
 end
 %%
+
+
 
 
 %{
