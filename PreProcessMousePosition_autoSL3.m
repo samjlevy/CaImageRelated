@@ -144,7 +144,7 @@ global ManualCorrFig; global overwriteManualFlag; global velCount; global sFrame
 global eFrame; global MoMtime; global vel_init; global auto_vel_thresh;
 global velchoice; global AMchoice; global corrDefGoodFlag; global elChoiceFlag;
 global elVector; global mazeEl; global bstr; global allTxt; global bframes;
-global update_pos_realtime;
+global update_pos_realtime; global blankVector;
 
 
 %% Get varargin
@@ -463,26 +463,27 @@ distLim2 = max_pixel_jump;
 grayBlobArea = 60; %Could probably be raised
 got=[];
 skipped=[];
+blankVector = zeros(size(xAVI));
 
-%Expected gray blobs to exclude
+%% Expected gray blobs to exclude
 grayFrameThreshB=rgb2gray(flipud(v0)) < grayThresh; %flipud
 expectedBlobs=logical(imgaussfilt(double(grayFrameThreshB),10) <= gaussThresh);
 
 SaveTemp;
 
 zero_frames = Xpix == 0 | Ypix == 0 ;
-
 [in,on] = inpolygon(xAVI, yAVI, maskx, masky);
 inBounds = in | on;
 outOfBounds=inBounds==0;
 outOfBounds(zero_frames) = 0;
-both_logical = zero_frames | outOfBounds;
+both_logical = zero_frames | outOfBounds;  
 
 if any(zero_frames)
     badPoints = figure; plot(xAVI, yAVI, '.')
     hold on
     plot(xAVI(both_logical), yAVI(both_logical), '*r')
-    reported = {['Found ' num2str(sum(zero_frames)) ' points at (0, 0)'],...
+    sum(zero_frames & definitelyGood)
+    reported = {['Found ' num2str(sum(zero_frames)) ' points at (0, 0), '],...
                            ['and ' num2str(sum(outOfBounds)) ' points out of bounds.']};
     zerochoice = questdlg(reported,'Fix bad points',...
                            'FixEm','Skip','FixEm');
@@ -499,13 +500,19 @@ if any(zero_frames)
                 case 'Both'
                     auto_frames = find(both_logical);
             end
+            alreadyCorr = zeros(size(both_logical));
+            alreadyCorr(auto_frames) = 1;
+            if any(definitelyGood & alreadyCorr)
+                
+                disp(['Some frames to fix are already definitely good; switch ' ...
+                        'AOM flag to correct those'])
+            end
             close(badPoints);
             CorrectTheseFrames;
         case 'Skip'
             %Do nothing
             close(badPoints);
     end
-    
 end
 %% so many options
 optionsText={'y - attempt auto, manual when missed';...
@@ -516,6 +523,7 @@ optionsText={'y - attempt auto, manual when missed';...
              'o - change AOM flag';...
              'l - edit expected locations';...
              's - save work';...
+             'x - quit without finalizing';...
              'q - save, finalize and quit';...
              ' ';...
              'AOM flag (auto-overwrites-manual)';...
@@ -692,6 +700,9 @@ switch MorePoints
         editELvectors;
     case 's'
         SaveTemp;
+    case 'x'
+        SaveTemp;
+        return
     case 'q'
         SaveTemp;
         stillEditingFlag=0;    
@@ -853,10 +864,7 @@ if doneVel==0 && any(auto_frames)
                     fixedThisFrameFlag=0;
                     [xm,ym]=EnhancedManualCorrect;
                     if fixedThisFrameFlag==1
-                        xAVI(auto_frames(corrFrame)) = xm;
-                        yAVI(auto_frames(corrFrame)) = ym;
-                        Xpix(auto_frames(corrFrame)) = ceil(xm/0.6246);
-                        Ypix(auto_frames(corrFrame)) = ceil(ym/0.6246);
+                        FixFrame(xm,ym)
                     end
                     end
                 end
@@ -876,11 +884,7 @@ if doneVel==0 && any(auto_frames)
                 [xm,ym]=EnhancedManualCorrect; 
         
                 if fixedThisFrameFlag==1
-                    xAVI(auto_frames(corrFrame)) = xm;
-                    yAVI(auto_frames(corrFrame)) = ym;
-                    Xpix(auto_frames(corrFrame)) = ceil(xm/0.6246);
-                    Ypix(auto_frames(corrFrame)) = ceil(ym/0.6246); 
-            
+                    FixFrame(xm,ym)
                 end   
             end
         end    
@@ -916,10 +920,7 @@ if doneVel==0 && any(auto_frames)
                     fixedThisFrameFlag=0;
                     [xm,ym]=EnhancedManualCorrect;
                     if fixedThisFrameFlag==1
-                        xAVI(auto_frames(corrFrame)) = xm;
-                        yAVI(auto_frames(corrFrame)) = ym;
-                        Xpix(auto_frames(corrFrame)) = ceil(xm/0.6246);
-                        Ypix(auto_frames(corrFrame)) = ceil(ym/0.6246);
+                        FixFrame(xm,ym);
                     end
                 end
                 correctThis=0;
@@ -935,10 +936,7 @@ if doneVel==0 && any(auto_frames)
         [xm,ym]=EnhancedManualCorrect; 
         
         if fixedThisFrameFlag==1
-            xAVI(auto_frames(corrFrame)) = xm;
-            yAVI(auto_frames(corrFrame)) = ym;
-            Xpix(auto_frames(corrFrame)) = ceil(xm/0.6246);
-            Ypix(auto_frames(corrFrame)) = ceil(ym/0.6246); 
+            FixFrame(xm,ym)
             
             %figure(ManualCorrFig); 
             %hold on;
@@ -956,12 +954,38 @@ UpdatePosAndVel;
 
 end
 %% %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+function FixFrame(xm,ym)
+global xAVI; global yAVI; global Xpix, global Ypix; global auto_frames;
+global corrFrame;
+
+xAVI(auto_frames(corrFrame)) = xm;
+yAVI(auto_frames(corrFrame)) = ym;
+Xpix(auto_frames(corrFrame)) = ceil(xm/0.6246);
+Ypix(auto_frames(corrFrame)) = ceil(ym/0.6246);
+end
+%% %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 function TryAdjacentFrames(~,~)
                 
-global putativeMouseX; global putativeMouseY
+global putativeMouseX; global putativeMouseY; global definitelyGood
 global auto_frames; global corrFrame; global skipped; global pass;
 global xAVI; global yAVI; global fixedThisFrameFlag; global huh; %global got
 global xm; global ym; 
+
+%Is there an adjacent definitelyGood frame to use?
+tryFrame = auto_frames(corrFrame);
+testDG = [0; definitelyGood; 0]; %so we can index w/o conditionals
+testDGtry = tryFrame+1;
+adjFrames = [(testDGtry-1) (testDGtry+1)]';
+useAdjFrames = testDG(adjFrames);%tryFrame = 1 or end always returns 0
+adjFrames(useAdjFrames==0) = [];
+
+defAdjXs = xAVI(adjFrames);
+defAdjYs = yAVI(adjFrames);
+
+
+%For one isn't hard, for both not sure. Maybe just radius that's within
+%both?
+1/sqrt(length(defAdjXs) %scaling factor for radius by how many adj frames
 
 skipThisStep=0;
 if auto_frames(corrFrame) > 1 && any(skipped==auto_frames(corrFrame)-1)==0 %Look at adjacent frames
@@ -1074,10 +1098,7 @@ while intendedFrameGood == 0
             title(['click here, backed up to ' num2str(lastManualFrame) ' from ' num2str(intendedFrameNum)])
             [xm,ym] = ginput(1);
             hold on; plot(xm,ym,'oy','MarkerSize',4,'MarkerFaceColor','g'); hold off
-            xAVI(lastManualFrame) = xm;
-            yAVI(lastManualFrame) = ym;
-            Xpix(lastManualFrame) = ceil(xm/0.6246);
-            Ypix(lastManualFrame) = ceil(ym/0.6246);
+            FixFrame(xm,ym)
             definitelyGood(lastManualFrame) = 1; %just in case
             obj.CurrentTime = (intendedFrameNum-1)/aviSR;
             intendedFrame = readFrame(obj);
@@ -1336,10 +1357,7 @@ end
             
     % apply corrected position to current frame
     if fixedThisFrameFlag==1
-        xAVI(auto_frames(corrFrame)) = xm;
-        yAVI(auto_frames(corrFrame)) = ym;
-        Xpix(auto_frames(corrFrame)) = ceil(xm/0.6246);
-        Ypix(auto_frames(corrFrame)) = ceil(ym/0.6246); 
+        FixFrame(xm,ym) 
             
         figure(ManualCorrFig); 
         hold on;
@@ -1377,10 +1395,7 @@ for corrFrame=1:length(auto_frames)
     end        
     
     if fixedThisFrameFlag==1
-        xAVI(auto_frames(corrFrame)) = xm;
-        yAVI(auto_frames(corrFrame)) = ym;
-        Xpix(auto_frames(corrFrame)) = ceil(xm/0.6246);
-        Ypix(auto_frames(corrFrame)) = ceil(ym/0.6246);
+        FixFrame(xm,ym)
                 
         figure(ManualCorrFig); 
         hold on;
