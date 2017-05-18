@@ -1246,7 +1246,7 @@ stats=stats(MouseBlob);
 %Sam's gray version
 grayFrameThresh = rgb2gray(flipud(v)) < grayThresh; %flipud
 grayGaussThresh = imgaussfilt(double(grayFrameThresh),10) > gaussThresh;
-maybeMouseGray = grayGaussThresh & maze & expectedBlobs; %To handle background gray
+maybeMouseGray = grayGaussThresh &expectedBlobs; %To handle background gray maze & 
 grayStats = regionprops(maybeMouseGray,'centroid','area','majoraxislength','minoraxislength'); %flipped
 grayStats = grayStats( [grayStats.Area] > grayBlobArea &...
                        [grayStats.MajorAxisLength] > 15 &...
