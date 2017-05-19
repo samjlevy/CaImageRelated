@@ -201,12 +201,6 @@ catch
     time = pos_data.data(:,4);
 end
 
-xAVI = Xpix*.6246;
-yAVI = Ypix*.6246;
-
-
-PreCorrectedData=figure('name','Pre-Corrected Data');plot(Xpix,Ypix);title('pre-corrected data'); %#ok<NASGU>
-
 avi_filepath = ls('*.avi');
 disp(['Using ' avi_filepath ])
 obj = VideoReader(avi_filepath);
@@ -232,11 +226,15 @@ if exist('Pos_temp.mat','file') || exist('Pos.mat','file')
         close(h1);
     end
 else
+    xAVI = Xpix*.6246;
+    yAVI = Ypix*.6246;
     h1 = implay(avi_filepath);
     MouseOnMazeFrame = input('on what frame number does Mr. Mouse arrive on the maze??? --->');
     MoMtime = MouseOnMazeFrame*0.03+time(1) %#ok<NOPRT>
     close(h1);
 end
+
+PreCorrectedData=figure('name','Pre-Corrected Data');plot(Xpix,Ypix);title('pre-corrected data'); %#ok<NASGU>
 
 if ~any(definitelyGood)
     definitelyGood = Xpix*0;
@@ -453,7 +451,7 @@ end
 
 %% All the rest...
 %if ~exist('Pos_temp.mat','file')
-    SaveTemp;
+    
 %end 
 
 willThresh=20;
@@ -465,55 +463,60 @@ got=[];
 skipped=[];
 blankVector = zeros(size(xAVI));
 
+BlackBlobContrastAdjuster;
+
+SaveTemp;
 %% Expected gray blobs to exclude
 grayFrameThreshB=rgb2gray(flipud(v0)) < grayThresh; %flipud
 expectedBlobs=logical(imgaussfilt(double(grayFrameThreshB),10) <= gaussThresh);
 
 SaveTemp;
 
+auto_frames=[];
 zero_frames = Xpix == 0 | Ypix == 0 ;
-[in,on] = inpolygon(xAVI, yAVI, maskx, masky);
-inBounds = in | on;
-outOfBounds=inBounds==0;
-outOfBounds(zero_frames) = 0;
-both_logical = zero_frames | outOfBounds;  
-
 if any(zero_frames)
-    badPoints = figure; plot(xAVI, yAVI, '.')
-    hold on
-    plot(xAVI(both_logical), yAVI(both_logical), '*r')
-    sum(zero_frames & definitelyGood)
-    reported = {['Found ' num2str(sum(zero_frames)) ' points at (0, 0), '],...
-                           ['and ' num2str(sum(outOfBounds)) ' points out of bounds.']};
+reported = {['Found ' num2str(sum(zero_frames)) ' points at (0, 0)']};
     zerochoice = questdlg(reported,'Fix bad points',...
                            'FixEm','Skip','FixEm');
     switch zerochoice
         case 'FixEm'
-            numPasses=2;
-            fixWhich = questdlg('Fix which?','Fix bad points',...
-                           'Zeros','OutOfBounds','Both','Both');
-            switch fixWhich
-                case 'Zeros'
-                    auto_frames = find(zero_frames);
-                case 'OutOfBounds'
-                    auto_frames = find(outOfBounds);
-                case 'Both'
-                    auto_frames = find(both_logical);
-            end
-            alreadyCorr = zeros(size(both_logical));
-            alreadyCorr(auto_frames) = 1;
-            if any(definitelyGood & alreadyCorr)
-                
-                disp(['Some frames to fix are already definitely good; switch ' ...
-                        'AOM flag to correct those'])
-            end
-            close(badPoints);
-            CorrectTheseFrames;
+            auto_frames = [auto_frames; find(zero_frames)];
         case 'Skip'
-            %Do nothing
-            close(badPoints);
+            %do nothing
+    end
+end      
+
+[in,on] = inpolygon(xAVI, yAVI, maskx, masky);
+inBounds = in | on;
+outOfBounds=inBounds==0;
+outOfBounds(zero_frames) = 0;
+alreadyGood = outOfBounds & definitelyGood;
+outOfBounds=outOfBounds & (definitelyGood==0);
+
+if any(outOfBounds)
+    badPoints = figure; plot(xAVI, yAVI, '.')
+    hold on
+    plot(xAVI(alreadyGood), yAVI(alreadyGood), '.g')
+    plot(xAVI(outOfBounds), yAVI(outOfBounds), '.r')
+    sum(zero_frames & definitelyGood)
+    reported = {['Found ' num2str(sum(outOfBounds)) ' points out of bounds, '...
+                num2str(sum(alreadyGood)) ' are already def good']};
+    oochoice = questdlg(reported,'Fix bad points',...
+                           'FixEm','Skip','FixEm');
+    switch oochoice
+        case 'FixEm'
+             auto_frames = [auto_frames; find(outOfBounds)];
+        case 'Skip'
+            %do nothing
     end
 end
+
+if any(auto_frames)
+    close(badPoints);
+    numPasses=2;
+    CorrectTheseFrames;
+end
+    
 %% so many options
 optionsText={'y - attempt auto, manual when missed';...
              'm - all manual';...
@@ -1246,7 +1249,7 @@ stats=stats(MouseBlob);
 %Sam's gray version
 grayFrameThresh = rgb2gray(flipud(v)) < grayThresh; %flipud
 grayGaussThresh = imgaussfilt(double(grayFrameThresh),10) > gaussThresh;
-maybeMouseGray = grayGaussThresh &expectedBlobs; %To handle background gray maze & 
+maybeMouseGray = grayGaussThresh & expectedBlobs; %To handle background gray maze & 
 grayStats = regionprops(maybeMouseGray,'centroid','area','majoraxislength','minoraxislength'); %flipped
 grayStats = grayStats( [grayStats.Area] > grayBlobArea &...
                        [grayStats.MajorAxisLength] > 15 &...
