@@ -123,6 +123,28 @@ else: if either graystats or stats is empty
                                 pass
 end
 
+alt logic: more generous black area as graygaussthresh as additional position mask
+first get brightness, gauss thresholds from blackblobcontrastadjuster, 
+
+ v is the frame we're working with
+    d is background image subtraction, gaussian filtered
+        stats is blobs from that
+    graygaussthresh is BW brightness thresholded
+
+if there's a single stats within black area, use that
+if there's more than one, check for:
+    adjacent definitely good frames: 
+        get the one closest (and within distlim2) to mean (if more than
+        one)
+    adjacent frames that haven't been skipped or don't need to be corrected
+
+if there's none here, if there's one stats and it's near a position that's
+not 0 even if not definitely good, use that
+
+if more than one, maybe now drop into old logic with black blobs and gray
+blobs
+
+
 if fixedThisFrameFlag==1
     use the position we came up with
 
