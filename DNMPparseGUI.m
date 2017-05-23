@@ -10,7 +10,7 @@ function DNMPparseGUI( ~,~ )
 global miscVar
 global ParsedFrames
 global videoFig
-global video
+% global video
 
 msgbox({'Notes on use:';' Q/R - step back/forward 100';...
         ' A/F - step back/forward 10'; ' S/D  - step back/forward 1';' ';...
