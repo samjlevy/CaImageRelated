@@ -1,4 +1,4 @@
-function DNMPparseGUI( ~,~ )
+function DNMPparseGUI( rot90,~ )
 % Tool to facilitate parsing AVI for DNMP task into event time stamps (frame numbers),
 % export those numbers in an excel sheet for using with Nat's DNMP
 % functions. Select lap number, toggle between frames, click button to set
@@ -17,11 +17,18 @@ function DNMPparseGUI( ~,~ )
 %       same line
 %       eval stuff to get button properties...
 %       loading needs to get generalized too
+
+%% Rotate 90 if needed
+if nargin < 1
+    rot90 = 0;
+end
+disp(['Rotation movie by ' num2str(rot90*90) ' degrees'])
 %%
 global miscVar
 global ParsedFrames
 global videoFig
 % global video
+miscVar.rot90 = rot90;
 
 msgbox({'Notes on use:';' Q/R - step back/forward 100';...
         ' A/F - step back/forward 10'; ' S/D  - step back/forward 1';' ';...
@@ -308,6 +315,8 @@ end
 function fcnLapNumberButton(~,~)
 global miscVar
 global videoFig
+global video
+global ParsedFrames
 
 disp('Lap number')
 try 
@@ -338,6 +347,8 @@ catch
     videoFig.LapNumberBox.BackgroundColor=miscVar.Red;
 end
 
+save 'ParsedFramesTest.mat' 'ParsedFrames' 'videoFig' 'video' 'miscVar'
+
 end
 function fcnLapNumberPlus(~,~)
 global videoFig
@@ -362,6 +373,7 @@ switch mod(str2double(videoFig.LapNumberBox.String),1)~=0
     videoFig.LapNumberButton.BackgroundColor=miscVar.Red;
     case 1
     msgbox('Lap number must be an integer.', 'Error','error');
+
 end     
 end
 end
@@ -604,7 +616,7 @@ if miscVar.VideoLoadedFlag==1
                     video.CurrentTime = miscVar.frameNum/video.FrameRate;
                     miscVar.currentFrame = readFrame(video);
                     miscVar.frameNum = miscVar.frameNum + 1;
-                    videoFig.plotted = imagesc(miscVar.currentFrame);
+                    videoFig.plotted = imagesc(rot90(miscVar.currentFrame,miscVar.rot90));
                     title(['frame ' num2str(miscVar.frameNum) '/' num2str(miscVar.totalFrames)])
                 else   
                     msgbox('Frame number must in range','Error','error')
@@ -629,7 +641,7 @@ miscVar.currentTime = miscVar.currentTime+video.FrameRate^-1;
 miscVar.frameNum = 1;
 miscVar.totalFrames = video.Duration/video.FrameRate^-1;
 videoFig.plotted;
-imagesc(miscVar.currentFrame);
+imagesc(rot90(miscVar.currentFrame,miscVar.rot90));
 title(['Frame ' num2str(miscVar.frameNum) '/' num2str(miscVar.totalFrames)])
 miscVar.VideoLoadedFlag=1;
 videoFig.Name=miscVar.FileName;
@@ -642,12 +654,15 @@ end
 function fcnSaveSheet(~,~)
 global ParsedFrames
 global miscVar
+global video
+global videoFig
+
 disp('Save sheet')
 
 for laps=1:(size(ParsedFrames.LapStart,1)-1)
     ParsedFrames.LapNumber{laps+1,1}=laps;
 end  
-save 'ParsedFramesTest.mat' 'ParsedFrames'
+save 'ParsedFramesTest.mat' 'ParsedFrames' 'video', 'videoFig', 'miscVar'
 
 fields = fieldnames(ParsedFrames);
 for i = 1:numel(fields)
@@ -732,8 +747,14 @@ function fcnLoadSheet(~,~)
 disp('Load sheet')
 global ParsedFrames
 global miscVar
+global video
+global videoFig
 
-disp('Not working right now, needs to be redone')
+[tempFileName, tempPathName] = uigetfile('*.mat','Select the MAT file (ParsedFramesTest.mat)');
+load(fullfile(tempPathName,tempFileName));
+disp('Previous work loaded')
+
+% disp('Not working right now, needs to be redone')
 %{
 [filename, pathname, ext] = uigetfile({'*.xlsx', 'Excel Files'; '*.xls', 'Excel Files'}, 'Select previously saved sheet: ');
 
@@ -784,7 +805,7 @@ switch e.Key
             video.CurrentTime = miscVar.frameNum/video.FrameRate;
             miscVar.currentFrame = readFrame(video);
             miscVar.frameNum = miscVar.frameNum + 1;
-            videoFig.plotted = imagesc(miscVar.currentFrame);
+            videoFig.plotted = imagesc(rot90(miscVar.currentFrame,miscVar.rot90));
             title(['Frame ' num2str(miscVar.frameNum) ' / ' num2str(miscVar.totalFrames)])
         end
     case 'a' %Step back 10
@@ -793,7 +814,7 @@ switch e.Key
             video.CurrentTime = miscVar.frameNum/video.FrameRate;
             miscVar.currentFrame = readFrame(video);
             miscVar.frameNum = miscVar.frameNum + 1;
-            videoFig.plotted = imagesc(miscVar.currentFrame);
+            videoFig.plotted = imagesc(rot90(miscVar.currentFrame,miscVar.rot90));
             title(['Frame ' num2str(miscVar.frameNum) ' / ' num2str(miscVar.totalFrames)])
         end
     case 's'   %Step back
@@ -803,14 +824,14 @@ switch e.Key
             video.CurrentTime = miscVar.frameNum/video.FrameRate;
             miscVar.currentFrame = readFrame(video);
             miscVar.frameNum = miscVar.frameNum + 1;
-            videoFig.plotted = imagesc(miscVar.currentFrame);
+            videoFig.plotted = imagesc(rot90(miscVar.currentFrame,miscVar.rot90));
             title(['Frame ' num2str(miscVar.frameNum) ' / ' num2str(miscVar.totalFrames)])
         end
     case 'd' %Step forward 1
         if video.currentTime+1 < miscVar.totalFrames
             miscVar.currentFrame = readFrame(video);
             miscVar.frameNum = miscVar.frameNum+1;
-            videoFig.plotted = imagesc(miscVar.currentFrame);
+            videoFig.plotted = imagesc(rot90(miscVar.currentFrame,miscVar.rot90));
             title(['Frame ' num2str(miscVar.frameNum) ' / ' num2str(miscVar.totalFrames)])
         end
     case 'f' %Step forward 10  
@@ -819,7 +840,7 @@ switch e.Key
             video.CurrentTime = miscVar.frameNum/video.FrameRate;
             miscVar.currentFrame = readFrame(video);
             miscVar.frameNum = miscVar.frameNum + 1;
-            videoFig.plotted = imagesc(miscVar.currentFrame);
+            videoFig.plotted = imagesc(rot90(miscVar.currentFrame,miscVar.rot90));
             title(['Frame ' num2str(miscVar.frameNum) ' / ' num2str(miscVar.totalFrames)])
         end
     case 'r' %Step forward 100
@@ -828,7 +849,7 @@ switch e.Key
             video.CurrentTime = miscVar.frameNum/video.FrameRate;
             miscVar.currentFrame = readFrame(video);
             miscVar.frameNum = miscVar.frameNum + 1;
-            videoFig.plotted = imagesc(miscVar.currentFrame);
+            videoFig.plotted = imagesc(rot90(miscVar.currentFrame,miscVar.rot90));
             title(['Frame ' num2str(miscVar.frameNum) ' / ' num2str(miscVar.totalFrames)])
         end    
     case 'space'    
