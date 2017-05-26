@@ -347,7 +347,14 @@ catch
     videoFig.LapNumberBox.BackgroundColor=miscVar.Red;
 end
 
-save 'ParsedFramesTest.mat' 'ParsedFrames' 'videoFig' 'video' 'miscVar'
+% Fix any fields that might have been missed
+% if miscVar.LapNumber > 1
+fix_missed_fields;
+% end
+    
+
+save(fullfile(miscVar.PathName,'ParsedFramesTest.mat'), 'ParsedFrames',...
+    'videoFig', 'video', 'miscVar')
 
 end
 function fcnLapNumberPlus(~,~)
@@ -390,7 +397,7 @@ if miscVar.VideoLoadedFlag==1
 end
 end
 function fcnForcedChoiceEnterButton(~,~)
-disp('Forced Choice Leave')
+disp('Forced Choice Enter')
 global miscVar
 global ParsedFrames
 global videoFig
@@ -654,16 +661,23 @@ end
 function fcnSaveSheet(~,~)
 global ParsedFrames
 global miscVar
-global video
-global videoFig
+global video %#ok<*NUSED>
+global videoFig %#ok<*NUSED>
 
 disp('Save sheet')
 
+% keyboard
 for laps=1:(size(ParsedFrames.LapStart,1)-1)
     ParsedFrames.LapNumber{laps+1,1}=laps;
 end  
-save 'ParsedFramesTest.mat' 'ParsedFrames' 'videoFig' 'video' 'miscVar'
 
+save(fullfile(miscVar.PathName, 'ParsedFramesTest.mat'), 'ParsedFrames', ...
+    'video', 'videoFig', 'miscVar') %#ok<*NOPRT>
+
+% Fix any fields that might have been missed
+fix_missed_fields;
+% keyboard
+% Removes all fields that have never been clicked/entered.
 fields = fieldnames(ParsedFrames);
 for i = 1:numel(fields)
     if length(ParsedFrames.(fields{i}))<=1 %fields get pre-loaded with their names
@@ -736,8 +750,9 @@ if saveNow==1
         xlswrite(fullfile(miscVar.PathName,[saveName{1}(1:end-5) '_bonus.xlsx']),table2cell(bonusTable));
         end
     catch
-        disp('Some saving error')   
-        save 'luckyYou.mat' 'ParsedFrames'
+        disp('Some saving error') 
+        keyboard
+        save(fullfile(miscVar.PathName, 'luckyYou.mat'), 'ParsedFrames')
     end    
 end
 end
@@ -858,4 +873,27 @@ switch e.Key
         fcnJumpFrameButton;
 end
          
+end
+
+%% Fix any fields that might be missing/unclicked on previous lap
+function fix_missed_fields(~,~)
+% Put NaNs in any fields that are somehow missing values and spit this
+% info out to the screen
+
+global ParsedFrames
+
+num_laps = structfun(@length, ParsedFrames); % Get number of laps/entries for each field
+correct_num_laps = max(num_laps);
+too_few = num_laps == (correct_num_laps - 1); % ID fields missing entries
+something_wrong = num_laps < (correct_num_laps -1); % ID fields missing 2 or more entries
+if sum(something_wrong) > 0
+    disp('Something is wrong.  Too few entires in some fields in ParsedFrames')
+elseif sum(something_wrong) == 0
+    names = fieldnames(ParsedFrames);
+    fields_to_fix = names(too_few); % Get fieldnames to update/fix
+    for j = 1:length(fields_to_fix)
+        ParsedFrames.(fields_to_fix{j}){correct_num_laps,1} = nan;
+    end
+end
+
 end
