@@ -662,7 +662,7 @@ disp('Save sheet')
 for laps=1:(size(ParsedFrames.LapStart,1)-1)
     ParsedFrames.LapNumber{laps+1,1}=laps;
 end  
-save 'ParsedFramesTest.mat' 'ParsedFrames' 'video', 'videoFig', 'miscVar'
+save 'ParsedFramesTest.mat' 'ParsedFrames' 'videoFig' 'video' 'miscVar'
 
 fields = fieldnames(ParsedFrames);
 for i = 1:numel(fields)
