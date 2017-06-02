@@ -640,6 +640,7 @@ global miscVar
 global video
 
 try
+miscTemp = miscVar; % Save miscVar in case you cancel this later
 [miscVar.FileName,miscVar.PathName] = uigetfile('*.AVI','Select the AVI file');
 video = VideoReader(fullfile(miscVar.PathName,miscVar.FileName));
 miscVar.currentTime = 0;
@@ -654,6 +655,7 @@ miscVar.VideoLoadedFlag=1;
 videoFig.Name=miscVar.FileName;
 catch
     disp('Something went wrong')
+    miscVar = miscTemp; % Re-load previous miscVar to prevent later save errors
 end
 
 end
