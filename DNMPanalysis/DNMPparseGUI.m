@@ -18,11 +18,14 @@ function DNMPparseGUI( rot90,~ )
 %       eval stuff to get button properties...
 %       loading needs to get generalized too
 
+% To start, clear out any previous session global variables...
+clear global miscVar ParsedFrames videoFig video
+
 %% Rotate 90 if needed
 if nargin < 1
     rot90 = 0;
 end
-disp(['Rotation movie by ' num2str(rot90*90) ' degrees'])
+disp(['Movie rotated ' num2str(rot90*90) ' degrees'])
 %%
 global miscVar
 global ParsedFrames
@@ -294,7 +297,7 @@ videoFig.JumpFrameButton = uicontrol('Style','pushbutton','String','JUMP TO FRAM
                              miscVar.buttonWidth,30], 'Callback',{@fcnJumpFrameButton});
 
 
-videoFig.LoadSheetExcel = uicontrol('Style','pushbutton','String','LOAD SHEET',...                         
+videoFig.LoadSheetExcel = uicontrol('Style','pushbutton','String','LOAD PREV. SESH',...                         
                              'Position',[miscVar.buttonSecondCol,miscVar.controlButtonHeight - miscVar.buttonStepDown*1,...
                              miscVar.buttonWidth,30],'Callback',{@fcnLoadSheet});     
 %{                         
@@ -761,15 +764,19 @@ end
 
 
 function fcnLoadSheet(~,~)
-disp('Load sheet')
+disp('Load Previous ParsedFramesTest file')
 global ParsedFrames
 global miscVar
 global video
 global videoFig
 
 [tempFileName, tempPathName] = uigetfile('*.mat','Select the MAT file (ParsedFramesTest.mat)');
-load(fullfile(tempPathName,tempFileName));
-disp('Previous work loaded')
+if tempFileName == 0
+    disp('Loading canceled - previous work NOT loaded')
+else
+    load(fullfile(tempPathName,tempFileName));
+    disp('Previous work loaded')
+end
 
 % disp('Not working right now, needs to be redone')
 %{
@@ -845,15 +852,17 @@ switch e.Key
             title(['Frame ' num2str(miscVar.frameNum) ' / ' num2str(miscVar.totalFrames)])
         end
     case 'd' %Step forward 1
-        if video.currentTime+1 < miscVar.totalFrames
+        if video.currentTime < miscVar.totalFrames
+            miscVar.frameNum = min([miscVar.frameNum, miscVar.totalFrames-1]);
+            video.CurrentTime = miscVar.frameNum/video.FrameRate;
             miscVar.currentFrame = readFrame(video);
-            miscVar.frameNum = miscVar.frameNum+1;
+            miscVar.frameNum = miscVar.frameNum + 1;
             videoFig.plotted = imagesc(rot90(miscVar.currentFrame,miscVar.rot90));
             title(['Frame ' num2str(miscVar.frameNum) ' / ' num2str(miscVar.totalFrames)])
         end
     case 'f' %Step forward 10  
         if video.currentTime+10 < miscVar.totalFrames
-            miscVar.frameNum = miscVar.frameNum + 9;
+            miscVar.frameNum = min([miscVar.frameNum + 9, miscVar.totalFrames-1]);
             video.CurrentTime = miscVar.frameNum/video.FrameRate;
             miscVar.currentFrame = readFrame(video);
             miscVar.frameNum = miscVar.frameNum + 1;
@@ -862,7 +871,7 @@ switch e.Key
         end
     case 'r' %Step forward 100
         if video.currentTime+100 < miscVar.totalFrames
-            miscVar.frameNum = miscVar.frameNum + 99;
+            miscVar.frameNum = min([miscVar.frameNum + 99, miscVar.totalFrames-1]);
             video.CurrentTime = miscVar.frameNum/video.FrameRate;
             miscVar.currentFrame = readFrame(video);
             miscVar.frameNum = miscVar.frameNum + 1;
