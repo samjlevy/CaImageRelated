@@ -508,6 +508,8 @@ reported = {['Found ' num2str(sum(zero_frames)) ' points at (0, 0)']};
     end
 end      
 
+%redo this to do out of bounds by each submask (if they exist)
+
 [in,on] = inpolygon(xAVI, yAVI, maskx, masky);
 inBounds = in | on;
 outOfBounds=inBounds==0;
@@ -525,6 +527,8 @@ if any(outOfBounds)
                 num2str(sum(alreadyGood)) ' are already def good']};
     oochoice = questdlg(reported,'Fix bad points',...
                            'FixEm','Skip','FixEm');
+                       
+    %add case: label all definitely good
     switch oochoice
         case 'FixEm'
              auto_frames = [auto_frames; find(outOfBounds)];
@@ -701,7 +705,7 @@ switch MorePoints
             
         end
         
-             AMchoice = questdlg('Manual only or auto-assist?', 'Auto or manual',...
+            AMchoice = questdlg('Manual only or auto-assist?', 'Auto or manual',...
                 'Auto-assist','Manual','Cancel','Auto-assist');
             switch AMchoice
                 case 'Auto-assist'
@@ -813,7 +817,8 @@ while doneVel==0
 correctThis=1;
 auto_frames=[];
 %velInds=1:length(vel_init);
-vel_init = hypot(diff(Xpix),diff(Ypix))/(time(2)-time(1));
+vel_init = hypot(diff(Xpix),diff(Ypix))./diff(time);%(time(2)-time(1));
+vel_init = [vel_init(1); vel_init];
 highVelFrames = find(vel_init>auto_vel_thresh);
 [~,~,inHV] = intersect(skipThese,highVelFrames);
 highVelFrames(inHV)=[];
@@ -1279,7 +1284,7 @@ grayStats = grayStats( [grayStats.Area] > grayBlobArea &...
         %{
           lengthStats=3;
           lengthGrayStats=5;
-          statsTry=lengthStats+isempty(lengthStats);
+          statsTry=lengthStats+isempty(lengthStats); %if length(stats)==0, returns 1
           grayTry=lengthGrayStats+isempty(lengthGrayStats);
 
           possible=zeros(statsTry*grayTry,6);
@@ -1289,7 +1294,7 @@ grayStats = grayStats( [grayStats.Area] > grayBlobArea &...
           grayStatsInds=repmat(grayStatsInds,1,statsTry);
 
             
-          possible=[statsInds(:) grayStatsInds' Centroids(1:2:end-1) Centroids(2:2:end)]
+          possible=[statsInds(:) grayStatsInds']; Centroids(1:2:end-1) Centroids(2:2:end)];
           or it could be possible=[Centroids(1) Centroids(2) grayCentroids(1) grayCentroids(2)]
           any(length(stats))                     
           Centroids=[stats.Centroid]

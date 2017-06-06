@@ -34,7 +34,7 @@ switch bkgChoice
         v0 = load(fullfile(folder,file),char(pieces(s).name));
         fig.v0 = v0.v0;
         fig.v0thresh = double(rgb2gray(fig.v0)) < grayThresh;
-        fig.expectedBlobs=logical(imgaussfilt(double(fig.grayV0),10) <= gaussThresh);
+        fig.expectedBlobs=logical(imgaussfilt(double(fig.v0thresh),10) <= gaussThresh);
         catch
             disp('Could not load. Weird')
             fig.v0 = zeros(size(frames(1).v));
