@@ -166,7 +166,7 @@ global ManualCorrFig; global overwriteManualFlag; global velCount; global sFrame
 global eFrame; global MoMtime; global vel_init; global auto_vel_thresh;
 global velchoice; global AMchoice; global corrDefGoodFlag; global elChoiceFlag;
 global elVector; global mazeEl; global bstr; global allTxt; global bframes;
-global update_pos_realtime; global blankVector;
+global update_pos_realtime; global blankVector; global isGrayThresh;
 
 
 %% Get varargin
@@ -479,6 +479,7 @@ end
 willThresh=20;
 grayThresh = 115; 
 gaussThresh = 0.2;
+isGrayThresh = 0.04;
 distLim2 = max_pixel_jump;
 grayBlobArea = 60; %Could probably be raised
 got=[];
@@ -1234,14 +1235,22 @@ global xAVI; global yAVI; global Xpix; global Ypix; global maze; global got;
 global pass; global aviSR; global expectedBlobs; global update_pos_realtime;
 global grayBlobArea; global skipped; global putativeMouseX; global putativeMouseY;
 global willThresh; global grayThresh; global gaussThresh; global distLim2;
-global xm; global ym; global elChoiceFlag; global elVector; global mazeEl
+global xm; global ym; global elChoiceFlag; global elVector; global mazeEl;
+global maskx; global masky;  global isGrayThresh;
 
 xm=[]; ym=[];
 marker = {'go' 'yo' 'ro'};
 marker_face = {'g' 'y' 'r'};
 
 if elChoiceFlag==1
-    maze = mazeEl( elVector( auto_frames(corrFrame) ) ).maze;
+    whichMaze = elVector( auto_frames(corrFrame) );
+    mazeMask = mazeEl(whichMaze).maze;
+    mazex = mazeEl(whichMaze).maskx;
+    mazey = mazeEl(whichMaze).masky;
+else
+    mazeMask = maze;
+    mazex = maskx;
+    mazey = masky; 
 end
 fixedThisFrameFlag=0;
     
@@ -1258,16 +1267,13 @@ if update_pos_realtime==1
     if Xpix(auto_frames(corrFrame)) ~= 0 && Ypix(auto_frames(corrFrame)) ~= 0
         plot(xAVI(auto_frames(corrFrame)),yAVI(auto_frames(corrFrame)),marker{markWith},'MarkerSize',4);
     end    
-    if elChoiceFlag == 1
-        whichMaze = elVector( auto_frames(corrFrame) );
-        hold on; plot([mazeEl(whichMaze).maskx; mazeEl(whichMaze).maskx(1)],...
-            [mazeEl(whichMaze).masky; mazeEl(whichMaze).masky(1)],'r','LineWidth',1); hold off 
-    end        
+
+    hold on; plot([mazex; mazex(1)],[mazey; mazey(1)],'r','LineWidth',1); hold off   
 end
             
 %Will's version, background image subtraction
 d = imgaussfilt(flipud(rgb2gray(v0-v)),10);
-stats = regionprops(d>willThresh & maze,'area','centroid','majoraxislength','minoraxislength');%flipped %'solidity'
+stats = regionprops(d>willThresh & mazeMask,'area','centroid','majoraxislength','minoraxislength');%flipped %'solidity'
 MouseBlob = [stats.Area] > 250 & ... %[stats.Area] < 3500...
             [stats.MajorAxisLength] > 10 & ...
             [stats.MinorAxisLength] > 10;
@@ -1275,12 +1281,34 @@ stats=stats(MouseBlob);
         
 %Sam's gray version
 grayFrameThresh = rgb2gray(flipud(v)) < grayThresh; %flipud
-grayGaussThresh = imgaussfilt(double(grayFrameThresh),10) > gaussThresh;
+grayGauss = imgaussfilt(double(grayFrameThresh),10);
+grayGaussThresh = grayGauss  > gaussThresh;
 maybeMouseGray = grayGaussThresh & expectedBlobs; %To handle background gray maze & 
 grayStats = regionprops(maybeMouseGray,'centroid','area','majoraxislength','minoraxislength'); %flipped
 grayStats = grayStats( [grayStats.Area] > grayBlobArea &...
                        [grayStats.MajorAxisLength] > 15 &...
                        [grayStats.MinorAxisLength] > 15);
+                   
+%Centers in mask
+statsCenters = reshape([stats.Centroid],2,length(stats))';
+[inmask, onmask] = inpolygon(statsCenters(:,1),statsCenters(:,2),mazex,mazey);
+inMask = inmask | onmask;
+
+%Centers on black
+generousGray = (grayGauss > isGrayThresh); & mazeMask;
+grayOutlines = bwboundaries(generousGray);%cell2mat(
+grayIn = zeros(length(statsCenters),1); grayOn = grayIn;
+for thisGray = 1:length(grayOutlines)
+    [thisIn, thisOn] = inpolygon(statsCenters(:,1),statsCenters(:,2),...
+        grayOutlines{thisGray,1}(:,2),grayOutlines{thisGray,1}(:,1));
+    grayIn = grayIn | thisIn;
+    grayOn = grayOn | thisOn;
+end
+inGray = grayIn | grayOn;
+
+
+
+
         %{
           lengthStats=3;
           lengthGrayStats=5;
