@@ -454,7 +454,7 @@ elChoice = questdlg('Expected locations?', 'Expected locations', ...
 switch elChoice
     case 'Yes'
         elChoiceFlag=1;
-        if length(mazeEl)>0
+        if length(mazeEl)>0 %#ok<ISMT>
             echoice = questdlg('Found expected maze locations; use?', 'Expected locations', ...
                                'Yes','No','Yes');
             switch echoice
@@ -488,64 +488,17 @@ blankVector = zeros(size(xAVI));
 
 BlackBlobContrastAdjuster;
 
-SaveTemp;
-%% Expected gray blobs to exclude
+%Expected gray blobs to exclude
 grayFrameThreshB=rgb2gray(flipud(v0)) < grayThresh; %flipud
 expectedBlobs=logical(imgaussfilt(double(grayFrameThreshB),10) <= gaussThresh);
 
 SaveTemp;
 
-auto_frames=[];
-zero_frames = Xpix == 0 | Ypix == 0 ;
-if any(zero_frames)
-reported = {['Found ' num2str(sum(zero_frames)) ' points at (0, 0)']};
-    zerochoice = questdlg(reported,'Fix bad points',...
-                           'FixEm','Skip','FixEm');
-    switch zerochoice
-        case 'FixEm'
-            auto_frames = [auto_frames; find(zero_frames)];
-        case 'Skip'
-            %do nothing
-    end
-end      
-
-%redo this to do out of bounds by each submask (if they exist)
-
-[in,on] = inpolygon(xAVI, yAVI, maskx, masky);
-inBounds = in | on;
-outOfBounds=inBounds==0;
-outOfBounds(zero_frames) = 0;
-alreadyGood = outOfBounds & definitelyGood;
-outOfBounds=outOfBounds & (definitelyGood==0);
-
-if any(outOfBounds)
-    badPoints = figure; plot(xAVI, yAVI, '.')
-    hold on
-    plot(xAVI(alreadyGood), yAVI(alreadyGood), '.g')
-    plot(xAVI(outOfBounds), yAVI(outOfBounds), '.r')
-    sum(zero_frames & definitelyGood)
-    reported = {['Found ' num2str(sum(outOfBounds)) ' points out of bounds, '...
-                num2str(sum(alreadyGood)) ' are already def good']};
-    oochoice = questdlg(reported,'Fix bad points',...
-                           'FixEm','Skip','FixEm');
-                       
-    %add case: label all definitely good
-    switch oochoice
-        case 'FixEm'
-             auto_frames = [auto_frames; find(outOfBounds)];
-        case 'Skip'
-            %do nothing
-    end
-end
-
-if any(auto_frames)
-    close(badPoints);
-    numPasses=2;
-    CorrectTheseFrames;
-end
     
 %% so many options
-optionsText={'y - attempt auto, manual when missed';...
+optionsText={'b - frames by behavior';...
+             'z - (0,0) and out-of-bounds frames';...
+             'y - attempt auto, manual when missed';...
              'm - all manual';...
              'p - select points by position';...
              't - reset auto-velocity threshold';...
@@ -566,6 +519,8 @@ optionsText={'y - attempt auto, manual when missed';...
              'middle-mouse to go back to the last manually';...
              'corrected frame to re-do it.'};
 msgbox(optionsText,'PreProcess Keys')
+
+disp('Highly recommended to do behavior flag (b), then (0,0) and OOB (z)')
              
 stillEditingFlag=1;
 while stillEditingFlag==1
@@ -580,6 +535,10 @@ end
 UpdatePosAndVel;
 
 switch MorePoints
+    case 'z'
+        ZeroBounds;
+    case 'b'
+        BehaviorFrames
     case 'y'
         disp('attempt auto')
         [sFrame,eFrame] = SelectFrameNumbers;
@@ -661,10 +620,8 @@ switch MorePoints
         choice = questdlg('Is this velocity threshold good?', ...
         'Velocity Threshold', ...
         'Yes','No > ginput','Yes');
-        % Handle response
         velLineGood=0;
         while velLineGood==0
-    
         switch choice
             case 'Yes'
                 disp(['Proceeding with velocity threshold ' num2str(auto_vel_thresh)])
@@ -1002,21 +959,7 @@ global auto_frames; global corrFrame; global skipped; global pass;
 global xAVI; global yAVI; global fixedThisFrameFlag; global huh; %global got
 global xm; global ym; 
 
-%Is there an adjacent definitelyGood frame to use?
-tryFrame = auto_frames(corrFrame);
-testDG = [0; definitelyGood; 0]; %so we can index w/o conditionals
-testDGtry = tryFrame+1;
-adjFrames = [(testDGtry-1) (testDGtry+1)]';
-useAdjFrames = testDG(adjFrames);%tryFrame = 1 or end always returns 0
-adjFrames(useAdjFrames==0) = [];
-
-defAdjXs = xAVI(adjFrames);
-defAdjYs = yAVI(adjFrames);
-
-
-%For one isn't hard, for both not sure. Maybe just radius that's within
-%both?
-1/sqrt(length(defAdjXs) %scaling factor for radius by how many adj frames
+%1/sqrt(length(defAdjXs) %scaling factor for radius by how many adj frames
 
 skipThisStep=0;
 if auto_frames(corrFrame) > 1 && any(skipped==auto_frames(corrFrame)-1)==0 %Look at adjacent frames
@@ -1242,6 +1185,7 @@ xm=[]; ym=[];
 marker = {'go' 'yo' 'ro'};
 marker_face = {'g' 'y' 'r'};
 
+%Get appropriate maze boundaries
 if elChoiceFlag==1
     whichMaze = elVector( auto_frames(corrFrame) );
     mazeMask = mazeEl(whichMaze).maze;
@@ -1268,7 +1212,11 @@ if update_pos_realtime==1
         plot(xAVI(auto_frames(corrFrame)),yAVI(auto_frames(corrFrame)),marker{markWith},'MarkerSize',4);
     end    
 
-    hold on; plot([mazex; mazex(1)],[mazey; mazey(1)],'r','LineWidth',1); hold off   
+    hold on
+        plot([mazex; mazex(1)],[mazey; mazey(1)],'r','LineWidth',1); 
+        %plot([50 50+distLim2], [30 30],'b','LineWidth',1.5)
+        plot([50 50+auto_vel_thresh/aviSR], [60 60],'r','LineWidth',1.5)
+    hold off   
 end
             
 %Will's version, background image subtraction
@@ -1282,20 +1230,15 @@ stats=stats(MouseBlob);
 %Sam's gray version
 grayFrameThresh = rgb2gray(flipud(v)) < grayThresh; %flipud
 grayGauss = imgaussfilt(double(grayFrameThresh),10);
-grayGaussThresh = grayGauss  > gaussThresh;
-maybeMouseGray = grayGaussThresh & expectedBlobs; %To handle background gray maze & 
-grayStats = regionprops(maybeMouseGray,'centroid','area','majoraxislength','minoraxislength'); %flipped
-grayStats = grayStats( [grayStats.Area] > grayBlobArea &...
-                       [grayStats.MajorAxisLength] > 15 &...
-                       [grayStats.MinorAxisLength] > 15);
                    
-%Centers in mask
+%Centers in mask (should pretty much always be all ones)
 statsCenters = reshape([stats.Centroid],2,length(stats))';
 [inmask, onmask] = inpolygon(statsCenters(:,1),statsCenters(:,2),mazex,mazey);
 inMask = inmask | onmask;
+stats = stats(inMask); 
 
 %Centers on black
-generousGray = (grayGauss > isGrayThresh); & mazeMask;
+generousGray = (grayGauss > isGrayThresh) & mazeMask & expectedBlobs; %check this line
 grayOutlines = bwboundaries(generousGray);%cell2mat(
 grayIn = zeros(length(statsCenters),1); grayOn = grayIn;
 for thisGray = 1:length(grayOutlines)
@@ -1305,9 +1248,71 @@ for thisGray = 1:length(grayOutlines)
     grayOn = grayOn | thisOn;
 end
 inGray = grayIn | grayOn;
+stats = stats(inGray);
 
+if length(stats) == 1
+    xm = stats.Centroid(1);
+    ym = stats.Centroid(2);
+    fixedThisFrameFlag=1;
+elseif length(stats)==0
+    if auto_frames(corrFrame)==1
+        [xm,ym]=ManualOnlyCorr;
+    elseif pass==2 && auto_frames(corrFrame)~=1
+        %Should it be do a last frame check and see which
+        %is really close? Or try will, if that fails try gray
+        [xm,ym] = EnhancedManualCorrect;
+    elseif pass==1 && auto_frames(corrFrame)~=1
+        %Here too?
+        skipped = [skipped; auto_frames(corrFrame)]; 
+        fixedThisFrameFlag=0;
+    end 
+elseif length(stats) > 1
+    %First check adjacent for definitelyGood frames
+    tryFrame = auto_frames(corrFrame);
+    testDG = [0; definitelyGood; 0]; %so we can index w/o conditionals
+    testDGtry = tryFrame+1;
+    adjFrames = [(testDGtry-1) (testDGtry+1)]';
+    useAdjFrames = testDG(adjFrames);%tryFrame = 1 or end always returns 0
+    adjFrames(useAdjFrames==0) = [];
 
-
+    defAdjXs = xAVI(adjFrames);
+    defAdjYs = yAVI(adjFrames);
+        
+    %if there's anything here, see if there's one stats that is minimum
+    %distance from both and within distlim2 of both
+    
+    
+    
+    %Then check adjacent at all, use this to build a radius of acceptable
+    %centers to further fulter stats; if only 1, then good
+    
+    %if still more than 1, check gray ones
+    grayGaussThresh = grayGauss  > gaussThresh;
+    maybeMouseGray = grayGaussThresh & expectedBlobs & mazeMask; %To handle background gray maze & 
+    grayStats = regionprops(maybeMouseGray,'centroid','area','majoraxislength','minoraxislength'); %flipped
+    grayStats = grayStats( [grayStats.Area] > grayBlobArea &...
+                       [grayStats.MajorAxisLength] > 15 &...
+                       [grayStats.MinorAxisLength] > 15);
+    
+    if ~isempty(grayStats)
+        statsTry=length(stats);%+double(length(stats)==0); %this was for generalizing...
+        grayTry=length(grayStats);%+double(length(grayStats)==0);
+        possible=zeros(statsTry*grayTry, 3);
+        statsInds = repmat([1:statsTry],grayTry,1);
+        grayInds = repmat([1:grayTry],1,statsTry);
+        
+    else
+        %????????
+    end
+    
+    if fixedThisFrameFlag==0
+        if pass==1
+            skipped = [skipped; auto_frames(corrFrame);
+        else
+            [xm,ym] = EnhancedManualCorrect;
+        end
+    end
+end
 
         %{
           lengthStats=3;
@@ -1505,31 +1510,7 @@ global elVector; global elChoiceFlag; global xAVI; global v0; global mazeEl;
 global maze; global maskx; global masky; global bstr; global allTxt; global bframes;
 global mazeElInd; global mazeUp
 
-doneLoading=0; 
-loaded=1;
-while doneLoading==0
-    [xlsFile, xlsPath] = uigetfile('*.xlsx', 'Select file with behavior times');
-    [frameses(loaded).frames, txt(loaded).txt] = xlsread(fullfile(xlsPath,xlsFile), 1);
-    
-
-    loadChoice = questdlg('Done loading sheets or another?','Done loading?',...
-                    'Done','Another!','Done');
-    switch loadChoice
-        case 'Done'
-            doneLoading=1;
-        case 'Another!'
-            loaded=loaded+1;
-            doneLoading=0;
-    end
-end 
-
-%doesn't give lap number column
-bstr = {}; allTxt = {}; bframes = [];
-for lvl=1:loaded
-    bstr = [bstr txt(lvl).txt(1,2:end)];
-    allTxt = [allTxt txt(lvl).txt(:,:)];
-    bframes = [bframes frameses(lvl).frames(:,2:end)];
-end
+LoadBehavior;
 
 elVector=ones(length(xAVI),1);
 mazeEl(1).maze=maze; mazeEl(1).maskx=maskx; mazeEl(1).masky=masky;
@@ -1658,71 +1639,41 @@ end
 end
 %% %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 function addAnElMask(~,~)
- global elVector; global elChoiceFlag; global xAVI; global v0; global mazeEl;
+global elVector; global elChoiceFlag; global xAVI; global v0; global mazeEl;
 global maze; global maskx; global masky; global bstr; global allTxt; global bframes;  
-global mazeElInd; global mazeUp; 
+global mazeElInd; global mazeUp; global chooseStrs; global starts; global stops;
+global beOptions; global allstarts; global allstops
 
-    selectedTwo=0;
-    while selectedTwo==0
-        [s,~] = listdlg('PromptString','A pair of timestamps:',...
-                    'SelectionMode','multiple',...
-                    'ListString',bstr);
-        if length(s)==2; selectedTwo=1; end
-    end
+chooseStrs = bstr;
+ChooseStartsStops;
+
+while beOptions >= 0
     
-    [ss,~] = listdlg('PromptString','Which comes first:',...
-                    'SelectionMode','single',...
-                    'ListString',[bstr(s(1)) bstr(s(2))]);
-    if ss==2; holder=s(1); s(1)=s(2); s(2)=holder; end
-    %Could be generalized for other markers, right now needs to read strings
-    dirChoice = questdlg('Restrict to left/right trials?','LR mod?',...
-                    'Yes','No','Yes');
-    switch dirChoice
-        case 'Yes'
-            [t,~] = listdlg('PromptString','Choose column with behavior:',...
-                    'SelectionMode','single','ListString',bstr);
-            
-            bChoices = unique(allTxt(2:end,t+1));
-            [flug,~] = listdlg('PromptString','Which flag:',...
-                    'SelectionMode','single','ListString',bChoices);    
-            LRmod = strcmpi(allTxt(2:end,t+1),bChoices(flug));
-            
-            beOptions = length(bChoices) - 1;
-        case 'No'
-            LRmod = ones(size(bframes,1));
-            beOptions = 0;
-    end    
-    
-    while beOptions >= 0
-    
-    starts = bframes(:,s(1)); starts(LRmod==0)=[];
-    stops = bframes(:,s(2)); stops(LRmod==0)=[];
-    
-    mazeMaskGood=0;
-    while mazeMaskGood==0
-        MazeFig=figure('name', 'Expected Location Mask'); imagesc(flipud(v0));
-        title(['Draw position mask for ' bstr(s(1)) ' - ' bstr(s(2))]);
-        [mazeEl(mazeElInd).maze, mazeEl(mazeElInd).maskx, mazeEl(mazeElInd).masky] = roipoly;
-        hold on; plot([mazeEl(mazeElInd).maskx; mazeEl(mazeElInd).maskx(1)],...
-            [mazeEl(mazeElInd).masky; mazeEl(mazeElInd).masky(1)],'r','LineWidth',1); hold off 
+mazeMaskGood=0;
+while mazeMaskGood==0
+    MazeFig=figure('name', 'Expected Location Mask'); imagesc(flipud(v0));
+    title(['Draw position mask for ' bstr(s(1)) ' - ' bstr(s(2))]);
+    [mazeEl(mazeElInd).maze, mazeEl(mazeElInd).maskx, mazeEl(mazeElInd).masky] = roipoly;
+    hold on; plot([mazeEl(mazeElInd).maskx; mazeEl(mazeElInd).maskx(1)],...
+        [mazeEl(mazeElInd).masky; mazeEl(mazeElInd).masky(1)],'r','LineWidth',1); hold off 
 
         mchoice = questdlg('Is this boundary good?', 'Maze Mask', 'Yes','No redraw','Yes');
-        switch mchoice
-            case 'Yes'
-                disp('Proceeding with this mask')
-                mazeMaskGood=1;
-            case 'No redraw'
-                mazeMaskGood=0;
-        end
-    end 
-    close(MazeFig)
+    switch mchoice
+        case 'Yes'
+            disp('Proceeding with this mask')
+            mazeMaskGood=1;
+        case 'No redraw'
+            mazeMaskGood=0;
+    end
+end 
+close(MazeFig)
     
     %set vector at these frames to ref the appropriate mask
     for tri=1:numel(starts)
         elVector(starts(tri):stops(tri)) = mazeElInd;
     end
     
-    if length(beOptions) > 0
+    if length(beOptions) > 0 %#ok<ISMT>
         flugChoice = questdlg('Found more behavior flags. Do them, same bounds?', 'More flags', ...
                               'Yes','No','Yes');  
         switch flugChoice
@@ -1731,6 +1682,9 @@ global mazeElInd; global mazeUp;
                 [flug,~] = listdlg('PromptString',':',...
                            'SelectionMode','single','ListString',bChoices);    
                 LRmod = strcmpi(allTxt(2:end,t+1),bChoices(flug));
+                
+                starts = allstarts; starts(LRmod==0)=[];
+                stops = allstops; stops(LRmod==0)=[];
            
                 if length(bChoices) > 1
                     mazeUp=mazeUp+1;
@@ -1743,10 +1697,194 @@ global mazeElInd; global mazeUp;
     
     beOptions = beOptions - 1;
     
+end
+
+end
+%% %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+function ChooseStartsStops(~,~)
+global chooseStrs; global starts; global stops; global beOptions;
+global bChoices; global allTxt; global bframes; global allstarts;
+global allstops;
+
+if size(chooseStrs,1)==1 && sum(cellfun(@ischar, chooseStrs))/size(chooseStrs,2)==1
+
+selectedTwo=0;
+while selectedTwo==0
+    [choices,~] = listdlg('PromptString','A pair of timestamps:',...
+                'SelectionMode','multiple',...
+                'ListString',chooseStrs);
+    if length(choices)==2; selectedTwo=1; end
+end
+    
+[ss,~] = listdlg('PromptString','Which comes first:',...
+                    'SelectionMode','single',...
+                    'ListString',[chooseStrs(choices(1)) chooseStrs(choices(2))]);
+if ss==2; holder=choices(1); choices(1)=choices(2); choices(2)=holder; end
+
+allstarts = bframes(:,choices(1));
+allstops = bframes(:,choices(2));
+
+%Could be generalized for other markers, right now needs to read strings
+dirChoice = questdlg('Restrict to left/right trials?','LR mod?',...
+                    'Yes','No','Yes');
+switch dirChoice
+    case 'Yes'
+        [t,~] = listdlg('PromptString','Choose column with behavior:',...
+                    'SelectionMode','single','ListString',chooseStrs);
+            
+        bChoices = unique(allTxt(2:end,t+1));
+        [flug,~] = listdlg('PromptString','Which flag:',...
+                    'SelectionMode','single','ListString',bChoices);    
+        LRmod = strcmpi(allTxt(2:end,t+1),bChoices(flug));
+            
+        beOptions = length(bChoices) - 1;    
+    case 'No'
+        LRmod = ones(size(bframes,1));
+        beOptions = 0;
+end
+    
+starts=allstarts; starts(LRmod==0)=[];
+stops=allstops; stops(LRmod==0)=[];
+else
+    disp('sorry, input strs needs to be 1 x n cell of strs')
+end
+
+end
+%% %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%  
+function ZeroBounds(~,~)
+global auto_frames; global Xpix; global Ypix; global elChoiceFlag; global mazeEl;
+global xAVI; global yAVI; global maskx; global masky; global elInds; global definitelyGood;
+global numPasses;
+
+auto_frames=[];
+zero_frames = Xpix == 0 | Ypix == 0 ;
+if any(zero_frames)
+reported = {['Found ' num2str(sum(zero_frames)) ' points at (0, 0)']};
+    zerochoice = questdlg(reported,'Fix bad points',...
+                           'FixEm','Skip','FixEm');
+    switch zerochoice
+        case 'FixEm'
+            auto_frames = [auto_frames; find(zero_frames)];
+        case 'Skip'
+            %do nothing
+    end
+end      
+
+%out of bounds for each submask
+switch elChoiceFlag
+    case 0
+        [in,on] = inpolygon(xAVI, yAVI, maskx, masky);
+        inBounds = in | on;
+    case 1
+        inBounds = [];
+        for ml=1:length(mazeEl)
+            elInds = find(elVector==ml);
+            [inHere, onHere] = inpolygon(xAVI(elInds), yAVI(elInds), mazeEl(ml).maskx, mazeEl(ml).masky);
+            inBounds = [inBounds; inHere | onHere]; %#ok<AGROW>
+        end
+end
+outOfBounds = inBounds==0;
+outOfBounds(zero_frames) = 0;
+alreadyGood = outOfBounds & definitelyGood;
+outOfBounds = outOfBounds & (definitelyGood==0);
+
+if any(outOfBounds)
+    badPoints = figure; plot(xAVI, yAVI, '.')
+    hold on
+    plot(xAVI(alreadyGood), yAVI(alreadyGood), '.g')
+    plot(xAVI(outOfBounds), yAVI(outOfBounds), '.r')
+    sum(zero_frames & definitelyGood)
+    reported = {['Found ' num2str(sum(outOfBounds)) ' points out of bounds, '...
+                num2str(sum(alreadyGood)) ' are already def good']};
+    oochoice = questdlg(reported,'Fix bad points',...
+                           'FixEm','Skip','FixEm');
+                       
+    %add case: label all definitely good
+    switch oochoice
+        case 'FixEm'
+             auto_frames = [auto_frames; find(outOfBounds)];
+        case 'Skip'
+            %do nothing
     end
 end
-%%
 
+if any(auto_frames)
+    close(badPoints);
+    numPasses=2;
+    CorrectTheseFrames;
+end
+
+end
+%% %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+function BehaviorFrames(~,~)
+global chooseStrs; global starts; global stops;
+global bstr; global auto_frames; global numPasses;
+global corrDefGoodFlag;
+
+chooseStrs = bstr;
+ChooseStartsStops;
+
+auto_frames = [];
+for nStarts = 1:length(starts)
+    auto_frames = [auto_frames, starts(nStarts):stops(nStarts)]; %#ok<AGROW>
+end
+
+manCho = questdlg('Fix these points manually or auto-assist?','Fix bad points',...
+                           'Manual','Auto','Cancel','Manual');
+switch manCho
+    case 'Manual'
+        disp(['You are currently editing ' num2str(length(auto_frames)) ' frames'])
+        manChoice = questdlg('Redo definitely good frames?','Redo DefGood',...
+                    'Yes','No','No');
+        switch manChoice
+            case 'Yes'
+                corrDefGoodFlag=1;
+            case 'No'
+                corrDefGoodFlag=0;
+        end
+        CorrectManualFrames;
+    case 'Auto'
+        numPasses = 2;
+        CorrectTheseFrames;
+    case 'Cancel'
+    %do nothing
+end
+
+%Could re-add the code to auto flag and use other behaviors from addAnElMask
+
+end
+%% %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+function LoadBehavior(~,~)
+global bstr; global allTxt; global bframes
+
+doneLoading=0; 
+loaded=1;
+while doneLoading==0
+    [xlsFile, xlsPath] = uigetfile('*.xlsx', 'Select file with behavior times');
+    [frameses(loaded).frames, txt(loaded).txt] = xlsread(fullfile(xlsPath,xlsFile), 1); %#ok<AGROW>
+    
+    loadChoice = questdlg('Done loading sheets or another?','Done loading?',...
+                    'Done','Another!','Done');
+    switch loadChoice
+        case 'Done'
+            doneLoading=1;
+        case 'Another!'
+            loaded=loaded+1;
+            doneLoading=0;
+    end
+end 
+
+%doesn't give lap number column
+bstr = {}; allTxt = {}; bframes = [];
+for lvl=1:loaded
+    bstr = [bstr txt(lvl).txt(1,2:end)]; %#ok<AGROW>
+    allTxt = [allTxt txt(lvl).txt(:,:)]; %#ok<AGROW>
+    bframes = [bframes frameses(lvl).frames(:,2:end)]; %#ok<AGROW>
+end
+
+end
+
+%%
 
 
 
