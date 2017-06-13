@@ -17,7 +17,7 @@ global obj %inherited
     than 1, the mapping is weighted toward lower (darker) output values. If
     you omit the argument, GAMMA defaults to 1 (linear mapping).     
 %}
-     
+
 %grayThresh = 115;
 %gaussThresh = 0.2;
 

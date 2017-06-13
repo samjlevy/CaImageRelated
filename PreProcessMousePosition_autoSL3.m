@@ -1,17 +1,13 @@
 function [xpos_interp,ypos_interp,time_interp,AVItime_interp] = PreProcessMousePosition_autoSL3(varargin);
-% Open issues: 1/11/17
+% Open issues: 6/13/17
 %   
 %   - Logic for possible: could be generalized better
-%   - Check for an adjacent definitelyGood frame, use that to limit
-%   possible blobs
 %   - Video of results
 %   - Blob restrictions for will and gray
 %   - contrast adjustment
 %   - select points by midpoint between frames to help catch not high
 %   velocity wrong things
 %   - marker style/color in velocity thing   
-%   - could add a generous 'Will's blobs have to be in a grayish region'
-%   to prevent using dividers, etc. as blobs
 %   - bring back cluster thresh to allow for more frequent saving
 %   - velocity threshold may not be working right
 %   - something wrong with ManualCorrFig being created multiple times - get(0,'children') 
@@ -19,7 +15,6 @@ function [xpos_interp,ypos_interp,time_interp,AVItime_interp] = PreProcessMouseP
 %   - how similar is blob to blob correlating to good position on an
 %   adjacent frame?
 %   - reject blobs found near current location
-%   - other exclude regions (known bad locations)
 %
 %[xpos_interp,ypos_interp,start_time,MoMtime] = PreProcessMousePosition_auto(filepath, auto_thresh,...)
 % Function to correct errors in mouse tracking.  Runs once through the
@@ -65,64 +60,6 @@ PreProcessMousePosition_autoSL2 logic
     graygaussthresh is BW brightness thresholded
         grayStats is blobs from that
     
-if there are elements in both, find how far apart all graystats and
-stats are from each other
-    
-    if there's only one close enough (distLim2), use that one
-    if there are none close enough
-        if there's only one stats, use that
-        if theres only one graystats, use that
-        if we're on frame 1 or pass 2
-            MANUAL CORRECT
-        elseif we're on pass 1, skip this frame
-    if there's more than one that are close enough
-        if it's not the first frame and we didn't skip the last frame
-            get position from the frame before
-        if it's not the last frame and the next frame wasn't skipped or
-        doesn't need to be corrected
-            get position from the next frame
-        if we're on frame 1 or pass 2
-            MANUAL CORRECT
-        elseif we're on pass 1, skip this frame
-        
-            if we got the position from an adjecent frame, find the shared
-            stats/graystats blob that is closest to the adjacent position
-                if we can't do that
-                    if it's pass 1, skip
-                    if it's pass 2
-                        MANUAL CORRECT
-                            skip/accept functions
-
-else: if either graystats or stats is empty
-    if it's not the first frame and we didn't skip the last frame
-            get position from the frame before
-    if it's not the last frame and the next frame wasn't skipped or
-    doesn't need to be corrected
-        get position from the next frame
-    if we're on frame 1 or pass 2
-        MANUAL CORRECT
-            skip/accept functions on pass 2
-    elseif we're on pass 1, skip this frame
-
-            if we got the position from an adjecent frame, find the shared
-            stats/graystats blob that is closest to the adjacent position
-                if we can't do that
-                    if it's pass 1, skip
-                    if it's pass 2
-                       MANUAL CORRECT
-                        with functions to jump backwards or
-                        skip the frame and accept an existing position
-                            %can this be used at any other manual correct?
-                            %to make this global we need...
-                                obj, aviSR
-                                auto_frames, corrFrame
-                                xAVI,yAVI,Xpix,Ypix
-                                definitelyGood, fixedThisFrameFlag
-                                MarkerSize, MarkerFace
-                                lastManualFrame
-                                pass
-end
-
 alt logic: more generous black area as graygaussthresh as additional position mask
 first get brightness, gauss thresholds from blackblobcontrastadjuster, 
 
@@ -143,7 +80,6 @@ not 0 even if not definitely good, use that
 
 if more than one, maybe now drop into old logic with black blobs and gray
 blobs
-
 
 if fixedThisFrameFlag==1
     use the position we came up with
@@ -349,6 +285,7 @@ bkgChoice = questdlg('Supply/Load background image or composite?', ...
         compositeBkg(241:480,:,:)=bottomClearFrame(241:480,:,:);
         close Top; close Bot;
         backgroundFrame=figure('name','backgroundFrame'); imagesc(compositeBkg); title('Composite Background Image')
+        backgroundImage=compositeBkg;
     end
 elseif ~isempty(v0) 
     backgroundImage=v0; 
@@ -475,10 +412,16 @@ end
 %if ~exist('Pos_temp.mat','file')
     
 %end 
-
-willThresh=20;
-grayThresh = 115; 
-gaussThresh = 0.2;
+if isempty(willThresh)
+    willThresh=20;
+end
+if isempty(grayThresh)
+    grayThresh = 115;
+end
+if isempty(gaussThresh)
+    gaussThresh = 0.2;
+end
+ 
 isGrayThresh = 0.04;
 distLim2 = max_pixel_jump;
 grayBlobArea = 60; %Could probably be raised
@@ -486,14 +429,24 @@ got=[];
 skipped=[];
 blankVector = zeros(size(xAVI));
 
-BlackBlobContrastAdjuster;
+constr = {'Find thresholds manually?';
+          ['grayThresh = ' num2str(grayThresh)];
+          ['gaussThresh = ' num2str(gaussThresh)];};
+            
+conChoice = questdlg(constr,'Manual thresholding',...
+                    'Yes','No','No');
+switch conChoice
+    case 'Yes'
+        BlackBlobContrastAdjuster;
+    case 'No'
+        %Do nothing
+end
 
 %Expected gray blobs to exclude
 grayFrameThreshB=rgb2gray(flipud(v0)) < grayThresh; %flipud
 expectedBlobs=logical(imgaussfilt(double(grayFrameThreshB),10) <= gaussThresh);
 
 SaveTemp;
-
     
 %% so many options
 optionsText={'b - frames by behavior';...
@@ -744,9 +697,11 @@ AVItime_interp = cellfun(@(a,b) lin_interp(time(a), AVIobjTime(a),...
 DVTtime=time;
 % Save all filtered data as well as raw data in case you want to go back
 % and fix an error you discover later on
-save Pos.mat Xpix_filt Ypix_filt xpos_interp ypos_interp time_interp start_time MoMtime Xpix Ypix xAVI yAVI MouseOnMazeFrame...
-    AVItime_interp maze v0 maskx masky definitelyGood expectedBlobs mazeEl elVector bstr allTxt bframes DVTtime
-    
+save Pos.mat Xpix_filt Ypix_filt xpos_interp ypos_interp time_interp start_time...
+    MoMtime Xpix Ypix xAVI yAVI MouseOnMazeFrame...
+    AVItime_interp maze v0 maskx masky definitelyGood expectedBlobs mazeEl...
+    elVector bstr allTxt bframes DVTtime willThresh grayThresh gaussThresh
+
 close all 
 end
 %%
@@ -1454,10 +1409,12 @@ function SaveTemp(~,~)
 global MoMtime; global MouseOnMazeFrame; global maskx; global masky
 global definitelyGood; global xAVI; global yAVI; global Xpix; global Ypix;
 global maze; global expectedBlobs; global v0; global mazeEl; global elVector;
-global bstr; global allTxt; global bframes;
+global bstr; global allTxt; global bframes; global willThresh; global grayThresh;
+global gaussThresh;
 
 save Pos_temp.mat Xpix Ypix xAVI yAVI MoMtime MouseOnMazeFrame maskx v0 maze masky...
-    definitelyGood expectedBlobs mazeEl elVector bstr allTxt bframes 
+    definitelyGood expectedBlobs mazeEl elVector bstr allTxt bframes willThresh...
+    grayThresh gaussThresh
 disp('Saved!')
 end
 %% %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -1600,12 +1557,13 @@ function addAnElMask(~,~)
 global elVector; global elChoiceFlag; global xAVI; global v0; global mazeEl;
 global maze; global maskx; global masky; global bstr; global allTxt; global bframes;  
 global mazeElInd; global mazeUp; global chooseStrs; global starts; global stops;
-global beOptions; global allstarts; global allstops
+global beOptions; global allstarts; global allstops; global choices
 
 chooseStrs = bstr;
 ChooseStartsStops;
+s=choices; %grrrrr
 
-while beOptions >= 0
+%while beOptions >= 0
     
 mazeMaskGood=0;
 while mazeMaskGood==0
@@ -1630,7 +1588,7 @@ close(MazeFig)
     for tri=1:numel(starts)
         elVector(starts(tri):stops(tri)) = mazeElInd;
     end
-    
+    %{
     if length(beOptions) > 0 %#ok<ISMT>
         flugChoice = questdlg('Found more behavior flags. Do them, same bounds?', 'More flags', ...
                               'Yes','No','Yes');  
@@ -1654,15 +1612,15 @@ close(MazeFig)
     end
     
     beOptions = beOptions - 1;
-    
-end
+    %}
+%end
 
 end
 %% %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 function ChooseStartsStops(~,~)
 global chooseStrs; global starts; global stops; global beOptions;
 global bChoices; global allTxt; global bframes; global allstarts;
-global allstops;
+global allstops; global choices
 
 if size(chooseStrs,1)==1 && sum(cellfun(@ischar, chooseStrs))/size(chooseStrs,2)==1
 
@@ -1781,6 +1739,16 @@ global corrDefGoodFlag;
 
 chooseStrs = bstr;
 ChooseStartsStops;
+
+crossLap = questdlg('Are these across a lap? If so, will shift second col down one','Cross lap',...
+                    'Across','No','No');
+switch crossLap
+    case 'No'
+        %do nothing
+    case 'Across'
+        starts = starts(1:end-1);
+        stops = stops(2:end);
+end
 
 auto_frames = [];
 for nStarts = 1:length(starts)
