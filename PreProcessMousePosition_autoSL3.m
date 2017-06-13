@@ -1111,7 +1111,7 @@ end
 function [sFrame, eFrame]=SelectFrameNumbers(~,~)
 global PosAndVel; global time; 
 
-display('click on the good points around the flaw then hit enter');
+disp('click on the good points around the flaw then hit enter');
         
 figure(PosAndVel);
 [DVTsec,~] = ginput(2); % DVTsec is start and end time in DVT seconds
@@ -1257,20 +1257,24 @@ if length(stats) == 1
 elseif length(stats)==0
     if auto_frames(corrFrame)==1
         [xm,ym]=ManualOnlyCorr;
-    elseif pass==2 && auto_frames(corrFrame)~=1
-        %Should it be do a last frame check and see which
-        %is really close? Or try will, if that fails try gray
-        [xm,ym] = EnhancedManualCorrect;
-    elseif pass==1 && auto_frames(corrFrame)~=1
-        %Here too?
-        skipped = [skipped; auto_frames(corrFrame)]; 
-        fixedThisFrameFlag=0;
+    elseif auto_frames(corrFrame)~=1
+        switch pass
+            case 2
+                %Should it be try gray?
+                [xm,ym] = EnhancedManualCorrect;
+            case 1
+                %Should it be try gray?
+                skipped = [skipped; auto_frames(corrFrame)]; 
+                fixedThisFrameFlag=0;
+        end
     end 
 elseif length(stats) > 1
     %First check adjacent for definitelyGood frames
+    
+    %Does any of this fail is both defGood frames are 0?
     tryFrame = auto_frames(corrFrame);
     testDG = [0; definitelyGood; 0]; %so we can index w/o conditionals
-    testDGtry = tryFrame+1;
+    testDGtry = tryFrame+1; %same
     adjFrames = [(testDGtry-1) (testDGtry+1)]';
     useAdjFrames = testDG(adjFrames);%tryFrame = 1 or end always returns 0
     adjFrames(useAdjFrames==0) = [];
@@ -1280,13 +1284,69 @@ elseif length(stats) > 1
         
     %if there's anything here, see if there's one stats that is minimum
     %distance from both and within distlim2 of both
+    statsCenters = reshape([stats.Centroid],2,length(stats))';
+    defDist = zeros(length(stats),length(defAdjXs));
+    for defAdjInd = 1:length(defAdjXs)
+        defDist(:,defAdjInd) = ...
+            hypot(statsCenters(:,1)-defAdjXs(defAdjInd), statsCenters(:,2)-defAdjYs(defAdjInd));
+    end
     
+    DefGoodDist = defDist <= distLim2;
+    NearBothDG = find(sum(DefGoodDist,2)==length(defAdjXs)).*any(defAdjXs);
     
-    
+    if length(NearBothDG)==1 && NearBothDG~=0
+        xm = stats(NearBothDG).Centroid(1);
+        ym = stats(NearBothDG).Centroid(2);
+        fixedThisFrameFlag = 1;
+        got=[got; corrFrame];
+    else
+        %Alt adjacent frames
     %Then check adjacent at all, use this to build a radius of acceptable
-    %centers to further fulter stats; if only 1, then good
+    %centers to further filter stats; if only 1, then good
+        adjToCheck = [auto_frames(corrFrame)-1 auto_frames(corrFrame)+1];
+        autoQueued = auto_frames(corrFrame:end);
+        
+        wasSkipped = [any(skipped==adjToCheck(1)) any(skipped==adjToCheck(2))];
+        isFirst = adjToCheck==1;
+        isLast = adjToCheck==length(Xpix);
+        inQueue = [any(autoQueued==adjToCheck(1)) any(autoQueued==adjToCheck(2))];
+        isZero = [xAVI(adjToCheck(1))==0 & yAVI(adjToCheck(1))==0,...
+                    xAVI(adjToCheck(2))==0 & yAVI(adjToCheck(2))==0];
+        
+        passedChecks = wasSkipped + isFirst + isLast + inQueue + isZero;
+        passedChecks = passedChecks==0;
+        adjUse = adjToCheck(passedChecks);
+        
+        tryAdjXs = xAVI(adjUse);
+        tryAdjYs = yAVI(adjUse);
+        
+        %NearOneDG = stats(find(sum(DefGoodDist,2)>=1);
+        %stats = stats(NearOneDG);
+        tryCenters = reshape([stats.Centroid],2,length(stats))';
+        tryDist = zeros(length(stats),length(tryAdjXs));
+        for tryAdjInd = 1:length(tryAdjXs)
+            tryDist(:,tryAdjInd) = ...
+                hypot(tryCenters(:,1)-tryAdjXs(tryAdjInd), tryCenters(:,2)-tryAdjYs(tryAdjInd));
+        end
     
-    %if still more than 1, check gray ones
+        tryGoodDist = tryDist <= distLim2;
+        %tryNearBoth = find(sum(tryGoodDist,2)==length(tryAdjXs));
+        tryNearBoth = find(sum(tryGoodDist,2)>=1);
+        if length(tryNearBoth)==1
+            xm = stats(tryNearBoth).Centroid(1);
+            ym = stats(tryNearBoth).Centroid(2);
+            fixedThisFrameFlag = 1;
+            got=[got; corrFrame];
+        elseif sum(NearBothDG & tryNearBoth)==1
+            xm = stats(NearBothDG & tryNearBoth).Centroid(1);
+            ym = stats(NearBothDG & tryNearBoth).Centroid(2);
+            fixedThisFrameFlag = 1;
+            got=[got; corrFrame];
+        end
+        
+        %Fix this later, get moving now
+        %{
+        %if still more than 1, check gray ones
     grayGaussThresh = grayGauss  > gaussThresh;
     maybeMouseGray = grayGaussThresh & expectedBlobs & mazeMask; %To handle background gray maze & 
     grayStats = regionprops(maybeMouseGray,'centroid','area','majoraxislength','minoraxislength'); %flipped
@@ -1304,140 +1364,35 @@ elseif length(stats) > 1
     else
         %????????
     end
-    
+        %}
     if fixedThisFrameFlag==0
         if pass==1
-            skipped = [skipped; auto_frames(corrFrame);
+            skipped = [skipped; auto_frames(corrFrame)];
         else
             [xm,ym] = EnhancedManualCorrect;
         end
     end
+    end
 end
 
-        %{
-          lengthStats=3;
-          lengthGrayStats=5;
-          statsTry=lengthStats+isempty(lengthStats); %if length(stats)==0, returns 1
-          grayTry=lengthGrayStats+isempty(lengthGrayStats);
-
-          possible=zeros(statsTry*grayTry,6);
-          statsInds=1:lengthStats+isempty(lengthStats);%1:length(stats)+isempty(stats) 
-          statsInds=repmat(statsInds,grayTry,1); 
-          grayStatsInds=1:lengthGrayStats+isempty(grayTry);
-          grayStatsInds=repmat(grayStatsInds,1,statsTry);
-
+if fixedThisFrameFlag==1
+    FixFrame(xm,ym) 
             
-          possible=[statsInds(:) grayStatsInds']; Centroids(1:2:end-1) Centroids(2:2:end)];
-          or it could be possible=[Centroids(1) Centroids(2) grayCentroids(1) grayCentroids(2)]
-          any(length(stats))                     
-          Centroids=[stats.Centroid]
-          Centroids(1:2:end-1) Centroids(2:2:end) %then need to do the same
-          stuff as earlier to align with proper index
-                                or not? just use the mean centroid of the one we pick... 
-                                Centroids use = index we pick in possible
-                                CentroidsUse(CentroidsUse==0)=NaN;
-                               mean CentroidsUse
-          possible
-        %}
-                       
-possible=[];
-switch ~isempty(grayStats) + ~isempty(stats) 
-    case 2 %both have stuff
-        for statsInd=1:length(stats)
-            for grayStatsInd=1:length(grayStats)
-                poRow=size(possible,1)+1;  
-                %possible is [stats_index, graystats_index, distance]
-                %probably some way to do this more elegantly
-                possible(poRow,1:3)=[statsInd grayStatsInd...
-                hypot(stats(statsInd).Centroid(1)-grayStats(grayStatsInd).Centroid(1),...
-                stats(statsInd).Centroid(2)-grayStats(grayStatsInd).Centroid(2))]; %#ok<AGROW>
-            end 
-        end
-        possible( possible(:,3)>distLim2, :) = []; 
-        if size(possible,1)==1
-            %Will and thresh agree on one blob
-            xm=mean([stats(possible(1)).Centroid(1) grayStats(possible(2)).Centroid(1)]);
-            ym=mean([stats(possible(1)).Centroid(2) grayStats(possible(2)).Centroid(2)]);
-            fixedThisFrameFlag=1;
-            got=[got; corrFrame];
-        elseif size(possible,1)==0 %If logic here may not be right...
-            if length(stats)==1 && length(grayStats)>1 %DON'T LIKE THIS
-                    xm = stats.Centroid(1);
-                    ym = stats.Centroid(2);
-                    fixedThisFrameFlag=1;
-            elseif length(stats)>1 && length(grayStats)==1 %DON'T LIKE THIS
-                    xm = grayStats.Centroid(1);
-                    ym = grayStats.Centroid(2);
-                    fixedThisFrameFlag=1;
-            else
-                if auto_frames(corrFrame)==1
-                        [xm,ym]=ManualOnlyCorr;
-                elseif pass==2 && auto_frames(corrFrame)~=1
-                        %Should it be do a last frame check and see which
-                        %is really close? Or try will, if that fails try gray
-                        [xm,ym] = EnhancedManualCorrect;
-                elseif pass==1 && auto_frames(corrFrame)~=1
-                        %Here too?
-                        skipped = [skipped; auto_frames(corrFrame)]; 
-                        fixedThisFrameFlag=0;
-                end    
-            end
-        elseif size(possible,1)>1 
-            %more than one blob will and thresh agree on
-            for posNum=1:size(possible,1)
-                putativeMouseX(posNum) = mean([stats(possible(posNum,1)).Centroid(1)...
-                    grayStats(possible(posNum,2)).Centroid(1)]); 
-                putativeMouseY(posNum) = mean([stats(possible(posNum,1)).Centroid(2)...
-                    grayStats(possible(posNum,2)).Centroid(2)]); 
-            end
-                
-            TryAdjacentFrames;
-        end
-            
-    case 1  %only one is empty
-        %either grayStats or will stats is empty
-        %A: whichever is not, use blob closest to last known good
-        if ~isempty(grayStats) && isempty(stats)
-            blobStats=grayStats;
-        elseif isempty(grayStats) && ~isempty(stats)    
-            blobStats=stats;
-        end
-
-            for posNum=1:size(blobStats,1)
-                putativeMouseX(posNum) = blobStats(posNum).Centroid(1); 
-                putativeMouseY(posNum) = blobStats(posNum).Centroid(2); 
-            end
-            
-            TryAdjacentFrames;
-    case 0 %isempty(grayStats) && isempty(stats)
-        switch pass
-            case 1
-                skipped = [skipped; auto_frames(corrFrame)]; 
-            case 2
-                [xm,ym] = EnhancedManualCorrect;
-        end
-end   
-            
-    % apply corrected position to current frame
-    if fixedThisFrameFlag==1
-        FixFrame(xm,ym) 
-            
-        figure(ManualCorrFig); 
-        hold on;
-        plot(xm,ym,marker{markWith},'MarkerSize',4,...
-            'MarkerFaceColor',marker_face{markWith})
-        hold off;
-        if update_pos_realtime==1
-           % pause(0.10)
-        end
+    figure(ManualCorrFig); 
+    hold on;
+    plot(xm,ym,marker{markWith},'MarkerSize',4,...
+        'MarkerFaceColor',marker_face{markWith})
+    hold off;
+    if update_pos_realtime==1
+        % pause(0.10)
     end
- 
+end
 
 end
 %% %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 function CorrectManualFrames(~,~)
 global obj; global aviSR; global v; global ManualCorrFig; global markWith;
-global xAVI; global yAVI; global Xpix; global Ypix; global fixedThisFrameFlag;
+global fixedThisFrameFlag;
 global auto_frames; global corrFrame; global corrDefGoodFlag; global definitelyGood
 
 marker = {'go' 'yo' 'ro'};
@@ -1501,7 +1456,8 @@ global definitelyGood; global xAVI; global yAVI; global Xpix; global Ypix;
 global maze; global expectedBlobs; global v0; global mazeEl; global elVector;
 global bstr; global allTxt; global bframes;
 
-save Pos_temp.mat Xpix Ypix xAVI yAVI MoMtime MouseOnMazeFrame maskx v0 maze masky definitelyGood expectedBlobs mazeEl elVector bstr allTxt bframes 
+save Pos_temp.mat Xpix Ypix xAVI yAVI MoMtime MouseOnMazeFrame maskx v0 maze masky...
+    definitelyGood expectedBlobs mazeEl elVector bstr allTxt bframes 
 disp('Saved!')
 end
 %% %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -1510,7 +1466,9 @@ global elVector; global elChoiceFlag; global xAVI; global v0; global mazeEl;
 global maze; global maskx; global masky; global bstr; global allTxt; global bframes;
 global mazeElInd; global mazeUp
 
-LoadBehavior;
+if isempty(bstr)
+    LoadBehavior;
+end
 
 elVector=ones(length(xAVI),1);
 mazeEl(1).maze=maze; mazeEl(1).maskx=maskx; mazeEl(1).masky=masky;
@@ -1536,7 +1494,7 @@ end
 end
 %% %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 function editELvectors(~,~)
-global elVector; global elChoiceFlag; global xAVI; global v0; global mazeEl;
+global elVector; global elChoiceFlag; global v0; global mazeEl;
 global maze; global maskx; global masky; global mazeElInd
 
 doneWithEl=0;
