@@ -7,6 +7,7 @@ global grayThresh %inherited
 global frames
 global gaussThresh %inherited
 global obj %inherited
+global findingContrast %inherited
 
 %{
     J = imadjust(I,[LOW_IN; HIGH_IN],[LOW_OUT; HIGH_OUT],GAMMA) maps the
@@ -251,9 +252,14 @@ end
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 function savequit(~,~)
 global fig
+global findingContrast
 
 disp('wew dub')
 close(fig.f)
+try %#ok<TRYNC>
+    close(fig.expect)
+end
+findingContrast=0;
 return
 
 end

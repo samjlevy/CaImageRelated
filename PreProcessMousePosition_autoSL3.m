@@ -1,20 +1,30 @@
 function [xpos_interp,ypos_interp,time_interp,AVItime_interp] = PreProcessMousePosition_autoSL3(varargin);
-% Open issues: 6/13/17
+% Open issues: 6/14/17
 %   
+%   PRIORITY   
+%   - fix frame select to preserve zoom
+%   - fix high velocity logic, getting stuck, correct index?
+%   - auto-close expected location boundaries
+%   - Video of results, viewer to drop back in at a bad frame. Show a
+%   slider over velocity plot?
+%   - test 'wait' for manual thresholds thing
+%   - does right click to skip in enhanced manual correct still work?
+%
+%   OTHER
 %   - Logic for possible: could be generalized better
-%   - Video of results
 %   - Blob restrictions for will and gray
 %   - contrast adjustment
 %   - select points by midpoint between frames to help catch not high
 %   velocity wrong things
 %   - marker style/color in velocity thing   
 %   - bring back cluster thresh to allow for more frequent saving
-%   - velocity threshold may not be working right
 %   - something wrong with ManualCorrFig being created multiple times - get(0,'children') 
-%   - high velocity detect getting stuck at points
 %   - how similar is blob to blob correlating to good position on an
 %   adjacent frame?
 %   - reject blobs found near current location
+%   - kalman filter?
+%   - maybe throw out expected location for blob finding, but keep for bad
+%   frame finding
 %
 %[xpos_interp,ypos_interp,start_time,MoMtime] = PreProcessMousePosition_auto(filepath, auto_thresh,...)
 % Function to correct errors in mouse tracking.  Runs once through the
@@ -24,7 +34,7 @@ function [xpos_interp,ypos_interp,time_interp,AVItime_interp] = PreProcessMouseP
 % INPUTS
 %   filepath: pathname to DVT file. Must reside in the same directory as
 %   the AVI file it matches, and there must be only ONE DVT and ONE AVI
-%   file in this directory
+%   file in this directory; optional
 %
 % OPTIONAL
 %   auto_thresh: proportion of timestamps you wish to edit - 0.01 will have
@@ -103,6 +113,7 @@ global eFrame; global MoMtime; global vel_init; global auto_vel_thresh;
 global velchoice; global AMchoice; global corrDefGoodFlag; global elChoiceFlag;
 global elVector; global mazeEl; global bstr; global allTxt; global bframes;
 global update_pos_realtime; global blankVector; global isGrayThresh;
+global findingContrast;
 
 
 %% Get varargin
@@ -137,6 +148,7 @@ end
 cd(DVTpath);
 
 %%
+findingContrast=0;
 PosSR = 30; % native sampling rate in Hz of position data (used only in smoothing)
 aviSR = 30.0003; % the framerate that the .avi thinks it's at
 cluster_thresh = 40; % For auto thresholding - any time there are events above
@@ -437,7 +449,11 @@ conChoice = questdlg(constr,'Manual thresholding',...
                     'Yes','No','No');
 switch conChoice
     case 'Yes'
+        findingContrast=1;
         BlackBlobContrastAdjuster;
+        while findingContrast==1
+           %just wait 
+        end
     case 'No'
         %Do nothing
 end
@@ -998,20 +1014,21 @@ while intendedFrameGood == 0
     catch
         ManualCorrFig=figure('name','ManualCorrFig'); imagesc(flipud(v0)); %title('Auto correcting, please wait')
     end
-    imagesc(flipud(intendedFrame))
-    title(['click here, frame ' num2str(auto_frames(corrFrame))])
+    imagesc(ManualCorrFig.Children,flipud(intendedFrame))
+    title(ManualCorrFig.Children,['click here, frame ' num2str(auto_frames(corrFrame))])
     if Xpix(intendedFrameNum) ~= 0 && Ypix(intendedFrameNum) ~= 0
-        figure(ManualCorrFig);
-        hold on   
-        plot(xAVI(intendedFrameNum),yAVI(intendedFrameNum),marker{markWith},'MarkerSize',4);
-        hold off
+        hold(ManualCorrFig.Children,'on');   
+        plot(ManualCorrFig.Children,xAVI(intendedFrameNum),yAVI(intendedFrameNum),marker{markWith},'MarkerSize',4);
+        hold(ManualCorrFig.Children,'off');
     end
     [xm,ym,button] = ginput(1);
     fixedThisFrameFlag=0;
     switch button
         case 1 %left click
             %this point is good, use the xm ym
-            hold on; plot(xm,ym,marker{markWith},'MarkerSize',4,'MarkerFaceColor',marker_face{markWith});hold off;
+            hold(ManualCorrFig.Children,'on');
+            plot(ManualCorrFig.Children,xm,ym,marker{markWith},'MarkerSize',4,'MarkerFaceColor',marker_face{markWith});hold off;
+            hold(ManualCorrFig.Children,'off');
             title('Auto correcting, please wait')
             definitelyGood(auto_frames(corrFrame)) = 1;
             fixedThisFrameFlag=1;
@@ -1023,10 +1040,12 @@ while intendedFrameGood == 0
             %go back and fix the last frame we corrected manually 
             obj.CurrentTime=(lastManualFrame-1)/aviSR;
             pastFrame = readFrame(obj);
-            imagesc(flipud(pastFrame))
+            imagesc(ManualCorrFig.Children,flipud(pastFrame))
             title(['click here, backed up to ' num2str(lastManualFrame) ' from ' num2str(intendedFrameNum)])
             [xm,ym] = ginput(1);
-            hold on; plot(xm,ym,'oy','MarkerSize',4,'MarkerFaceColor','g'); hold off
+            hold(ManualCorrFig.Children,'on');
+            plot(ManualCorrFig.Childrenxm,ym,'oy','MarkerSize',4,'MarkerFaceColor','g'); 
+            hold(ManualCorrFig.Children,'off');
             FixFrame(xm,ym)
             definitelyGood(lastManualFrame) = 1; %just in case
             obj.CurrentTime = (intendedFrameNum-1)/aviSR;
@@ -1051,11 +1070,11 @@ global auto_frames; global corrFrame; global v; global ManualCorrFig
 global fixedThisFrameFlag; global definitelyGood; global lastManualFrame;
 
 figure(ManualCorrFig); 
-imagesc(flipud(v))
-hold on
+imagesc(ManualCorrFig.Children,flipud(v))
+hold(ManualCorrFig.Children,'on')
 title(['click here, frame ' num2str(auto_frames(corrFrame))])
 [xm,ym] = ginput(1);
-plot(xm,ym,'og','MarkerSize',4,'MarkerFaceColor','g');hold off;
+plot(ManualCorrFig.Children,xm,ym,'og','MarkerSize',4,'MarkerFaceColor','g');hold off;
 title('Auto correcting, please wait')
 definitelyGood(auto_frames(corrFrame)) = 1;
 fixedThisFrameFlag=1;
@@ -1084,7 +1103,7 @@ global markWith; global v0; global pass; global numPasses;
 global overwriteManualFlag; global definitelyGood;
 
 skipped=[];
-ManualCorrFig=figure('name','ManualCorrFig'); imagesc(flipud(v0)); title('Auto correcting, please wait')
+ManualCorrFig=figure('name','ManualCorrFig'); imagesc(ManualCorrFig.Children,flipud(v0)); title('Auto correcting, please wait')
 for pass=1:numPasses
     disp(['Running auto assisted on ' num2str(length(auto_frames)) ' frames'])
     %pass 1 skip where bad, pass 2 run skipped, manual correct if still bad
@@ -1118,6 +1137,7 @@ for pass=1:numPasses
         case 1
             disp(['Completed auto-pass ' num2str(pass) ' on ' num2str(total) ' out of bounds frames'])
             auto_frames=skipped; %and can't have any skipped in round 2
+            skipped = [];
         case 2
             disp('something about the frames you helped correct, human')
     end 
@@ -1134,7 +1154,8 @@ global pass; global aviSR; global expectedBlobs; global update_pos_realtime;
 global grayBlobArea; global skipped; global putativeMouseX; global putativeMouseY;
 global willThresh; global grayThresh; global gaussThresh; global distLim2;
 global xm; global ym; global elChoiceFlag; global elVector; global mazeEl;
-global maskx; global masky;  global isGrayThresh;
+global maskx; global masky;  global isGrayThresh; global auto_vel_thresh;
+global definitelyGood
 
 xm=[]; ym=[];
 marker = {'go' 'yo' 'ro'};
@@ -1156,25 +1177,26 @@ fixedThisFrameFlag=0;
 obj.CurrentTime=(auto_frames(corrFrame)-1)/aviSR;
 v = readFrame(obj);
 if update_pos_realtime==1
-    try
-        figure(ManualCorrFig);
-    catch
-        ManualCorrFig=figure('name','ManualCorrFig'); imagesc(flipud(v0)); title('Auto correcting, please wait')
-    end    
-    hold off; imagesc(flipud(v)); hold on
+    %try
+    %    figure(ManualCorrFig);
+    %catch
+    %    ManualCorrFig=figure('name','ManualCorrFig'); imagesc(flipud(v0)); title('Auto correcting, please wait')
+    %end    
+    hold(ManualCorrFig.Children,'off')
+    imagesc(ManualCorrFig.Children,flipud(v)); 
+    hold(ManualCorrFig.Children,'on')
     title(['Auto correcting frame ' num2str(auto_frames(corrFrame)) ', please wait'])
     if Xpix(auto_frames(corrFrame)) ~= 0 && Ypix(auto_frames(corrFrame)) ~= 0
-        plot(xAVI(auto_frames(corrFrame)),yAVI(auto_frames(corrFrame)),marker{markWith},'MarkerSize',4);
+        plot(ManualCorrFig.Children,xAVI(auto_frames(corrFrame)),yAVI(auto_frames(corrFrame)),marker{markWith},'MarkerSize',4);
     end    
 
-    hold on
-        plot([mazex; mazex(1)],[mazey; mazey(1)],'r','LineWidth',1); 
-        %plot([50 50+distLim2], [30 30],'b','LineWidth',1.5)
-        plot([50 50+auto_vel_thresh/aviSR], [60 60],'r','LineWidth',1.5)
-    hold off   
+    plot(ManualCorrFig.Children,[mazex; mazex(1)],[mazey; mazey(1)],'r','LineWidth',1); 
+    plot(ManualCorrFig.Children,[50 50+auto_vel_thresh/aviSR], [60 60],'r','LineWidth',1.5)
+    hold(ManualCorrFig.Children,'off')  
 end
             
 %Will's version, background image subtraction
+stats=[];
 d = imgaussfilt(flipud(rgb2gray(v0-v)),10);
 stats = regionprops(d>willThresh & mazeMask,'area','centroid','majoraxislength','minoraxislength');%flipped %'solidity'
 MouseBlob = [stats.Area] > 250 & ... %[stats.Area] < 3500...
@@ -1193,9 +1215,10 @@ inMask = inmask | onmask;
 stats = stats(inMask); 
 
 %Centers on black
-generousGray = (grayGauss > isGrayThresh) & mazeMask & expectedBlobs; %check this line
+statsCenters = reshape([stats.Centroid],2,length(stats))';
+generousGray = (grayGauss > isGrayThresh) & mazeMask & expectedBlobs; %seems ok
 grayOutlines = bwboundaries(generousGray);%cell2mat(
-grayIn = zeros(length(statsCenters),1); grayOn = grayIn;
+grayIn = zeros(size(statsCenters,1),1); grayOn = grayIn;
 for thisGray = 1:length(grayOutlines)
     [thisIn, thisOn] = inpolygon(statsCenters(:,1),statsCenters(:,2),...
         grayOutlines{thisGray,1}(:,2),grayOutlines{thisGray,1}(:,1));
@@ -1209,7 +1232,7 @@ if length(stats) == 1
     xm = stats.Centroid(1);
     ym = stats.Centroid(2);
     fixedThisFrameFlag=1;
-elseif length(stats)==0
+elseif isempty(stats)
     if auto_frames(corrFrame)==1
         [xm,ym]=ManualOnlyCorr;
     elseif auto_frames(corrFrame)~=1
@@ -1234,8 +1257,8 @@ elseif length(stats) > 1
     useAdjFrames = testDG(adjFrames);%tryFrame = 1 or end always returns 0
     adjFrames(useAdjFrames==0) = [];
 
-    defAdjXs = xAVI(adjFrames);
-    defAdjYs = yAVI(adjFrames);
+    defAdjXs = xAVI(adjFrames-1);
+    defAdjYs = yAVI(adjFrames-1);
         
     %if there's anything here, see if there's one stats that is minimum
     %distance from both and within distlim2 of both
@@ -1247,17 +1270,43 @@ elseif length(stats) > 1
     end
     
     DefGoodDist = defDist <= distLim2;
-    NearBothDG = find(sum(DefGoodDist,2)==length(defAdjXs)).*any(defAdjXs);
+    NearBothDG = sum(DefGoodDist,2)==length(defAdjXs);
     
-    if length(NearBothDG)==1 && NearBothDG~=0
+    if sum(NearBothDG)==1 %If there's one, use it
         xm = stats(NearBothDG).Centroid(1);
         ym = stats(NearBothDG).Centroid(2);
         fixedThisFrameFlag = 1;
         got=[got; corrFrame];
-    else
+        %{
+    elseif sum(NearBothDG)==0
+        %Probably something is fuxed somewhere
+        %maybe need to redo that definitely good frame?
+        %or image subtraction sucked
+        switch pass
+            case 2
+                disp('Something off in definitelyGood; please fix now')
+                hold_auto_frames = auto_frames;
+                hold_corrFrame = corrFrame;
+                auto_frames = adjFrames-1;
+                for fixDG = 1:length(auto_frames)
+                    corrFrame = fixDG;
+                    [xm,ym] = EnhancedManualCorrect;
+                end
+                auto_frames = hold_auto_frames;
+                corrFrame = hold_corrFrame;
+                [xm,ym] = EnhancedManualCorrect;
+            case 1
+                skipped = [skipped; auto_frames(corrFrame)]; 
+                fixedThisFrameFlag=0;
+        end
+        %}
+    else %if sum(NearBothDG)>1
+        %One of these cases is where it splits the mouse in two around a
+        %corner or something
+        
         %Alt adjacent frames
-    %Then check adjacent at all, use this to build a radius of acceptable
-    %centers to further filter stats; if only 1, then good
+        %Then check adjacent at all, use this to build a radius of acceptable
+        %centers to further filter stats; if only 1, then good
         adjToCheck = [auto_frames(corrFrame)-1 auto_frames(corrFrame)+1];
         autoQueued = auto_frames(corrFrame:end);
         
@@ -1269,7 +1318,7 @@ elseif length(stats) > 1
                     xAVI(adjToCheck(2))==0 & yAVI(adjToCheck(2))==0];
         
         passedChecks = wasSkipped + isFirst + isLast + inQueue + isZero;
-        passedChecks = passedChecks==0;
+        passedChecks = passedChecks==0; %only points that don't fail any checks
         adjUse = adjToCheck(passedChecks);
         
         tryAdjXs = xAVI(adjUse);
@@ -1278,16 +1327,18 @@ elseif length(stats) > 1
         %NearOneDG = stats(find(sum(DefGoodDist,2)>=1);
         %stats = stats(NearOneDG);
         tryCenters = reshape([stats.Centroid],2,length(stats))';
-        tryDist = zeros(length(stats),length(tryAdjXs));
+        tryDist = zeros(length(stats),length(tryAdjXs)+isempty(tryAdjXs));
+        if any(adjUse)
         for tryAdjInd = 1:length(tryAdjXs)
             tryDist(:,tryAdjInd) = ...
                 hypot(tryCenters(:,1)-tryAdjXs(tryAdjInd), tryCenters(:,2)-tryAdjYs(tryAdjInd));
         end
-    
+        end
+        
         tryGoodDist = tryDist <= distLim2;
         %tryNearBoth = find(sum(tryGoodDist,2)==length(tryAdjXs));
-        tryNearBoth = find(sum(tryGoodDist,2)>=1);
-        if length(tryNearBoth)==1
+        tryNearBoth = sum(tryGoodDist,2)==length(tryAdjXs);
+        if sum(tryNearBoth)==1
             xm = stats(tryNearBoth).Centroid(1);
             ym = stats(tryNearBoth).Centroid(2);
             fixedThisFrameFlag = 1;
@@ -1298,6 +1349,107 @@ elseif length(stats) > 1
             fixedThisFrameFlag = 1;
             got=[got; corrFrame];
         end
+        
+        
+        %If all above fails, drop back into old logic (now in PPMP2,
+        if fixedThisFrameFlag==0
+            stats=[];
+            d = imgaussfilt(flipud(rgb2gray(v0-v)),10);
+            stats = regionprops(d>willThresh & mazeMask,'area','centroid','majoraxislength','minoraxislength');%flipped %'solidity'
+            MouseBlob = [stats.Area] > 250 & ... %[stats.Area] < 3500...
+                        [stats.MajorAxisLength] > 10 & ...
+                        [stats.MinorAxisLength] > 10;
+            stats=stats(MouseBlob);
+        
+            %Sam's gray version
+            grayFrameThresh = rgb2gray(flipud(v)) < grayThresh; %flipud
+            grayGaussThresh = imgaussfilt(double(grayFrameThresh),10) > gaussThresh;
+            maybeMouseGray = grayGaussThresh & maze & expectedBlobs; %To handle background gray
+            grayStats = regionprops(maybeMouseGray,'centroid','area','majoraxislength','minoraxislength'); %flipped
+            grayStats = grayStats( [grayStats.Area] > grayBlobArea &...
+                       [grayStats.MajorAxisLength] > 15 &...
+                       [grayStats.MinorAxisLength] > 15);
+
+                       
+            possible=[];
+            switch ~isempty(grayStats) + ~isempty(stats) 
+                case 2 %both have stuff
+                    for statsInd=1:length(stats)
+                        for grayStatsInd=1:length(grayStats)
+                            poRow=size(possible,1)+1;  
+                            %possible is [stats_index, graystats_index, distance]
+                            %probably some way to do this more elegantly
+                            possible(poRow,1:3)=[statsInd grayStatsInd...
+                            hypot(stats(statsInd).Centroid(1)-grayStats(grayStatsInd).Centroid(1),...
+                            stats(statsInd).Centroid(2)-grayStats(grayStatsInd).Centroid(2))]; %#ok<AGROW>
+                        end 
+                    end
+                    possible( possible(:,3)>distLim2, :) = []; 
+                    if size(possible,1)==1
+                        %Will and thresh agree on one blob
+                        xm=mean([stats(possible(1)).Centroid(1) grayStats(possible(2)).Centroid(1)]);
+                        ym=mean([stats(possible(1)).Centroid(2) grayStats(possible(2)).Centroid(2)]);
+                        fixedThisFrameFlag=1;
+                        got=[got; corrFrame];
+                    elseif size(possible,1)==0 %If logic here may not be right...
+                        if length(stats)==1 && length(grayStats)>1 %DON'T LIKE THIS
+                                xm = stats.Centroid(1);
+                                ym = stats.Centroid(2);
+                                fixedThisFrameFlag=1;
+                        elseif length(stats)>1 && length(grayStats)==1 %DON'T LIKE THIS
+                                xm = grayStats.Centroid(1);
+                                ym = grayStats.Centroid(2);
+                                fixedThisFrameFlag=1;
+                        else
+                            if auto_frames(corrFrame)==1
+                                    [xm,ym]=ManualOnlyCorr;
+                            elseif pass==2 && auto_frames(corrFrame)~=1
+                                    %Should it be do a last frame check and see which
+                                    %is really close? Or try will, if that fails try gray
+                                    [xm,ym] = EnhancedManualCorrect;
+                            elseif pass==1 && auto_frames(corrFrame)~=1
+                                    %Here too?
+                                    skipped = [skipped; auto_frames(corrFrame)]; 
+                                    fixedThisFrameFlag=0;
+                            end    
+                        end
+                    elseif size(possible,1)>1 
+                        %more than one blob will and thresh agree on
+                        for posNum=1:size(possible,1)
+                            putativeMouseX(posNum) = mean([stats(possible(posNum,1)).Centroid(1)...
+                                grayStats(possible(posNum,2)).Centroid(1)]); 
+                            putativeMouseY(posNum) = mean([stats(possible(posNum,1)).Centroid(2)...
+                                grayStats(possible(posNum,2)).Centroid(2)]); 
+                        end
+
+                        TryAdjacentFrames;
+                    end
+
+                case 1  %only one is empty
+                    %either grayStats or will stats is empty
+                    %A: whichever is not, use blob closest to last known good
+                    if ~isempty(grayStats) && isempty(stats)
+                        blobStats=grayStats;
+                    elseif isempty(grayStats) && ~isempty(stats)    
+                        blobStats=stats;
+                    end
+
+                        for posNum=1:size(blobStats,1)
+                            putativeMouseX(posNum) = blobStats(posNum).Centroid(1); 
+                            putativeMouseY(posNum) = blobStats(posNum).Centroid(2); 
+                        end
+
+                        TryAdjacentFrames;
+                case 0 %isempty(grayStats) && isempty(stats)
+                    switch pass
+                        case 1
+                            skipped = [skipped; auto_frames(corrFrame)]; 
+                        case 2
+                            [xm,ym] = EnhancedManualCorrect;
+                    end
+            end    
+        end
+        %starting to be generalized here
         
         %Fix this later, get moving now
         %{
@@ -1333,11 +1485,10 @@ end
 if fixedThisFrameFlag==1
     FixFrame(xm,ym) 
             
-    figure(ManualCorrFig); 
-    hold on;
-    plot(xm,ym,marker{markWith},'MarkerSize',4,...
+    hold(ManualCorrFig.Children,'on')  
+    plot(ManualCorrFig.Children,xm,ym,marker{markWith},'MarkerSize',4,...
         'MarkerFaceColor',marker_face{markWith})
-    hold off;
+    hold(ManualCorrFig.Children,'off')  
     if update_pos_realtime==1
         % pause(0.10)
     end
@@ -1670,7 +1821,7 @@ end
 function ZeroBounds(~,~)
 global auto_frames; global Xpix; global Ypix; global elChoiceFlag; global mazeEl;
 global xAVI; global yAVI; global maskx; global masky; global elInds; global definitelyGood;
-global numPasses;
+global numPasses; global elVector
 
 auto_frames=[];
 zero_frames = Xpix == 0 | Ypix == 0 ;
@@ -1687,16 +1838,19 @@ reported = {['Found ' num2str(sum(zero_frames)) ' points at (0, 0)']};
 end      
 
 %out of bounds for each submask
+
 switch elChoiceFlag
     case 0
         [in,on] = inpolygon(xAVI, yAVI, maskx, masky);
         inBounds = in | on;
     case 1
-        inBounds = [];
+        inBounds = zeros(length(xAVI),1);
         for ml=1:length(mazeEl)
             elInds = find(elVector==ml);
             [inHere, onHere] = inpolygon(xAVI(elInds), yAVI(elInds), mazeEl(ml).maskx, mazeEl(ml).masky);
-            inBounds = [inBounds; inHere | onHere]; %#ok<AGROW>
+            fixTheseEl = inHere | onHere;
+            fixx=elInds(fixTheseEl);
+            inBounds(fixx) = 1;
         end
 end
 outOfBounds = inBounds==0;
