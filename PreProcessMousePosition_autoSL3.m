@@ -1,12 +1,11 @@
 function [xpos_interp,ypos_interp,time_interp,AVItime_interp] = PreProcessMousePosition_autoSL3(varargin);
-% Open issues: 6/14/17
+% Open issues: 6/15/17
 %   
 %   PRIORITY   
 %   - fix high velocity logic, getting stuck, correct index?
-%   - auto-close expected location boundaries
 %   - Video of results, viewer to drop back in at a bad frame. Show a
 %   slider over velocity plot?
-%   - test 'wait' for manual thresholds thing
+%   - blackblobs done before continue
 %   - does right click to skip in enhanced manual correct still work?
 %
 %   OTHER
@@ -359,41 +358,8 @@ vel_init = [vel_init(1); vel_init];
 if isempty(auto_vel_thresh)
     auto_vel_thresh = 1500;
 end
-velthreshing=figure; plot(vel_init)
-title(['suggested velocity threshold: ' num2str(auto_vel_thresh)])
-hline=refline(0,auto_vel_thresh);
-hline.Color='r';
-hline.LineWidth=1.5;
-    
-choice = questdlg('Is this velocity threshold good?', ...
-'Velocity Threshold', ...
-'Yes','No > ginput','Yes');
 
-velLineGood=0;
-while velLineGood==0
-    switch choice
-        case 'Yes'
-            disp(['Proceeding with velocity threshold ' num2str(auto_vel_thresh)])
-            velLineGood=1;
-        case 'No > ginput'
-            figure(velthreshing);
-            [~,user_vel_thresh] = ginput(1);
-            plot(vel_init)
-            hline = refline(0,user_vel_thresh); hline.Color='r'; hline.LineWidth=1.5;
-            choice2 = questdlg('Is this velocity threshold good?', ...
-                                'Velocity Threshold', ...
-                                'Yes','No > ginput','Yes');
-            switch choice2
-                case 'Yes'
-                    velLineGood=1;
-                    auto_vel_thresh=user_vel_thresh;
-                case 'No > ginput'
-                    velLineGood=0;
-            end        
-    end
-end
-    close(velthreshing)    
-
+SetVelocityThresh;
 
 UpdatePosAndVel;
 %% Expected location
@@ -448,12 +414,12 @@ conChoice = questdlg(constr,'Manual thresholding',...
                     'Yes','No','No');
 switch conChoice
     case 'Yes'
-        findingContrast=1;
-        AdjustBlackContrast;
+        BlackBlobContrastAdjuster;
     case 'No'
         %Do nothing
 end
 
+disp('made it here')
 %Expected gray blobs to exclude
 grayFrameThreshB=rgb2gray(flipud(v0)) < grayThresh; %flipud
 expectedBlobs=logical(imgaussfilt(double(grayFrameThreshB),10) <= gaussThresh);
@@ -586,40 +552,7 @@ switch MorePoints
     %}
     case 't'
         disp('reset high-velocity threshold')
-        velthreshing=figure; plot(vel_init)
-        %auto_vel_thresh = 1500;
-        title(['suggested velocity threshold: ' num2str(auto_vel_thresh)])
-        hline=refline(0,auto_vel_thresh);
-        hline.Color='r';
-        hline.LineWidth=1.5;
-    
-        choice = questdlg('Is this velocity threshold good?', ...
-        'Velocity Threshold', ...
-        'Yes','No > ginput','Yes');
-        velLineGood=0;
-        while velLineGood==0
-        switch choice
-            case 'Yes'
-                disp(['Proceeding with velocity threshold ' num2str(auto_vel_thresh)])
-                velLineGood=1;
-            case 'No > ginput'
-                figure(velthreshing);
-                [~,user_vel_thresh] = ginput(1);
-                plot(vel_init)
-                hline = refline(0,user_vel_thresh); hline.Color='r'; hline.LineWidth=1.5;
-                choice2 = questdlg('Is this velocity threshold good?', ...
-                                'Velocity Threshold', ...
-                                'Yes','No > ginput','Yes');
-                switch choice2
-                    case 'Yes'
-                        velLineGood=1;
-                        auto_vel_thresh=user_vel_thresh;
-                    case 'No > ginput'
-                        velLineGood=0;
-                end        
-        end
-        end
-        close(velthreshing)
+        SetVelocityThresh
     case 'v'
         disp('auto-correcting high velocity points')
         % Find indices of all points above auto_vel_thresh
@@ -628,27 +561,36 @@ switch MorePoints
         
         velchoice = questdlg('How do you want to do velocity?', 'Correct high velocity',...
             'Whole session','First 100','Select Window','Select Window');
+        bounds=[];
         switch velchoice
             case 'Whole session'
                 disp(['right now found ' num2str(sum(vel_init>auto_vel_thresh)) ' high velocity frames; expect more'])
+                bounds(1:round(length(xAVI)/3))=1;
+                bounds(round(length(xAVI)/3)+1:2*round(length(xAVI)/3))=2;
+                bounds(2*round(length(xAVI)/3)+1:length(xAVI)+1)=3;
+                sFrame = 1;
+                eFrame = length(xAVI)-1;
             case 'First 100'
                 bounds(1:33)=1; bounds(34:66)=2; bounds(67:101)=3;
-                velCount=0;
+                sFrame = 1;
+                eFrame = length(xAVI)-1;
             case 'Select Window'
                 [sFrame,eFrame] = SelectFrameNumbers;
-            
+                frameRange = eFrame-sFrame+1;
+                bounds(1:round(frameRange/3))=1;
+                bounds(round(frameRange/3)+1:2*round(frameRange/3))=2;
+                bounds(2*round(frameRange/3):frameRange)=3;
+                bounds = [ones(1,sFrame-1), bounds, ones(1,length(xAVI)-eFrame+1)*3]; %#ok<AGROW>
         end
         
-            AMchoice = questdlg('Manual only or auto-assist?', 'Auto or manual',...
+        AMchoice = questdlg('Manual only or auto-assist?', 'Auto or manual',...
                 'Auto-assist','Manual','Cancel','Auto-assist');
-            switch AMchoice
-                case 'Auto-assist'
-                    HighVelocityCorrect;
-                case 'Manual'
-                    HighVelocityCorrect;
-                case 'Cancel'
-                    %Do nothing
-            end
+        switch AMchoice
+            case {'Auto-assist','Manual'}
+                HighVelocityCorrect;
+            case 'Cancel'
+                %Do nothing
+        end
         
     case 'o'
     switch overwriteManualFlag
@@ -665,10 +607,10 @@ switch MorePoints
         SaveTemp;
     case 'x'
         SaveTemp;
+        ClearStuff;
         return
     case 'q'
         SaveTemp;
-        ClearStuff;
         stillEditingFlag=0;    
     otherwise
         disp('Not a recognized input')
@@ -727,6 +669,9 @@ save Pos.mat Xpix_filt Ypix_filt xpos_interp ypos_interp time_interp start_time.
     AVItime_interp maze v0 maskx masky definitelyGood expectedBlobs mazeEl...
     elVector bstr allTxt bframes DVTtime willThresh grayThresh gaussThresh time...
     auto_vel_thresh
+
+ClearStuff;
+
 close all 
 end
 %%
@@ -737,70 +682,128 @@ global sFrame; global eFrame; global vel_init; global auto_vel_thresh;
 global velCount; global time; global Xpix; global Ypix; global corrFrame;
 global auto_frames; global velchoice; global AMchoice; global pass;
 global xAVI; global yAVI; global definitelyGood; global fixedThisFrameFlag
-global bounds; global skipped; global ManualCorrFig; global MoMtime;
+global bounds; global skipped; global ManualCorrFig;
 global v; global obj; global xm; global ym; global aviSR; global markWith
 
 marker = {'go' 'yo' 'ro'};
 marker_face = {'g' 'y' 'r'};
-markWith = 3; %needs to be updated...
 
-veldFrames=[];
-doneVel=0;
-skipped=[];
-skipThese=[];
+numPasses = 1;
+if strcmp(AMchoice,'Auto-assist')
+    numPasses = 2;
+end
 manChoice = questdlg('Redo definitely good frames?','Redo DefGood',...
                     'Yes','No','No');
+
+velCount = 0;                
+
+for pass = 1:numPasses
+
+hvTriedFrames=[];
+doneVel=0;
+skipped=[];
+skipThese = ones(length(Xpix)-1,1);
+hundredCount = ones(length(Xpix)-1,1);
+
 while doneVel==0
 
-correctThis=1;
-auto_frames=[];
-%velInds=1:length(vel_init);
-vel_init = hypot(diff(Xpix),diff(Ypix))./diff(time);%(time(2)-time(1));
-vel_init = [vel_init(1); vel_init]; %#ok<AGROW>
-highVelFrames = find(vel_init>auto_vel_thresh);
-[~,~,inHV] = intersect(skipThese,highVelFrames);
-highVelFrames(inHV)=[];
-
+fixHere = 1;
+velCount=velCount+1;
 switch manChoice
     case 'Yes'                
-        %corrDefGoodFlag=1;
+        hvDefUse = ones(length(definitelyGood)-1,1);
     case 'No'
-        %corrDefGoodFlag=0;
-        theseAreOk = find(definitelyGood);
-        [~,~,inHighVel] = intersect(theseAreOk,highVelFrames);
-        highVelFrames(inHighVel) = [];
+        hvDefUse = definitelyGood(1:end-1)==0;
 end
 
+auto_frames=[];
+vel_init = hypot(diff(Xpix),diff(Ypix))./diff(time);%(time(2)-time(1));
+main_restrict = zeros(length(vel_init),1);
+stopHere = min([eFrame length(vel_init)]);
+main_restrict(sFrame:stopHere)=1;
+if pass==1
+    skipThese(skipped) = 0;
+end
+%vel_init = [vel_init(1); vel_init];
+
+if strcmp(velchoice,'First 100') && velCount > 100
+    if pass==1
+        hundredCount(:) = 0;
+    elseif pass==2
+        hundredCount = zeros(length(Xpix)-1,1);
+        hundredCount(skipped) = 1;
+    end
+end
+
+highVelLogical = vel_init>auto_vel_thresh;
+highVelLogical = highVelLogical & skipThese &  main_restrict & hundredCount;% & hvDefUse;
+highVelLogical(hvDefUse)=0;
+highVelFrames = find(highVelLogical);
+
+if any(highVelFrames)
+    auto_frames=highVelFrames(1);
+    corrFrame=1;
+    switch velchoice
+        case {'Whole session','Select Window'}
+            markWith=bounds(auto_frames(corrFrame));
+        case 'First 100'
+            markWith=bounds(velCount);
+    end
+else 
+    doneVel=1;
+end
+
+%If there's a highVel point at 5, then original frame 5 or 6 is the problem
 
 %look at overwriteManualFlag?
+hvTriedFrames=[hvTriedFrames auto_frames]; %#ok<AGROW>
+if doneVel==0 && any(auto_frames) %in this case auto_frames should never be empty
+    if sum(hvTriedFrames==auto_frames)==1
+        %expected
+    elseif sum(hvTriedFrames==auto_frames)==2
+        %already did this, try the next one
+        auto_frames = auto_frames + 1; 
+        hvTriedFrames=[hvTriedFrames auto_frames]; %#ok<AGROW>
+    elseif sum(hvTriedFrames==auto_frames)==3
+        %already did this, try the next one
+        auto_frames = auto_frames + 1; 
+        hvTriedFrames=[hvTriedFrames auto_frames]; %#ok<AGROW>
+    elseif sum(hvTriedFrames==auto_frames)>=4
+        disp('Iono man, have not figured this out yet')
+        [xm,ym]=EnhancedManualCorrect;
+        fixHere=0;
+    end
+    
+    if fixHere == 1
+        switch AMchoice
+            case 'Auto-assist'
+                CorrectThisFrame;
+            case 'Manual'
+               [xm,ym]=EnhancedManualCorrect;
+        end
+    end
 
-switch velchoice
-    case 'Whole session'
-        if any(highVelFrames)
-            auto_frames=highVelFrames(1);
-            corrFrame=1;
-        else 
-            doneVel=1;
-        end
-    case 'First 100'
-        velCount=velCount+1;
-        markWith=bounds(velCount);
-        if velCount>=101
-            doneVel=1;
-        else
-            if any(highVelFrames)
-                auto_frames=highVelFrames(1);
-                corrFrame=1;
-            end    
-        end
+    if fixedThisFrameFlag==1
+        FixFrame(xm,ym)
+            
+        hold(ManualCorrFig.Children,'on')  
+        plot(ManualCorrFig.Children,xm,ym,marker{markWith},'MarkerSize',4,...
+            'MarkerFaceColor',marker_face{markWith})
+        hold(ManualCorrFig.Children,'off')
+    end
+end
+end
+
+disp('No more high velocity frames')
+UpdatePosAndVel;
+
+end
+
+%{
+veldFrames=[veldFrames auto_frames];
+
+
         
-    case 'Select Window'
-        theseFrames=highVelFrames>=sFrame & highVelFrames<=eFrame;
-        auto_frames=highVelFrames(find(theseFrames,1,'first'));
-        corrFrame=1;
-        if isempty(auto_frames)
-            doneVel=1;
-        end
 end
 
 veldFrames=[veldFrames auto_frames]; %#ok<AGROW>
@@ -841,7 +844,7 @@ if doneVel==0 && any(auto_frames)
                 SaveTemp;
             end
         elseif sum(veldFrames==auto_frames)>=4
-            skipThese=[skipThese auto_frames]; %#ok<AGROW>
+            skipThese(auto_frames) = 0;
             correctThis=0;    
         end
         if correctThis==1
@@ -866,9 +869,6 @@ if doneVel==0 && any(auto_frames)
         
         auto_frames=auto_frames+1;
         veldFrames=[veldFrames auto_frames]; %#ok<AGROW>
-        %{
-            
-            %}
     end
     if sum(veldFrames==auto_frames)>=3
             disp(['Uh oh, already did this frame, ' num2str(auto_frames) ', '...
@@ -906,19 +906,17 @@ if doneVel==0 && any(auto_frames)
         if fixedThisFrameFlag==1
             FixFrame(xm,ym)
             
-            %figure(ManualCorrFig); 
-            %hold on;
-            %plot(xm,ym,marker{markWith},'MarkerSize',4,...
-            %    'MarkerFaceColor',marker_face{markWith})
-            %hold off;
+            hold(ManualCorrFig.Children,'on')  
+            plot(ManualCorrFig.Children,xm,ym,marker{markWith},'MarkerSize',4,...
+                'MarkerFaceColor',marker_face{markWith})
+            hold(ManualCorrFig.Children,'off')
         end
         end
     end
 
 end
-end
 
-UpdatePosAndVel;
+%}
 
 end
 %% %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -1053,7 +1051,7 @@ while intendedFrameGood == 0
             title(['click here, backed up to ' num2str(lastManualFrame) ' from ' num2str(intendedFrameNum)])
             [xm,ym] = ginput(1);
             hold(ManualCorrFig.Children,'on');
-            plot(ManualCorrFig.Childrenxm,ym,'oy','MarkerSize',4,'MarkerFaceColor','g'); 
+            plot(ManualCorrFig.Children,xm,ym,'oy','MarkerSize',4,'MarkerFaceColor','g'); 
             hold(ManualCorrFig.Children,'off');
             FixFrame(xm,ym)
             definitelyGood(lastManualFrame) = 1; %just in case
@@ -1194,7 +1192,7 @@ if update_pos_realtime==1
     hold(ManualCorrFig.Children,'off')
     imagesc(ManualCorrFig.Children,flipud(v)); 
     hold(ManualCorrFig.Children,'on')
-    title(['Auto correcting frame ' num2str(auto_frames(corrFrame)) ', please wait'])
+    title(ManualCorrFig.Children,['Auto correcting frame ' num2str(auto_frames(corrFrame)) ', please wait'])
     if Xpix(auto_frames(corrFrame)) ~= 0 && Ypix(auto_frames(corrFrame)) ~= 0
         plot(ManualCorrFig.Children,xAVI(auto_frames(corrFrame)),yAVI(auto_frames(corrFrame)),marker{markWith},'MarkerSize',4);
     end    
@@ -1529,12 +1527,11 @@ for corrFrame=1:length(auto_frames)
     
     if fixedThisFrameFlag==1
         FixFrame(xm,ym)
-                
-        figure(ManualCorrFig); 
-        hold on;
-        plot(xm,ym,marker{markWith},'MarkerSize',4,...
+        
+        hold(ManualCorrFig.Children,'on')  
+        plot(ManualCorrFig.Children,xm,ym,marker{markWith},'MarkerSize',4,...
             'MarkerFaceColor',marker_face{markWith})
-        hold off;
+        hold(ManualCorrFig.Children,'off')
     end    
 end
  
@@ -1551,7 +1548,7 @@ try
 catch
     PosAndVel=figure('name','Position and Velocity');
 end
-vel_init = hypot(diff(Xpix),diff(Ypix))/(time(2)-time(1));
+vel_init = hypot(diff(Xpix),diff(Ypix))./diff(time);%(time(2)-time(1));
 velInds=1:length(vel_init);
 hx0 = subplot(4,3,1:3);plot(time,Xpix);xlabel('time (sec)');ylabel('x position (cm)');yl = get(gca,'YLim');
     line([MoMtime MoMtime], [yl(1) yl(2)],'Color','r');axis tight;
@@ -1632,7 +1629,7 @@ global maze; global maskx; global masky; global mazeElInd
 doneWithEl=0;
 while doneWithEl==0
     for figg = 1:length(mazeEl)
-        figure; imagesc(flipud(v0)); 
+        MazesFigs(figg).figg=figure; imagesc(flipud(v0)); 
         hold on; plot([mazeEl(figg).maskx; mazeEl(figg).maskx(1)],...
             [mazeEl(figg).masky; mazeEl(figg).masky(1)],'r','LineWidth',1); hold off 
         switch figg==1
@@ -1722,8 +1719,9 @@ while doneWithEl==0
             addAnElMask;
         case 'n'
             doneWithEl=1; 
-    end            
-    
+    end
+    close(MazesFigs.figg)
+    clear(MazesFigs)
 end
 
 end
@@ -1899,6 +1897,7 @@ if any(outOfBounds)
              auto_frames = [auto_frames; find(outOfBounds)];
         case 'Skip'
             %do nothing
+            close(badPoints);
     end
 end
 
@@ -1988,22 +1987,47 @@ end
 
 end
 %% %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-function AdjustBlackContrast(~,~)
+function SetVelocityThresh(~,~)
+global vel_init; global auto_vel_thresh; 
 
-BlackBlobContrastAdjuster;
+velthreshing=figure; plot(vel_init)
+title(['suggested velocity threshold: ' num2str(auto_vel_thresh)])
+hline=refline(0,auto_vel_thresh);
+hline.Color='r';
+hline.LineWidth=1.5;
+    
+choice = questdlg('Is this velocity threshold good?', ...
+'Velocity Threshold', ...
+'Yes','No > ginput','Yes');
 
+velLineGood=0;
+while velLineGood==0
+    switch choice
+        case 'Yes'
+            disp(['Proceeding with velocity threshold ' num2str(auto_vel_thresh)])
+            velLineGood=1;
+        case 'No > ginput'
+            figure(velthreshing);
+            [~,user_vel_thresh] = ginput(1);
+            plot(vel_init)
+            hline = refline(0,user_vel_thresh); hline.Color='r'; hline.LineWidth=1.5;
+            choice2 = questdlg('Is this velocity threshold good?', ...
+                                'Velocity Threshold', ...
+                                'Yes','No > ginput','Yes');
+            switch choice2
+                case 'Yes'
+                    velLineGood=1;
+                    auto_vel_thresh=user_vel_thresh;
+                case 'No > ginput'
+                    velLineGood=0;
+            end        
+    end
+end
+close(velthreshing) 
 end
 %%
 
-
-
 %{
 BoneYard
-
- = regionprops(grayGaussThreshB & maze,'centroid','area'); %flipped
-for aa=1:length(expectedBlobs); blobCenters(aa,1:2)=expectedBlobs(aa).Centroid; end
-[inBlob,onBlob] = inpolygon(blobCenters(:,1), blobCenters(:,2), maskx, masky);
-inMaze= inBlob | onBlob; %probably going to yes all of them (maze above)
-expectedBkgBlobs=expectedBlobs(inMaze);
 
 %}

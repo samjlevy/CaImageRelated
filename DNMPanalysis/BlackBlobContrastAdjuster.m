@@ -8,6 +8,7 @@ global frames
 global gaussThresh %inherited
 global obj %inherited
 global findingContrast %inherited
+global v0
 
 %{
     J = imadjust(I,[LOW_IN; HIGH_IN],[LOW_OUT; HIGH_OUT],GAMMA) maps the
@@ -24,6 +25,17 @@ global findingContrast %inherited
 
 WhichFrames;
 
+if any(v0)
+    foundBG = questdlg('Found a v0. Use it?', 'Background image', 'Yes','No','Yes');
+switch foundBG
+    case 'Yes'
+        fig.v0 = v0;
+        fig.v0thresh = [];
+        fig.v0thresh = double(rgb2gray(fig.v0)) < grayThresh;
+        fig.expectedBlobs=logical(imgaussfilt(double(fig.v0thresh),10) <= gaussThresh);
+    case 'No'
+end
+else
 bkgChoice = questdlg('Load a background image?', 'Background image', 'Yes','No','Yes');
 switch bkgChoice
     case 'Yes'
@@ -39,13 +51,14 @@ switch bkgChoice
         catch
             disp('Could not load. Weird')
             fig.v0 = zeros(size(frames(1).v));
-            fig.expectedBlobs = logical(ones(size(frames(1).v)));
+            fig.expectedBlobs = true(size(frames(1).v));
         end
     case 'No'
         fig.v0 = zeros(size(frames(1).v));
         fig.expectedBlobs = ones(size(frames(1).v));
 end
- figure; imagesc(fig.v0)
+end
+figure; imagesc(fig.v0)
 
 figWidth = 1400;
 edgeBuffer = 0.02;
@@ -235,7 +248,9 @@ prompt = {'Frame 1:','Frame 2:','Frame 3:','Frame 4:','Frame 5:','Frame 6:'};
 defaultans = {'971','','','','',''};
 answer = inputdlg(prompt,'Frames to test',1,defaultans);
 
-obj = VideoReader('161013_Europa_DNMP.AVI');
+avi_filepath = ls('*.avi');
+disp(['Using ' avi_filepath ])
+obj = VideoReader(avi_filepath);
 for ff = 1:6
     if any(answer{ff})
         frames(ff).wanted = str2double(answer{ff});
