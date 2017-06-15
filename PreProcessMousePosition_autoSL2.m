@@ -524,7 +524,7 @@ msgbox(optionsText,'PreProcess Keys')
              
 stillEditingFlag=1;
 while stillEditingFlag==1
-MorePoints = input('Is there a flaw that needs to be corrected?','s');
+
 try 
     figure(ManualCorrFig);
 catch
@@ -534,6 +534,7 @@ end
 
 UpdatePosAndVel;
 
+MorePoints = input('Is there a flaw that needs to be corrected?','s');
 switch MorePoints
     case 'y'
         disp('attempt auto')

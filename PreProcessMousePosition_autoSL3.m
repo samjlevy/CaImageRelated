@@ -2,7 +2,6 @@ function [xpos_interp,ypos_interp,time_interp,AVItime_interp] = PreProcessMouseP
 % Open issues: 6/14/17
 %   
 %   PRIORITY   
-%   - fix frame select to preserve zoom
 %   - fix high velocity logic, getting stuck, correct index?
 %   - auto-close expected location boundaries
 %   - Video of results, viewer to drop back in at a bad frame. Show a
@@ -16,7 +15,7 @@ function [xpos_interp,ypos_interp,time_interp,AVItime_interp] = PreProcessMouseP
 %   - contrast adjustment
 %   - select points by midpoint between frames to help catch not high
 %   velocity wrong things
-%   - marker style/color in velocity thing   
+%   - marker style/color in velocity thing: do it by thirds of edit window   
 %   - bring back cluster thresh to allow for more frequent saving
 %   - something wrong with ManualCorrFig being created multiple times - get(0,'children') 
 %   - how similar is blob to blob correlating to good position on an
@@ -354,47 +353,48 @@ close(backgroundFrame);
 
 %% Position and velocity
 vel_init = hypot(diff(Xpix),diff(Ypix))/(time(2)-time(1));
-[fv, xv] = ecdf(vel_init);
-if exist('auto_thresh','var')
-    auto_vel_thresh = min(xv(fv > (1-auto_thresh)));
-else
-    velthreshing=figure; plot(vel_init)
+vel_init = [vel_init(1); vel_init];
+%[fv, xv] = ecdf(vel_init);
+%if exist('auto_thresh','var')
+%    auto_vel_thresh = min(xv(fv > (1-auto_thresh)));
+if isempty(auto_vel_thresh)
     auto_vel_thresh = 1500;
-    title(['suggested velocity threshold: ' num2str(auto_vel_thresh)])
-    hline=refline(0,auto_vel_thresh);
-    hline.Color='r';
-    hline.LineWidth=1.5;
+end
+velthreshing=figure; plot(vel_init)
+title(['suggested velocity threshold: ' num2str(auto_vel_thresh)])
+hline=refline(0,auto_vel_thresh);
+hline.Color='r';
+hline.LineWidth=1.5;
     
-    choice = questdlg('Is this velocity threshold good?', ...
-	'Velocity Threshold', ...
-	'Yes','No > ginput','Yes');
-    % Handle response
-    velLineGood=0;
-    while velLineGood==0
-    
-        switch choice
-            case 'Yes'
-                disp(['Proceeding with velocity threshold ' num2str(auto_vel_thresh)])
-                velLineGood=1;
-            case 'No > ginput'
-                figure(velthreshing);
-                [~,user_vel_thresh] = ginput(1);
-                plot(vel_init)
-                hline = refline(0,user_vel_thresh); hline.Color='r'; hline.LineWidth=1.5;
-                choice2 = questdlg('Is this velocity threshold good?', ...
+choice = questdlg('Is this velocity threshold good?', ...
+'Velocity Threshold', ...
+'Yes','No > ginput','Yes');
+
+velLineGood=0;
+while velLineGood==0
+    switch choice
+        case 'Yes'
+            disp(['Proceeding with velocity threshold ' num2str(auto_vel_thresh)])
+            velLineGood=1;
+        case 'No > ginput'
+            figure(velthreshing);
+            [~,user_vel_thresh] = ginput(1);
+            plot(vel_init)
+            hline = refline(0,user_vel_thresh); hline.Color='r'; hline.LineWidth=1.5;
+            choice2 = questdlg('Is this velocity threshold good?', ...
                                 'Velocity Threshold', ...
                                 'Yes','No > ginput','Yes');
-                switch choice2
-                    case 'Yes'
-                        velLineGood=1;
-                        auto_vel_thresh=user_vel_thresh;
-                    case 'No > ginput'
-                        velLineGood=0;
-                end        
-        end
+            switch choice2
+                case 'Yes'
+                    velLineGood=1;
+                    auto_vel_thresh=user_vel_thresh;
+                case 'No > ginput'
+                    velLineGood=0;
+            end        
     end
-    close(velthreshing)
 end
+    close(velthreshing)    
+
 
 UpdatePosAndVel;
 %% Expected location
@@ -493,15 +493,21 @@ disp('Highly recommended to do behavior flag (b), then (0,0) and OOB (z)')
              
 stillEditingFlag=1;
 while stillEditingFlag==1
-MorePoints = input('Is there a flaw that needs to be corrected?','s');
-try 
+UpdatePosAndVel;
+figsOpen=get(0,'children');
+manCorr = 
     figure(ManualCorrFig);
 catch
-    ManualCorrFig=figure('name','ManualCorrFig'); 
-    imagesc(flipud(v0)); title('Auto correcting, please wait')
-end 
+    ManualCorrFig=figure('name','ManualCorrFig'); imagesc(flipud(v0)); %title('Auto correcting, please wait')
+end
 
-UpdatePosAndVel;
+MorePoints = input('Is there a flaw that needs to be corrected?','s');
+%try 
+%    figure(ManualCorrFig);
+%catch
+%    ManualCorrFig=figure('name','ManualCorrFig'); 
+%    imagesc(flipud(v0)); title('Auto correcting, please wait')
+%end 
 
 switch MorePoints
     case 'z'
@@ -580,7 +586,7 @@ switch MorePoints
     case 't'
         disp('reset high-velocity threshold')
         velthreshing=figure; plot(vel_init)
-        auto_vel_thresh = 1500;
+        %auto_vel_thresh = 1500;
         title(['suggested velocity threshold: ' num2str(auto_vel_thresh)])
         hline=refline(0,auto_vel_thresh);
         hline.Color='r';
@@ -713,11 +719,12 @@ AVItime_interp = cellfun(@(a,b) lin_interp(time(a), AVIobjTime(a),...
 DVTtime=time;
 % Save all filtered data as well as raw data in case you want to go back
 % and fix an error you discover later on
+%Final save
 save Pos.mat Xpix_filt Ypix_filt xpos_interp ypos_interp time_interp start_time...
     MoMtime Xpix Ypix xAVI yAVI MouseOnMazeFrame...
     AVItime_interp maze v0 maskx masky definitelyGood expectedBlobs mazeEl...
-    elVector bstr allTxt bframes DVTtime willThresh grayThresh gaussThresh
-
+    elVector bstr allTxt bframes DVTtime willThresh grayThresh gaussThresh time...
+    auto_vel_thresh
 close all 
 end
 %%
@@ -999,7 +1006,7 @@ end
 function [xm,ym]=EnhancedManualCorrect(~,~)
 global auto_frames; global corrFrame; global v; global ManualCorrFig
 global fixedThisFrameFlag; global definitelyGood; global obj
-global xAVI; global yAVI; global Xpix; global Ypix;
+global xAVI; global yAVI; global Xpix; global Ypix; global v0;
 global lastManualFrame; global aviSR; global markWith
 
 marker = {'go' 'yo' 'ro'};
@@ -1561,11 +1568,11 @@ global MoMtime; global MouseOnMazeFrame; global maskx; global masky
 global definitelyGood; global xAVI; global yAVI; global Xpix; global Ypix;
 global maze; global expectedBlobs; global v0; global mazeEl; global elVector;
 global bstr; global allTxt; global bframes; global willThresh; global grayThresh;
-global gaussThresh;
+global gaussThresh; global time; global auto_vel_thresh
 
 save Pos_temp.mat Xpix Ypix xAVI yAVI MoMtime MouseOnMazeFrame maskx v0 maze masky...
     definitelyGood expectedBlobs mazeEl elVector bstr allTxt bframes willThresh...
-    grayThresh gaussThresh
+    grayThresh gaussThresh time auto_vel_thresh
 disp('Saved!')
 end
 %% %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
