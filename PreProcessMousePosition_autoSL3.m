@@ -16,8 +16,7 @@ function [xpos_interp,ypos_interp,time_interp,AVItime_interp] = PreProcessMouseP
 %   - select points by midpoint between frames to help catch not high
 %   velocity wrong things
 %   - marker style/color in velocity thing: do it by thirds of edit window   
-%   - bring back cluster thresh to allow for more frequent saving
-%   - something wrong with ManualCorrFig being created multiple times - get(0,'children') 
+%   - bring back cluster thresh to allow for more frequent saving 
 %   - how similar is blob to blob correlating to good position on an
 %   adjacent frame?
 %   - reject blobs found near current location
@@ -450,10 +449,7 @@ conChoice = questdlg(constr,'Manual thresholding',...
 switch conChoice
     case 'Yes'
         findingContrast=1;
-        BlackBlobContrastAdjuster;
-        while findingContrast==1
-           %just wait 
-        end
+        AdjustBlackContrast;
     case 'No'
         %Do nothing
 end
@@ -494,11 +490,16 @@ disp('Highly recommended to do behavior flag (b), then (0,0) and OOB (z)')
 stillEditingFlag=1;
 while stillEditingFlag==1
 UpdatePosAndVel;
-figsOpen=get(0,'children');
-manCorr = 
-    figure(ManualCorrFig);
-catch
+%figsOpen=get(0,'children');
+figsOpen = findall(0,'type','figure');
+isManCorr = strcmp({figsOpen.Name},'ManualCorrFig');
+if sum(isManCorr)==1
+    %We're good
+elseif sum(isManCorr)==0
     ManualCorrFig=figure('name','ManualCorrFig'); imagesc(flipud(v0)); %title('Auto correcting, please wait')
+elseif sum(isManCorr) > 1
+    manCorrInds = find(isManCorr);
+    close(figsOpen(manCorrInds(2:end)))
 end
 
 MorePoints = input('Is there a flaw that needs to be corrected?','s');
@@ -667,6 +668,7 @@ switch MorePoints
         return
     case 'q'
         SaveTemp;
+        ClearStuff;
         stillEditingFlag=0;    
     otherwise
         disp('Not a recognized input')
@@ -754,7 +756,7 @@ correctThis=1;
 auto_frames=[];
 %velInds=1:length(vel_init);
 vel_init = hypot(diff(Xpix),diff(Ypix))./diff(time);%(time(2)-time(1));
-vel_init = [vel_init(1); vel_init];
+vel_init = [vel_init(1); vel_init]; %#ok<AGROW>
 highVelFrames = find(vel_init>auto_vel_thresh);
 [~,~,inHV] = intersect(skipThese,highVelFrames);
 highVelFrames(inHV)=[];
@@ -1573,6 +1575,21 @@ global gaussThresh; global time; global auto_vel_thresh
 save Pos_temp.mat Xpix Ypix xAVI yAVI MoMtime MouseOnMazeFrame maskx v0 maze masky...
     definitelyGood expectedBlobs mazeEl elVector bstr allTxt bframes willThresh...
     grayThresh gaussThresh time auto_vel_thresh
+
+disp('Saved!')
+end
+%% %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+function ClearStuff(~,~)
+global MoMtime; global MouseOnMazeFrame; global maskx; global masky
+global definitelyGood; global xAVI; global yAVI; global Xpix; global Ypix;
+global maze; global expectedBlobs; global v0; global mazeEl; global elVector;
+global bstr; global allTxt; global bframes; global willThresh; global grayThresh;
+global gaussThresh; global time; global auto_vel_thresh
+
+clear Xpix Ypix xAVI yAVI MoMtime MouseOnMazeFrame maskx v0 maze masky...
+    definitelyGood expectedBlobs mazeEl elVector bstr allTxt bframes willThresh...
+    grayThresh gaussThresh time auto_vel_thresh
+
 disp('Saved!')
 end
 %% %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -1970,7 +1987,12 @@ for lvl=1:loaded
 end
 
 end
+%% %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+function AdjustBlackContrast(~,~)
 
+BlackBlobContrastAdjuster;
+
+end
 %%
 
 
