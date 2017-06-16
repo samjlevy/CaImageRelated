@@ -6,10 +6,10 @@ function [xpos_interp,ypos_interp,time_interp,AVItime_interp] = PreProcessMouseP
 %   - Video of results, viewer to drop back in at a bad frame. Show a
 %   slider over velocity plot?
 %   - blackblobs done before continue
-%   - does right click to skip in enhanced manual correct still work?
 %
 %   OTHER
 %   - Logic for possible: could be generalized better
+%   - right click to skip should still be able to step back to
 %   - Blob restrictions for will and gray
 %   - contrast adjustment
 %   - select points by midpoint between frames to help catch not high
@@ -431,6 +431,7 @@ optionsText={'b - frames by behavior';...
              'z - (0,0) and out-of-bounds frames';...
              'y - attempt auto, manual when missed';...
              'm - all manual';...
+             'n - frame numbers';...
              'p - select points by position';...
              't - reset auto-velocity threshold';...
              'v - run auto on high velocity points';...
@@ -487,6 +488,39 @@ switch MorePoints
         auto_frames=sFrame:eFrame;
         numPasses=2;
         CorrectTheseFrames; 
+    case 'n'
+        prompt = {'Edit start:','Edit end:'};
+        defaultans = {'25325','57870'};
+        answer = inputdlg(prompt,'Edit by frame numbers',1,defaultans);
+        answer=cell2mat(cellfun(@str2num,answer,'UniformOutput',false));
+        
+        if length(answer)==1
+            auto_frames = answer;
+        elseif length(answer)==2
+            if answer(1)==answer(2)
+                auto_frames = answer(1);
+            else 
+                auto_frames = answer(1):answer(2);
+            end
+        end
+        manChoice = questdlg('Redo definitely good frames?','Redo DefGood',...
+                    'Yes','No','No');
+        switch manChoice
+            case 'Yes'
+                corrDefGoodFlag=1;
+            case 'No'
+                corrDefGoodFlag=0;
+        end         
+        mchoice = questdlg(['Edit these ' num2str(length(auto_frames)) ' frames'],...
+            'Edit by frame number','Auto-assist','Manual','Cancel','Manual');
+        switch mchoice
+            case 'Auto-assist'
+                CorrectTheseFrames;
+            case 'Manual'
+                CorrectManualFrames
+            case 'Cancel'
+                %do nothing
+        end
     case 'm'
         %select a bunch of frames and manual correct all of them       
         disp('correcting manually')
@@ -606,6 +640,9 @@ switch MorePoints
     case 's'
         SaveTemp;
     case 'x'
+        figsOpen = findall(0,'type','figure');
+        isPreKeys = strcmp({figsOpen.Name},'PreProcess Keys');
+        close(figsOpen(isPreKeys));
         SaveTemp;
         ClearStuff;
         return
@@ -688,236 +725,167 @@ global v; global obj; global xm; global ym; global aviSR; global markWith
 marker = {'go' 'yo' 'ro'};
 marker_face = {'g' 'y' 'r'};
 
-numPasses = 1;
-if strcmp(AMchoice,'Auto-assist')
-    numPasses = 2;
-end
 manChoice = questdlg('Redo definitely good frames?','Redo DefGood',...
                     'Yes','No','No');
-
-velCount = 0;                
-
-for pass = 1:numPasses
-
-hvTriedFrames=[];
-doneVel=0;
-skipped=[];
-skipThese = ones(length(Xpix)-1,1);
-hundredCount = ones(length(Xpix)-1,1);
-
-while doneVel==0
-
-fixHere = 1;
-velCount=velCount+1;
-switch manChoice
-    case 'Yes'                
-        hvDefUse = ones(length(definitelyGood)-1,1);
-    case 'No'
-        hvDefUse = definitelyGood(1:end-1)==0;
-end
-
-auto_frames=[];
-vel_init = hypot(diff(Xpix),diff(Ypix))./diff(time);%(time(2)-time(1));
-main_restrict = zeros(length(vel_init),1);
-stopHere = min([eFrame length(vel_init)]);
-main_restrict(sFrame:stopHere)=1;
-if pass==1
-    skipThese(skipped) = 0;
-end
-%vel_init = [vel_init(1); vel_init];
-
-if strcmp(velchoice,'First 100') && velCount > 100
-    if pass==1
-        hundredCount(:) = 0;
-    elseif pass==2
-        hundredCount = zeros(length(Xpix)-1,1);
-        hundredCount(skipped) = 1;
-    end
-end
-
-highVelLogical = vel_init>auto_vel_thresh;
-highVelLogical = highVelLogical & skipThese &  main_restrict & hundredCount;% & hvDefUse;
-highVelLogical(hvDefUse)=0;
-highVelFrames = find(highVelLogical);
-
-if any(highVelFrames)
-    auto_frames=highVelFrames(1);
-    corrFrame=1;
-    switch velchoice
-        case {'Whole session','Select Window'}
-            markWith=bounds(auto_frames(corrFrame));
-        case 'First 100'
-            markWith=bounds(velCount);
-    end
-else 
-    doneVel=1;
-end
-
-%If there's a highVel point at 5, then original frame 5 or 6 is the problem
-
-%look at overwriteManualFlag?
-hvTriedFrames=[hvTriedFrames auto_frames]; %#ok<AGROW>
-if doneVel==0 && any(auto_frames) %in this case auto_frames should never be empty
-    if sum(hvTriedFrames==auto_frames)==1
-        %expected
-    elseif sum(hvTriedFrames==auto_frames)==2
-        %already did this, try the next one
-        auto_frames = auto_frames + 1; 
-        hvTriedFrames=[hvTriedFrames auto_frames]; %#ok<AGROW>
-    elseif sum(hvTriedFrames==auto_frames)==3
-        %already did this, try the next one
-        auto_frames = auto_frames + 1; 
-        hvTriedFrames=[hvTriedFrames auto_frames]; %#ok<AGROW>
-    elseif sum(hvTriedFrames==auto_frames)>=4
-        disp('Iono man, have not figured this out yet')
-        [xm,ym]=EnhancedManualCorrect;
-        fixHere=0;
-    end
-    
-    if fixHere == 1
-        switch AMchoice
-            case 'Auto-assist'
-                CorrectThisFrame;
-            case 'Manual'
-               [xm,ym]=EnhancedManualCorrect;
-        end
-    end
-
-    if fixedThisFrameFlag==1
-        FixFrame(xm,ym)
-            
-        hold(ManualCorrFig.Children,'on')  
-        plot(ManualCorrFig.Children,xm,ym,marker{markWith},'MarkerSize',4,...
-            'MarkerFaceColor',marker_face{markWith})
-        hold(ManualCorrFig.Children,'off')
-    end
-end
-end
-
-disp('No more high velocity frames')
-UpdatePosAndVel;
-
-end
-
-%{
-veldFrames=[veldFrames auto_frames];
-
-
-        
-end
-
-veldFrames=[veldFrames auto_frames]; %#ok<AGROW>
-if doneVel==0 && any(auto_frames)
-    
-    switch AMchoice
-    case 'Auto-assist'
-        if sum(veldFrames==auto_frames)==1
-            %expected, it's fine
-        elseif sum(veldFrames==auto_frames)==2
-            auto_frames=auto_frames+1;
-            %veldFrames=[veldFrames auto_frames]; 
-        elseif sum(veldFrames==auto_frames)==3
-            disp(['Uh oh, already did this frame, ' num2str(auto_frames) ', '...
-            num2str(sum(veldFrames==auto_frames)-1) ' times'])
-            contchoice =  questdlg('Try it again or skip it?', 'SkipTry',...
-                            'End','PrevNext','Save','End');
-            switch contchoice
-            case 'End'
-                correctThis=0;
-                doneVel=1;
-            case 'PrevNext'
-                intendedFrame=auto_frames;
-                auto_frames=[intendedFrame-1 intendedFrame+1];
-                for corrFrame=1:2
-                    if definitelyGood(auto_frames(corrFrame))==0
-                    obj.CurrentTime=(auto_frames(corrFrame)-1)/aviSR;
-                    v = readFrame(obj);
-                    fixedThisFrameFlag=0;
-                    [xm,ym]=EnhancedManualCorrect;
-                    if fixedThisFrameFlag==1
-                        FixFrame(xm,ym)
-                    end
-                    end
-                end
-                correctThis=0;
-            case 'Save'    
-                SaveTemp;
-            end
-        elseif sum(veldFrames==auto_frames)>=4
-            skipThese(auto_frames) = 0;
-            correctThis=0;    
-        end
-        if correctThis==1
-            pass=1;
-            skipped=[];
-            CorrectThisFrame;  
-            if any(skipped)
-                [xm,ym]=EnhancedManualCorrect; 
-        
-                if fixedThisFrameFlag==1
-                    FixFrame(xm,ym)
-                end   
-            end
-        end    
+                
+switch AMchoice
     case 'Manual'
-        if sum(veldFrames==auto_frames)==1
-       %expected
-        end
-    if sum(veldFrames==auto_frames)==2
-        %disp(['Uh oh, already did this frame, ' num2str(auto_frames) ', '...
-        %    num2str(sum(veldFrames==auto_frames))-1 ' times'])
+        hvTriedFrames=[];
+        doneVel=0;
+        velCount=0;
+        while doneVel==0
         
-        auto_frames=auto_frames+1;
-        veldFrames=[veldFrames auto_frames]; %#ok<AGROW>
-    end
-    if sum(veldFrames==auto_frames)>=3
-            disp(['Uh oh, already did this frame, ' num2str(auto_frames) ', '...
-            num2str(sum(veldFrames==auto_frames)-1) ' times'])
-        contchoice =  questdlg('Try it again or skip it?', 'SkipTry',...
-                            'End','PrevNext','Save','End');
-            switch contchoice
-            case 'End'
-                correctThis=0;
-                doneVel=1;
-            case 'PrevNext'
-                intendedFrame=auto_frames;
-                auto_frames=[intendedFrame-1 intendedFrame+1];
-                for corrFrame=1:2
-                    obj.CurrentTime=(auto_frames(corrFrame)-1)/aviSR;
-                    v = readFrame(obj);
-                    fixedThisFrameFlag=0;
-                    [xm,ym]=EnhancedManualCorrect;
-                    if fixedThisFrameFlag==1
-                        FixFrame(xm,ym);
-                    end
+        vel_init = hypot(diff(Xpix),diff(Ypix))./diff(time);
+        
+        main_restrict = zeros(length(vel_init),1);
+        stopHere = min([eFrame length(vel_init)]);
+        main_restrict(sFrame:stopHere)=1;
+        highVelLogical = vel_init>auto_vel_thresh;
+        highVelLogical = highVelLogical &  main_restrict;
+        
+        highVelFrames = find(highVelLogical);
+        
+        if any(highVelFrames)
+            auto_frames=highVelFrames(1);
+            corrFrame=1;
+            if strcmp(manChoice,'No') && definitelyGood(auto_frames(corrFrame))==1
+                auto_frames = auto_frames + 1;
+                if definitelyGood(auto_frames(corrFrame))==1
+                    %somehow we've still for a high velocity frame though both are good
+                    disp('Something wrong here, 2 def good frames but still high vel')
+                    disp('This bit still needs fixing')
                 end
-                correctThis=0;
-            case 'Save'    
-                SaveTemp;
             end
-        %veldFrames=[veldFrames auto_frames]; %#ok<AGROW>    
-    end
-        if correctThis==1
-        obj.CurrentTime=(auto_frames(corrFrame)-1)/aviSR;
-        v = readFrame(obj);
-        fixedThisFrameFlag=0;
-        [xm,ym]=EnhancedManualCorrect; 
-        
-        if fixedThisFrameFlag==1
-            FixFrame(xm,ym)
             
-            hold(ManualCorrFig.Children,'on')  
-            plot(ManualCorrFig.Children,xm,ym,marker{markWith},'MarkerSize',4,...
-                'MarkerFaceColor',marker_face{markWith})
-            hold(ManualCorrFig.Children,'off')
+            switch velchoice
+                case {'Whole session','Select Window'}
+                    markWith=bounds(auto_frames(corrFrame));
+                case 'First 100'
+                    markWith=bounds(velCount);
+            end
+        else 
+            doneVel=1;
         end
-        end
-    end
 
+        if doneVel==0 && any(auto_frames) %in this case auto_frames should never be empty
+            if sum(hvTriedFrames==auto_frames)==1
+                auto_frames = auto_frames + 1;
+            elseif sum(hvTriedFrames==auto_frames)==2
+                disp('Tried this frame twice')
+            elseif sum(hvTriedFrames==auto_frames)>=3
+                disp('Tried this frame 3x')
+            end
+            
+            obj.CurrentTime=(auto_frames(corrFrame)-1)/aviSR;
+            v = readFrame(obj);
+            [xm,ym]=EnhancedManualCorrect;
+        
+            if fixedThisFrameFlag==1
+                FixFrame(xm,ym)
+
+                hold(ManualCorrFig.Children,'on')  
+                plot(ManualCorrFig.Children,xm,ym,marker{markWith},'MarkerSize',4,...
+                    'MarkerFaceColor',marker_face{markWith})
+                hold(ManualCorrFig.Children,'off')
+            end
+            hvTriedFrames = [hvTriedFrames, auto_frames]; %#ok<AGROW>
+        end
+        
+        if strcmp(velchoice,'First 100')
+            velCount = velCount+1;
+            if velCount > 99
+                doneVel=1;
+            end
+        end
+        
+        end
+        disp('No more high velocity frames')
+        UpdatePosAndVel;
+        
+    case 'Auto-assist'
+        disp('Nope, not yet')
+        %{
+        hvTriedFrames=[];
+        doneVel=0;
+        velCount=0;
+        
+        if strcmp(velchoice,'First 100')
+            disp('Sorry, first 100 does not work with auto right now, running whole session')
+            velchoice = 'Whole session';
+        end
+        
+        hvSkipped = [];
+        for fakePass=1:2
+            while doneVel==0
+                vel_init = hypot(diff(Xpix),diff(Ypix))./diff(time);
+                main_restrict = zeros(length(vel_init),1);
+                stopHere = min([eFrame length(vel_init)]);
+                main_restrict(sFrame:stopHere)=1;
+
+                
+
+                highVelLogical = vel_init>auto_vel_thresh;        
+                highVelLogical = highVelLogical &  main_restrict;
+                highVelLogical(hvSkipped) = 0;
+                highVelFrames = find(highVelLogical);
+
+                if any(highVelFrames)
+                    auto_frames=highVelFrames(1);
+                    corrFrame=1;
+                    switch velchoice
+                        case {'Whole session','Select Window'}
+                            markWith=bounds(auto_frames(corrFrame));
+                        case 'First 100'
+                            markWith=bounds(velCount);
+                    end
+                else 
+                    doneVel=1;
+                end
+
+                if doneVel==0 && any(auto_frames) %in this case auto_frames should never be empty
+                    %if strcmp(manChoice,'Yes') && definitelyGood(auto_frames(corrFrame))==1
+                    %    auto_frames = auto_frames + 1;
+                    %end
+
+                    if sum(hvTriedFrames==auto_frames)==1
+                        auto_frames = auto_frames + 1;
+                        
+                        
+                    elseif sum(hvTriedFrames==auto_frames)==2
+                        disp('Tried this frame twice')
+                    elseif sum(hvTriedFrames==auto_frames)>=3
+                        disp('Tried this frame 3x')
+                    end
+
+                    CorrectThisFrame;
+                    if fixedThisFrameFlag==1
+                        if strcmp(velchoice,'First 100')
+                            velCount = velCount+1;
+                            if velCount > 99
+                                doneVel=1;
+                            end
+                        end
+                    elseif fixedThisFrameFlag==0
+                        hvSkipped = [hvSkipped, auto_frames];
+                                
+                            
+                    end
+
+                    hvTriedFrames = [hvTriedFrames, auto_frames];
+
+                end
+            end
+            
+            if fakePass==1
+                hvTriedFrames
+                hvSkipped
+            end
+        end
+        disp('No more high velocity frames')
+        UpdatePosAndVel;
+        %}
 end
-
-%}
-
+   
 end
 %% %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 function FixFrame(xm,ym)
@@ -1586,8 +1554,6 @@ global gaussThresh; global time; global auto_vel_thresh
 clear Xpix Ypix xAVI yAVI MoMtime MouseOnMazeFrame maskx v0 maze masky...
     definitelyGood expectedBlobs mazeEl elVector bstr allTxt bframes willThresh...
     grayThresh gaussThresh time auto_vel_thresh
-
-disp('Saved!')
 end
 %% %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 function getELvector(~,~)
