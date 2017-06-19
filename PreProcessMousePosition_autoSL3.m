@@ -303,7 +303,7 @@ elseif ~isempty(v0)
     bkgNotFlipped=0;
     while bkgNotFlipped==0
     bkgNormal = questdlg('Is the background image right-side up?', 'Background Image', ...
-                              'Yes','No','No');               
+                              'Yes','No','Yes');               
         switch bkgNormal
             case 'Yes'
                 bkgNotFlipped=1;
@@ -731,10 +731,13 @@ manChoice = questdlg('Redo definitely good frames?','Redo DefGood',...
 switch AMchoice
     case 'Manual'
         hvTriedFrames=[];
+        skipForNow=[];
         doneVel=0;
         velCount=0;
+        triedOnce=[];
         while doneVel==0
         
+        correctThis=1;
         vel_init = hypot(diff(Xpix),diff(Ypix))./diff(time);
         
         main_restrict = zeros(length(vel_init),1);
@@ -742,6 +745,8 @@ switch AMchoice
         main_restrict(sFrame:stopHere)=1;
         highVelLogical = vel_init>auto_vel_thresh;
         highVelLogical = highVelLogical &  main_restrict;
+        skipPass = unique(skipForNow);
+        highVelLogical(skipPass) = 0;
         
         highVelFrames = find(highVelLogical);
         
@@ -766,29 +771,73 @@ switch AMchoice
         else 
             doneVel=1;
         end
-
+        
         if doneVel==0 && any(auto_frames) %in this case auto_frames should never be empty
             if sum(hvTriedFrames==auto_frames)==1
+                disp(['Tried ' num2str(auto_frames) ' once, trying next frame'])
+                triedOnce = [triedOnce, auto_frames];
+                if sum(triedOnce==auto_frames)>10
+                    keyboard 
+                end
                 auto_frames = auto_frames + 1;
             elseif sum(hvTriedFrames==auto_frames)==2
-                disp('Tried this frame twice')
-            elseif sum(hvTriedFrames==auto_frames)>=3
-                disp('Tried this frame 3x')
+                %maybe just let it go?
+                disp(['2x on frame ' num2str(auto_frames)])
+            elseif sum(hvTriedFrames==auto_frames)==3 || sum(hvTriedFrames==auto_frames)==4
+                disp(['Tried this frame ' num2str(sum(hvTriedFrames==auto_frames)) ' times'])
+                doneCont = 0;
+                while doneCont==0
+                contchoice =  questdlg('Try it again or skip it?', 'SkipTry',...
+                            'End','PrevNext','Save','End');
+                switch contchoice
+                    case 'End'
+                        correctThis=0;
+                        doneVel=1;
+                        doneCont=1;
+                    case 'PrevNext'
+                        intendedFrame=auto_frames;
+                        auto_frames=[intendedFrame-1 intendedFrame+1];
+                        for corrFrame=1:2
+                            if definitelyGood(auto_frames(corrFrame))==0 || strcmp(manChoice,'Yes')
+                                obj.CurrentTime=(auto_frames(corrFrame)-1)/aviSR;
+                                v = readFrame(obj);
+                                fixedThisFrameFlag=0;
+                                [xm,ym]=EnhancedManualCorrect;
+                                if fixedThisFrameFlag==1
+                                    FixFrame(xm,ym)
+                                end
+                                hvTriedFrames = [hvTriedFrames, auto_frames]; %#ok<AGROW>
+                            end
+                        end
+                        correctThis=0;
+                        doneCont=1;
+                    case 'Save'    
+                        SaveTemp;
+                        doneCont=0;
+                end
+                end
+            elseif sum(hvTriedFrames==auto_frames)>=5
+                disp(['skipping ' num2str(auto_frames)])
+                skipForNow = [skipForNow, auto_frames]; %#ok<AGROW>
+                correctThis=0;
             end
             
-            obj.CurrentTime=(auto_frames(corrFrame)-1)/aviSR;
-            v = readFrame(obj);
-            [xm,ym]=EnhancedManualCorrect;
-        
-            if fixedThisFrameFlag==1
-                FixFrame(xm,ym)
+            hvTriedFrames = [hvTriedFrames, auto_frames];  %#ok<AGROW>
+            if correctThis==1
+                obj.CurrentTime=(auto_frames(corrFrame)-1)/aviSR;
+                v = readFrame(obj);
+                [xm,ym]=EnhancedManualCorrect;
 
-                hold(ManualCorrFig.Children,'on')  
-                plot(ManualCorrFig.Children,xm,ym,marker{markWith},'MarkerSize',4,...
-                    'MarkerFaceColor',marker_face{markWith})
-                hold(ManualCorrFig.Children,'off')
+                if fixedThisFrameFlag==1
+                    FixFrame(xm,ym)
+
+                    hold(ManualCorrFig.Children,'on')  
+                    plot(ManualCorrFig.Children,xm,ym,marker{markWith},'MarkerSize',4,...
+                        'MarkerFaceColor',marker_face{markWith})
+                    hold(ManualCorrFig.Children,'off')
+                end
+                %hvTriedFrames = [hvTriedFrames, auto_frames];  %#ok<AGROW>
             end
-            hvTriedFrames = [hvTriedFrames, auto_frames]; %#ok<AGROW>
         end
         
         if strcmp(velchoice,'First 100')
@@ -798,6 +847,27 @@ switch AMchoice
             end
         end
         
+        end
+        
+        
+        if any(skipForNow)
+            SaveTemp;
+            auto_frames = sort(unique(skipForNow));
+            disp(['Continuing with ' num2str(length(auto_frames)) ' skipped frames'])
+            for corrFrame = 1:length(auto_frames)
+                obj.CurrentTime=(auto_frames(corrFrame)-1)/aviSR;
+                v = readFrame(obj);
+                [xm,ym]=EnhancedManualCorrect;
+
+                if fixedThisFrameFlag==1
+                    FixFrame(xm,ym)
+
+                    hold(ManualCorrFig.Children,'on')  
+                    plot(ManualCorrFig.Children,xm,ym,marker{markWith},'MarkerSize',4,...
+                        'MarkerFaceColor',marker_face{markWith})
+                    hold(ManualCorrFig.Children,'off')
+                end 
+            end
         end
         disp('No more high velocity frames')
         UpdatePosAndVel;
@@ -990,6 +1060,7 @@ while intendedFrameGood == 0
         ManualCorrFig=figure('name','ManualCorrFig'); imagesc(flipud(v0)); %title('Auto correcting, please wait')
     end
     imagesc(ManualCorrFig.Children,flipud(intendedFrame))
+    PlotVelLine;
     title(ManualCorrFig.Children,['click here, frame ' num2str(auto_frames(corrFrame))])
     if Xpix(intendedFrameNum) ~= 0 && Ypix(intendedFrameNum) ~= 0
         hold(ManualCorrFig.Children,'on');   
@@ -1016,6 +1087,7 @@ while intendedFrameGood == 0
             obj.CurrentTime=(lastManualFrame-1)/aviSR;
             pastFrame = readFrame(obj);
             imagesc(ManualCorrFig.Children,flipud(pastFrame))
+            PlotVelLine;
             title(['click here, backed up to ' num2str(lastManualFrame) ' from ' num2str(intendedFrameNum)])
             [xm,ym] = ginput(1);
             hold(ManualCorrFig.Children,'on');
@@ -1044,13 +1116,16 @@ function [xm,ym]=ManualOnlyCorr(~,~)
 global auto_frames; global corrFrame; global v; global ManualCorrFig
 global fixedThisFrameFlag; global definitelyGood; global lastManualFrame;
 
-figure(ManualCorrFig); 
+
 imagesc(ManualCorrFig.Children,flipud(v))
+PlotVelLine;
 hold(ManualCorrFig.Children,'on')
-title(['click here, frame ' num2str(auto_frames(corrFrame))])
+title(ManualCorrFig.Children,['click here, frame ' num2str(auto_frames(corrFrame))])
+figure(ManualCorrFig); 
 [xm,ym] = ginput(1);
-plot(ManualCorrFig.Children,xm,ym,'og','MarkerSize',4,'MarkerFaceColor','g');hold off;
-title('Auto correcting, please wait')
+plot(ManualCorrFig.Children,xm,ym,'og','MarkerSize',4,'MarkerFaceColor','g');
+hold(ManualCorrFig.Children,'off')
+title(ManualCorrFig.Children,'Auto correcting, please wait')
 definitelyGood(auto_frames(corrFrame)) = 1;
 fixedThisFrameFlag=1;
 lastManualFrame=auto_frames(corrFrame);
@@ -1130,7 +1205,7 @@ global grayBlobArea; global skipped; global putativeMouseX; global putativeMouse
 global willThresh; global grayThresh; global gaussThresh; global distLim2;
 global xm; global ym; global elChoiceFlag; global elVector; global mazeEl;
 global maskx; global masky;  global isGrayThresh; global auto_vel_thresh;
-global definitelyGood
+global definitelyGood;
 
 xm=[]; ym=[];
 marker = {'go' 'yo' 'ro'};
@@ -1164,14 +1239,15 @@ if update_pos_realtime==1
     if Xpix(auto_frames(corrFrame)) ~= 0 && Ypix(auto_frames(corrFrame)) ~= 0
         plot(ManualCorrFig.Children,xAVI(auto_frames(corrFrame)),yAVI(auto_frames(corrFrame)),marker{markWith},'MarkerSize',4);
     end    
+    
+    plot(ManualCorrFig.Children,[mazex; mazex(1)],[mazey; mazey(1)],'r','LineWidth',1);
+    hold(ManualCorrFig.Children,'off')
 
-    plot(ManualCorrFig.Children,[mazex; mazex(1)],[mazey; mazey(1)],'r','LineWidth',1); 
-    plot(ManualCorrFig.Children,[50 50+auto_vel_thresh/aviSR], [60 60],'r','LineWidth',1.5)
-    hold(ManualCorrFig.Children,'off')  
+    PlotVelLine;
 end
             
 %Will's version, background image subtraction
-stats=[];
+stats=[]; %#ok<NASGU>
 d = imgaussfilt(flipud(rgb2gray(v0-v)),10);
 stats = regionprops(d>willThresh & mazeMask,'area','centroid','majoraxislength','minoraxislength');%flipped %'solidity'
 MouseBlob = [stats.Area] > 250 & ... %[stats.Area] < 3500...
@@ -1990,6 +2066,14 @@ while velLineGood==0
     end
 end
 close(velthreshing) 
+end
+%% %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+function PlotVelLine(~,~)
+global ManualCorrFig; global auto_vel_thresh; global aviSR;
+
+hold(ManualCorrFig.Children,'on')
+plot(ManualCorrFig.Children,[50 50+auto_vel_thresh/aviSR], [60 60],'r','LineWidth',1.5)
+hold(ManualCorrFig.Children,'off')  
 end
 %%
 
