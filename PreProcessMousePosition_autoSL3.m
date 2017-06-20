@@ -2,19 +2,18 @@ function [xpos_interp,ypos_interp,time_interp,AVItime_interp] = PreProcessMouseP
 % Open issues: 6/15/17
 %   
 %   PRIORITY   
-%   - fix high velocity logic, getting stuck, correct index?
 %   - Video of results, viewer to drop back in at a bad frame. Show a
 %   slider over velocity plot?
 %   - blackblobs done before continue
 %
 %   OTHER
+%   - high velocity for auto
+%   - elMask for other behavior flags
 %   - Logic for possible: could be generalized better
-%   - right click to skip should still be able to step back to
 %   - Blob restrictions for will and gray
 %   - contrast adjustment
 %   - select points by midpoint between frames to help catch not high
-%   velocity wrong things
-%   - marker style/color in velocity thing: do it by thirds of edit window   
+%   velocity wrong things  
 %   - bring back cluster thresh to allow for more frequent saving 
 %   - how similar is blob to blob correlating to good position on an
 %   adjacent frame?
@@ -458,16 +457,7 @@ stillEditingFlag=1;
 while stillEditingFlag==1
 UpdatePosAndVel;
 %figsOpen=get(0,'children');
-figsOpen = findall(0,'type','figure');
-isManCorr = strcmp({figsOpen.Name},'ManualCorrFig');
-if sum(isManCorr)==1
-    %We're good
-elseif sum(isManCorr)==0
-    ManualCorrFig=figure('name','ManualCorrFig'); imagesc(flipud(v0)); %title('Auto correcting, please wait')
-elseif sum(isManCorr) > 1
-    manCorrInds = find(isManCorr);
-    close(figsOpen(manCorrInds(2:end)))
-end
+CheckManCorrFig;
 
 MorePoints = input('Is there a flaw that needs to be corrected?','s');
 %try 
@@ -594,7 +584,7 @@ switch MorePoints
         % Following this to work towards end
         
         velchoice = questdlg('How do you want to do velocity?', 'Correct high velocity',...
-            'Whole session','First 100','Select Window','Select Window');
+            'Whole session','Select Window','First 100','Select Window');
         bounds=[];
         switch velchoice
             case 'Whole session'
@@ -618,10 +608,12 @@ switch MorePoints
         end
         
         AMchoice = questdlg('Manual only or auto-assist?', 'Auto or manual',...
-                'Auto-assist','Manual','Cancel','Auto-assist');
+                'Auto-assist','Manual','Cancel','Manual');
         switch AMchoice
-            case {'Auto-assist','Manual'}
+            case 'Manual'
                 HighVelocityCorrect;
+            case 'Auto-assist'
+                disp('Sorry, not working right now')
             case 'Cancel'
                 %Do nothing
         end
@@ -714,6 +706,22 @@ end
 %%
 %Functions
 %% %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+function CheckManCorrFig(~,~)
+global ManualCorrFig; global v0; global PosAndVel; 
+
+figsOpen = findall(0,'type','figure');
+isManCorr = strcmp({figsOpen.Name},'ManualCorrFig');
+if sum(isManCorr)==1
+    %We're good
+elseif sum(isManCorr)==0
+    ManualCorrFig=figure('name','ManualCorrFig'); imagesc(flipud(v0)); %title('Auto correcting, please wait')
+elseif sum(isManCorr) > 1
+    manCorrInds = find(isManCorr);
+    close(figsOpen(manCorrInds(2:end)))
+end
+
+end
+%% %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 function HighVelocityCorrect(~,~)
 global sFrame; global eFrame; global vel_init; global auto_vel_thresh;
 global velCount; global time; global Xpix; global Ypix; global corrFrame;
@@ -726,7 +734,7 @@ marker = {'go' 'yo' 'ro'};
 marker_face = {'g' 'y' 'r'};
 
 manChoice = questdlg('Redo definitely good frames?','Redo DefGood',...
-                    'Yes','No','No');
+                    'Yes','No','Yes');
                 
 switch AMchoice
     case 'Manual'
@@ -775,9 +783,37 @@ switch AMchoice
         if doneVel==0 && any(auto_frames) %in this case auto_frames should never be empty
             if sum(hvTriedFrames==auto_frames)==1
                 disp(['Tried ' num2str(auto_frames) ' once, trying next frame'])
-                triedOnce = [triedOnce, auto_frames];
+                triedOnce = [triedOnce, auto_frames]; %#ok<AGROW>
                 if sum(triedOnce==auto_frames)>10
-                    keyboard 
+                    stuckDone=0;
+                    while stuckDone==0
+                    stuckchoice =  questdlg('I see you are stuck. Near frames (+/-3) or debug?', 'Stuck',...
+                            'Near frames','debug','Save','Near frames');
+                    switch stuckchoice
+                        case 'Near frames'
+                            tryF = auto_frames;
+                            auto_frames = tryF-3:tryF+3;
+                            for corrFrame=1:length(auto_frames)
+                                if definitelyGood(auto_frames(corrFrame))==0 || strcmp(manChoice,'Yes')
+                                    obj.CurrentTime=(auto_frames(corrFrame)-1)/aviSR;
+                                    v = readFrame(obj);
+                                    fixedThisFrameFlag=0;
+                                    [xm,ym]=EnhancedManualCorrect;
+                                    if fixedThisFrameFlag==1
+                                        FixFrame(xm,ym)
+                                    end
+                                    hvTriedFrames = [hvTriedFrames, auto_frames]; %#ok<AGROW>
+                                end
+                            end
+                            correctThis=0;
+                            stuckDone=1;
+                        case 'debug'
+                            keyboard 
+                        case 'Save'
+                            SaveTemp;
+                            stuckDone=0;
+                    end
+                    end
                 end
                 auto_frames = auto_frames + 1;
             elseif sum(hvTriedFrames==auto_frames)==2
@@ -797,7 +833,7 @@ switch AMchoice
                     case 'PrevNext'
                         intendedFrame=auto_frames;
                         auto_frames=[intendedFrame-1 intendedFrame+1];
-                        for corrFrame=1:2
+                        for corrFrame=1:length(auto_frames)
                             if definitelyGood(auto_frames(corrFrame))==0 || strcmp(manChoice,'Yes')
                                 obj.CurrentTime=(auto_frames(corrFrame)-1)/aviSR;
                                 v = readFrame(obj);
@@ -848,7 +884,6 @@ switch AMchoice
         end
         
         end
-        
         
         if any(skipForNow)
             SaveTemp;
@@ -1106,6 +1141,7 @@ while intendedFrameGood == 0
             %skip
             fixedThisFrameFlag=0;
             definitelyGood(auto_frames(corrFrame)) = 1;
+            lastManualFrame=auto_frames(corrFrame);
             intendedFrameGood=1;
     end
 end
@@ -1153,7 +1189,9 @@ global markWith; global v0; global pass; global numPasses;
 global overwriteManualFlag; global definitelyGood;
 
 skipped=[];
-ManualCorrFig=figure('name','ManualCorrFig'); imagesc(ManualCorrFig.Children,flipud(v0)); title('Auto correcting, please wait')
+%ManualCorrFig=figure('name','ManualCorrFig'); 
+imagesc(ManualCorrFig.Children,flipud(v0)); 
+title(ManualCorrFig.Children,'Auto correcting, please wait')
 for pass=1:numPasses
     disp(['Running auto assisted on ' num2str(length(auto_frames)) ' frames'])
     %pass 1 skip where bad, pass 2 run skipped, manual correct if still bad
@@ -1232,6 +1270,8 @@ if update_pos_realtime==1
     %catch
     %    ManualCorrFig=figure('name','ManualCorrFig'); imagesc(flipud(v0)); title('Auto correcting, please wait')
     %end    
+    
+    CheckManCorrFig;
     hold(ManualCorrFig.Children,'off')
     imagesc(ManualCorrFig.Children,flipud(v)); 
     hold(ManualCorrFig.Children,'on')
@@ -1927,6 +1967,7 @@ if any(outOfBounds)
     hold on
     plot(xAVI(alreadyGood), yAVI(alreadyGood), '.g')
     plot(xAVI(outOfBounds), yAVI(outOfBounds), '.r')
+    hold off
     sum(zero_frames & definitelyGood)
     reported = {['Found ' num2str(sum(outOfBounds)) ' points out of bounds, '...
                 num2str(sum(alreadyGood)) ' are already def good']};
@@ -1936,7 +1977,7 @@ if any(outOfBounds)
     %add case: label all definitely good
     switch oochoice
         case 'FixEm'
-             auto_frames = [auto_frames; find(outOfBounds)];
+            auto_frames = [auto_frames; find(outOfBounds)];
         case 'Skip'
             %do nothing
             close(badPoints);
@@ -1944,6 +1985,7 @@ if any(outOfBounds)
 end
 
 if any(auto_frames)
+    auto_frames = sort(auto_frames);
     close(badPoints);
     numPasses=2;
     CorrectTheseFrames;
@@ -1970,31 +2012,48 @@ switch crossLap
 end
 
 auto_frames = [];
+skipB = [];
 for nStarts = 1:length(starts)
-    auto_frames = [auto_frames, starts(nStarts):stops(nStarts)]; %#ok<AGROW>
-end
-
-manCho = questdlg('Fix these points manually or auto-assist?','Fix bad points',...
-                           'Manual','Auto','Cancel','Manual');
-switch manCho
-    case 'Manual'
-        disp(['You are currently editing ' num2str(length(auto_frames)) ' frames'])
-        manChoice = questdlg('Redo definitely good frames?','Redo DefGood',...
-                    'Yes','No','No');
-        switch manChoice
-            case 'Yes'
-                corrDefGoodFlag=1;
-            case 'No'
-                corrDefGoodFlag=0;
+    auto_frames = starts(nStarts):stops(nStarts); 
+    
+    fixem = questdlg([num2str(length(auto_frames)) ' frames ' num2str(auto_frames(1))...
+        ' to ' num2str(auto_frames(end)) '. Do it?'], 'Behavior Pass',...
+        'FixEm', 'Skip', 'FixEm');
+    switch fixem
+        case 'FixEm'
+            doIt=1;
+        case 'Skip'
+            skipB = [skipB; starts(nStarts) stops(nStarts)]; %#ok<AGROW>
+            doIt=0;
+    end
+    
+    if doIt==1
+        manCho = questdlg('Fix these points manually or auto-assist?','Fix bad points',...
+                                   'Manual','Auto','Cancel','Manual');
+        switch manCho
+            case 'Manual'
+                disp(['You are currently editing ' num2str(length(auto_frames)) ' frames'])
+                manChoice = questdlg('Redo definitely good frames?','Redo DefGood',...
+                            'Yes','No','No');
+                switch manChoice
+                    case 'Yes'
+                        corrDefGoodFlag=1;
+                    case 'No'
+                        corrDefGoodFlag=0;
+                end
+                CorrectManualFrames;
+            case 'Auto'
+                numPasses = 2;
+                CorrectTheseFrames;
+            case 'Cancel'
+            %do nothing
         end
-        CorrectManualFrames;
-    case 'Auto'
-        numPasses = 2;
-        CorrectTheseFrames;
-    case 'Cancel'
-    %do nothing
+    end
 end
 
+if any(skipB)
+    skipB %#ok<NOPRT>
+end
 %Could re-add the code to auto flag and use other behaviors from addAnElMask
 
 end
