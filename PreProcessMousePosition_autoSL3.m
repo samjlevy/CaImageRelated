@@ -4,7 +4,7 @@ function [xpos_interp,ypos_interp,time_interp,AVItime_interp] = PreProcessMouseP
 %   PRIORITY   
 %   - Video of results, viewer to drop back in at a bad frame. Show a
 %   slider over velocity plot?
-%   - blackblobs done before continue
+%   - blackblobscontrastadjuster done before continue
 %
 %   OTHER
 %   - high velocity for auto
@@ -292,15 +292,17 @@ bkgChoice = questdlg('Supply/Load background image or composite?', ...
         compositeBkg(1:240,:,:)=topClearFrame(1:240,:,:);
         compositeBkg(241:480,:,:)=bottomClearFrame(241:480,:,:);
         close Top; close Bot;
-        backgroundFrame=figure('name','backgroundFrame'); imagesc(compositeBkg); title('Composite Background Image')
+        %backgroundFrame=figure('name','backgroundFrame'); imagesc(compositeBkg); title('Composite Background Image')
         backgroundImage=compositeBkg;
     end
 elseif ~isempty(v0) 
     backgroundImage=v0; 
-    backgroundFrame=figure('name','backgroundFrame'); imagesc(backgroundImage); title('Background Image')
-    %should have checker for is it right orientation
-    bkgNotFlipped=0;
-    while bkgNotFlipped==0
+end
+
+backgroundFrame=figure('name','backgroundFrame'); imagesc(backgroundImage); title('Background Image')
+%should have checker for is it right orientation
+bkgNotFlipped=0;
+while bkgNotFlipped==0
     bkgNormal = questdlg('Is the background image right-side up?', 'Background Image', ...
                               'Yes','No','Yes');               
         switch bkgNormal
@@ -309,11 +311,12 @@ elseif ~isempty(v0)
             case 'No'
                 backgroundImage=flipud(backgroundImage);
         end
-    end     
 end     
+
 try %#ok<*TRYNC>
     close(h1);
 end
+
 compGood=0;
 while compGood==0
     holdChoice = questdlg('Good or fix a piece?', 'Background Image', ...
@@ -338,11 +341,9 @@ while compGood==0
             obj.CurrentTime = (swapInNum-1)/obj.FrameRate;
             swapClearFrame = readFrame(obj);
             [rows,cols]=ind2sub([480,640],find(swapRegion));
-            compositeBkg(rows,cols,:)=swapClearFrame(rows,cols,:);
-            figure(backgroundFrame);imagesc(compositeBkg)
+            backgroundImage(rows,cols,:)=swapClearFrame(rows,cols,:);
+            figure(backgroundFrame);imagesc(backgroundImage)
             compGood=0;
-            backgroundImage = compositeBkg;
-
     end
 end
 v0 = backgroundImage; %Comes out rightside up
@@ -588,7 +589,8 @@ switch MorePoints
         bounds=[];
         switch velchoice
             case 'Whole session'
-                disp(['right now found ' num2str(sum(vel_init>auto_vel_thresh)) ' high velocity frames; expect more'])
+                disp(['right now found ' num2str(sum(vel_init>auto_vel_thresh))...
+                    ' high velocity frames; expect more'])
                 bounds(1:round(length(xAVI)/3))=1;
                 bounds(round(length(xAVI)/3)+1:2*round(length(xAVI)/3))=2;
                 bounds(2*round(length(xAVI)/3)+1:length(xAVI)+1)=3;
@@ -824,7 +826,7 @@ switch AMchoice
                 doneCont = 0;
                 while doneCont==0
                 contchoice =  questdlg('Try it again or skip it?', 'SkipTry',...
-                            'End','PrevNext','Save','End');
+                            'End','PrevNext','Save','PrevNext');
                 switch contchoice
                     case 'End'
                         correctThis=0;
@@ -1108,7 +1110,8 @@ while intendedFrameGood == 0
         case 1 %left click
             %this point is good, use the xm ym
             hold(ManualCorrFig.Children,'on');
-            plot(ManualCorrFig.Children,xm,ym,marker{markWith},'MarkerSize',4,'MarkerFaceColor',marker_face{markWith});hold off;
+            plot(ManualCorrFig.Children,xm,ym,marker{markWith},'MarkerSize',4,...
+                'MarkerFaceColor',marker_face{markWith});hold off;
             hold(ManualCorrFig.Children,'off');
             title('Auto correcting, please wait')
             definitelyGood(auto_frames(corrFrame)) = 1;
@@ -1201,6 +1204,35 @@ for pass=1:numPasses
     total=0;
     bounds=[0 floor(length(auto_frames)/3) 2*floor(length(auto_frames)/3)];
     
+    %Chunking to allow for altering things
+    %Maybe this can be replaced with a figure with a checkbox that can be
+    %read every thousand frames
+    %{ 
+        global ab
+    ab.AutoBadFigure = figure('name','AutoBadFigure','position',[500 500 200 70],...
+                                'MenuBar','none','ToolBar','none');
+    ab.stopBox = uicontrol('Style','checkbox','Position',[160,11,25,25],...
+                                'Value', 0,'Parent',ab.AutoBadFigure);
+    ab.boxLabel = uicontrol('style','text','String','Stop at next chunk:',...
+                              'Position',[5,10,140,25],'FontSize',12,'Parent',ab.AutoBadFigure);
+    %}
+    bl = 1000;
+    %if length(auto_frames) > bl
+    %hold_auto_frames = auto_frames;
+    blocks = floor(length(auto_frames)/bl);
+    %rem(length(auto_frames),500)
+    auto_chunks = cell(blocks+1,1);
+    for bb = 1:blocks
+        auto_chunks{bb} = auto_frames((1:bl)+bl*(bb-1));
+    end
+    auto_chunks{blocks+1} = auto_frames(bl*blocks+1:end);
+    
+    chunk = 1;
+    while chunk <= size(auto_chunks,1)
+        auto_frames = auto_chunks{chunk};
+    %end
+    
+    
     for corrFrame=1:length(auto_frames)   
         if overwriteManualFlag==1 || definitelyGood(auto_frames(corrFrame))==0
             markWith=sum(corrFrame>bounds);
@@ -1213,9 +1245,21 @@ for pass=1:numPasses
         end
     end
     
-    try
-    close(ManualCorrFig);    
+    if chunk <= size(auto_chunks,1)
+        doingChoice = questdlg('Continue or stop?','How are we doing?',...
+            'Continue','Stop','Continue');
+        switch doingChoice
+            case 'Continue'
+                chunk = chunk+1;
+            case 'Stop'
+                chunk = size(auto_chunks,1)+1;
+        end
     end
+    
+    end
+    %try
+    %close(ManualCorrFig);    
+    %end
     SaveTemp;
     p.stop;
 
@@ -1277,7 +1321,8 @@ if update_pos_realtime==1
     hold(ManualCorrFig.Children,'on')
     title(ManualCorrFig.Children,['Auto correcting frame ' num2str(auto_frames(corrFrame)) ', please wait'])
     if Xpix(auto_frames(corrFrame)) ~= 0 && Ypix(auto_frames(corrFrame)) ~= 0
-        plot(ManualCorrFig.Children,xAVI(auto_frames(corrFrame)),yAVI(auto_frames(corrFrame)),marker{markWith},'MarkerSize',4);
+        plot(ManualCorrFig.Children,xAVI(auto_frames(corrFrame)),yAVI(auto_frames(corrFrame)),...
+            marker{markWith},'MarkerSize',4);
     end    
     
     plot(ManualCorrFig.Children,[mazex; mazex(1)],[mazey; mazey(1)],'r','LineWidth',1);
@@ -1446,7 +1491,8 @@ elseif length(stats) > 1
         if fixedThisFrameFlag==0
             stats=[];
             d = imgaussfilt(flipud(rgb2gray(v0-v)),10);
-            stats = regionprops(d>willThresh & mazeMask,'area','centroid','majoraxislength','minoraxislength');%flipped %'solidity'
+            stats = regionprops(d>willThresh & mazeMask,'area','centroid',...
+                'majoraxislength','minoraxislength');%flipped %'solidity'
             MouseBlob = [stats.Area] > 250 & ... %[stats.Area] < 3500...
                         [stats.MajorAxisLength] > 10 & ...
                         [stats.MinorAxisLength] > 10;
@@ -1595,7 +1641,7 @@ global auto_frames; global corrFrame; global corrDefGoodFlag; global definitelyG
 marker = {'go' 'yo' 'ro'};
 marker_face = {'g' 'y' 'r'};
 bounds=[0 floor(length(auto_frames)/3) 2*floor(length(auto_frames)/3)];
-        
+       
 for corrFrame=1:length(auto_frames)
     obj.CurrentTime=(auto_frames(corrFrame)-1)/aviSR;
     v = readFrame(obj); 
@@ -1757,7 +1803,8 @@ while doneWithEl==0
                 mazeEl(deleteThis)=[];
                 elVector(elVector==deleteThis)=1;
                 elVector(elVector>deleteThis)=elVector(elVector>deleteThis)-1;
-                disp(['deleted expected location ' num2str(deleteThis) ', those points reset to original mask'])
+                disp(['deleted expected location ' num2str(deleteThis)...
+                    ', those points reset to original mask'])
             elseif deleteThis == 1
                 disp('Nope, that is the original maze mask')
             end
@@ -1988,6 +2035,9 @@ if any(auto_frames)
     auto_frames = sort(auto_frames);
     close(badPoints);
     numPasses=2;
+    %if length(auto_frames) > 500
+    %    auto_chunks = 
+    
     CorrectTheseFrames;
 end
 
@@ -2131,7 +2181,9 @@ function PlotVelLine(~,~)
 global ManualCorrFig; global auto_vel_thresh; global aviSR;
 
 hold(ManualCorrFig.Children,'on')
-plot(ManualCorrFig.Children,[50 50+auto_vel_thresh/aviSR], [60 60],'r','LineWidth',1.5)
+plot(ManualCorrFig.Children,[50 50+auto_vel_thresh/aviSR], [60 60],'r','LineWidth',1)
+plot(ManualCorrFig.Children,[50 50],[55 65],'r','LineWidth',1)
+plot(ManualCorrFig.Children,[50+auto_vel_thresh/aviSR 50+auto_vel_thresh/aviSR],[55 65],'r','LineWidth',1)
 hold(ManualCorrFig.Children,'off')  
 end
 %%
