@@ -2,11 +2,23 @@ function ParsedFramesToBrainFrames ( xls_file)
 %Takes an excell file as input and returns (in same format) all found frame
 %numbers in brain (FT) time.
 
+if ~exist('xls_file','var')
+    try
+        xls_file = ls('*.xlsx');
+        [frames, txt] = xlsread(xls_file, 1);
+    catch
+        disp('auto finding xls file did not work; rerun with file name as input')
+        return
+    end
+else
+    [frames, txt] = xlsread(xls_file, 1);
+end
+        
 fps_brainimage = 20; brainFrameRate = 1/fps_brainimage;
 
 load FToffsetSam.mat %Comes with FToffset LastUsable whichEndsFirst FTlength brainTime time
 
-[frames, txt] = xlsread(xls_file, 1);
+
 if any(frames>length(time))
    disp(['Problem: found ' sum(sum(frames>length(time))) ' frame numbers too long']) 
 end

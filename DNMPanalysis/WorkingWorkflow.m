@@ -16,13 +16,17 @@ ParsedFramesToBrainFrames
     %Translates a sheet (columnwise) of 
     %timestamps from an AVI into brain 
     %PSAbool timestamps; needs FToffsetSam.mat
-    %in folder to run. Run on original frames and brain frames
+    %in folder to run. Run on original frames
 DNMPtimestampsValidator 
     %Takes a position file and a spreadsheet, plots
     %each column's timestamps on top of the X/Y
     %positions to validate. If you see a bad one, click
     %near it and it will give you the lap number of
     %that point in that column
+AdjustBehaviorTimes
+    %Brings points across laps as close together as possible so always
+    %comparing the same sections of the maze. Right now only works for
+    %ginput to pick anchor point, other versions can be added
 GetBlockDNMPbehavior
     %Compiles timestamps from a spreadsheet into a
     %struct with pairs of starts and stops, a struct
