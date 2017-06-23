@@ -109,7 +109,7 @@ global eFrame; global MoMtime; global vel_init; global auto_vel_thresh;
 global velchoice; global AMchoice; global corrDefGoodFlag; global elChoiceFlag;
 global elVector; global mazeEl; global bstr; global allTxt; global bframes;
 global update_pos_realtime; global blankVector; global isGrayThresh;
-global findingContrast;
+global findingContrast; global excludeFromVel;
 
 
 %% Get varargin
@@ -205,7 +205,9 @@ PreCorrectedData=figure('name','Pre-Corrected Data');plot(Xpix,Ypix);title('pre-
 if ~any(definitelyGood)
     definitelyGood = Xpix*0;
 end
-
+if ~any(excludeFromVel)
+    excludeFromVel = Xpix*0;
+end
 
 %% Cage mask
 %Comes out flipped
@@ -427,7 +429,9 @@ expectedBlobs=logical(imgaussfilt(double(grayFrameThreshB),10) <= gaussThresh);
 SaveTemp;
     
 %% so many options
-optionsText={'b - frames by behavior';...
+optionsText={'h - full explanations';...
+             ' ';...
+             'b - frames by behavior';...
              'z - (0,0) and out-of-bounds frames';...
              'y - attempt auto, manual when missed';...
              'm - all manual';...
@@ -435,6 +439,8 @@ optionsText={'b - frames by behavior';...
              'p - select points by position';...
              't - reset auto-velocity threshold';...
              'v - run auto on high velocity points';...
+             'g - mark frames as good and exclude';...
+             'f - undo good and excluded frames';...
              'o - change AOM flag';...
              'l - edit expected locations';...
              's - save work';...
@@ -631,6 +637,8 @@ switch MorePoints
     end
     case 'l'
         editELvectors;
+    case 'g'
+        MarkForExclude;
     case 's'
         SaveTemp;
     case 'x'
@@ -699,7 +707,7 @@ save Pos.mat Xpix_filt Ypix_filt xpos_interp ypos_interp time_interp start_time.
     MoMtime Xpix Ypix xAVI yAVI MouseOnMazeFrame...
     AVItime_interp maze v0 maskx masky definitelyGood expectedBlobs mazeEl...
     elVector bstr allTxt bframes DVTtime willThresh grayThresh gaussThresh time...
-    auto_vel_thresh
+    auto_vel_thresh excludeFromVel
 
 ClearStuff;
 
@@ -730,7 +738,8 @@ global velCount; global time; global Xpix; global Ypix; global corrFrame;
 global auto_frames; global velchoice; global AMchoice; global pass;
 global xAVI; global yAVI; global definitelyGood; global fixedThisFrameFlag
 global bounds; global skipped; global ManualCorrFig;
-global v; global obj; global xm; global ym; global aviSR; global markWith
+global v; global obj; global xm; global ym; global aviSR; global markWith;
+global excludeFromVel;
 
 marker = {'go' 'yo' 'ro'};
 marker_face = {'g' 'y' 'r'};
@@ -750,6 +759,9 @@ switch AMchoice
         correctThis=1;
         vel_init = hypot(diff(Xpix),diff(Ypix))./diff(time);
         
+        %This comes from last function
+        vel_init(excludeFromVel(1:length(vel_init))) = min(vel_init);
+        
         main_restrict = zeros(length(vel_init),1);
         stopHere = min([eFrame length(vel_init)]);
         main_restrict(sFrame:stopHere)=1;
@@ -757,6 +769,8 @@ switch AMchoice
         highVelLogical = highVelLogical &  main_restrict;
         skipPass = unique(skipForNow);
         highVelLogical(skipPass) = 0;
+        
+        disp('Here need to work in excludeFromVel')
         
         highVelFrames = find(highVelLogical);
         
@@ -1671,7 +1685,7 @@ end
 %% %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 function UpdatePosAndVel(~,~)
 global PosAndVel; global vel_init; global time; global Xpix; global Ypix;
-global MoMtime; global auto_vel_thresh;
+global MoMtime; global auto_vel_thresh; global excludeFromVel;
     
 try
     figure(PosAndVel);
@@ -1679,6 +1693,10 @@ catch
     PosAndVel=figure('name','Position and Velocity');
 end
 vel_init = hypot(diff(Xpix),diff(Ypix))./diff(time);%(time(2)-time(1));
+
+forcedExclude = find(excludeFromVel(1:length(vel_init)));
+vel_init(forcedExclude) = min(vel_init);
+
 velInds=1:length(vel_init);
 hx0 = subplot(4,3,1:3);plot(time,Xpix);xlabel('time (sec)');ylabel('x position (cm)');yl = get(gca,'YLim');
     line([MoMtime MoMtime], [yl(1) yl(2)],'Color','r');axis tight;
@@ -1697,11 +1715,11 @@ global MoMtime; global MouseOnMazeFrame; global maskx; global masky
 global definitelyGood; global xAVI; global yAVI; global Xpix; global Ypix;
 global maze; global expectedBlobs; global v0; global mazeEl; global elVector;
 global bstr; global allTxt; global bframes; global willThresh; global grayThresh;
-global gaussThresh; global time; global auto_vel_thresh
+global gaussThresh; global time; global auto_vel_thresh; global excludeFromVel
 
 save Pos_temp.mat Xpix Ypix xAVI yAVI MoMtime MouseOnMazeFrame maskx v0 maze masky...
     definitelyGood expectedBlobs mazeEl elVector bstr allTxt bframes willThresh...
-    grayThresh gaussThresh time auto_vel_thresh
+    grayThresh gaussThresh time auto_vel_thresh excludeFromVel
 
 disp('Saved!')
 end
@@ -1711,11 +1729,11 @@ global MoMtime; global MouseOnMazeFrame; global maskx; global masky
 global definitelyGood; global xAVI; global yAVI; global Xpix; global Ypix;
 global maze; global expectedBlobs; global v0; global mazeEl; global elVector;
 global bstr; global allTxt; global bframes; global willThresh; global grayThresh;
-global gaussThresh; global time; global auto_vel_thresh
+global gaussThresh; global time; global auto_vel_thresh; global excludeFromVel;
 
 clear Xpix Ypix xAVI yAVI MoMtime MouseOnMazeFrame maskx v0 maze masky...
     definitelyGood expectedBlobs mazeEl elVector bstr allTxt bframes willThresh...
-    grayThresh gaussThresh time auto_vel_thresh
+    grayThresh gaussThresh time auto_vel_thresh excludeFromVel
 end
 %% %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 function getELvector(~,~)
@@ -1963,6 +1981,13 @@ end
     
 starts=allstarts; starts(LRmod==0)=[];
 stops=allstops; stops(LRmod==0)=[];
+
+if any(starts>length(xAVI)) || any(stops>length(xAVI))
+    disp('Look out, some frames in the spreadsheet are longer than the video')
+    starts(starts>length(xAVI)) = length(xAVI);
+    stops(stops>length(xAVI)) = length(xAVI);
+end
+    
 else
     disp('sorry, input strs needs to be 1 x n cell of strs')
 end
@@ -1972,7 +1997,7 @@ end
 function ZeroBounds(~,~)
 global auto_frames; global Xpix; global Ypix; global elChoiceFlag; global mazeEl;
 global xAVI; global yAVI; global maskx; global masky; global elInds; global definitelyGood;
-global numPasses; global elVector
+global numPasses; global elVector; global excludeFromVel
 
 auto_frames=[];
 zero_frames = Xpix == 0 | Ypix == 0 ;
@@ -2033,6 +2058,11 @@ end
 
 if any(auto_frames)
     auto_frames = sort(auto_frames);
+    if any(excludeFromVel)
+        disp('There are points here marked to be excluded.')
+        [~,ia,~] = intersect(auto_frames,excludeFromVel); %returns index vectors ia and ib.
+        auto_frames(ia) = [];
+    end
     close(badPoints);
     numPasses=2;
     %if length(auto_frames) > 500
@@ -2175,6 +2205,69 @@ while velLineGood==0
     end
 end
 close(velthreshing) 
+end
+%% %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+function MarkForExclude(~,~)
+global definitelyGood; global excludeFromVel; global starts; global stops;
+global bstr; global allTxt; global bframes; global chooseStrs;
+
+goodFrames = [];
+exMethod = questdlg('How do you want to label frames?', 'Exclude frames', ...
+'Number','Behavior flags','Cancel','Behavior flags');
+switch exMethod
+    case 'Number'
+        prompt = {'Exclude start:','Exclude end:'};
+        defaultans = {'25325','57870'};
+        answer = inputdlg(prompt,'Mark by frame numbers',1,defaultans);
+        answer=cell2mat(cellfun(@str2num,answer,'UniformOutput',false));
+        
+        if length(answer)==1
+            goodFrames = answer;
+        elseif length(answer)==2
+            if answer(1)==answer(2)
+                goodFrames = answer(1);
+            else 
+                goodFrames = answer(1):answer(2);
+            end
+        end
+    case 'Behavior flags'
+        chooseStrs = bstr;
+        ChooseStartsStops;
+        crossLap = questdlg('Are these across a lap? If so, will shift second col down one','Cross lap',...
+                    'Across','No','No');
+        switch crossLap
+            case 'No'
+                %do nothing
+            case 'Across'
+                starts = starts(1:end-1);
+                stops = stops(2:end);
+        end
+        for nn = 1:length(starts)
+            goodFrames = [goodFrames, starts(nn):stops(nn)]; %#ok<AGROW>
+        end
+    case 'Cancel'
+        %Do nothing
+end
+
+if any(goodFrames)
+     areyousure = questdlg(['This will label ' num2str(length(goodFrames))...
+         ' frames to exclude from correction. Continue?'], 'Exclude frames', ...
+         'Yes','No','Yes');
+    switch areyousure
+        case 'Yes'
+            definitelyGood(goodFrames) = 1;
+            excludeFromVel(goodFrames) = 1;
+            %{
+            switch exMethod
+            %disp(['Excluded ' num2str(length(goodFrames)) ' as good,' from
+            flag to flag
+            %}
+            %Question here is whether next frame needs to be excluded too
+        case 'No'
+            %Do nothing
+    end
+end
+
 end
 %% %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 function PlotVelLine(~,~)

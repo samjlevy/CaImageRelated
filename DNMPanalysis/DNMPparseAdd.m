@@ -8,7 +8,7 @@ function DNMPparseAdd
 %frames, parser will jump through video to input timestamps (leave start area),
 %forward/backward 60 frames, leave it to user to find the exact frame and 
 %save it.
-%Saving to XLS formatting isn't quite right
+
 %% 
 global miscVar
 global ParsedFrames
@@ -175,7 +175,7 @@ global videoFig
 
 if miscVar.currentEvent > 1
     miscVar.currentEvent = miscVar.currentEvent - 1;
-    frameSet(miscVar.anchorFrames(miscVar.currentEvent + miscVar.adjustment));
+    frameSet(miscVar.anchorFrames(miscVar.currentEvent) + miscVar.adjustment);
     videoFig.AddButton.BackgroundColor = miscVar.Red;
 else
     disp('Already at event 1')   
@@ -286,78 +286,49 @@ global video
 
 switch e.Key
     case 'q' %Step back 100
-        if video.currentTime > 100/video.FrameRate
-           frameSet(miscVar.frameNum - 100);
-            %{
-            miscVar.frameNum = miscVar.frameNum - 101;
-            video.CurrentTime = miscVar.frameNum/video.FrameRate;
-            miscVar.currentFrame = readFrame(video);
-            miscVar.frameNum = miscVar.frameNum + 1;
-            videoFig.plotted = imagesc(miscVar.currentFrame);
-            title(['Frame ' num2str(miscVar.frameNum) ' / ' num2str(miscVar.totalFrames)])
-            %}
-        end
+        miscVar.frameChangeWanted = -100;
+        SetAndDisplay;
     case 'a' %Step back 10
-        if video.currentTime > 10/video.FrameRate
-            frameSet(miscVar.frameNum - 10);
-            %{
-            miscVar.frameNum = miscVar.frameNum - 11;
-            video.CurrentTime = miscVar.frameNum/video.FrameRate;
-            miscVar.currentFrame = readFrame(video);
-            miscVar.frameNum = miscVar.frameNum + 1;
-            videoFig.plotted = imagesc(miscVar.currentFrame);
-            title(['Frame ' num2str(miscVar.frameNum) ' / ' num2str(miscVar.totalFrames)])
-            %}
-        end
+        miscVar.frameChangeWanted = -10;
+        SetAndDisplay;
     case 's'   %Step back
-        %can't do frame 0/1
-        if video.currentTime > 1/video.FrameRate
-            frameSet(miscVar.frameNum - 1);
-            %{
-            miscVar.frameNum = miscVar.frameNum - 2;
-            video.CurrentTime = miscVar.frameNum/video.FrameRate;
-            miscVar.currentFrame = readFrame(video);
-            miscVar.frameNum = miscVar.frameNum + 1;
-            videoFig.plotted = imagesc(miscVar.currentFrame);
-            title(['Frame ' num2str(miscVar.frameNum) ' / ' num2str(miscVar.totalFrames)])
-            %}
-        end
+        miscVar.frameChangeWanted = -1;
+        SetAndDisplay;
     case 'd' %Step forward 1
-        if video.currentTime+1 <= miscVar.totalFrames
-            frameSet(miscVar.frameNum + 1);
-            %{
-            miscVar.currentFrame = readFrame(video);
-            miscVar.frameNum = miscVar.frameNum+1;
-            videoFig.plotted = imagesc(miscVar.currentFrame);
-            title(['Frame ' num2str(miscVar.frameNum) ' / ' num2str(miscVar.totalFrames)])
-            %}
-        end
+        miscVar.frameChangeWanted = 1;
+        SetAndDisplay;
     case 'f' %Step forward 10  
-        if video.currentTime+10 <= miscVar.totalFrames
-            frameSet(miscVar.frameNum + 10);
-            %{
-            miscVar.frameNum = miscVar.frameNum + 9;
-            video.CurrentTime = miscVar.frameNum/video.FrameRate;
-            miscVar.currentFrame = readFrame(video);
-            miscVar.frameNum = miscVar.frameNum + 1;
-            videoFig.plotted = imagesc(miscVar.currentFrame);
-            title(['Frame ' num2str(miscVar.frameNum) ' / ' num2str(miscVar.totalFrames)])
-            %}
-        end
+        miscVar.frameChangeWanted = 10;
+        SetAndDisplay;
     case 'r' %Step forward 100
-        if video.currentTime+1 <= miscVar.totalFrames
-            frameSet(miscVar.frameNum + 100)
-            %{
-            miscVar.frameNum = miscVar.frameNum + 99;
-            video.CurrentTime = miscVar.frameNum/video.FrameRate;
-            miscVar.currentFrame = readFrame(video);
-            miscVar.frameNum = miscVar.frameNum + 1;
-            videoFig.plotted = imagesc(miscVar.currentFrame);
-            title(['Frame ' num2str(miscVar.frameNum) ' / ' num2str(miscVar.totalFrames)])
-            %}
-        end    
+        %if video.currentTime+100 < miscVar.totalFrames
+        miscVar.frameChangeWanted = 100;
+        SetAndDisplay; 
     case 'space'    
         disp('Fake player start/stop')
 end
          
+end
+%%
+function SetAndDisplay(~,~)
+global miscVar
+global videoFig
+global video
+
+
+if miscVar.frameNum + miscVar.frameChangeWanted <= miscVar.totalFrames...
+        && miscVar.frameNum + miscVar.frameChangeWanted >= 1
+    miscVar.frameNum = miscVar.frameNum + miscVar.frameChangeWanted - 1;
+elseif miscVar.frameNum + miscVar.frameChangeWanted > miscVar.totalFrames
+    miscVar.frameNum = miscVar.totalFrames - 1;
+elseif miscVar.frameNum + miscVar.frameChangeWanted < 1    
+    miscVar.frameNum = 0;
+end
+
+video.CurrentTime = miscVar.frameNum/video.FrameRate;
+miscVar.currentFrame = readFrame(video);
+miscVar.frameNum = miscVar.frameNum + 1;
+videoFig.plotted = imagesc(miscVar.currentFrame);
+title(['Frame ' num2str(miscVar.frameNum) ' / ' num2str(miscVar.totalFrames)])
+
 end

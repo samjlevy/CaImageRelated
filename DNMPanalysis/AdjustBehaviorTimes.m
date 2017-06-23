@@ -88,10 +88,13 @@ while areGood==0
         hold on
         plot(oldAnchors(:,1), oldAnchors(:,2), '.y', 'MarkerSize',12)
         title('Old Anchors')
-        useOA = questdlg('Found old anchor points. Use one?','Use old anchors',...
+        useOA = questdlg(['Found old anchor points. Use one for ' txt{1,column_fix(nowCol)} '?'],...
+                            'Use old anchors',...
                              'Yes','No','Yes');
         switch useOA
             case 'Yes'
+                figure(602);
+                title('Click near preffered old anchor')
                 [xUse, yUse] = ginput(1);   
                 [idx] = findclosest2D (oldAnchors(:,1), oldAnchors(:,2), xUse, yUse);
                 anchorXY = oldAnchors(idx,:);
