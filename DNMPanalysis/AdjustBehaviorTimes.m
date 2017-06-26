@@ -186,7 +186,7 @@ end
 
 end
 
-[newAll] = CombineForExcel(frames, txt);
+[newAll] = CombineForExcel(adjustedFrames, txt);
 saveName = [xls_file(1:end-5) '_Adjusted.xlsx'];
 if strcmpi(xls_file(end-12:end-5),'adjusted')
     reuse = input('Overwrite existing adjusted file? (0/1)') %#ok<NOPRT>

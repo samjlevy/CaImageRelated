@@ -10,16 +10,22 @@ if nargin==3
     isText=0;
 end
 
-framesWanted = zeros(length(columnLabel),1);
+framesWanted = zeros(size(frames,1),1);
 for colLab = 1:size(txt,2)
     if strcmpi(columnLabel,txt{1,colLab})
         if isText==1
             framesWanted = txt(2:end,colLab);
         else
             framesWanted = frames(:,colLab); 
+            if sum(framesWanted)==0
+                framesWanted = [];
+                disp(['No frames with this label:' columnLabel])
+            end
         end    
     end
 end
+
+
 
 %{
 switch columnLabel

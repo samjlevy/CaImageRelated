@@ -1934,7 +1934,7 @@ end
 function ChooseStartsStops(~,~)
 global chooseStrs; global starts; global stops; global beOptions;
 global bChoices; global allTxt; global bframes; global allstarts;
-global allstops; global choices
+global allstops; global choices; global xAVI
 
 if size(chooseStrs,1)==1 && sum(cellfun(@ischar, chooseStrs))/size(chooseStrs,2)==1
 
@@ -2155,9 +2155,9 @@ end
 %doesn't give lap number column
 bstr = {}; allTxt = {}; bframes = [];
 for lvl=1:loaded
-    bstr = [bstr txt(lvl).txt(1,2:end)]; %#ok<AGROW>
+    bstr = [bstr txt(lvl).txt(1,1:end)]; %#ok<AGROW>
     allTxt = [allTxt txt(lvl).txt(:,:)]; %#ok<AGROW>
-    bframes = [bframes frameses(lvl).frames(:,2:end)]; %#ok<AGROW>
+    bframes = [bframes frameses(lvl).frames(:,1:end)]; %#ok<AGROW>
 end
 
 end
