@@ -395,10 +395,10 @@ if isempty(willThresh)
     willThresh=20;
 end
 if isempty(grayThresh)
-    grayThresh = 115;
+    grayThresh = 0.95;
 end
 if isempty(gaussThresh)
-    gaussThresh = 0.2;
+    gaussThresh = 0.21;
 end
  
 isGrayThresh = 0.04;
@@ -1322,13 +1322,7 @@ fixedThisFrameFlag=0;
     
 obj.CurrentTime=(auto_frames(corrFrame)-1)/aviSR;
 v = readFrame(obj);
-if update_pos_realtime==1
-    %try
-    %    figure(ManualCorrFig);
-    %catch
-    %    ManualCorrFig=figure('name','ManualCorrFig'); imagesc(flipud(v0)); title('Auto correcting, please wait')
-    %end    
-    
+if update_pos_realtime==1   
     CheckManCorrFig;
     hold(ManualCorrFig.Children,'off')
     imagesc(ManualCorrFig.Children,flipud(v)); 
