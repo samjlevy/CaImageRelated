@@ -37,7 +37,7 @@ switch foundBG
         fig.v0 = v0;
         fig.v0thresh = [];
         fig.v0thresh = double(rgb2gray(fig.v0)) < grayThresh;
-        fig.expectedBlobs=logical(imgaussfilt(double(fig.v0thresh),10) <= gaussThresh);
+        PlotExpectedBlobs;
     case 'No'
 end
 else
@@ -52,7 +52,7 @@ switch bkgChoice
         v0 = load(fullfile(folder,file),char(pieces(s).name));
         fig.v0 = v0.v0;
         fig.v0thresh = double(rgb2gray(fig.v0)) < grayThresh;
-        fig.expectedBlobs=logical(imgaussfilt(double(fig.v0thresh),10) <= gaussThresh);
+        PlotExpectedBlobs;
         catch
             disp('Could not load. Weird')
             fig.v0 = zeros(size(frames(1).v));
@@ -75,9 +75,6 @@ row3 = 1-edgeBuffer*6-imY*4;
 
 fig.f = figure('Position',[100,100,figWidth,800],'Name','Gray thresholding',...
     'Color',[0.7 0.7 0.7]);
-fig.expect = figure('Name','expectedblobs');
-fig.expected.axx = axes('Parent',fig.expect);
-imagesc(fig.expected.axx,fig.expectedBlobs)
 
 
 pos(1).pos = [edgeBuffer row1 imX imY];
@@ -183,6 +180,7 @@ fig.v0thresh = double(rgb2gray(fig.v0)) < grayThresh;
 fig.expectedBlobs=logical(imgaussfilt(double(fig.v0thresh),10) <= gaussThresh);
 imagesc(fig.expected.axx,fig.expectedBlobs)
 PlotFrames;
+PlotExpectedBlobs;
 end
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 function updateGauss(~,~)
@@ -195,6 +193,7 @@ fig.gaussLabel.String = ['Gauss Threshold: ' num2str(gaussThresh)];
 fig.expectedBlobs=logical(imgaussfilt(double(fig.v0thresh),10) <= gaussThresh);
 imagesc(fig.expected.axx,fig.expectedBlobs)
 PlotFrames;
+PlotExpectedBlobs;
 end
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 function PlotFrames(~,~)
@@ -257,6 +256,7 @@ function PlotBlobs(~,~)
 global fig
 global frames
 global grayBlobArea
+global grayLength
 
 
 for pp = 1:length(fig.spot)
@@ -380,23 +380,42 @@ switch fig.defSelect.Value
     case 1
         grayLength = 15;
         fig.graySlider.Value = 95;
-        fig.graySlider.Value = 0.21;
+        fig.gaussSlider.Value = 0.21;
     case 2
         grayLength = 15;
         fig.graySlider.Value = 95;
-        fig.graySlider.Value = 0.21;
+        fig.gaussSlider.Value = 0.21;
     case 3
-        grayLength = 15;
-        grayThresh = 100;
-        gaussThresh = 0.20;
+        %grayLength = 15;
+        %grayThresh = 100;
+        %gaussThresh = 0.20;
 end
 
 updateGauss;
 updateThresh;
 
 end
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+function PlotExpectedBlobs(~,~)
+global fig
+global gaussThresh
 
+figsOpen = findall(0,'type','figure');
+isManCorr = strcmp({figsOpen.Name},'expectedblobs');
+if sum(isManCorr)==1
+    %We're good
+elseif sum(isManCorr)==0
+    fig.expect = figure('Name','expectedblobs');
+    fig.expected.axx = axes('Parent',fig.expect);
+elseif sum(isManCorr) > 1
+    manCorrInds = find(isManCorr);
+    close(figsOpen(manCorrInds(2:end)))
+end
 
+fig.expectedBlobs=logical(imgaussfilt(double(fig.v0thresh),10) <= gaussThresh);
+imagesc(fig.expected.axx,fig.expectedBlobs)
+
+end
 
 
 

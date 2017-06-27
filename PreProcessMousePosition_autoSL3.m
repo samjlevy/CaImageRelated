@@ -109,7 +109,7 @@ global eFrame; global MoMtime; global vel_init; global auto_vel_thresh;
 global velchoice; global AMchoice; global corrDefGoodFlag; global elChoiceFlag;
 global elVector; global mazeEl; global bstr; global allTxt; global bframes;
 global update_pos_realtime; global blankVector; global isGrayThresh;
-global findingContrast; global excludeFromVel;
+global findingContrast; global excludeFromVel; global grayLength;
 
 
 %% Get varargin
@@ -301,10 +301,9 @@ elseif ~isempty(v0)
     backgroundImage=v0; 
 end
 
-backgroundFrame=figure('name','backgroundFrame'); imagesc(backgroundImage); title('Background Image')
-%should have checker for is it right orientation
 bkgNotFlipped=0;
 while bkgNotFlipped==0
+    backgroundFrame=figure('name','backgroundFrame'); imagesc(backgroundImage); title('Background Image')
     bkgNormal = questdlg('Is the background image right-side up?', 'Background Image', ...
                               'Yes','No','Yes');               
         switch bkgNormal
@@ -395,7 +394,7 @@ if isempty(willThresh)
     willThresh=20;
 end
 if isempty(grayThresh)
-    grayThresh = 0.95;
+    grayThresh = 95; %0.95
 end
 if isempty(gaussThresh)
     gaussThresh = 0.21;
@@ -407,6 +406,7 @@ grayBlobArea = 60; %Could probably be raised
 got=[];
 skipped=[];
 blankVector = zeros(size(xAVI));
+grayLength = 15;
 
 constr = {'Find thresholds manually?';
           ['grayThresh = ' num2str(grayThresh)];
@@ -760,7 +760,7 @@ switch AMchoice
         vel_init = hypot(diff(Xpix),diff(Ypix))./diff(time);
         
         %This comes from last function
-        vel_init(excludeFromVel(1:length(vel_init))) = min(vel_init);
+        vel_init(logical(excludeFromVel(1:length(vel_init)))) = min(vel_init);
         
         main_restrict = zeros(length(vel_init),1);
         stopHere = min([eFrame length(vel_init)]);
@@ -769,9 +769,7 @@ switch AMchoice
         highVelLogical = highVelLogical &  main_restrict;
         skipPass = unique(skipForNow);
         highVelLogical(skipPass) = 0;
-        
-        disp('Here need to work in excludeFromVel')
-        
+                
         highVelFrames = find(highVelLogical);
         
         if any(highVelFrames)
@@ -1267,6 +1265,7 @@ for pass=1:numPasses
                 chunk = chunk+1;
             case 'Stop'
                 chunk = size(auto_chunks,1)+1;
+                skipped = [];
         end
     end
     
@@ -1512,8 +1511,8 @@ elseif length(stats) > 1
             maybeMouseGray = grayGaussThresh & maze & expectedBlobs; %To handle background gray
             grayStats = regionprops(maybeMouseGray,'centroid','area','majoraxislength','minoraxislength'); %flipped
             grayStats = grayStats( [grayStats.Area] > grayBlobArea &...
-                       [grayStats.MajorAxisLength] > 15 &...
-                       [grayStats.MinorAxisLength] > 15);
+                       [grayStats.MajorAxisLength] > grayLength &...
+                       [grayStats.MinorAxisLength] > grayLength);
 
                        
             possible=[];
@@ -1764,7 +1763,7 @@ end
 %% %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 function editELvectors(~,~)
 global elVector; global elChoiceFlag; global v0; global mazeEl;
-global maze; global maskx; global masky; global mazeElInd
+global maze; global maskx; global masky; global mazeElInd; global bstr
 
 doneWithEl=0;
 while doneWithEl==0
@@ -1776,7 +1775,9 @@ while doneWithEl==0
             case 1
                 title('mazeEl index #1 original maze mask')
             case 0
-                title(['mazeEl index # ' num2str(figg)])    
+                %title(['mazeEl index # ' num2str(figg)])
+                title(['mazeEl index # ' num2str(figg) ', '...
+                    bstr(mazeEl(figg).choices(1)) ' - ' bstr(mazeEl(figg).choices(2))]);
         end
     end
     
@@ -1862,7 +1863,7 @@ while doneWithEl==0
             doneWithEl=1; 
     end
     close(MazesFigs.figg)
-    clear(MazesFigs)
+    clear MazesFigs
 end
 
 end
@@ -1876,6 +1877,13 @@ global beOptions; global allstarts; global allstops; global choices
 chooseStrs = bstr;
 ChooseStartsStops;
 s=choices; %grrrrr
+
+if sum(starts)==0 || sum(stops)==0
+    disp('problem, returned 0s')
+    keyboard
+end
+
+mazeEl(mazeElInd).choices = choices;
 
 %while beOptions >= 0
     
@@ -1962,14 +1970,17 @@ switch dirChoice
         [t,~] = listdlg('PromptString','Choose column with behavior:',...
                     'SelectionMode','single','ListString',chooseStrs);
             
-        bChoices = unique(allTxt(2:end,t+1));
+        bChoices = unique(allTxt(2:end,t));
+        if sum(cellfun(@isempty,bChoices))==length(bChoices)
+            keyboard
+        end
         [flug,~] = listdlg('PromptString','Which flag:',...
                     'SelectionMode','single','ListString',bChoices);    
-        LRmod = strcmpi(allTxt(2:end,t+1),bChoices(flug));
+        LRmod = strcmpi(allTxt(2:end,t),bChoices(flug));
             
         beOptions = length(bChoices) - 1;    
     case 'No'
-        LRmod = ones(size(bframes,1));
+        LRmod = ones(size(bframes,1),1);
         beOptions = 0;
 end
     
