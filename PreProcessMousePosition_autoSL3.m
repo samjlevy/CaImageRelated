@@ -103,13 +103,13 @@ global fixedThisFrameFlag; global numPasses; global v; global maskx;
 global masky; global v0; global maze; global lastManualFrame; lastManualFrame=[];
 global grayThresh; global gaussThresh; global willThresh; global distLim2;
 global got; global skipped; global xm; global ym; global bounds;
-global expectedBlobs; global time; global grayBlobArea;
+global expectedBlobs; global time; global grayBlobArea; global auto_vel_thresh;
 global ManualCorrFig; global overwriteManualFlag; global velCount; global sFrame;
-global eFrame; global MoMtime; global vel_init; global auto_vel_thresh;
+global eFrame; global MoMtime; global MouseOnMazeFrame; global vel_init; 
 global velchoice; global AMchoice; global corrDefGoodFlag; global elChoiceFlag;
 global elVector; global mazeEl; global bstr; global allTxt; global bframes;
 global update_pos_realtime; global blankVector; global isGrayThresh;
-global findingContrast; global excludeFromVel; global grayLength;
+global findingContrast; global excludeFromVel; global grayLength; global avi_filepath;
 
 
 %% Get varargin
@@ -245,6 +245,8 @@ end
 close(MaskFig)
 
 %% Background Image
+DealWithBackgroundImage;
+%{
 if ~exist('v0','var') || any(v0(:))==0 %need the any since declaring as global
 bkgChoice = questdlg('Supply/Load background image or composite?', ...
 	'Background Image', ...
@@ -349,7 +351,7 @@ while compGood==0
 end
 v0 = backgroundImage; %Comes out rightside up
 close(backgroundFrame);
-
+%}
 %% Position and velocity
 vel_init = hypot(diff(Xpix),diff(Ypix))/(time(2)-time(1));
 vel_init = [vel_init(1); vel_init];
@@ -650,7 +652,9 @@ switch MorePoints
         return
     case 'q'
         SaveTemp;
-        stillEditingFlag=0;    
+        stillEditingFlag=0; 
+    case 'i'
+        DealWithBackgroundImage;
     otherwise
         disp('Not a recognized input')
 end
@@ -1240,35 +1244,53 @@ for pass=1:numPasses
     auto_chunks{blocks+1} = auto_frames(bl*blocks+1:end);
     
     chunk = 1;
-    while chunk <= size(auto_chunks,1)
-        auto_frames = auto_chunks{chunk};
-    %end
     
+    breakchoice = questdlg(['About to do ' num2str(length(auto_frames))...
+        ' frames, pass ' num2str(pass),'; do it?'],...
+        'go ahead','Do it','No stop','Do it');
+        switch breakchoice
+            case 'Do it'
+                proceedCorrect=1;
+            case 'No stop'
+                proceedCorrect=0;
+                total = length(auto_frames);
+                p.progress;
+        end
     
-    for corrFrame=1:length(auto_frames)   
-        if overwriteManualFlag==1 || definitelyGood(auto_frames(corrFrame))==0
-            markWith=sum(corrFrame>bounds);
-            CorrectThisFrame;
-        end 
+    if proceedCorrect==1    
+        while chunk <= size(auto_chunks,1)
+            auto_frames = auto_chunks{chunk};
+            for corrFrame=1:length(auto_frames)   
+                if overwriteManualFlag==1 || definitelyGood(auto_frames(corrFrame))==0
+                    markWith=sum(corrFrame>bounds);
+                    CorrectThisFrame;
+                end 
 
-        total=total+1;
-        if round(total/update_inc) == (total/update_inc) % Update progress bar
-            p.progress;
+                total=total+1;
+                if round(total/update_inc) == (total/update_inc) % Update progress bar
+                    p.progress;
+                end
+            end
+            
+            if chunk <= size(auto_chunks,1)
+                doneWchunk=0;
+                while doneWchunk==0
+                    doingChoice = questdlg('Continue or stop?','How are we doing?',...
+                        'Continue','Stop','Save','Continue');
+                    switch doingChoice
+                        case 'Continue'
+                            chunk = chunk+1;
+                            doneWchunk=1;
+                        case 'Stop'
+                            chunk = size(auto_chunks,1)+1;
+                            skipped = [];
+                            doneWchunk=1;
+                        case 'Save'
+                            SaveTemp;
+                    end
+                end
+            end
         end
-    end
-    
-    if chunk <= size(auto_chunks,1)
-        doingChoice = questdlg('Continue or stop?','How are we doing?',...
-            'Continue','Stop','Continue');
-        switch doingChoice
-            case 'Continue'
-                chunk = chunk+1;
-            case 'Stop'
-                chunk = size(auto_chunks,1)+1;
-                skipped = [];
-        end
-    end
-    
     end
     %try
     %close(ManualCorrFig);    
@@ -1300,7 +1322,7 @@ global grayBlobArea; global skipped; global putativeMouseX; global putativeMouse
 global willThresh; global grayThresh; global gaussThresh; global distLim2;
 global xm; global ym; global elChoiceFlag; global elVector; global mazeEl;
 global maskx; global masky;  global isGrayThresh; global auto_vel_thresh;
-global definitelyGood;
+global definitelyGood; global grayLength
 
 xm=[]; ym=[];
 marker = {'go' 'yo' 'ro'};
@@ -2283,6 +2305,134 @@ plot(ManualCorrFig.Children,[50 50+auto_vel_thresh/aviSR], [60 60],'r','LineWidt
 plot(ManualCorrFig.Children,[50 50],[55 65],'r','LineWidth',1)
 plot(ManualCorrFig.Children,[50+auto_vel_thresh/aviSR 50+auto_vel_thresh/aviSR],[55 65],'r','LineWidth',1)
 hold(ManualCorrFig.Children,'off')  
+end
+%% %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+function DealWithBackgroundImage(~,~)
+global v0; global avi_filepath; global obj;
+
+if exist('v0','var') 
+    if ~isempty(v0) 
+        backgroundImage=v0; 
+        backgroundFrame=figure('name','backgroundFrame'); imagesc(backgroundImage); title('Background Image')
+        makeChoice = questdlg('Found a background image; use or make a new one?','bkg',...
+            'Use','Remake','Use');
+            switch makeChoice
+                case 'Use'
+                    makebackground=0;
+                case 'Remake'
+                    makebackground=1;
+            end
+        close backgroundFrame
+    else
+        makebackground=1;
+    end
+elseif ~exist('v0','var') || any(v0(:))==0 %need the any since declaring as global
+    makebackground=1;
+end
+
+if makebackground==1
+bkgChoice = questdlg('Supply/Load background image or composite?', ...
+	'Background Image', ...
+	'Load','Frame #','Composite','Composite');
+    switch bkgChoice
+    case 'Load'    
+        [backgroundImage,bkgpath]=uigetfile('Select background image');
+        load(fullfile(bkgpath,backgroundImage))
+    case 'Frame #'
+        try
+            h1 = implay(avi_filepath);
+        catch
+            avi_filepath = ls('*.avi');
+            h1 = implay(avi_filepath);
+        end
+        bkgFrameNum = input('frame number of mouse-free background frame??? --->');
+        obj.CurrentTime = (bkgFrameNum-1)/obj.FrameRate;
+        backgroundImage = readFrame(obj);
+        backgroundFrame=figure('name','backgroundFrame'); imagesc(backgroundImage); title('Background Image')
+        compositeBkg = backgroundImage;
+        %could break here to allow fixing a piece of this one
+    case 'Composite'
+        try
+            h1 = implay(avi_filepath);
+        catch
+            avi_filepath = ls('*.avi');
+            h1 = implay(avi_filepath);
+        end    
+        msgbox({'Find images: ' '   -frame 1: top half has no mouse' '   -frame 2: bottom half has no mouse'})
+        %prompt = {'No mouse on top frame:','No mouse on bottom frame:'};
+        %dlg_title = 'Clear frames';
+        %num_lines = 1;
+        %clearFrames = inputdlg(prompt,dlg_title,num_lines);
+        
+        topClearNum = input('Frame number with no mouse on top: ') %#ok<NOPRT>
+        bottomClearNum = input('Frame number with no mouse on bottom: ') %#ok<NOPRT>
+        
+        obj.CurrentTime = (topClearNum-1)/obj.FrameRate;
+        topClearFrame = readFrame(obj);
+        obj.CurrentTime = (bottomClearNum-1)/obj.FrameRate;
+        bottomClearFrame = readFrame(obj);
+        Top=figure('name','Top'); imagesc(topClearFrame); %#ok<NASGU>
+            title(['Top Clear Frame ' num2str(topClearNum)]) 
+        Bot=figure('name','Bot'); imagesc(bottomClearFrame); %#ok<NASGU>
+            title(['Bottom Clear Frame ' num2str(bottomClearNum)]) 
+        compositeBkg=uint8(zeros(480,640,3));
+        compositeBkg(1:240,:,:)=topClearFrame(1:240,:,:);
+        compositeBkg(241:480,:,:)=bottomClearFrame(241:480,:,:);
+        close Top; close Bot;
+        %backgroundFrame=figure('name','backgroundFrame'); imagesc(compositeBkg); title('Composite Background Image')
+        backgroundImage=compositeBkg;
+    end
+end
+
+bkgNotFlipped=0;
+while bkgNotFlipped==0
+    backgroundFrame=figure('name','backgroundFrame'); imagesc(backgroundImage); title('Background Image')
+    bkgNormal = questdlg('Is the background image right-side up?', 'Background Image', ...
+                              'Yes','No','Yes');               
+        switch bkgNormal
+            case 'Yes'
+                bkgNotFlipped=1;
+            case 'No'
+                backgroundImage=flipud(backgroundImage);
+        end
+end     
+
+try %#ok<*TRYNC>
+    close(h1);
+end
+
+compGood=0;
+while compGood==0
+    holdChoice = questdlg('Good or fix a piece?', 'Background Image', ...
+                              'Good','Fix area','Good');               
+    switch holdChoice
+        case 'Good'
+            try %#ok<*TRYNC>
+                close(h1);
+            end
+            compGood=1;
+        case 'Fix area'
+            try %#ok<*TRYNC>
+                close(h1);
+            end
+            figure(backgroundFrame); title('Select area to swap out')
+            [swapRegion, SwapX, SwapY] = roipoly;
+            hold on 
+            plot([SwapX; SwapX(1)],[SwapY; SwapY(1)],'r','LineWidth',2)
+            h1 = implay(avi_filepath);
+            swapInNum = input('Frame number to swap in area from ---->')%#ok<NOPRT> 
+            %might replace with 2 field dialog box
+            obj.CurrentTime = (swapInNum-1)/obj.FrameRate;
+            swapClearFrame = readFrame(obj);
+            [rows,cols]=ind2sub([480,640],find(swapRegion));
+            backgroundImage(rows,cols,:)=swapClearFrame(rows,cols,:);
+            figure(backgroundFrame);imagesc(backgroundImage)
+            compGood=0;
+    end
+end
+v0 = backgroundImage; %Comes out rightside up
+close(backgroundFrame);
+
 end
 %%
 
