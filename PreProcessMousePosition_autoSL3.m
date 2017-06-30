@@ -758,6 +758,7 @@ switch AMchoice
         doneVel=0;
         velCount=0;
         triedOnce=[];
+        goneOnce = 0;
         while doneVel==0
         
         correctThis=1;
@@ -775,6 +776,11 @@ switch AMchoice
         highVelLogical(skipPass) = 0;
                 
         highVelFrames = find(highVelLogical);
+        
+        if goneOnce==0
+            disp(['found ' num2str(length(highVelFrames)) ' frames, expect more'])
+            goneOnce=1;
+        end
         
         if any(highVelFrames)
             auto_frames=highVelFrames(1);
@@ -1989,12 +1995,24 @@ dirChoice = questdlg('Restrict to left/right trials?','LR mod?',...
                     'Yes','No','Yes');
 switch dirChoice
     case 'Yes'
+        choiceGood=0;
+        while choiceGood==0
         [t,~] = listdlg('PromptString','Choose column with behavior:',...
                     'SelectionMode','single','ListString',chooseStrs);
             
         bChoices = unique(allTxt(2:end,t));
         if sum(cellfun(@isempty,bChoices))==length(bChoices)
-            keyboard
+            mc = questdlg('Misclick?','Bad markers','Misclick','debug','Misclick');    
+            switch mc
+                case 'Misclick'
+                    choiceGood = 0;
+                case 'debug'
+                    keyboard
+            end
+        else
+            choiceGood = 1;
+        end
+        
         end
         [flug,~] = listdlg('PromptString','Which flag:',...
                     'SelectionMode','single','ListString',bChoices);    

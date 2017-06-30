@@ -8,14 +8,13 @@ xls_file = dir('*BrainTime_Adjusted.xlsx');
 %Get Trial timestamps
 forced_starts = CondExcelParseout(frames, txt, 'Start on maze (start of Forced', 0);
 free_starts = CondExcelParseout(frames, txt, 'Lift barrier (start of free choice)', 0);
-try
-    forced_stem_ends = CondExcelParseout(frames, txt, 'ForcedChoiceEnter', 0);
-catch
+
+forced_stem_ends = CondExcelParseout(frames, txt, 'ForcedChoiceEnter', 0);
+if sum(forced_stem_ends)==0
     forced_stem_ends = CondExcelParseout(frames, txt, 'Forced Stem End', 0);
 end
-try
-    free_stem_ends = CondExcelParseout(frames, txt, 'FreeChoiceEnter', 0);
-catch
+free_stem_ends = CondExcelParseout(frames, txt, 'FreeChoiceEnter', 0);
+if sum(free_stem_ends)==0
     free_stem_ends = CondExcelParseout(frames, txt, 'Free Stem End', 0);
 end
 
@@ -25,6 +24,13 @@ end
 %Good lap timestamps (video too short, FT too short, etc.)
 tooLong = frames >= length(speed);%FTuseIndices(end)
 GoodLaps = any(tooLong,2) == 0;
+
+[C,ia,ic] = unique(frames,'rows');
+for ur = 1:size(frames,1)
+    [~,ia,~] = unique(frames(ur,:));
+    MessedUp(ur,1) = length(ia) < size(frames,2);
+end
+if any(MessedUp); disp('deleting some laps, overlap frames'); end
 correct_trials = right_forced & left_free | ...
     left_forced & right_free;
 allGood = GoodLaps & correct_trials;
@@ -68,6 +74,28 @@ totalDurAll = totalDurFoR + totalDurFrR + totalDurFoL + totalDurFrL;
 LRdurSelectivity = ((totalDurFoR + totalDurFrR) - (totalDurFoL + totalDurFrL)) ./ totalDurAll;
 ForcedFreeDurSelectivity = ((totalDurFrR + totalDurFrL) - (totalDurFoR + totalDurFoL)) ./ totalDurAll;
 
+FoLselectiveCells = find(LRdurSelectivity < -0.1 & ForcedFreeDurSelectivity < -0.1);
+FrLselectiveCells = find(LRdurSelectivity < -0.1 & ForcedFreeDurSelectivity > 0.1);
+FoRselectiveCells = find(LRdurSelectivity > 0.1 & ForcedFreeDurSelectivity < -0.1);
+FrRselectiveCells = find(LRdurSelectivity > 0.1 & ForcedFreeDurSelectivity > 0.1);
+
+otherLogical = ones(size(PSAbool,1),1);
+otherLogical([FoLselectiveCells; FrLselectiveCells; FoRselectiveCells; FrRselectiveCells]) = 0;
+NonselectiveCells = find(otherLogical);
+
+SortedInd = [FoRselectiveCells; FrRselectiveCells; FoLselectiveCells; FrLselectiveCells; NonselectiveCells];
+SortedEdges = [0 length(FoRselectiveCells)];
+SortedEdges = [SortedEdges SortedEdges(end)+length(FrRselectiveCells)];
+SortedEdges = [SortedEdges SortedEdges(end)+length(FoLselectiveCells)];
+SortedEdges = [SortedEdges SortedEdges(end)+length(FrLselectiveCells)];
+SortedEdges = [SortedEdges SortedEdges(end)+length(NonselectiveCells)];
+
+blockedFTstemEdges = [1 FoRedges(end)];
+blockedFTstemEdges = [blockedFTstemEdges blockedFTstemEdges(end)+FrRedges(end)];
+blockedFTstemEdges = [blockedFTstemEdges blockedFTstemEdges(end)+FoLedges(end)]; 
+blockedFTstemEdges = [blockedFTstemEdges blockedFTstemEdges(end)+FrLedges(end)];
+
+blockedSortedPSAstem = blockedFTstem(SortedInd,:);
 %Duration-based correlation coefficients
 %Rows are observations, columns are cells; but running in corrcoef transposed?
 totalDurationVector = [totalDurFoR'; totalDurFrR'; totalDurFoL'; totalDurFrL'];
@@ -79,6 +107,26 @@ trialBounds = [1 size(durFoR,2)];
 trialBounds = [trialBounds trialBounds(end)+1 trialBounds(end)+size(durFrR,2)];
 trialBounds = [trialBounds trialBounds(end)+1 trialBounds(end)+size(durFoL,2)];
 trialBounds = [trialBounds trialBounds(end)+1 trialBounds(end)+size(durFrL,2)];
+%% Stem Raster
+
+stemFig=figure; imagesc(blockedSortedPSAstem); title('Stem Data, Europa 161020')
+stemFig.Children.XTick = ceil(diff(blockedFTstemEdges,1)/2) + blockedFTstemEdges(1:4); 
+stemFig.Children.XTickLabel = {'Forced Right', 'Free Right', 'Forced Left', 'Free Left'};
+stemFig.Children.YTick = ceil(diff(SortedEdges,1)/2) + SortedEdges(1:5); 
+stemFig.Children.YTickLabel = {'FoR', 'FrR', 'FoL', 'FrL', 'Other'};
+xlabel('Time')
+ylabel('Cell')
+for edge=2:4
+    hold on    
+    plot([blockedFTstemEdges(edge) blockedFTstemEdges(edge)], [0 size(PSAbool,1)],'g')
+end
+for cellEdge = 2:5 
+    hold on
+    plot([0 size(PSAbool,2)], [SortedEdges(cellEdge) SortedEdges(cellEdge)],'r')
+end
+
+
+
 %% Demo figs
 figure; imagesc(PSAbool); title('Raw Data, with stem time indicated')
 for trial = find(allGood)
@@ -101,26 +149,16 @@ plot( brainX(free_stem_ends(allGood)), brainY(free_stem_ends(allGood)), '.y','Ma
 title('X/Y positions, with stem time indicated')
 
 
+
 %lap blocks explanation
-blockedFTstemEdges = [1 FoRedges(end)];
-blockedFTstemEdges = [blockedFTstemEdges blockedFTstemEdges(end)+FrRedges(end)];
-blockedFTstemEdges = [blockedFTstemEdges blockedFTstemEdges(end)+FoLedges(end)]; 
-blockedFTstemEdges = [blockedFTstemEdges blockedFTstemEdges(end)+FrLedges(end)];
 lapEdges = FoRedges(2:end);
 lapEdges = [lapEdges FrRedges(2:end)+lapEdges(end)];
 lapEdges = [lapEdges FoLedges(2:end)+lapEdges(end)];
 lapEdges = [lapEdges FrLedges(2:end)+lapEdges(end)];
-stemFig=figure; imagesc(blockedFTstem); title('Stem Data only, sorted')
-stemFig.Children.XTick = ceil(diff(blockedFTstemEdges,1)/2) + blockedFTstemEdges(1:4); 
-stemFig.Children.XTickLabel = {'Forced Right', 'Free Right', 'Forced Left', 'Free Left'};
-for edge=2:5
-    hold on    
-    plot([blockedFTstemEdges(edge) blockedFTstemEdges(edge)], [0 size(PSAbool,1)],'g')
-end
-for lapEdge=lapEdges
-    hold on
-    plot([lapEdges(lapEdge), lapEdges(lapEdge)], [0 size(PSAbool,1)],'r')
-end
+%for lapEdge=lapEdges
+%    hold on
+%    plot([lapEdges(lapEdge), lapEdges(lapEdge)], [0 size(PSAbool,1)],'r')
+%end
 
 %hit selectivity
 figure; histogram(LRhitSelectivity,20); title('Left/Right hit selectivity')
