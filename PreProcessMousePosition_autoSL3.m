@@ -365,6 +365,8 @@ end
 SetVelocityThresh;
 
 UpdatePosAndVel;
+
+SaveTemp;
 %% Expected location
 elChoice = questdlg('Expected locations?', 'Expected locations', ...
 	'Yes','No','Yes');
@@ -445,6 +447,7 @@ optionsText={'h - full explanations';...
              'f - undo good and excluded frames';...
              'o - change AOM flag';...
              'l - edit expected locations';...
+             'i - edit background image';...
              's - save work';...
              'x - quit without finalizing';...
              'q - save, finalize and quit';...
@@ -501,21 +504,22 @@ switch MorePoints
             else 
                 auto_frames = answer(1):answer(2);
             end
-        end
-        manChoice = questdlg('Redo definitely good frames?','Redo DefGood',...
-                    'Yes','No','No');
-        switch manChoice
-            case 'Yes'
-                corrDefGoodFlag=1;
-            case 'No'
-                corrDefGoodFlag=0;
-        end         
+        end       
         mchoice = questdlg(['Edit these ' num2str(length(auto_frames)) ' frames'],...
             'Edit by frame number','Auto-assist','Manual','Cancel','Manual');
         switch mchoice
             case 'Auto-assist'
+                numPasses=2;
                 CorrectTheseFrames;
             case 'Manual'
+                        manChoice = questdlg('Redo definitely good frames?','Redo DefGood',...
+                    'Yes','No','No');
+                switch manChoice
+                    case 'Yes'
+                        corrDefGoodFlag=1;
+                    case 'No'
+                        corrDefGoodFlag=0;
+                end  
                 CorrectManualFrames
             case 'Cancel'
                 %do nothing
@@ -1238,7 +1242,7 @@ for pass=1:numPasses
     ab.boxLabel = uicontrol('style','text','String','Stop at next chunk:',...
                               'Position',[5,10,140,25],'FontSize',12,'Parent',ab.AutoBadFigure);
     %}
-    bl = 1000;
+    bl = 2000;
     %if length(auto_frames) > bl
     %hold_auto_frames = auto_frames;
     blocks = floor(length(auto_frames)/bl);
