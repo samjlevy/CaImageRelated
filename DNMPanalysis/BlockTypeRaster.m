@@ -126,6 +126,23 @@ for cellEdge = 2:5
 end
 
 
+%% Better stem raster
+[FoLtotalHits, FoLactiveLaps, FoLreliability] = CellsInConditions2(PSAbool, forced_l_stem(:,1), forced_l_stem(:,2));
+[FoRtotalHits, FoRactiveLaps, FoRreliability] = CellsInConditions2(PSAbool, forced_r_stem(:,1), forced_r_stem(:,2));
+[FrLtotalHits, FrLactiveLaps, FrLreliability] = CellsInConditions2(PSAbool, free_l_stem(:,1), free_l_stem(:,2));
+[FrRtotalHits, FrRactiveLaps, FrRreliability] = CellsInConditions2(PSAbool, free_r_stem(:,1), free_r_stem(:,2));
+
+allReliability = [FoLreliability, FoRreliability, FrLreliability,  FrRreliability];
+useCells = find(sum(allReliability >= 0.5, 2)); 
+
+epochs(1).starts = forced_l_stem(:,1);
+epochs(1).stops = forced_l_stem(:,2);
+epochs(2).starts = forced_r_stem(:,1);
+epochs(2).stops = forced_r_stem(:,2);
+epochs(3).starts = free_l_stem(:,1);
+epochs(3).stops = free_l_stem(:,2);
+epochs(4).starts = free_r_stem(:,1);
+epochs(4).stops = free_r_stem(:,2);
 
 %% Demo figs
 figure; imagesc(PSAbool); title('Raw Data, with stem time indicated')
