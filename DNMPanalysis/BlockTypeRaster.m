@@ -28,7 +28,7 @@ GoodLaps = any(tooLong,2) == 0;
 [C,ia,ic] = unique(frames,'rows');
 for ur = 1:size(frames,1)
     [~,ia,~] = unique(frames(ur,:));
-    MessedUp(ur,1) = length(ia) < size(frames,2);
+    MessedUp(ur,1) = length(ia) < size(frames,2); %#ok<SAGROW>
 end
 if any(MessedUp); disp('deleting some laps, overlap frames'); end
 correct_trials = right_forced & left_free | ...
@@ -144,6 +144,13 @@ epochs(3).stops = free_l_stem(:,2);
 epochs(4).starts = free_r_stem(:,1);
 epochs(4).stops = free_r_stem(:,2);
 
+plot_file = 'Cells Stem Rasters';
+for plotCell = 1:length(useCells)
+    thisCell = useCells(plotCell);
+    rastPlot = PlotRaster1(x_adj_cm,epochs,PSAbool,thisCell);
+    export_fig(plot_file,'-pdf','-append')
+    close rastPlot
+end
 %% Demo figs
 figure; imagesc(PSAbool); title('Raw Data, with stem time indicated')
 for trial = find(allGood)

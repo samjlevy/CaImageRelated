@@ -246,112 +246,6 @@ close(MaskFig)
 
 %% Background Image
 DealWithBackgroundImage;
-%{
-if ~exist('v0','var') || any(v0(:))==0 %need the any since declaring as global
-bkgChoice = questdlg('Supply/Load background image or composite?', ...
-	'Background Image', ...
-	'Load','Frame #','Composite','Composite');
-    switch bkgChoice
-    case 'Load'    
-        [backgroundImage,bkgpath]=uigetfile('Select background image');
-        load(fullfile(bkgpath,backgroundImage))
-    case 'Frame #'
-        try
-            h1 = implay(avi_filepath);
-        catch
-            avi_filepath = ls('*.avi');
-            h1 = implay(avi_filepath);
-        end
-        bkgFrameNum = input('frame number of mouse-free background frame??? --->');
-        obj.CurrentTime = (bkgFrameNum-1)/obj.FrameRate;
-        backgroundImage = readFrame(obj);
-        backgroundFrame=figure('name','backgroundFrame'); imagesc(backgroundImage); title('Background Image')
-        compositeBkg = backgroundImage;
-        %could break here to allow fixing a piece of this one
-    case 'Composite'
-        try
-            h1 = implay(avi_filepath);
-        catch
-            avi_filepath = ls('*.avi');
-            h1 = implay(avi_filepath);
-        end    
-        msgbox({'Find images: ' '   -frame 1: top half has no mouse' '   -frame 2: bottom half has no mouse'})
-        %prompt = {'No mouse on top frame:','No mouse on bottom frame:'};
-        %dlg_title = 'Clear frames';
-        %num_lines = 1;
-        %clearFrames = inputdlg(prompt,dlg_title,num_lines);
-        
-        topClearNum = input('Frame number with no mouse on top: ') %#ok<NOPRT>
-        bottomClearNum = input('Frame number with no mouse on bottom: ') %#ok<NOPRT>
-        
-        obj.CurrentTime = (topClearNum-1)/obj.FrameRate;
-        topClearFrame = readFrame(obj);
-        obj.CurrentTime = (bottomClearNum-1)/obj.FrameRate;
-        bottomClearFrame = readFrame(obj);
-        Top=figure('name','Top'); imagesc(topClearFrame); %#ok<NASGU>
-            title(['Top Clear Frame ' num2str(topClearNum)]) 
-        Bot=figure('name','Bot'); imagesc(bottomClearFrame); %#ok<NASGU>
-            title(['Bottom Clear Frame ' num2str(bottomClearNum)]) 
-        compositeBkg=uint8(zeros(480,640,3));
-        compositeBkg(1:240,:,:)=topClearFrame(1:240,:,:);
-        compositeBkg(241:480,:,:)=bottomClearFrame(241:480,:,:);
-        close Top; close Bot;
-        %backgroundFrame=figure('name','backgroundFrame'); imagesc(compositeBkg); title('Composite Background Image')
-        backgroundImage=compositeBkg;
-    end
-elseif ~isempty(v0) 
-    backgroundImage=v0; 
-end
-
-bkgNotFlipped=0;
-while bkgNotFlipped==0
-    backgroundFrame=figure('name','backgroundFrame'); imagesc(backgroundImage); title('Background Image')
-    bkgNormal = questdlg('Is the background image right-side up?', 'Background Image', ...
-                              'Yes','No','Yes');               
-        switch bkgNormal
-            case 'Yes'
-                bkgNotFlipped=1;
-            case 'No'
-                backgroundImage=flipud(backgroundImage);
-        end
-end     
-
-try %#ok<*TRYNC>
-    close(h1);
-end
-
-compGood=0;
-while compGood==0
-    holdChoice = questdlg('Good or fix a piece?', 'Background Image', ...
-                              'Good','Fix area','Good');               
-    switch holdChoice
-        case 'Good'
-            try %#ok<*TRYNC>
-                close(h1);
-            end
-            compGood=1;
-        case 'Fix area'
-            try %#ok<*TRYNC>
-                close(h1);
-            end
-            figure(backgroundFrame); title('Select area to swap out')
-            [swapRegion, SwapX, SwapY] = roipoly;
-            hold on 
-            plot([SwapX; SwapX(1)],[SwapY; SwapY(1)],'r','LineWidth',2)
-            h1 = implay(avi_filepath);
-            swapInNum = input('Frame number to swap in area from ---->')%#ok<NOPRT> 
-            %might replace with 2 field dialog box
-            obj.CurrentTime = (swapInNum-1)/obj.FrameRate;
-            swapClearFrame = readFrame(obj);
-            [rows,cols]=ind2sub([480,640],find(swapRegion));
-            backgroundImage(rows,cols,:)=swapClearFrame(rows,cols,:);
-            figure(backgroundFrame);imagesc(backgroundImage)
-            compGood=0;
-    end
-end
-v0 = backgroundImage; %Comes out rightside up
-close(backgroundFrame);
-%}
 %% Position and velocity
 vel_init = hypot(diff(Xpix),diff(Ypix))/(time(2)-time(1));
 vel_init = [vel_init(1); vel_init];
@@ -609,7 +503,7 @@ switch MorePoints
                 sFrame = 1;
                 eFrame = length(xAVI)-1;
             case 'First 100'
-                bounds(1:33)=1; bounds(34:66)=2; bounds(67:101)=3;
+                bounds(1:33)=1; bounds(34:66)=2; bounds(67:100)=3;
                 sFrame = 1;
                 eFrame = length(xAVI)-1;
             case 'Select Window'
@@ -627,7 +521,8 @@ switch MorePoints
             case 'Manual'
                 HighVelocityCorrect;
             case 'Auto-assist'
-                disp('Sorry, not working right now')
+                %disp('Sorry, not working right now')
+                HighVelocityCorrect;
             case 'Cancel'
                 %Do nothing
         end
@@ -937,86 +832,130 @@ switch AMchoice
         
     case 'Auto-assist'
         disp('Nope, not yet')
-        %{
-        hvTriedFrames=[];
-        doneVel=0;
-        velCount=0;
         
-        if strcmp(velchoice,'First 100')
-            disp('Sorry, first 100 does not work with auto right now, running whole session')
-            velchoice = 'Whole session';
-        end
-        
-        hvSkipped = [];
         for fakePass=1:2
-            while doneVel==0
-                vel_init = hypot(diff(Xpix),diff(Ypix))./diff(time);
-                main_restrict = zeros(length(vel_init),1);
-                stopHere = min([eFrame length(vel_init)]);
-                main_restrict(sFrame:stopHere)=1;
 
-                
+        hvTriedFrames=[];
+        skipForNow=[];
+        doneVel=0;
+        velCount=1;
+        
+        while doneVel==0
+        
+            correctThis=1;
+            vel_init = hypot(diff(Xpix),diff(Ypix))./diff(time);
 
-                highVelLogical = vel_init>auto_vel_thresh;        
-                highVelLogical = highVelLogical &  main_restrict;
-                highVelLogical(hvSkipped) = 0;
-                highVelFrames = find(highVelLogical);
+            %This comes from last function
+            vel_init(logical(excludeFromVel(1:length(vel_init)))) = min(vel_init);
 
-                if any(highVelFrames)
-                    auto_frames=highVelFrames(1);
-                    corrFrame=1;
-                    switch velchoice
-                        case {'Whole session','Select Window'}
-                            markWith=bounds(auto_frames(corrFrame));
-                        case 'First 100'
-                            markWith=bounds(velCount);
+            main_restrict = zeros(length(vel_init),1);
+            stopHere = min([eFrame length(vel_init)]);
+            main_restrict(sFrame:stopHere)=1;
+            highVelLogical = vel_init>auto_vel_thresh;
+            highVelLogical = highVelLogical &  main_restrict;
+            skipPass = unique(skipForNow);
+            highVelLogical(skipPass) = 0;
+
+            highVelFrames = find(highVelLogical);
+            if any(highVelFrames)
+                auto_frames=highVelFrames(1);
+                corrFrame=1;
+                if strcmp(manChoice,'No') && definitelyGood(auto_frames(corrFrame))==1
+                    auto_frames = auto_frames + 1;
+                    if definitelyGood(auto_frames(corrFrame))==1
+                        %somehow we've still for a high velocity frame though both are good
+                        disp('Something wrong here, 2 def good frames but still high vel')
+                        disp('This bit still needs fixing')
                     end
-                else 
-                    doneVel=1;
                 end
 
-                if doneVel==0 && any(auto_frames) %in this case auto_frames should never be empty
-                    %if strcmp(manChoice,'Yes') && definitelyGood(auto_frames(corrFrame))==1
-                    %    auto_frames = auto_frames + 1;
-                    %end
-
-                    if sum(hvTriedFrames==auto_frames)==1
-                        auto_frames = auto_frames + 1;
-                        
-                        
-                    elseif sum(hvTriedFrames==auto_frames)==2
-                        disp('Tried this frame twice')
-                    elseif sum(hvTriedFrames==auto_frames)>=3
-                        disp('Tried this frame 3x')
-                    end
-
-                    CorrectThisFrame;
-                    if fixedThisFrameFlag==1
-                        if strcmp(velchoice,'First 100')
-                            velCount = velCount+1;
-                            if velCount > 99
+                switch velchoice
+                    case {'Whole session','Select Window'}
+                        markWith=bounds(auto_frames(corrFrame));
+                    case 'First 100'
+                        markWith=bounds(velCount);
+                end
+            else 
+                doneVel=1;
+            end
+        
+            if sum(hvTriedFrames==auto_frames)==1
+                disp(['Tried ' num2str(auto_frames) ' once, trying next frame'])
+                auto_frames = auto_frames+1;
+            elseif sum(hvTriedFrames==auto_frames)==2
+                %Maybe we came back to it
+                disp(['2x on frame ' num2str(auto_frames)])
+            elseif sum(hvTriedFrames==auto_frames)>=3
+                switch fakePass
+                    case 1
+                        skipForNow = [skipForNow, auto_frames]; %#ok<AGROW>
+                        correctThis = 0;
+                    case 2
+                        disp(['Tried this frame ' num2str(sum(hvTriedFrames==auto_frames)) ' times'])
+                        doneCont = 0;
+                        while doneCont==0
+                        contchoice =  questdlg('Try it again or skip it?', 'SkipTry',...
+                                    'End','PrevNext','Save','PrevNext');
+                        switch contchoice
+                            case 'End'
+                                correctThis=0;
                                 doneVel=1;
-                            end
+                                doneCont=1;
+                            case 'PrevNext'
+                                intendedFrame=auto_frames;
+                                auto_frames=[intendedFrame-1 intendedFrame+1];
+                                for corrFrame=1:length(auto_frames)
+                                    if definitelyGood(auto_frames(corrFrame))==0 || strcmp(manChoice,'Yes')
+                                        obj.CurrentTime=(auto_frames(corrFrame)-1)/aviSR;
+                                        v = readFrame(obj);
+                                        fixedThisFrameFlag=0;
+                                        [xm,ym]=EnhancedManualCorrect;
+                                        if fixedThisFrameFlag==1
+                                            FixFrame(xm,ym)
+                                            hold(ManualCorrFig.Children,'on')  
+                                            plot(ManualCorrFig.Children,xm,ym,marker{markWith},'MarkerSize',4,...
+                                                'MarkerFaceColor',marker_face{markWith})
+                                            hold(ManualCorrFig.Children,'off')
+                                            velCount = velCount+1;
+                                        end
+                                        hvTriedFrames = [hvTriedFrames, auto_frames]; %#ok<AGROW>
+                                    end
+                                end
+                                correctThis=0;
+                                doneCont=1;
+                            case 'Save'    
+                                SaveTemp;
+                                doneCont=0;
                         end
-                    elseif fixedThisFrameFlag==0
-                        hvSkipped = [hvSkipped, auto_frames];
-                                
-                            
-                    end
-
-                    hvTriedFrames = [hvTriedFrames, auto_frames];
-
+                        end
                 end
             end
             
-            if fakePass==1
-                hvTriedFrames
-                hvSkipped
+            hvTriedFrames = [hvTriedFrames, auto_frames];     %#ok<AGROW>
+            if correctThis==1
+                obj.CurrentTime=(auto_frames(corrFrame)-1)/aviSR;
+                v = readFrame(obj);
+                pass=fakePass;
+                
+                CorrectThisFrame;
+
+                if fixedThisFrameFlag==1
+                    FixFrame(xm,ym)
+                    hold(ManualCorrFig.Children,'on')  
+                    plot(ManualCorrFig.Children,xm,ym,marker{markWith},'MarkerSize',4,...
+                        'MarkerFaceColor',marker_face{markWith})
+                    hold(ManualCorrFig.Children,'off')
+                    velCount = velCount+1;
+                elseif fixedThisFrameFlag==0
+                    skipForNow = [skipForNow, auto_frames]; %#ok<AGROW>
+                end
+            end
+        
+            if velCount > 100
+                doneVel = 1;
             end
         end
-        disp('No more high velocity frames')
-        UpdatePosAndVel;
-        %}
+        end
 end
    
 end
@@ -1033,7 +972,7 @@ end
 %% %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 function TryAdjacentFrames(~,~)
                 
-global putativeMouseX; global putativeMouseY; global definitelyGood
+global putativeMouseX; global putativeMouseY;
 global auto_frames; global corrFrame; global skipped; global pass;
 global xAVI; global yAVI; global fixedThisFrameFlag; global huh; %global got
 global xm; global ym; 
@@ -1272,7 +1211,7 @@ for pass=1:numPasses
             auto_frames = auto_chunks{chunk};
             for corrFrame=1:length(auto_frames)   
                 if overwriteManualFlag==1 || definitelyGood(auto_frames(corrFrame))==0
-                    markWith=sum(corrFrame>bounds);
+                    markWith=sum((corrFrame+bl*(chunk-1))>bounds);
                     CorrectThisFrame;
                 end 
 
@@ -1282,6 +1221,8 @@ for pass=1:numPasses
                 end
             end
             
+            
+            chunk = chunk+1;
             if chunk <= size(auto_chunks,1)
                 doneWchunk=0;
                 while doneWchunk==0
@@ -1289,7 +1230,6 @@ for pass=1:numPasses
                         'Continue','Stop','Save','Continue');
                     switch doingChoice
                         case 'Continue'
-                            chunk = chunk+1;
                             doneWchunk=1;
                         case 'Stop'
                             chunk = size(auto_chunks,1)+1;
