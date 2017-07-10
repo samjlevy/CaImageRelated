@@ -1181,7 +1181,7 @@ for pass=1:numPasses
     ab.boxLabel = uicontrol('style','text','String','Stop at next chunk:',...
                               'Position',[5,10,140,25],'FontSize',12,'Parent',ab.AutoBadFigure);
     %}
-    bl = 2000;
+    bl = 10000;
     %if length(auto_frames) > bl
     %hold_auto_frames = auto_frames;
     blocks = floor(length(auto_frames)/bl);
