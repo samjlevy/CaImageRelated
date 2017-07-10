@@ -186,6 +186,8 @@ if exist('Pos_temp.mat','file') || exist('Pos.mat','file')
         load(load_file);%,'Xpix', 'Ypix', 'xAVI', 'yAVI', 'MoMtime', 'MouseOnMazeFrame');
         MoMtime %#ok<NOPRT>
     else
+        xAVI = Xpix*.6246;
+        yAVI = Ypix*.6246;
         h1 = implay(avi_filepath);
         MouseOnMazeFrame = input('on what frame number does Mr. Mouse arrive on the maze??? --->');
         MoMtime = MouseOnMazeFrame*0.03+time(1) %#ok<NOPRT>
@@ -1975,6 +1977,11 @@ end
     
 starts=allstarts; starts(LRmod==0)=[];
 stops=allstops; stops(LRmod==0)=[];
+
+if sum(starts)==0 || sum(stops)==0
+    disp('problem, returned 0s')
+    keyboard
+end
 
 if any(starts>length(xAVI)) || any(stops>length(xAVI))
     disp('Look out, some frames in the spreadsheet are longer than the video')
