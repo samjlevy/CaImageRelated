@@ -257,6 +257,7 @@ function PlotBlobs(~,~)
 global fig
 global frames
 global grayBlobArea
+global grayLength
 
 
 for pp = 1:length(fig.spot)

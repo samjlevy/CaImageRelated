@@ -109,7 +109,7 @@ global eFrame; global MoMtime; global vel_init; global auto_vel_thresh;
 global velchoice; global AMchoice; global corrDefGoodFlag; global elChoiceFlag;
 global elVector; global mazeEl; global bstr; global allTxt; global bframes;
 global update_pos_realtime; global blankVector; global isGrayThresh;
-global findingContrast; global excludeFromVel;
+global findingContrast; global excludeFromVel; global grayLength;
 
 
 %% Get varargin
@@ -1934,7 +1934,7 @@ end
 function ChooseStartsStops(~,~)
 global chooseStrs; global starts; global stops; global beOptions;
 global bChoices; global allTxt; global bframes; global allstarts;
-global allstops; global choices
+global allstops; global choices; global xAVI
 
 if size(chooseStrs,1)==1 && sum(cellfun(@ischar, chooseStrs))/size(chooseStrs,2)==1
 
