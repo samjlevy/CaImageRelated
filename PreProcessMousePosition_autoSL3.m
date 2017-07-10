@@ -521,8 +521,8 @@ switch MorePoints
             case 'Manual'
                 HighVelocityCorrect;
             case 'Auto-assist'
-                %disp('Sorry, not working right now')
-                HighVelocityCorrect;
+                disp('Sorry, not working right now')
+                %HighVelocityCorrect;
             case 'Cancel'
                 %Do nothing
         end
@@ -1306,7 +1306,10 @@ if update_pos_realtime==1
     
     plot(ManualCorrFig.Children,[mazex; mazex(1)],[mazey; mazey(1)],'r','LineWidth',1);
     hold(ManualCorrFig.Children,'off')
-
+    
+    drawnow
+    
+    %disp('working')
     PlotVelLine;
 end
             
@@ -1605,6 +1608,8 @@ if fixedThisFrameFlag==1
     plot(ManualCorrFig.Children,xm,ym,marker{markWith},'MarkerSize',4,...
         'MarkerFaceColor',marker_face{markWith})
     hold(ManualCorrFig.Children,'off')  
+    
+    drawnow
     if update_pos_realtime==1
         % pause(0.10)
     end
