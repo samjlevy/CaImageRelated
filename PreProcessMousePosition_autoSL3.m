@@ -110,6 +110,7 @@ global velchoice; global AMchoice; global corrDefGoodFlag; global elChoiceFlag;
 global elVector; global mazeEl; global bstr; global allTxt; global bframes;
 global update_pos_realtime; global blankVector; global isGrayThresh;
 global findingContrast; global excludeFromVel; global grayLength; global avi_filepath;
+global bl; global drawnowEnable
 
 
 %% Get varargin
@@ -119,6 +120,7 @@ update_pos_realtime = 1;
 max_pixel_jump = 45;
 corrDefGoodFlag = 0;
 overwriteManualFlag=0;
+drawnowEnable=1;
 for j = 1:length(varargin)
     if strcmpi('filepath', varargin{j})
         filepath = varargin{j+1};
@@ -145,6 +147,7 @@ cd(DVTpath);
 
 %%
 findingContrast=0;
+bl = 10000;
 PosSR = 30; % native sampling rate in Hz of position data (used only in smoothing)
 aviSR = 30.0003; % the framerate that the .avi thinks it's at
 cluster_thresh = 40; % For auto thresholding - any time there are events above
@@ -329,8 +332,8 @@ expectedBlobs=logical(imgaussfilt(double(grayFrameThreshB),10) <= gaussThresh);
 SaveTemp;
     
 %% so many options
-optionsText={'h - full explanations';...
-             ' ';...
+optionsText={%'h - full explanations';...
+             %' ';...
              'b - frames by behavior';...
              'z - (0,0) and out-of-bounds frames';...
              'y - attempt auto, manual when missed';...
@@ -341,9 +344,11 @@ optionsText={'h - full explanations';...
              'v - run auto on high velocity points';...
              'g - mark frames as good and exclude';...
              'f - undo good and excluded frames';...
+             'c - change editing block length';...
              'o - change AOM flag';...
              'l - edit expected locations';...
              'i - edit background image';...
+             'd - change whether draw now is used';...
              's - save work';...
              'x - quit without finalizing';...
              'q - save, finalize and quit';...
@@ -538,6 +543,15 @@ switch MorePoints
             overwriteManualFlag=0 %#ok<NOPRT>
             disp('auto-overwrites-manual is now DISABLED')
     end
+    case 'd'
+    switch drawnowEnable
+        case 0
+            drawnowEnable=1 %#ok<NOPRT>
+            disp('drawnow for plotting is now ENABLED')
+        case 1
+            drawnowEnable=0 %#ok<NOPRT>
+            disp('drawnow for plotting is now DISABLED')
+    end
     case 'l'
         editELvectors;
     case 'g'
@@ -556,6 +570,11 @@ switch MorePoints
         stillEditingFlag=0; 
     case 'i'
         DealWithBackgroundImage;
+    case 'c'
+        prompt = {'BL:'};
+        defaultans = {num2str(bl)};
+        answer = inputdlg(prompt,'Change block length:',1,defaultans);
+        bl=cell2mat(cellfun(@str2num,answer,'UniformOutput',false));
     otherwise
         disp('Not a recognized input')
 end
@@ -1156,7 +1175,7 @@ function CorrectTheseFrames(~,~)
 %main frame-correcting code here
 global auto_frames; global corrFrame; global ManualCorrFig; global skipped;
 global markWith; global v0; global pass; global numPasses;
-global overwriteManualFlag; global definitelyGood;
+global overwriteManualFlag; global definitelyGood; global bl;
 
 skipped=[];
 %ManualCorrFig=figure('name','ManualCorrFig'); 
@@ -1183,7 +1202,7 @@ for pass=1:numPasses
     ab.boxLabel = uicontrol('style','text','String','Stop at next chunk:',...
                               'Position',[5,10,140,25],'FontSize',12,'Parent',ab.AutoBadFigure);
     %}
-    bl = 10000;
+    
     %if length(auto_frames) > bl
     %hold_auto_frames = auto_frames;
     blocks = floor(length(auto_frames)/bl);
@@ -1242,6 +1261,7 @@ for pass=1:numPasses
                     end
                 end
             end
+            
         end
     end
     %try
@@ -1274,7 +1294,7 @@ global grayBlobArea; global skipped; global putativeMouseX; global putativeMouse
 global willThresh; global grayThresh; global gaussThresh; global distLim2;
 global xm; global ym; global elChoiceFlag; global elVector; global mazeEl;
 global maskx; global masky;  global isGrayThresh; global auto_vel_thresh;
-global definitelyGood; global grayLength
+global definitelyGood; global grayLength; global drawnowEnable
 
 xm=[]; ym=[];
 marker = {'go' 'yo' 'ro'};
@@ -1309,8 +1329,9 @@ if update_pos_realtime==1
     plot(ManualCorrFig.Children,[mazex; mazex(1)],[mazey; mazey(1)],'r','LineWidth',1);
     hold(ManualCorrFig.Children,'off')
     
+    if drawnowEnable==1
     drawnow
-    
+    end
     %disp('working')
     PlotVelLine;
 end
@@ -1611,7 +1632,9 @@ if fixedThisFrameFlag==1
         'MarkerFaceColor',marker_face{markWith})
     hold(ManualCorrFig.Children,'off')  
     
+    if drawnowEnable==1
     drawnow
+    end
     if update_pos_realtime==1
         % pause(0.10)
     end
@@ -1735,7 +1758,8 @@ while doneGettingEls==0
         case 'Another!'
             mazeUp=mazeUp+1;
             doneGettingEls=0;
-    end    
+    end
+    SaveTemp;
 end
     
 end
