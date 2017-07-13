@@ -34,7 +34,7 @@ plot(base_picked_centers(:,1),base_picked_centers(:,2),'*c')
 
 reg_cellCentersShifted = getAllCellCenters(regImage_shifted2);
 
-%{
+
 figure; imshow(reg_allMask_shifted, shiftRef)
 hold on
 plot(X, Y, 'r*')
