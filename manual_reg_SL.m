@@ -26,11 +26,11 @@ baseImage = NeuronImage;
 base_allMask = create_AllICmask(baseImage);
 base_cellCenters = getAllCellCenters(baseImage);
 
-for regSess = 1:length(reg_paths)
+%for regSess = 1:length(reg_paths)
 
-reg_path = reg_paths{regSess};
+reg_path = reg_paths;%{regSess};
 
-load(fullfile(reg_path,'FinalOutput.mat'),'NeuronImage')
+load(fullfile(reg_path,'FinalOutput.mat'),'NeuronImage','NeuronAvg')
 regImage = NeuronImage;
 reg_allMask = create_AllICmask(regImage);
 reg_cellCenters = getAllCellCenters(regImage);
@@ -81,7 +81,7 @@ while stillLabeling == 1
                 plot(reg_cellCenters(pairedInds(gotPts,2),1), reg_cellCenters(pairedInds(gotPts,2),2),'*y');
                 colorInd = colorInd - 1;
                 
-                pairedInds(gotPts,1:2) = []; %#ok<AGROW>
+                pairedInds(gotPts,:) = []; %#ok<AGROW>
                 getAcell = 1;
         end
         end
@@ -111,7 +111,6 @@ while stillLabeling == 1
     
 end
 
-%Find how to get from one set to the other
 base_picked_centers = [base_cellCenters(pairedInds(:,1),1) base_cellCenters(pairedInds(:,1),2)];
 reg_picked_centers = [reg_cellCenters(pairedInds(:,2),1) reg_cellCenters(pairedInds(:,2),2)];
 
@@ -119,27 +118,12 @@ reg_picked_centers = [reg_cellCenters(pairedInds(:,2),1) reg_cellCenters(pairedI
 tform = fitgeotrans(reg_picked_centers,base_picked_centers,'projective');%'affine'
 
 %shift masks
-[regImage_shifted,regShiftRef]=cellfun(@(x) imwarp(x,tform),regImage,'UniformOutput',false);
-
-%regImage_shifted = cell(1,numRegCells);
-%regShiftRef = cell(1,numRegCells);
-%regImage_shifted_cropped = cell(1,numRegCells);
-    %rect = [-regShiftRef{1,regCell}.XWorldLimits(1) -regShiftRef{1,regCell}.YWorldLimits(1)...
-    %    regShiftRef{1,regCell}.XWorldLimits(2)+regShiftRef{1,regCell}.XWorldLimits(1)...
-    %    regShiftRef{1,regCell}.YWorldLimits(2)+regShiftRef{1,regCell}.YWorldLimits(1)];
-    %regImage_shifted_cropped{1,regCell} = imcrop(regImage_shifted{1,regCell},rect);
-
-
+RA = imref2d(size(base_allMask));
+[regImage_shifted,~] = ...
+    cellfun(@(x) imwarp(x,tform,'OutputView',RA,'InterpolationMethod','nearest'),regImage,'UniformOutput',false);
 reg_allMask_shifted = create_AllICmask(regImage_shifted);
-%reg_allMask_shiftedAlt = create_AllICmask(regImage_shifted_cropped);
 
-%shift centers: remake from image vs. transform old point
-T = projective2d(tform.T);%affine2d
-[reg_shift_centers(:,1),reg_shift_centers(:,2)] =...
-    transformPointsForward(T,reg_cellCenters(:,1),reg_cellCenters(:,2));
-%reg_cellCenters_shifted = getAllCellCenters(regImage_shifted); 
-%adjust = -1*[regShiftRef{1,1}.XWorldLimits(1), regShiftRef{1,1}.YWorldLimits(1)];
-%reg_cellCenters_shifted = reg_cellCenters_shifted - adjust;
+reg_shift_centers = getAllCellCenters(regImage_shifted);
 
 %find closest: closestCell is baseCell index for each reg cell
 [closestCell, distance] = findclosest2D ( base_cellCenters(:,1), base_cellCenters(:,2),...
@@ -158,8 +142,7 @@ else
     disp(['only ' num2str(sum(worked)) ' out of ' num2str(length(worked)) ' anchor cells matched'])
 end
 
-RA = imref2d(size(base_allMask));
-[overlay,overlayRef] = imfuse(base_allMask,RA,reg_allMask_shifted,regShiftRef{1,1},'ColorChannels',[1 2 0]);
+[overlay,overlayRef] = imfuse(base_allMask,reg_allMask_shifted,'ColorChannels',[1 2 0]);
 mixFig = figure; imshow(overlay,overlayRef)
 title(['Base and reg shifted overlay, ' num2str(sum(distance<distanceThreshold)) ' cell centers < 3um'])
 hold on
@@ -176,12 +159,17 @@ switch moreCells
     case 'No'
         getAcell = 0;
         stillLabeling = 0;
+        reallyDone = 0;
 end
 
 end
 
-save(fullfile(reg_path,'RegisteredImage.mat'),'regImage_shifted','regShiftRef','reg_shift_centers')
+[ROIavg] = MakeAvgROI(regImage,NeuronAvg);
+[regAvg_shifted,~] = ...
+    cellfun(@(x) imwarp(x,tform,'OutputView',RA,'InterpolationMethod','nearest'),ROIavg,'UniformOutput',false);
 
-end
+save(fullfile(reg_path,'RegisteredImage.mat'),'regImage_shifted','reg_shift_centers','regAvg_shifted')
+
+%end
 
 end
