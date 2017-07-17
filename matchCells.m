@@ -1,4 +1,4 @@
-function [assignmat] = matchCells(base_path, reg_paths)
+function matchCells(base_path, reg_paths)
 
 distanceThreshold = 3;
 
@@ -15,14 +15,15 @@ else
     fullReg.BaseSession = base_path;
     fullReg.RegSessions = reg_paths;
     fullReg.centers = base_cellCenters; 
-    fullReg.orientation = baseOrientation;
+    fullReg.orientation = cell2mat(cellfun(@(x) x.Orientation, baseOrientation, 'UniformOutput',false))';
     fullReg.Image = baseImage;
     fullReg.ROIavg = MakeAvgROI(NeuronImage,NeuronAvg);
     
-    %save(fullfile(base_path,'fullReg.mat'),'fullReg')
+    save(fullfile(base_path,'fullReg.mat'),'fullReg')
+    disp('no fullReg found, making and saving')
 end    
 
-%for regsess = 1:length(reg_paths)
+for regsess = 1:length(reg_paths)
     reg_path = reg_paths{regsess};
 
 load(fullfile(reg_path,'RegisteredImage.mat'))
@@ -36,73 +37,63 @@ numBaseCells = length(fullReg.Image);
 
 cellsInRange = closestCell(distance < distanceThreshold);
 rinds = 1:numRegCells;
-inRangeIndices = rinds(distance < distanceThreshold);
+inRangeIndices = rinds(distance < distanceThreshold); %indices of regCells
 binEdges = 0.5:1:numBaseCells+0.5;
 [counts,~] = histcounts(cellsInRange,binEdges);
 overlapped = find(counts > 1);
 for repCell = 1:length(overlapped)
-    matchedCells = inRangeIndices(cellsInRange==overlapped(repCell)); %indices in closestCell
+    matchedCells = inRangeIndices(cellsInRange==overlapped(repCell)); 
+        %indices in closestCell, full length regCells
     
-    baseReg = regionprops(fullReg.ROIavg{1,overlapped(repCell)}, 'ConvexArea');
-    regMatchedReg = cellfun(@(x) regionprops(x,'ConvexArea'), {regAvg_shifted{1,matchedCells}},'UniformOutput',false);
-    
+    baseReg = fullReg.ROIavg{1,overlapped(repCell)};
+    regMatchedReg = {regAvg_shifted{1,matchedCells}};
+      
     areaCorrs = cellfun(@(x) corr(baseReg(:),x(:),'type','Spearman'), regMatchedReg, 'UniformOutput',false);
-    %here probably need to approach with orientation
-    closer = min(distance(matchedCells));
-    if sum(distance(matchedCells)==closer)
-        useCell = matchedCells(distance(matchedCells)==closer);
-        closestCell(useCell) = NaN;
-        distance(matchedCells(matchedCells~=useCell)) = NaN;
-        
-        %Check this part
-        need to test that convex area works with possible bad shifting
-        baseNeuronMeanReg = cellfun(@(x) regionprops(x,'ConvexArea'), baseImage,'UniformOutput',false);
-        
-
-        corr(sesh(1).NeuronMean_reg{same_ind(k)}(:),...
-                    sesh(2).NeuronMean_reg{j}(:));
-    else 
-        %huh, both cells are the same distance away; probably won't happen?
-    end
-end
-inRangeIndices = rinds(distance < distanceThreshold);
-
-matchedBaseCells = closestCell(inRangeIndices);
-
-unpairedRegCells = rinds(distance >= distanceThreshold | isnan(distance));
-%are there sessions other than the base one? if so, check against those 
-
-
-
-
-
-
-
-
-regOrientation = cellfun(@(x) regionprops(x,'Orientation'), regImage_shifted,'UniformOutput',false);
-           
-for pc = 1:length(inRangeIndices)
-    baseAngle(pc) = baseOrientation{1,matchedBaseCells(pc)}.Orientation;
-    regAngle(pc) = regOrientation{1,inRangeIndices(pc)}.Orientation;
-
-
-end    
+    areaCorrs = cell2mat(areaCorrs);
     
-    
-cellsOutofRange = closestCell(distance >= distanceThreshold | isnan(distance));
-
-
-
-    
-
-
-
-
-
-
-
+    useCell = areaCorrs==max(areaCorrs);
+    if sum(useCell)==1
+        %good
+        closestCell(matchedCells(~useCell)) = NaN;
+        distance(matchedCells(~useCell)) = NaN;
+    else
+        %either both or none, problem; mostly shouldn't happen?
+        disp('something up here, found 2 matches for this cell; probably need a fallback')
+    end 
 end
 
+inRangeIndicesCells = rinds(distance < distanceThreshold);
+unpairedRegCells = rinds((distance >= distanceThreshold) | isnan(distance));
 
+matchedBaseCells = closestCell(inRangeIndicesCells);
+
+foundTwice = intersect(inRangeIndicesCells,unpairedRegCells);
+assigned = length(inRangeIndicesCells) + length(unpairedRegCells);
+if isempty(foundTwice) && assigned == numRegCells && max(matchedBaseCells) <= numBaseCells
+    newCol = size(fullReg.sessionInds,2) + 1;
+    fullReg.sessionInds(matchedBaseCells, newCol) = inRangeIndicesCells;
+    
+    newInds = size(fullReg.sessionInds,1)+1;
+    newInds = newInds:newInds+length(unpairedRegCells)-1;
+    
+    fullReg.sessionInds(newInds, newCol) = unpairedRegCells;
+    
+    fullReg.centers(newInds, 1:2) = reg_shift_centers(unpairedRegCells,:);
+    
+    regOrientation = cellfun(@(x) regionprops(x,'Orientation'),...
+        {regImage_shifted{1,unpairedRegCells}},'UniformOutput',false);
+    fullReg.orientation(newInds,1) =...
+        cell2mat(cellfun(@(x) x.Orientation, regOrientation, 'UniformOutput',false))';
+    
+    fullReg.Image(1,newInds) = {regImage_shifted{1,unpairedRegCells}};
+    fullReg.ROIavg(1,newInds) = {regAvg_shifted{1,unpairedRegCells}};
+    
+    save(fullfile(base_path,'fullReg.mat'),'fullReg')
+else
+    disp('Something wrong with indexing, some kind of overlap')
+    keyboard
+end
+
+end
 
 end

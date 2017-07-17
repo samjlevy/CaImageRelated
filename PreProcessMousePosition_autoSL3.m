@@ -338,7 +338,8 @@ optionsText={%'h - full explanations';...
              'z - (0,0) and out-of-bounds frames';...
              'y - attempt auto, manual when missed';...
              'm - all manual';...
-             'n - frame numbers';...
+             'n - frame number range';...
+             'a - frame number array';...
              'p - select points by position';...
              't - reset auto-velocity threshold';...
              'v - run auto on high velocity points';...
@@ -425,6 +426,41 @@ switch MorePoints
             case 'Cancel'
                 %do nothing
         end
+    case 'a'
+        prompt = 'Edit frames:';
+        %defaultans = ' ';
+        numbch = questdlg('Number or load?','Frames by number','Number','Load','Number');
+        switch numbch
+            case 'Number'
+        answer = inputdlg(prompt,'Edit by frame numbers',1);
+        auto_frames = cell2mat(cellfun(@str2num,strsplit(answer{1},' '),'UniformOutput',false)');
+            case 'Load'
+                [file,pathloc] = uigetfile('Choose file with vector only');
+                loadedFrames = load(fullfile(pathloc,file));
+                names = fieldnames(loadedFrames);
+                eval(['auto_frames = loadedFrames.' names{1} ';'])
+        end
+        corrFrame = 1;
+            
+        mchoice = questdlg(['Edit these ' num2str(length(auto_frames)) ' frames'],...
+            'Edit by frame number','Auto-assist','Manual','Cancel','Manual');
+        switch mchoice
+            case 'Auto-assist'
+                numPasses=2;
+                CorrectTheseFrames;
+            case 'Manual'
+                        manChoice = questdlg('Redo definitely good frames?','Redo DefGood',...
+                    'Yes','No','No');
+                switch manChoice
+                    case 'Yes'
+                        corrDefGoodFlag=1;
+                    case 'No'
+                        corrDefGoodFlag=0;
+                end  
+                CorrectManualFrames
+            case 'Cancel'
+                %do nothing
+        end       
     case 'm'
         %select a bunch of frames and manual correct all of them       
         disp('correcting manually')

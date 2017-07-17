@@ -72,10 +72,12 @@ tform = affine2d(COMtranslation);
  figure; imshow(reg_allMask_shifted,shiftRef)
  
  
- 
- 
- Roriginal = imref2d(size(original));
- recovered = imwarp(distorted,tform,'OutputView',Roriginal);
+ closer = min(distance(matchedCells));
+    if sum(distance(matchedCells)==closer)
+        useCell = matchedCells(distance(matchedCells)==closer);
+        closestCell(useCell) = NaN;
+        distance(matchedCells(matchedCells~=useCell)) = NaN;
+    end
  
  
  
