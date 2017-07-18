@@ -78,6 +78,9 @@ if isempty(foundTwice) && assigned == numRegCells && max(matchedBaseCells) <= nu
     
     fullReg.sessionInds(newInds, newCol) = unpairedRegCells;
     
+    fullReg.RegPairs{1,regsess} = [matchedBaseCells, inRangeIndicesCells];
+    fullReg.RegPairs{1,regsess} = [fullReg.RegPairs{1,regsess}; newInds unpairedRegCells];
+    
     fullReg.centers(newInds, 1:2) = reg_shift_centers(unpairedRegCells,:);
     
     regOrientation = cellfun(@(x) regionprops(x,'Orientation'),...

@@ -97,8 +97,9 @@ if ~isempty(strfind(version,'R2016a'))
     return
 end
 %% Need these for better organization
-global obj; global aviSR; global auto_frames; global corrFrame;
-global xAVI; global yAVI; global Xpix; global Ypix; global definitelyGood;
+clear global
+
+global obj aviSR auto_frames corrFrame xAVI yAVI Xpix Ypix definitelyGood
 global fixedThisFrameFlag; global numPasses; global v; global maskx;
 global masky; global v0; global maze; global lastManualFrame; lastManualFrame=[];
 global grayThresh; global gaussThresh; global willThresh; global distLim2;
@@ -1729,9 +1730,9 @@ forcedExclude = find(excludeFromVel(1:length(vel_init)));
 vel_init(forcedExclude) = min(vel_init);
 
 velInds=1:length(vel_init);
-hx0 = subplot(4,3,1:3);plot(time,Xpix);xlabel('time (sec)');ylabel('x position (cm)');yl = get(gca,'YLim');
+hx0 = subplot(4,3,1:3);plot([1:length(Xpix)],Xpix);xlabel('time (sec)');ylabel('x position (cm)');yl = get(gca,'YLim');
     line([MoMtime MoMtime], [yl(1) yl(2)],'Color','r');axis tight;
-hy0 = subplot(4,3,4:6);plot(time,Ypix);xlabel('time (sec)');ylabel('y position (cm)');yl = get(gca,'YLim');
+hy0 = subplot(4,3,4:6);plot([1:length(Ypix)],Ypix);xlabel('time (sec)');ylabel('y position (cm)');yl = get(gca,'YLim');
     line([MoMtime MoMtime], [yl(1) yl(2)],'Color','r');axis tight;
 hVel = subplot(4,3,7:12);plot(velInds,vel_init);xlabel('time (sec)');ylabel('velocity');axis tight; %#ok<NASGU>
 

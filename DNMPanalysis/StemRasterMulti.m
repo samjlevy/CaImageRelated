@@ -13,14 +13,19 @@ allfiles = [base_path; reg_paths];
 [~,howSort] = sort(cellfun(@(x) x(end-5:end),allfiles,'UniformOutput',false));
 allfiles = allfiles(howSort);
 
+%sort session Inds: comes in in order of session registration
+sortedSessionInds = fullReg.sessionInds(:,howSort);
+
 for thisFile = 1:length(allfiles)
 
     load(fullfile(allfiles{thisFile},'Pos_align.mat'))
     xls_file = dir(fullfile(allfiles{thisFile},'*BrainTime_Adjusted.xlsx'));
     [frames, txt] = xlsread(fullfile(allfiles{thisFile},xls_file.name), 1);
 
-    bigStuff(thisFile).PSAbool = PSAbool;
-    bigStuff(thisFile).x_adj_cm = x_adj_cm;
+    %bigStuff(thisFile).PSAbool = PSAbool;
+    %bigStuff(thisFile).x_adj_cm = x_adj_cm;
+    all_x_adj_cm{1,thisFile} = x_adj_cm;
+    all_PSAbool{1,thisFile} = PSAbool;
     
     forced_starts = CondExcelParseout(frames, txt, 'Start on maze (start of Forced', 0);
     free_starts = CondExcelParseout(frames, txt, 'Lift barrier (start of free choice)', 0);
@@ -62,14 +67,14 @@ for thisFile = 1:length(allfiles)
     free_r_stem = [free_starts(allGood & right_free), free_stem_ends(allGood & right_free)];
     free_l_stem = [free_starts(allGood & left_free), free_stem_ends(allGood & left_free)];
 
-    bigStuff(thisFile).epochs(1).starts = forced_l_stem(:,1);
-    bigStuff(thisFile).epochs(1).stops = forced_l_stem(:,2);
-    bigStuff(thisFile).epochs(2).starts = forced_r_stem(:,1);
-    bigStuff(thisFile).epochs(2).stops = forced_r_stem(:,2);
-    bigStuff(thisFile).epochs(3).starts = free_l_stem(:,1);
-    bigStuff(thisFile).epochs(3).stops = free_l_stem(:,2);
-    bigStuff(thisFile).epochs(4).starts = free_r_stem(:,1);
-    bigStuff(thisFile).epochs(4).stops = free_r_stem(:,2);
+    all_epochs(thisFile).epochs(1).starts = forced_l_stem(:,1);
+    all_epochs(thisFile).epochs(1).stops = forced_l_stem(:,2);
+    all_epochs(thisFile).epochs(2).starts = forced_r_stem(:,1);
+    all_epochs(thisFile).epochs(2).stops = forced_r_stem(:,2);
+    all_epochs(thisFile).epochs(3).starts = free_l_stem(:,1);
+    all_epochs(thisFile).epochs(3).stops = free_l_stem(:,2);
+    all_epochs(thisFile).epochs(4).starts = free_r_stem(:,1);
+    all_epochs(thisFile).epochs(4).stops = free_r_stem(:,2);
     
     [FoLtotalHits, FoLactiveLaps, FoLreliability] = CellsInConditions2(PSAbool, forced_l_stem(:,1), forced_l_stem(:,2));
     [FoRtotalHits, FoRactiveLaps, FoRreliability] = CellsInConditions2(PSAbool, forced_r_stem(:,1), forced_r_stem(:,2));
@@ -77,18 +82,39 @@ for thisFile = 1:length(allfiles)
     [FrRtotalHits, FrRactiveLaps, FrRreliability] = CellsInConditions2(PSAbool, free_r_stem(:,1), free_r_stem(:,2));
 
     allReliability = [FoLreliability, FoRreliability, FrLreliability,  FrRreliability];
-    useCells = find(sum(allReliability >= 0.5, 2)); 
+    useLogical = sum(allReliability >= 0.5, 2);
+    useCells = find(useLogical); 
     
     bigStuff(thisFile).allReliability = allReliability;
+    bigStuff(thisFile).useLogical = useLogical;
     bigStuff(thisFile).useCells = useCells;
     
 end
 
+%Find the cells to plot
+try
+    if any(fullReg.RegPairs)
+        %use regpairs
+    end
+catch
+    disp('made it to catch')
+    bigUse = zeros(size(sortedSessionInds));
+    %bigUse(bigStuff(1).useCells,1) = 1;
+    for thisF = 1:length(allfiles)
+        for cc = 1:length(bigStuff(thisF).useCells)
+            pairedCell = find(sortedSessionInds(:,thisF)==bigStuff(thisF).useCells(cc));
+            bigUse(pairedCell,thisF) = 1;
+        end
+    end
+end
+useActual = find(sum(bigUse,2) > 0);
+
+
 
 plot_file = 'Cells Stem Rasters';
-for plotCell = 1:length(useCells)
-    thisCell = useCells(plotCell);
-    rastPlot = PlotRasterMultiSess(x_adj_cm,epochs,PSAbool,thisCell);
+for plotCell = 1:length(useActual)
+    thisCell = useActual(plotCell);
+    rastPlot = PlotRasterMultiSess(all_x_adj_cm,all_epochs,all_PSAbool,sortedSessionInds,thisCell);
     export_fig(plot_file,'-pdf','-append')
-    close rastPlot
+    close(rastPlot)
 end
