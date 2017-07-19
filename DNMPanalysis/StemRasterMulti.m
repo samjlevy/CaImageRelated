@@ -25,6 +25,7 @@ for thisFile = 1:length(allfiles)
     %bigStuff(thisFile).PSAbool = PSAbool;
     %bigStuff(thisFile).x_adj_cm = x_adj_cm;
     all_x_adj_cm{1,thisFile} = x_adj_cm;
+    all_y_adj_cm{1,thisFile} = y_adj_cm;
     all_PSAbool{1,thisFile} = PSAbool;
     
     forced_starts = CondExcelParseout(frames, txt, 'Start on maze (start of Forced', 0);
@@ -88,7 +89,7 @@ for thisFile = 1:length(allfiles)
     bigStuff(thisFile).allReliability = allReliability;
     bigStuff(thisFile).useLogical = useLogical;
     bigStuff(thisFile).useCells = useCells;
-    
+    allUseLogical{1,thisFile} = useLogical;
 end
 
 %Find the cells to plot
@@ -109,7 +110,7 @@ catch
 end
 useActual = find(sum(bigUse,2) > 0);
 
-
+combinedPlot = PlotMultiSessDotField(all_x_adj_cm,all_y_adj_cm,all_epochs,all_PSAbool,sortedSessionInds,thisCell,allUseLogical,allfiles);
 
 plot_file = 'Cells Stem Rasters';
 for plotCell = 1:length(useActual)
