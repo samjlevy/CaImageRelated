@@ -5,6 +5,8 @@ cmperbin = 1;
 minspeed = 30;
 
 plotLabels = {'Study Left','Study Right','Test Left','Test Right'};
+dotPlots = [3 4 7 8];
+heatPlots = [1 2 5 6];
 
 [~,~,~, pooled{1}] =...
     GetBlockDNMPbehavior( fullfile(allfiles{1},'Bellatrix_160830DNMPsheet_BrainTime_Adjusted.xlsx'), 'stem_only', length(x_adj_cm{1,1}));
@@ -63,13 +65,14 @@ for cond=1:4
     end
     
     %plot dotplot
-    subHand(cond)=subplot(2,4,cond*2-1);
-    plot(plotY,plotX, '.', 'Color', [0.5 0.5 0.5])
+    subHand(dotPlots(cond))=subplot(4,2,dotPlots(cond));
+    plot(60-plotX,plotY, '.', 'Color', [0.5 0.5 0.5],'MarkerSize',7)
     hold on
-    plot(spikeY, spikeX, '.', 'Color', [1 0 0])
-    ylim([25 60])
-    xlim([44 48])
-    ylabel('Stem position (cm)')
+    plot(60-spikeX, spikeY, '.', 'Color', [1 0 0],'MarkerSize',10)
+    %xlim([25 60])
+    xlim([0 35])
+    ylim([44 48])
+    xlabel('Stem position (cm)')
     
     %make linPlace Field
     xmin = 25;
@@ -88,78 +91,33 @@ for cond=1:4
     isrunning = good;                                   %Running frames that were not excluded. 
     isrunning(velocity < minspeed) = false;
     
-    [OccMap,RunOccMap,xBin] = MakeOccMapLin(plotX,good,isrunning,xEdges);
-    [TMap_unsmoothed,TCounts,TMap_gauss] = ...
-            MakePlacefieldLin(logical(cellPSA),plotX,xEdges,RunOccMap,...
+    [OccMap{cond},RunOccMap{cond},xBin{cond}] = MakeOccMapLin(plotX,good,isrunning,xEdges);
+    [TMap_unsmoothed{cond},TCounts{cond},TMap_gauss{cond}] = ...
+            MakePlacefieldLin(logical(cellPSA),plotX,xEdges,RunOccMap{cond},...
             'cmperbin',cmperbin,'smooth',true);
-        
+end
+
+%scale TMAPs
+maxRate = max([TMap_gauss{:}]);
+scaledTmaps = cellfun(@(x) x/maxRate,TMap_gauss,'UniformOutput',false);
+
+
+
+for condA = 1:4
     %plot linplacefield
-    subHand(cond)=subplot(2,4,cond*2);
-    imagesc(flipud(TMap_gauss'))
+    subHand(heatPlots(condA))=subplot(4,2,heatPlots(condA));
+    imagesc(fliplr(scaledTmaps{condA})) %fliplr?
+    xlim([0.5 35.5])
+    caxis([0 1])
     colormap(hot)
+    title(plotLabels{condA})
     %ylim([35.5 0.5])
-    
 end
 
-%{
-            for thisLap = 1:length(starts)
-                %plotLine = plotLine + 1;
-                spikePoints = [spikePoints,...
-                    find(PSAbool{1,sess}(PSArow,starts(thisLap):stops(thisLap))) + starts(thisLap)-1];
-
-                %hold on
-                %if any(thesePoints)
-                %for point = 1:length(thesePoints)
-                %    plot(60-[x_adj_cm{1,sess}(thesePoints(point)) x_adj_cm{1,sess}(thesePoints(point))],...
-                %        [0 bH]+bH*(plotLine-1),'Color',plotColors(cond,:))
-                %end
-                %end
-            end
-            
-        %else
-        %    plotLine = plotLine + length(starts);
-        %    xcorn = [0 35 35 0]; ycorn = [oldBase oldBase plotLine plotLine]*bH;
-        %    v = [xcorn; ycorn]';
-        %    hold on
-        %    patch('Faces',1:4,'Vertices',v,'FaceColor',[0.45 0.45 0.45],'EdgeColor',[0.45 0.45 0.45]);%,'FaceAlpha',0.3
-        %end
-        
-        if sess < length(epochs)
-            hold on
-            plot([0 35], [plotLine*bH plotLine*bH],'k')
-        end
-        YTLadd = 2:2:length(starts);
-        YTickLabels = [YTickLabels, YTLadd];
-        Yblank = zeros(1,length(starts));
-        Yblank(YTLadd) = 1;
-        YTick = [YTick find(Yblank)+oldBase];
-        YTick2 = [YTick2 oldBase+round(length(starts)/2)];
-        %YTickLabels = [YTickLabels, 1:length(starts)];
-    end
-
-    title(plotLabels{cond})
-    
-    %subHand(cond).YTick = (1:plotLine)*bH-bH/2;
-    subHand(cond).YTick = YTick*bH-bH/2;
-    subHand(cond).YTickLabel = {YTickLabels}; %#ok<*AGROW>
-    ylabel('Lap number')
-    xlabel('X position (cm)')
-    %xlim([25 60])
-    xlim([0 35])
-    ylim([0 bH*plotLine])
-
-    yyaxis right
-    ylim([0 bH*plotLine])
-    subHand(cond).YTick = YTick2*bH-bH/2;
-    subHand(cond).YTickLabel={'160830'; '160831';'160901'};
-    ytickangle(90)
-    subHand(cond).YColor = [0 0 0];
-end
-%}
 
 borderPos = [430,748,176,29];
 labelBorder = uicontrol('style','text','BackgroundColor',[0 0 0],...
-    'Position',borderPos,'Parent',rastPlot);
+    'Position',borderPos,'Parent',combinedPlot);
 
 labelBump = [3 2 -6 -4];
 labelPos = borderPos+labelBump;
@@ -173,7 +131,7 @@ cellnums(strfind(cellnums,' '))=[];
 cellLabel = uicontrol('style','text','String',...
     ['Cell #: ' cellnums],...
     'BackgroundColor',[1 1 1],'FontWeight','bold',...
-    'Position',labelPos,'FontSize',12,'Parent',rastPlot);
+    'Position',labelPos,'FontSize',12,'Parent',combinedPlot);
 
 drawnow
 end

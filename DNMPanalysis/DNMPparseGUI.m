@@ -429,7 +429,7 @@ if miscVar.VideoLoadedFlag==1
 end
 end
 function fcnForcedRewardButton(~,~)
-disp('Enter Delay')
+disp('Forced Reward')
 global miscVar
 global ParsedFrames
 global videoFig
