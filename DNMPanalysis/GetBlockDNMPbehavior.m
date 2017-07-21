@@ -1,4 +1,5 @@
-function [start_stop_struct, include_struct, exclude_struct, pooled] = GetBlockDNMPbehavior( xls_file, block_type, sessionLength)
+function [start_stop_struct, include_struct, exclude_struct, pooled, correct]...
+    = GetBlockDNMPbehavior( xls_file, block_type, sessionLength)
 %Returns frame numbers for what block you want, asking for what type of
 %timestamps
 [frames, txt] = xlsread(xls_file, 1);
@@ -38,43 +39,49 @@ end
 %Make include/exclude arrays
 switch block_type
     case {'stem_only', 'arm_min', 'whole_arm'}
-        start_stop_struct.forced_r = [forced_starts(right_forced), forced_stops(right_forced)];
-        start_stop_struct.free_r = [free_starts(right_free), free_stops(right_free)];
-        start_stop_struct.forced_l = [forced_starts(left_forced), forced_stops(left_forced)];
-        start_stop_struct.free_l = [free_starts(left_free), free_stops(left_free)];
+        start_stop_struct.study_l = [forced_starts(left_forced), forced_stops(left_forced)];
+        start_stop_struct.study_r = [forced_starts(right_forced), forced_stops(right_forced)];
+        start_stop_struct.test_l = [free_starts(left_free), free_stops(left_free)];
+        start_stop_struct.test_r = [free_starts(right_free), free_stops(right_free)];
         
-        include_struct.forced_r = includeBlank;
-        for aa = 1:length(start_stop_struct.forced_r)
-            include_struct.forced_r(start_stop_struct.forced_r(aa,1):start_stop_struct.forced_r(aa,2)) = 1;
-            include_struct.forced_r = logical(include_struct.forced_r);
-            exclude_struct.forced_r = double(include_struct.forced_r == 0);
+        include_struct.study_r = includeBlank;
+        for aa = 1:length(start_stop_struct.study_r)
+            include_struct.study_r(start_stop_struct.study_r(aa,1):start_stop_struct.study_r(aa,2)) = 1;
+            include_struct.study_r = logical(include_struct.study_r);
+            exclude_struct.study_r = double(include_struct.study_r == 0);
         end 
-        include_struct.free_r = includeBlank;
-        for bb = 1:length(start_stop_struct.free_r)
-            include_struct.free_r(start_stop_struct.free_r(bb,1):start_stop_struct.free_r(bb,2)) = 1;
-            include_struct.free_r = logical(include_struct.free_r);
-            exclude_struct.free_r = double(include_struct.free_r == 0);
+        include_struct.test_r = includeBlank;
+        for bb = 1:length(start_stop_struct.test_r)
+            include_struct.test_r(start_stop_struct.test_r(bb,1):start_stop_struct.test_r(bb,2)) = 1;
+            include_struct.test_r = logical(include_struct.test_r);
+            exclude_struct.test_r = double(include_struct.test_r == 0);
         end 
-        include_struct.forced_l = includeBlank;
-        for cc = 1:length(start_stop_struct.forced_l)
-            include_struct.forced_l(start_stop_struct.forced_l(cc,1):start_stop_struct.forced_l(cc,2)) = 1;
-            include_struct.forced_l = logical(include_struct.forced_l);
-            exclude_struct.forced_l = double(include_struct.forced_l == 0);
+        include_struct.study_l = includeBlank;
+        for cc = 1:length(start_stop_struct.study_l)
+            include_struct.study_l(start_stop_struct.study_l(cc,1):start_stop_struct.study_l(cc,2)) = 1;
+            include_struct.study_l = logical(include_struct.study_l);
+            exclude_struct.study_l = double(include_struct.study_l == 0);
         end
-        include_struct.free_l = includeBlank;
-        for dd = 1:length(start_stop_struct.free_l)
-            include_struct.free_l(start_stop_struct.free_l(dd,1):start_stop_struct.free_l(dd,2)) = 1;
-            include_struct.free_l = logical(include_struct.free_l);
-            exclude_struct.free_l = double(include_struct.free_l == 0);
+        include_struct.test_l = includeBlank;
+        for dd = 1:length(start_stop_struct.test_l)
+            include_struct.test_l(start_stop_struct.test_l(dd,1):start_stop_struct.test_l(dd,2)) = 1;
+            include_struct.test_l = logical(include_struct.test_l);
+            exclude_struct.test_l = double(include_struct.test_l == 0);
         end 
         
-    pooled = PoolDNMPbehavior(start_stop_struct, include_struct);    
+        correct.all = (left_forced & right_free) | (right_forced & left_free);
+        correct.study_l = correct.all(left_forced);
+        correct.study_r = correct.all(right_forced);
+        correct.test_l = correct.all(left_free);
+        correct.test_r = correct.all(right_free);
+        
+        pooled = PoolDNMPbehavior(start_stop_struct, include_struct);    
     
     case {'delay', 'cage', 'on_maze'}
         start_stop_struct.starts = starts;
         start_stop_struct.stops = stops;
         
-        include_struct.free_l = includeBlank;
+        include_struct.test_l = includeBlank;
         for ee = 1:length(starts)
             if ~isnan(start_stop_struct.starts(ee)) && ~isnan(start_stop_struct.stops(ee))
             include_struct.include(start_stop_struct.starts(ee):start_stop_struct.stops(ee)) = 1;

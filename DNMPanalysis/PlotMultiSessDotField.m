@@ -8,6 +8,7 @@ plotLabels = {'Study Left','Study Right','Test Left','Test Right'};
 dotPlots = [3 4 7 8];
 heatPlots = [1 2 5 6];
 
+
 [~,~,~, pooled{1}] =...
     GetBlockDNMPbehavior( fullfile(allfiles{1},'Bellatrix_160830DNMPsheet_BrainTime_Adjusted.xlsx'), 'stem_only', length(x_adj_cm{1,1}));
 [~,~,~, pooled{2}] =...
