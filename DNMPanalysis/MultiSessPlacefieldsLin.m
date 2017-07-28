@@ -28,12 +28,23 @@ correctBounds = StructCorrect(bounds, correct);
 
 trialbytrial = PoolTrialsAcrossSessions(correctBounds,all_x_adj_cm,all_y_adj_cm,all_PSAbool,sessionInds);
 
+[sortedReliability,aboveThresh] = TrialReliability(trialbytrial, 0.5);
+newUseActual = find(sum(aboveThresh,2) > 0);
 
+rastPlot = figure('name','Raster Plot','Position',[100 50 1000 800]);
+PlotRasterMultiSess2(trialbytrial, thisCell, sessionInds, sortedReliability,rastPlot);
 
+dotHeat = figure;
+sublocs = [  ;   ;   ;  ];
+ManyDotPlots(trialbytrial, thisCell, sessionInds, aboveThresh, dotHeat, subLocs); 
 
-plotX = [trialbytrial(cond).trialsX{:}];
-plotY = [trialbytrial(cond).trialsY{:}];
-blockBool = logical([trialbytrial(cond).trialPSAbool{:}]);
+%make lin place fields
+
+%plot heatmaps
+
+plotX = [trialbytrial(condType).trialsX{:}];
+plotY = [trialbytrial(condType).trialsY{:}];
+blockBool = [trialbytrial(condType).trialPSAbool{:}];
 spikeX = plotX(blockBool(14,:));
 spikeY = plotY(blockBool(14,:));
 ddd
@@ -44,7 +55,7 @@ ddd
 %preallocate place cell stuff;
 for cellI = 1:length(useActual)
     thisCell = useActual(cellI);
-for cond = 1:4
+for condType = 1:4
     plotX = [];
     spikeX = [];
     cellPSA = [];
@@ -52,10 +63,10 @@ for cond = 1:4
         PSArow = sessionInds(thisCell,sess);
         if PSArow ~= 0
             if all_useLogical{1,sess}(PSArow)==1
-                hereTime = allInc{cond,sess};
+                hereTime = allInc{condType,sess};
                 plotX = [plotX all_x_adj_cm{1,sess}(hereTime)]; %#ok<AGROW>
                 spikeX = [spikeX all_x_adj_cm{1,sess}(hereTime & all_PSAbool{1,sess}(PSArow,:))]; %#ok<AGROW>
-                cellPSA = [cellPSA  all_PSAbool{1,sess}(PSArow,allInc{cond,sess})]; %#ok<AGROW>
+                cellPSA = [cellPSA  all_PSAbool{1,sess}(PSArow,allInc{condType,sess})]; %#ok<AGROW>
             end
         end
     end
@@ -77,9 +88,9 @@ for cond = 1:4
     isrunning = good;                                   %Running frames that were not excluded. 
     isrunning(velocity < minspeed) = false;
     
-    [OccMap{thisCell,cond},RunOccMap{thisCell,cond},xBin{thisCell,cond}] = MakeOccMapLin(plotX,good,isrunning,xEdges);
-    [TMap_unsmoothed{thisCell,cond},TCounts{thisCell,cond},TMap_gauss{thisCell,cond}] = ...
-            MakePlacefieldLin(logical(cellPSA),plotX,xEdges,RunOccMap{thisCell,cond},...
+    [OccMap{thisCell,condType},RunOccMap{thisCell,condType},xBin{thisCell,condType}] = MakeOccMapLin(plotX,good,isrunning,xEdges);
+    [TMap_unsmoothed{thisCell,condType},TCounts{thisCell,condType},TMap_gauss{thisCell,condType}] = ...
+            MakePlacefieldLin(logical(cellPSA),plotX,xEdges,RunOccMap{thisCell,condType},...
             'cmperbin',cmperbin,'smooth',true);
     
     %make tuning curves

@@ -1,4 +1,4 @@
-rastPlot = PlotRasterMultiSess2(trialbytrial, thisCell, sessionInds)
+function PlotRasterMultiSess2(trialbytrial, thisCell, sessionInds,figHand)
 %Works, could be redone to handle session by session
 
 bH = 5;
@@ -8,58 +8,64 @@ plotColors = [1 0 0.65;... %magenta
               1 0 0;... %red
               0 0 1];   %blue
 
-rastPlot = figure('name','Raster Plot','Position',[100 50 1000 800]);
+%rastPlot = figure('name','Raster Plot','Position',[100 50 1000 800]);
 
-for cond=1:4
-    subHand(cond)=subplot(2,2,cond);
+for condType=1:4
+    subHand(condType)=subplot(2,2,condType);
+    
     plotLine = 0;
-    
-    YTickLabels = [];
-    YTick = [];
-    YTick2 = [];
-    %for sess = 1:length(trialbytrial)
-    %    oldBase = plotLine;
+    sessBreaks = find(diff(trialbytrial(condType).sessID));
+    for thisLap = 1:length(trialbytrial(condType).trialsX)
+        plotLine = plotLine + 1;
         
-    %    PSArow = sessionInds(thisCell,sess);
-    %    if PSArow ~= 0            
-            for thisLap = 1:length(trialbytrial(cond).trialsX)
-                plotLine = plotLine + 1;
-                thesePoints = find(trialbytrial(cond).trialPSAbool{thisLap,1}(thisCell,:));
-
+        if sum([1; sessBreaks+1] == plotLine)==1
+            thisSess = trialbytrial(condType).sessID(thisLap);
+            %if aboveThresh{condType}(thisCell,thisSess) == 0
+            if sessionInds(thisCell,thisSess) == 0
+                blockHeight = sum(trialbytrial(condType).sessID==thisSess);
+                xc = [0 35 35 0]; 
+                yc = [plotLine-1 plotLine-1 blockHeight blockHeight]*bH;% + [1 1 0 0]
+                v = [xc; yc]';
                 hold on
-                if any(thesePoints)
-                for point = 1:length(thesePoints)
-                    plotX = trialbytrial(cond).trialsX{thisLap,1}(thesePoints(point));
-                    plot(60-[plotX plotX], [0 bH]+bH*(plotLine-1),'Color',plotColors(cond,:))
-                end
-                end
+                patch('Faces',1:4,'Vertices',v,'FaceColor',[0.45 0.45 0.45],'EdgeColor',[0.45 0.45 0.45]);
             end
-    %    else
-    %        plotLine = plotLine + length(starts);
-    %        xcorn = [0 35 35 0]; ycorn = [oldBase oldBase plotLine plotLine]*bH;
-    %        v = [xcorn; ycorn]';
-    %        hold on
-    %        patch('Faces',1:4,'Vertices',v,'FaceColor',[0.45 0.45 0.45],'EdgeColor',[0.45 0.45 0.45]);%,'FaceAlpha',0.3
-    %    end
+        end
+                
+        thesePoints = find(trialbytrial(condType).trialPSAbool{thisLap,1}(thisCell,:));
         
-        %if sess < length(epochs)
-        %    hold on
-        %    plot([0 35], [plotLine*bH plotLine*bH],'k')
+        hold on
+        if any(thesePoints)
+        for point = 1:length(thesePoints)
+            plotX = trialbytrial(condType).trialsX{thisLap,1}(thesePoints(point));
+            plot(60-[plotX plotX], [0 bH]+bH*(plotLine-1),'Color',plotColors(condType,:))
+        end
+        end
+        
+        %if sum(sessBreaks==plotLine)==1
+            %hold on
+            %plot([0 35], [plotLine*bH plotLine*bH],'k')
         %end
-    %    YTLadd = 2:2:length(starts);
-    %    YTickLabels = [YTickLabels, YTLadd];
-    %    Yblank = zeros(1,length(starts));
-    %    Yblank(YTLadd) = 1;
-    %    YTick = [YTick find(Yblank)+oldBase];
-    %    YTick2 = [YTick2 oldBase+round(length(starts)/2)];
-        %YTickLabels = [YTickLabels, 1:length(starts)];
-    %end
-
-    title(plotLabels{cond})
+    end
     
-    %subHand(cond).YTick = (1:plotLine)*bH-bH/2;
-    %subHand(cond).YTick = YTick*bH-bH/2;
-    %subHand(cond).YTickLabel = {YTickLabels}; %#ok<*AGROW>
+    for ss=1:length(sessBreaks)
+        hold on
+        plot([0 35], [sessBreaks(ss) sessBreaks(ss)]*bH,'k')
+    end
+    
+    YTickPre = [];
+    numSess = max(trialbytrial(condType).sessID);
+    for sess = 1:numSess
+        numLaps = sum(trialbytrial(condType).sessID == sess);
+        YTickPre = [YTickPre 1:numLaps];
+    end
+    YTick = 1:length(YTickPre);
+    YTickLabels = {YTickPre(rem(YTickPre,2)==0)};
+    YTick = YTick(rem(YTickPre,2)==0);
+    
+    title(plotLabels{condType})
+    
+    subHand(condType).YTick = YTick*bH-bH/2;
+    subHand(condType).YTickLabel = YTickLabels;
     ylabel('Lap number')
     xlabel('X position (cm)')
     %xlim([25 60])
@@ -72,4 +78,6 @@ for cond=1:4
     %subHand(cond).YTickLabel={'160830'; '160831';'160901'};
     %ytickangle(90)
     %subHand(cond).YColor = [0 0 0];
+end
+
 end

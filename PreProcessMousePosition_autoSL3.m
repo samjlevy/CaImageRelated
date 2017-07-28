@@ -1,4 +1,5 @@
-function [xpos_interp,ypos_interp,time_interp,AVItime_interp] = PreProcessMousePosition_autoSL3(varargin);
+function PreProcessMousePosition_autoSL3(varargin)
+% [xpos_interp,ypos_interp,time_interp,AVItime_interp] = 
 % Open issues: 6/15/17
 %   
 %   PRIORITY   
@@ -172,6 +173,9 @@ catch
 end
 
 avi_filepath = ls('*.avi');
+if size(avi_filepath,1)~=1
+    [avi_filepath,~] = uigetfile('*.avi','Choose appropriate video:');
+end
 disp(['Using ' avi_filepath ])
 obj = VideoReader(avi_filepath);
 
@@ -485,10 +489,10 @@ switch MorePoints
         posSelect=figure('name','posSelect','Position',[250 250 640*1.5 480*1.5]); imagesc(flipud(v0))
         title('Drag region around points to correct')
         hold on
-        plot(xAVI,yAVI,'.')
+        plot(xAVI(excludeFromVel==0),yAVI(excludeFromVel==0),'.')
         [~, pointBoxX, pointBoxY] = roipoly;
         [editLogical,~] = inpolygon(xAVI, yAVI, pointBoxX, pointBoxY);
-        auto_frames=find(editLogical);
+        auto_frames = find(editLogical & (excludeFromVel==0)); %find(editLogical);
         hold on
         plot(xAVI(editLogical),yAVI(editLogical),'.r')
         poschoice = questdlg(['Edit these ' num2str(length(auto_frames)) ' points?'],...
@@ -510,7 +514,9 @@ switch MorePoints
             case 'No'
                 %Do nothing
         end
+        try
         close(posSelect);
+        end
     %{    
     case 'g'
         % generate a movie and show it
@@ -1987,12 +1993,13 @@ global allstops; global choices; global xAVI
 if size(chooseStrs,1)==1 && sum(cellfun(@ischar, chooseStrs))/size(chooseStrs,2)==1
 
 selectedTwo=0;
-while selectedTwo==0
-    [choices,~] = listdlg('PromptString','A pair of timestamps:',...
-                'SelectionMode','multiple',...
+for tt = 1:2
+    [choices(tt),~] = listdlg('PromptString',['Select timestamps #' num2str(tt) ':'],...
+                'SelectionMode','single',...
                 'ListString',chooseStrs);
-    if length(choices)==2; selectedTwo=1; end
 end
+   % if length(choices)==2; selectedTwo=1; end
+
     
 [ss,~] = listdlg('PromptString','Which comes first:',...
                     'SelectionMode','single',...
@@ -2044,10 +2051,33 @@ if sum(starts)==0 || sum(stops)==0
     keyboard
 end
 
+for aa = 1:2
+    bumpFr = questdlg(['Bump ' chooseStrs{choices(aa)} ' forward or back?'],'bump frames',...
+        'Forward','Back','No','No');
+    bump = 0;
+    if strcmpi(bumpFr,'Forward') || strcmpi(bumpFr,'Back')
+        bump = str2double(cell2mat(inputdlg('How many frames?')));
+        if strcmpi(bumpFr,'Back')
+            bump = bump*-1;
+        end
+    end
+    switch aa
+        case 1
+            starts = starts + bump;
+        case 2
+            stops = stops + bump;
+    end
+end
+
 if any(starts>length(xAVI)) || any(stops>length(xAVI))
     disp('Look out, some frames in the spreadsheet are longer than the video')
     starts(starts>length(xAVI)) = length(xAVI);
     stops(stops>length(xAVI)) = length(xAVI);
+end
+if any(starts<1) || any(stops<1)
+    disp('Look out, some frames in the spreadsheet are less than 1??')
+    starts(starts<1) = 1;
+    stops(stops<1) = 1;
 end
     
 else
@@ -2138,7 +2168,7 @@ end
 function BehaviorFrames(~,~)
 global chooseStrs; global starts; global stops;
 global bstr; global auto_frames; global numPasses;
-global corrDefGoodFlag;
+global corrDefGoodFlag; global choices;
 
 chooseStrs = bstr;
 ChooseStartsStops;

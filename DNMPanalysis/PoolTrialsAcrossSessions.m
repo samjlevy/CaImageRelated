@@ -13,7 +13,8 @@ for fn = 1:4
             getInds = bounds{sess}.(ss{fn})(lap,1):bounds{sess}.(ss{fn})(lap,2);
             trialbytrial(fn).trialsX{row,1} = all_x_adj_cm{sess}(getInds);
             trialbytrial(fn).trialsY{row,1} = all_y_adj_cm{sess}(getInds);
-            trialbytrial(fn).trialPSAbool{row,1} = all_PSAbool_aligned{sess}(:,getInds);
+            trialbytrial(fn).trialPSAbool{row,1} = logical(all_PSAbool_aligned{sess}(:,getInds));
+            trialbytrial(fn).sessID(row,1) = sess;
         end
     end
 end
