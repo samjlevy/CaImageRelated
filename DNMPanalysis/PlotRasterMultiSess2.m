@@ -41,10 +41,6 @@ for condType=1:4
         end
         end
         
-        %if sum(sessBreaks==plotLine)==1
-            %hold on
-            %plot([0 35], [plotLine*bH plotLine*bH],'k')
-        %end
     end
     
     for ss=1:length(sessBreaks)

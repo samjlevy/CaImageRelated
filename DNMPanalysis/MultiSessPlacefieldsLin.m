@@ -1,6 +1,6 @@
 function MultiSessPlacefieldsLin( allfiles, all_x_adj_cm, all_y_adj_cm, sessionInds, all_PSAbool, cmperbin, all_useLogical, useActual)
 numSessions = length(allfiles); 
-allInc = cell(4,length(allfiles));
+%allInc = cell(4,length(allfiles));
 pooled = cell(length(allfiles),1);
 for file = 1:length(allfiles)
     bta = dir(fullfile(allfiles{file},'*BrainTime_Adjusted.xlsx'));
@@ -18,10 +18,10 @@ for file = 1:length(allfiles)
     [bounds{file},~,~, pooled{file},correct{file}] =...
     GetBlockDNMPbehavior( fullfile(allfiles{file},bta), 'stem_only', length(all_x_adj_cm{1,file}));
 
-    allInc{1,file} = pooled{file}.include.forced & pooled{file}.include.left; %studyLeft
-    allInc{2,file} = pooled{file}.include.forced & pooled{file}.include.right; %studyRight
-    allInc{3,file} = pooled{file}.include.free & pooled{file}.include.left;%testLeft
-    allInc{4,file} = pooled{file}.include.free & pooled{file}.include.right; %testRight    
+    %allInc{1,file} = pooled{file}.include.forced & pooled{file}.include.left; %studyLeft
+    %allInc{2,file} = pooled{file}.include.forced & pooled{file}.include.right; %studyRight
+    %allInc{3,file} = pooled{file}.include.free & pooled{file}.include.left;%testLeft
+    %allInc{4,file} = pooled{file}.include.free & pooled{file}.include.right; %testRight    
 end
 
 correctBounds = StructCorrect(bounds, correct);
@@ -29,15 +29,44 @@ correctBounds = StructCorrect(bounds, correct);
 trialbytrial = PoolTrialsAcrossSessions(correctBounds,all_x_adj_cm,all_y_adj_cm,all_PSAbool,sessionInds);
 
 [sortedReliability,aboveThresh] = TrialReliability(trialbytrial, 0.5);
-newUseActual = find(sum(aboveThresh,2) > 0);
+newUseActual = cell2mat(cellfun(@(x) sum(x,2) > 0,aboveThresh,'UniformOutput',false));
+
+PFsLinTrialbyTrial(trialbytrial,aboveThresh);
+
 
 rastPlot = figure('name','Raster Plot','Position',[100 50 1000 800]);
 PlotRasterMultiSess2(trialbytrial, thisCell, sessionInds, sortedReliability,rastPlot);
 
 dotHeat = figure;
-sublocs = [  ;   ;   ;  ];
-ManyDotPlots(trialbytrial, thisCell, sessionInds, aboveThresh, dotHeat, subLocs); 
 
+dotlocs = [5 6; 7 8; 13 14; 15 16];
+heatlocs = [1 2; 3 4; 9 10; 11 12];
+titles = {'Study Left'; 'Study Right'; 'Test Left'; 'Test Right'};
+for cellI = 1:length(useActual)
+    thisCell = useActual(cellI);
+
+    ManyDotPlots(trialbytrial, thisCell, sessionInds, aboveThresh, dotHeat, [4 4], dotlocs) %titles
+    ManyHeatPlots(mapLoc, thisCell, figHand, [4 4], heatlocs,titles)
+    
+    % set to landscape or portrait
+% if hfig.Position(3) > hfig.Position(4)
+%     hfig.PaperOrientation = 'landscape';
+% else
+%     hfig.PaperOrientation = 'portrait';
+% end
+resolution_use = '-r600'; %'-r600' = 600 dpi - might not be necessary
+hfig.Renderer = 'painters'; % This makes sure weird stuff doesn't happen when you save lots of data points by using openGL rendering
+save_file = fullfile(location, filename);
+print(hfig, save_file,'-dpdf',resolution_use, varargin{:});
+% print(hfig, save_file,'-dpdf','-bestfit',resolution_use)
+
+end
+
+append_pdfs(output file, input files)
+
+
+    
+    
 %make lin place fields
 
 %plot heatmaps
@@ -50,53 +79,6 @@ spikeY = plotY(blockBool(14,:));
 ddd
 
 
-
-%Old version
-%preallocate place cell stuff;
-for cellI = 1:length(useActual)
-    thisCell = useActual(cellI);
-for condType = 1:4
-    plotX = [];
-    spikeX = [];
-    cellPSA = [];
-    for sess = 1:numSessions           
-        PSArow = sessionInds(thisCell,sess);
-        if PSArow ~= 0
-            if all_useLogical{1,sess}(PSArow)==1
-                hereTime = allInc{condType,sess};
-                plotX = [plotX all_x_adj_cm{1,sess}(hereTime)]; %#ok<AGROW>
-                spikeX = [spikeX all_x_adj_cm{1,sess}(hereTime & all_PSAbool{1,sess}(PSArow,:))]; %#ok<AGROW>
-                cellPSA = [cellPSA  all_PSAbool{1,sess}(PSArow,allInc{condType,sess})]; %#ok<AGROW>
-            end
-        end
-    end
-    
-    %make linPlace Field
-    xmin = 25;
-    xmax = 60;
-    Xrange = xmax-xmin; 
-    nXBins = ceil(Xrange/cmperbin); 
-    xEdges = (0:nXBins)*cmperbin+xmin;
-    
-    nFrames = length(plotX);
-    SR=20;
-    dx = diff(plotX);
-    dy = diff(plotY);
-    speed = hypot(dx,dy)*SR;
-    velocity = convtrim(speed,ones(1,2*20))./(2*20);
-    good = true(1,nFrames);
-    isrunning = good;                                   %Running frames that were not excluded. 
-    isrunning(velocity < minspeed) = false;
-    
-    [OccMap{thisCell,condType},RunOccMap{thisCell,condType},xBin{thisCell,condType}] = MakeOccMapLin(plotX,good,isrunning,xEdges);
-    [TMap_unsmoothed{thisCell,condType},TCounts{thisCell,condType},TMap_gauss{thisCell,condType}] = ...
-            MakePlacefieldLin(logical(cellPSA),plotX,xEdges,RunOccMap{thisCell,condType},...
-            'cmperbin',cmperbin,'smooth',true);
-    
-    %make tuning curves
-    PlaceTuningCurveLin(PSAbool, bounds, x_adj_cm)
-    
-end
 end
 
 end
