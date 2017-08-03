@@ -1,65 +1,104 @@
 function MultiSessPlacefieldsLin( allfiles, all_x_adj_cm, all_y_adj_cm, sessionInds, all_PSAbool, cmperbin, all_useLogical, useActual)
+lapThresh = 4;
+mapLoc = 'F:\Bellatrix\Bellatrix_160901';
+
 numSessions = length(allfiles); 
 %allInc = cell(4,length(allfiles));
-pooled = cell(length(allfiles),1);
-for file = 1:length(allfiles)
-    bta = dir(fullfile(allfiles{file},'*BrainTime_Adjusted.xlsx'));
-    if length(bta)==1
-        bta = bta.name;
-    elseif length(bta) > 1
-        isRight = cell2mat(cellfun(@(x) any(strfind(x,'~$')),{bta.name},'UniformOutput',false));
-        if sum(isRight)==1
-            bta = bta(isRight).name;
-        end
-    else 
-        disp('could not find brainTime_adjusted file')
-        return
-    end
-    [bounds{file},~,~, pooled{file},correct{file}] =...
-    GetBlockDNMPbehavior( fullfile(allfiles{file},bta), 'stem_only', length(all_x_adj_cm{1,file}));
-
-    %allInc{1,file} = pooled{file}.include.forced & pooled{file}.include.left; %studyLeft
-    %allInc{2,file} = pooled{file}.include.forced & pooled{file}.include.right; %studyRight
-    %allInc{3,file} = pooled{file}.include.free & pooled{file}.include.left;%testLeft
-    %allInc{4,file} = pooled{file}.include.free & pooled{file}.include.right; %testRight    
-end
+numframes = cell2mat(cellfun(@length, all_x_adj_cm, 'UniformOutput',false));
+[bounds, ~, correct] = GetMultiSessDNMPbehavior(allfiles, numframes);
 
 correctBounds = StructCorrect(bounds, correct);
 
 trialbytrial = PoolTrialsAcrossSessions(correctBounds,all_x_adj_cm,all_y_adj_cm,all_PSAbool,sessionInds);
 
 [sortedReliability,aboveThresh] = TrialReliability(trialbytrial, 0.5);
-newUseActual = cell2mat(cellfun(@(x) sum(x,2) > 0,aboveThresh,'UniformOutput',false));
+[maxConsec, enoughConsec] = ConsecutiveLaps(trialbytrial,lapThresh);
+
+newUse = cell2mat(cellfun(@(x) sum(x,2) > 0,aboveThresh,'UniformOutput',false));
+newUseActual = find(sum(newUse,2));
+newUse2 = cell2mat(cellfun(@(x) sum(x,2) > 0,enoughConsec,'UniformOutput',false));
+newUseActual2 = find(sum(newUse2,2));
+
+threshing = [sum(newUse,2)>0 sum(newUse2,2)>0];
+threshing2 = find(sum(threshing,2));
 
 PFsLinTrialbyTrial(trialbytrial,aboveThresh);
 
+figDir = fullfile(base_path,'tempPlots');
+if exist(figDir(1:end-4),'dir')==0
+    mkdir(fullfile(base_path,'tempPlots'))
+end
+for cellJ = 1:length(threshing2)
+    thisCell = threshing2(cellJ);
+    
+    rastPlot = figure('name','Raster Plot');
+    rastPlot.OuterPosition = [0 0 850 1100];
+    rastPlot.PaperPositionMode = 'auto';
+    PlotRasterMultiSess2(trialbytrial, thisCell, sessionInds,rastPlot);
+    
+    resolution_use = '-r600'; %'-r600' = 600 dpi - might not be necessary
+    rastPlot.Renderer = 'painters';
+    %rastPlot.PaperOrientation = 'portrait';
+    
+    zzs = num2str(zeros(1,3-length(num2str(thisCell))));
+    save_file = fullfile(figDir, ['cell_' zzs num2str(thisCell) '_heatDot']);
+    print(rastPlot, save_file,'-dpdf','-fillpage',resolution_use);
+    close(rastPlot)
+end
 
-rastPlot = figure('name','Raster Plot','Position',[100 50 1000 800]);
-PlotRasterMultiSess2(trialbytrial, thisCell, sessionInds, sortedReliability,rastPlot);
+fls = dir(figDir);
+fls([fls.isdir]) = [];
+names = {fls.name};
+names2 = cellfun(@(x) fullfile(figDir,x),names,'UniformOutput',false);
+output_file = fullfile(base_path,'Bellatrix Stem Rasters.pdf');
+copyfile(names2{1},fullfile(output_file));
+append_pdfs(output_file,names2{2:end})
+rmdir(figDir,'s')
+    
 
-dotHeat = figure;
+
 
 dotlocs = [5 6; 7 8; 13 14; 15 16];
 heatlocs = [1 2; 3 4; 9 10; 11 12];
+%left bottom width height
+
+dotHeight = 0.18;
+heatHeight = 0.08;
+tuningHeight = 0.18;
+width = 0.4;
+leftCol = 0.05;
+rightCol = 0.55;
+
 titles = {'Study Left'; 'Study Right'; 'Test Left'; 'Test Right'};
-for cellI = 1:length(useActual)
-    thisCell = useActual(cellI);
+mkdir(fullfile(base_path,'tempPlots'))
+for cellI = 1:length(threshing2)
+    thisCell = threshing2(cellI);
 
-    ManyDotPlots(trialbytrial, thisCell, sessionInds, aboveThresh, dotHeat, [4 4], dotlocs) %titles
-    ManyHeatPlots(mapLoc, thisCell, figHand, [4 4], heatlocs,titles)
+    dotHeat = figure;
+    dotHeat.OuterPosition = [0 0 850 1100];
+    dotHeat.PaperPositionMode = 'auto';
+    ManyDotPlots(trialbytrial, thisCell, sessionInds, aboveThresh, dotHeat, [4 4], dotlocs, []) %titles
+    ManyHeatPlots(mapLoc, thisCell, dotHeat, [4 4], heatlocs,titles)
     
-    % set to landscape or portrait
-% if hfig.Position(3) > hfig.Position(4)
-%     hfig.PaperOrientation = 'landscape';
-% else
-%     hfig.PaperOrientation = 'portrait';
-% end
-resolution_use = '-r600'; %'-r600' = 600 dpi - might not be necessary
-hfig.Renderer = 'painters'; % This makes sure weird stuff doesn't happen when you save lots of data points by using openGL rendering
-save_file = fullfile(location, filename);
-print(hfig, save_file,'-dpdf',resolution_use, varargin{:});
-% print(hfig, save_file,'-dpdf','-bestfit',resolution_use)
+    ManyTuningCurves( )
+    
+    
+    cellnums = num2str(sessionInds(thisCell,:));
+    spaces = [-2 strfind(cellnums,'  ')];
+    cellnums(spaces(find(diff(spaces)>1)+1))='/';
+    cellnums(strfind(cellnums,' '))=[];
+    cellnums(strfind(cellnums,' '))=[];
 
+    suptitle(['Cell #: ' cellnums])
+    
+    resolution_use = '-r600'; %'-r600' = 600 dpi - might not be necessary
+    rastPlot.Renderer = 'painters';
+    %rastPlot.PaperOrientation = 'portrait';
+    
+    zzs = num2str(zeros(1,3-length(num2str(thisCell))));
+    save_file = fullfile(figDir, ['cell_' zzs num2str(thisCell) '_heatDot']);
+    print(rastPlot, save_file,'-dpdf','-fillpage',resolution_use);
+    close(rastPlot)
 end
 
 append_pdfs(output file, input files)
@@ -81,4 +120,3 @@ ddd
 
 end
 
-end

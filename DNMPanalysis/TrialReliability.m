@@ -9,6 +9,8 @@ for condType = 1:length(trialbytrial)
            hitsThisCond = [hitsThisCond,...
                any(trialbytrial(condType).trialPSAbool{thisLap},2)];
        end
+       %cellfun(@(x) any(x(thisCell,:)), (trialbytrial(condType).trialPSAbool(lapsUse)));
+       
        reliability = sum(hitsThisCond,2)/length(thisLaps);
        sortedReliability{condType}(:,sess) = reliability;
        aboveThresh{condType}(:,sess) = reliability >= thresh;

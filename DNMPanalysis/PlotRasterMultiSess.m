@@ -86,7 +86,9 @@ labelBump = [3 2 -6 -4];
 labelPos = borderPos+labelBump;
 
 cellnums = num2str(sessionInds(thisCell,:));
-cellnums(strfind(cellnums,'  '))='/';
+spaces = [-2 strfind(cellnums,'  ')];
+cellnums(spaces(find(diff(spaces)>1)+1))='/';
+cellnums(strfind(cellnums,' '))=[];
 cellnums(strfind(cellnums,' '))=[];
 
 cellLabel = uicontrol('style','text','String',...

@@ -1,4 +1,4 @@
-function PFsLinTrialbyTrial(trialbytrial,aboveThresh)
+function [OccMap, RunOccMap, xBin, TMap_unsmoothed, TCounts, TMap_gauss] = PFsLinTrialbyTrial(trialbytrial,aboveThresh,saveThis)
 
 numSess = size(aboveThresh{1,1},2);
 numCells = length(trialbytrial(1).trialPSAbool{1,1});
@@ -7,6 +7,7 @@ xmin = 25;
 xmax = 60;
 nPerms = 1000;
 minspeed = 0;
+cmperbin = 1;
 
 sessionUse = false(size(aboveThresh{1,1}));
 for ss = 1:numConds
@@ -42,8 +43,6 @@ for cellI = 1:numCells
         [TMap_unsmoothed{cellI,condType},TCounts{cellI,condType},TMap_gauss{cellI,condType}] = ...
                 MakePlacefieldLin(logical(spikeTs),posX,xEdges,RunOccMap{cellI,condType},...
                 'cmperbin',cmperbin,'smooth',true);
-            
-        
 
         %make tuning curves
         %PlaceTuningCurveLin(trialbytrial, aboveThresh, nPerms, [xmin xmax], xEdges);
@@ -52,7 +51,9 @@ for cellI = 1:numCells
         end
     end
 end
-save PFsLin.mat OccMap RunOccMap xBin TMap_unsmoothed TCounts TMap_gauss 
 
+if saveThis==1
+save PFsLin.mat OccMap RunOccMap xBin TMap_unsmoothed TCounts TMap_gauss 
+end
     
 end

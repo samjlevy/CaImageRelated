@@ -4,7 +4,7 @@ function PlaceTuningCurveLin(trialbytrial, aboveThresh, nPerms, xlims, cmperbin,
 %Shift whole position vector to preserve temporal autocorrelogram of spiking
  
 sessionUse = false(size(aboveThresh{1,1}));
-for ss = 1:numConds
+for ss = 1:4
     sessionUse = sessionUse + aboveThresh{1,ss}(:,:);
 end
 sessionUse = sessionUse > 0;
@@ -43,6 +43,11 @@ for cellI = 1:numCells
             shuffleCurves(:,thisPerm) = mean(shuffledRates(:,:,thisPerm),1);
         end
 
+        mn = mean(shuffleCurves,2)
+        shuffsort = sort(shuffleCurves,2);
+        idxci = round([0.975;0.025].*1000);
+        ci = shuffsort(:,idxci);
+        
         TMap_test = TMap_gauss{cellI,thisCond}';
         TMap_test(isnan(TMap_test)) = 0;
         smoothfit = fit([1:numBins]',TMap_test,'smoothingspline');

@@ -3,7 +3,6 @@ function trialbytrial = PoolTrialsAcrossSessions(bounds,all_x_adj_cm,all_y_adj_c
 
 [~, all_PSAbool_aligned] = PoolPSA(all_PSAbool, sessionInds);
 
-
 ss = fieldnames(bounds{1}); %should always be 4
 for fn = 1:4
     row = 0;
@@ -15,6 +14,7 @@ for fn = 1:4
             trialbytrial(fn).trialsY{row,1} = all_y_adj_cm{sess}(getInds);
             trialbytrial(fn).trialPSAbool{row,1} = logical(all_PSAbool_aligned{sess}(:,getInds));
             trialbytrial(fn).sessID(row,1) = sess;
+            trialbytrial(fn).name = ss(fn);
         end
     end
 end
