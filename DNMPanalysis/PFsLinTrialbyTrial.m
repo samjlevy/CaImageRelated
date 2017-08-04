@@ -1,13 +1,12 @@
-function [OccMap, RunOccMap, xBin, TMap_unsmoothed, TCounts, TMap_gauss] = PFsLinTrialbyTrial(trialbytrial,aboveThresh,saveThis)
+function [OccMap, RunOccMap, xBin, TMap_unsmoothed, TCounts, TMap_gauss] =...
+    PFsLinTrialbyTrial(trialbytrial,aboveThresh, xlims, cmperbin, minspeed, saveThis, base_path)
 
 numSess = size(aboveThresh{1,1},2);
 numCells = length(trialbytrial(1).trialPSAbool{1,1});
 numConds = length(trialbytrial);
-xmin = 25;
-xmax = 60;
-nPerms = 1000;
-minspeed = 0;
-cmperbin = 1;
+xmin = xlims(1);
+xmax = xlims(2);
+
 
 sessionUse = false(size(aboveThresh{1,1}));
 for ss = 1:numConds
@@ -58,8 +57,9 @@ for cellI = 1:numCells
     end
 end
 
-if saveThis==1
-save PFsLin.mat OccMap RunOccMap xBin TMap_unsmoothed TCounts TMap_gauss 
+if saveThis==13
+    savePath = fullfile(base_path,'PFsLin.mat'); 
+save(savePath,'OccMap','RunOccMap', 'xBin', 'TMap_unsmoothed', 'TCounts', 'TMap_gauss') 
 end
     
 end

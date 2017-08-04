@@ -1,34 +1,25 @@
-function PlaceTuningCurveLin(trialbytrial, aboveThresh, nPerms, xlims, cmperbin, xEdges)
+function [meanCurves, ciCurves, shuffTMap_unsmoothed, shuffTMap_gauss]=...
+    PlaceTuningCurveLin(base_path, trialbytrial, aboveThresh,  xlims, cmperbin, minspeed, numShuffles, dimShuffle)
 
-numSess = size(aboveThresh{1,1},2);
+%numSess = size(aboveThresh{1,1},2);
 numCells = length(trialbytrial(1).trialPSAbool{1,1});
-numConds = length(trialbytrial);
-xmin = 25;
-xmax = 60;
-nPerms = 1000;
-minspeed = 0;
-cmperbin = 1;
-dimShuffle = 'all';
-
-%Base PFs
-if basePFs exists
-    load it
-else
-	[OccMap, RunOccMap, xBin, TMap_unsmoothed, TCounts, TMap_gauss] =...
-        PFsLinTrialbyTrial(trialbytrial,aboveThresh,saveThis);
-end
+%numConds = length(trialbytrial);
 
 resol = 1;
 p = ProgressBar(100/resol);
 update_inc = round(numShuffles/(100/resol));
 shuffTMap_gauss = cell(1,numShuffles);
 shuffTMap_unsmoothed = cell(1,numShuffles);
+total = 0;
 for ts = 1:numShuffles
     shuffledTBT = ShuffleTrialsAcrossConditions(trialbytrial,dimShuffle);
     [~, ~, ~, shuffTMap_unsmoothed{ts}, ~, shuffTMap_gauss{ts}] = ...
-        PFsLinTrialbyTrial(shuffledTBT,aboveThresh,0);
+        PFsLinTrialbyTrial(trialbytrial,aboveThresh, xlims, cmperbin, minspeed, saveThis, base_path);
 
-     p.progress;
+    total=total+1;
+    if round(total/update_inc) == (total/update_inc) 
+        p.progress;
+    end
 end
 p.stop;
 
@@ -59,6 +50,9 @@ for tc = 1:numCells
     end
 end
 
+save(fullfile(base_path,'tuningCurves.mat'),'meanCurves','ciCurves','shuffTMap_gauss','shuffTMap_unsmoothed')
+
+end
 
             
             

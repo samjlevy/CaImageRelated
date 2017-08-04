@@ -14,7 +14,7 @@ switch dimShuffle
         shuffleThis = round(rand(mostTrials,2));
         trialShuffAssign = [useSess(shuffleThis(:,1)+1)' useSess(~shuffleThis(:,1)+1)' ...
                             useSess(shuffleThis(:,2)+3)' useSess(~shuffleThis(:,2)+3)'];
-    case {'studyTest','trialtype'}
+    case {'studytest','trialtype'}
         useSess = [lStudy lTest rStudy rTest];
         
         shuffleThis = round(rand(mostTrials,2));

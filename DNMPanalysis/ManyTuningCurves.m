@@ -1,4 +1,4 @@
-function ManyHeatPlots(mapLoc, thisCell, figHand, subDims, subLocs,titles)
+function ManyTuningCurves(dotHeat, thisCell, TMap_gauss, shuffTMap_gauss, meanCurves, ciCurves, curveLocs, titles)
 
 load(fullfile(mapLoc,'PFsLin.mat'),'TMap_gauss')
 
@@ -18,5 +18,7 @@ for condType = 1:4
         title(titles{condType})
     end 
 end 
+
+
 
 end

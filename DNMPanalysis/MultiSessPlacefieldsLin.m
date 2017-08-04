@@ -11,25 +11,41 @@ correctBounds = StructCorrect(bounds, correct);
 
 trialbytrial = PoolTrialsAcrossSessions(correctBounds,all_x_adj_cm,all_y_adj_cm,all_PSAbool,sessionInds);
 
-[sortedReliability,aboveThresh] = TrialReliability(trialbytrial, 0.5);
-[maxConsec, enoughConsec] = ConsecutiveLaps(trialbytrial,lapThresh);
+save(fullfile(base_path,'trialbytrial.mat'),'trialbytrial')
+
+[~,aboveThresh] = TrialReliability(trialbytrial, 0.5);%sortedReliability
+[~, enoughConsec] = ConsecutiveLaps(trialbytrial,lapThresh);%maxConsec
 
 newUse = cell2mat(cellfun(@(x) sum(x,2) > 0,aboveThresh,'UniformOutput',false));
-newUseActual = find(sum(newUse,2));
 newUse2 = cell2mat(cellfun(@(x) sum(x,2) > 0,enoughConsec,'UniformOutput',false));
-newUseActual2 = find(sum(newUse2,2));
 
-threshing = [sum(newUse,2)>0 sum(newUse2,2)>0];
-threshing2 = find(sum(threshing,2));
+xlims = [25 60]; cmperbin = 1; minspeed = 0; 
+if exist(fullfile(base_path,'PFsLin.mat'),'file')
+    fullfile(base_path,'PFsLin.mat')
+else
+	[~, ~, ~, TMap_unsmoothed, ~, TMap_gauss] =...
+        PFsLinTrialbyTrial(trialbytrial,aboveThresh, xlims, cmperbin, minspeed, 1, base_path);
+end
 
-PFsLinTrialbyTrial(trialbytrial,aboveThresh);
+numShuffles = 1000;
+dimShuffle = 'all'; %'direction' 'studytest'
+[meanCurves, ciCurves, ~, shuffTMap_gauss]=...
+    PlaceTuningCurveLin(base_path, trialbytrial, aboveThresh,  xlims,...
+                        cmperbin, minspeed, numShuffles, dimShuffle);
+
+
+
+
+
+threshing = sum(newUse,2)>0 | sum(newUse2,2)>0;
+useCells = find(threshing);
 
 figDir = fullfile(base_path,'tempPlots');
 if exist(figDir(1:end-4),'dir')==0
     mkdir(fullfile(base_path,'tempPlots'))
 end
-for cellJ = 1:length(threshing2)
-    thisCell = threshing2(cellJ);
+for cellJ = 1:length(useCells)
+    thisCell = useCells(cellJ);
     
     rastPlot = figure('name','Raster Plot');
     rastPlot.OuterPosition = [0 0 850 1100];
@@ -38,7 +54,6 @@ for cellJ = 1:length(threshing2)
     
     resolution_use = '-r600'; %'-r600' = 600 dpi - might not be necessary
     rastPlot.Renderer = 'painters';
-    %rastPlot.PaperOrientation = 'portrait';
     
     zzs = num2str(zeros(1,3-length(num2str(thisCell))));
     save_file = fullfile(figDir, ['cell_' zzs num2str(thisCell) '_heatDot']);
@@ -56,8 +71,6 @@ append_pdfs(output_file,names2{2:end})
 rmdir(figDir,'s')
     
 
-
-
 dotlocs = [5 6; 7 8; 13 14; 15 16];
 heatlocs = [1 2; 3 4; 9 10; 11 12];
 %left bottom width height
@@ -71,16 +84,16 @@ rightCol = 0.55;
 
 titles = {'Study Left'; 'Study Right'; 'Test Left'; 'Test Right'};
 mkdir(fullfile(base_path,'tempPlots'))
-for cellI = 1:length(threshing2)
-    thisCell = threshing2(cellI);
+for cellI = 1:length(useCells)
+    thisCell = useCells(cellI);
 
     dotHeat = figure;
     dotHeat.OuterPosition = [0 0 850 1100];
     dotHeat.PaperPositionMode = 'auto';
     ManyDotPlots(trialbytrial, thisCell, sessionInds, aboveThresh, dotHeat, [4 4], dotlocs, []) %titles
-    ManyHeatPlots(mapLoc, thisCell, dotHeat, [4 4], heatlocs,titles)
+    ManyHeatPlots(base_path, thisCell, dotHeat, [4 4], heatlocs, [])%titles
     
-    ManyTuningCurves( )
+    ManyTuningCurves(dotHeat, thisCell, TMap_gauss, shuffTMap_gauss, meanCurves, ciCurves, curveLocs, titles)
     
     
     cellnums = num2str(sessionInds(thisCell,:));
@@ -91,9 +104,8 @@ for cellI = 1:length(threshing2)
 
     suptitle(['Cell #: ' cellnums])
     
-    resolution_use = '-r600'; %'-r600' = 600 dpi - might not be necessary
+    resolution_use = '-r600'; % dpi - might not be necessary
     rastPlot.Renderer = 'painters';
-    %rastPlot.PaperOrientation = 'portrait';
     
     zzs = num2str(zeros(1,3-length(num2str(thisCell))));
     save_file = fullfile(figDir, ['cell_' zzs num2str(thisCell) '_heatDot']);
@@ -103,19 +115,6 @@ end
 
 append_pdfs(output file, input files)
 
-
-    
-    
-%make lin place fields
-
-%plot heatmaps
-
-plotX = [trialbytrial(condType).trialsX{:}];
-plotY = [trialbytrial(condType).trialsY{:}];
-blockBool = [trialbytrial(condType).trialPSAbool{:}];
-spikeX = plotX(blockBool(14,:));
-spikeY = plotY(blockBool(14,:));
-ddd
 
 
 end
