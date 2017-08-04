@@ -14,7 +14,7 @@ for fn = 1:4
             trialbytrial(fn).trialsY{row,1} = all_y_adj_cm{sess}(getInds);
             trialbytrial(fn).trialPSAbool{row,1} = logical(all_PSAbool_aligned{sess}(:,getInds));
             trialbytrial(fn).sessID(row,1) = sess;
-            trialbytrial(fn).name = ss(fn);
+            trialbytrial(fn).name = ss{fn};
         end
     end
 end

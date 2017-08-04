@@ -15,6 +15,12 @@ for ss = 1:numConds
 end
 sessionUse = sessionUse > 0;
 
+OccMap = cell(numCells, numConds);
+RunOccMap = cell(numCells, numConds);
+xBin = cell(numCells, numConds);
+TMap_unsmoothed = cell(numCells, numConds);
+TCounts = cell(numCells, numConds);
+TMap_gauss = cell(numCells, numConds);
 for cellI = 1:numCells
     for condType = 1:4    
         lapsUse = logical(sum(trialbytrial(condType).sessID == find(sessionUse(cellI,:)),2));
