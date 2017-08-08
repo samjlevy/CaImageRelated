@@ -26,7 +26,7 @@ for cellI = 1:numCells
         
         if any(lapsUse)
         posX = [trialbytrial(condType).trialsX{lapsUse,1}];
-        posY = [trialbytrial(condType).trialsY{lapsUse,1}];
+        %posY = [trialbytrial(condType).trialsY{lapsUse,1}];
         spikeTs = [trialbytrial(condType).trialPSAbool{lapsUse,1}];
         spikeTs = spikeTs(cellI,:);
         

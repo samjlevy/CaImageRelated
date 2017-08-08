@@ -77,7 +77,33 @@ switch block_type
         
         pooled = PoolDNMPbehavior(start_stop_struct, include_struct);    
     
-    case {'delay', 'cage', 'on_maze'}
+    case 'delay'
+        start_stop_struct.starts_pre_l = starts(left_free);
+        start_stop_struct.starts_pre_r = starts(right_free);
+        start_stop_struct.stops_pre_l = stops(left_free);
+        start_stop_struct.stops_pre_r = stops(right_free);
+        
+        include_struct.pre_l = includeBlank;
+        for dd = 1:length(start_stop_struct.starts_pre_l)
+            include_struct.pre_l(start_stop_struct.starts_pre_l(dd,1):start_stop_struct.stops_pre_l(dd,1)) = 1;
+        end    
+        include_struct.pre_l = logical(include_struct.pre_l);
+        exclude_struct.pre_l = logical(double(include_struct.pre_l == 0));
+        
+        include_struct.pre_r = includeBlank;
+        for dd = 1:length(start_stop_struct.starts_pre_r)
+            include_struct.pre_r(start_stop_struct.starts_pre_r(dd,1):start_stop_struct.stops_pre_r(dd,1)) = 1;
+        end
+        include_struct.pre_r = logical(include_struct.pre_r);
+        exclude_struct.pre_r = logical(double(include_struct.pre_r == 0));
+        
+        correct.all = (left_forced & right_free) | (right_forced & left_free);
+        correct.pre_l = correct.all(left_free);
+        correct.pre_r = correct.all(right_free);
+        
+        pooled = PoolDNMPbehavior(start_stop_struct, include_struct);
+        
+    case {'cage', 'on_maze'}
         start_stop_struct.starts = starts;
         start_stop_struct.stops = stops;
         

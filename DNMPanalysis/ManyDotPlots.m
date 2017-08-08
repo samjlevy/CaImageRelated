@@ -1,10 +1,10 @@
 function ManyDotPlots(trialbytrial, thisCell, sessionInds, aboveThresh,...
-    figHand, subDims, subLocs,titles)
+    figHand, subPos,titles)%subDims, 
 
 %figHand;
 
 for condType = 1:4
-    subHand(condType) = subplot(subDims(1),subDims(2),subLocs(condType,:));
+    subHand(condType) = subplot('Position',subPos(condType,:));
     
     badSess = find(sessionInds(thisCell,:)==0); %| aboveThresh{condType}(thisCell,:)==0
     badLaps = trialbytrial(condType).sessID == badSess;
@@ -16,6 +16,7 @@ for condType = 1:4
     
     plot(subHand(condType),60-plotX,plotY,'.k','MarkerSize',8)
     
+    
     blockBool = [trialbytrial(condType).trialPSAbool{goodLaps}];
     blockBool = blockBool(thisCell,:);
     %if condType==4
@@ -26,6 +27,7 @@ for condType = 1:4
     spikeY = plotY(blockBool);
     hold on
     plot(subHand(condType),60-spikeX, spikeY, '.r','MarkerSize',10)
+    xlim([0 35])
     %end
     
     if any(titles)

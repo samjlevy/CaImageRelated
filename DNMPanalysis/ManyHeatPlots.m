@@ -1,4 +1,4 @@
-function ManyHeatPlots(mapLoc, thisCell, figHand, subDims, subLocs,titles)
+function ManyHeatPlots(mapLoc, thisCell, figHand, subPos,titles)% subDims,
 
 load(fullfile(mapLoc,'PFsLin.mat'),'TMap_gauss')
 
@@ -8,7 +8,7 @@ maxRate = max([useTmaps{:}]);
 %scaledTmaps = cellfun(@(x) x/maxRate,useTmaps,'UniformOutput',false);
 
 for condType = 1:4
-    subHand(condType) = subplot(subDims(1),subDims(2),subLocs(condType,:));
+    subHand(condType) = subplot('Position',subPos(condType,:));
 
     imagesc(subHand(condType),fliplr(useTmaps{condType}))
     caxis([0 maxRate])

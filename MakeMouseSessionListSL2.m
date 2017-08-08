@@ -626,6 +626,8 @@ MDSL(i).Room = '201a - 2015';
 MDSL(i).RecordStartTime = '11:14:17.394000 AM';
 if strcmp(userstr,'mouseimage')
     MDSL(i).Location = 'I:\Europa\Europa_161013';
+elseif strcmp(userstr,'sam')
+    MDSL(i).Location = 'H:\Europa\Europa_161013';
 end
 MDSL(i).Notes = [];
 
@@ -795,6 +797,8 @@ MDSL(i).Room = '201a - 2015';
 MDSL(i).RecordStartTime = '11:19:41.906000 AM';
 if strcmp(userstr,'mouseimage')
     MDSL(i).Location = 'I:\Europa\Europa_161014';
+elseif strcmp(userstr,'sam')
+    MDSL(i).Location = 'H:\Europa\Europa_161014';
 end
 MDSL(i).Notes = [];
 

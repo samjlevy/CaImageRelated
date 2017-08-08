@@ -1,5 +1,5 @@
-function MultiSessPlacefieldsLin( allfiles, all_x_adj_cm, all_y_adj_cm, sessionInds, all_PSAbool, cmperbin, all_useLogical, useActual)
-lapThresh = 4;
+function MultiSessPlacefieldsLin( allfiles, all_x_adj_cm, all_y_adj_cm, sortedSessionInds, all_PSAbool, cmperbin, all_useLogical, useActual)
+lapThresh = 3;
 mapLoc = 'F:\Bellatrix\Bellatrix_160901';
 
 numSessions = length(allfiles); 
@@ -9,9 +9,9 @@ numframes = cell2mat(cellfun(@length, all_x_adj_cm, 'UniformOutput',false));
 
 correctBounds = StructCorrect(bounds, correct);
 
-trialbytrial = PoolTrialsAcrossSessions(correctBounds,all_x_adj_cm,all_y_adj_cm,all_PSAbool,sessionInds);
+trialbytrial = PoolTrialsAcrossSessions(correctBounds,all_x_adj_cm,all_y_adj_cm,all_PSAbool,sortedSessionInds);
 
-save(fullfile(base_path,'trialbytrial.mat'),'trialbytrial')
+save(fullfile(base_path,'trialbytrial.mat'),'trialbytrial','sortedSessionInds')
 
 [~,aboveThresh] = TrialReliability(trialbytrial, 0.5);%sortedReliability
 [~, enoughConsec] = ConsecutiveLaps(trialbytrial,lapThresh);%maxConsec
@@ -50,7 +50,7 @@ for cellJ = 1:length(useCells)
     rastPlot = figure('name','Raster Plot');
     rastPlot.OuterPosition = [0 0 850 1100];
     rastPlot.PaperPositionMode = 'auto';
-    PlotRasterMultiSess2(trialbytrial, thisCell, sessionInds,rastPlot);
+    PlotRasterMultiSess2(trialbytrial, thisCell, sortedSessionInds,rastPlot);
     
     resolution_use = '-r600'; %'-r600' = 600 dpi - might not be necessary
     rastPlot.Renderer = 'painters';
@@ -75,12 +75,23 @@ dotlocs = [5 6; 7 8; 13 14; 15 16];
 heatlocs = [1 2; 3 4; 9 10; 11 12];
 %left bottom width height
 
-dotHeight = 0.18;
-heatHeight = 0.08;
-tuningHeight = 0.18;
+dotH = 0.19;
+heatH = 0.04;
+tuningH = 0.19;
+
 width = 0.4;
 leftCol = 0.05;
-rightCol = 0.55;
+botMarg = 0.03;
+rowBuf = 0.01;
+%rightCol = 0.55;
+
+for condType = 1:4
+    colMod = mod(condType+1,2);
+    rowMod = condType<3;
+    dotPos(condType,:) = [leftCol+0.5*colMod, botMarg+0.5*rowMod, width, dotH];
+    heatPos(condType,:) = [dotPos(condType,1:3) 0] + [0 rowBuf+dotH 0 heatH]; 
+    tuningPos(condType,:) = [heatPos(condType,1:3) 0] + [0 rowBuf+heatH 0 tuningH];
+end
 
 titles = {'Study Left'; 'Study Right'; 'Test Left'; 'Test Right'};
 mkdir(fullfile(base_path,'tempPlots'))
@@ -88,15 +99,14 @@ for cellI = 1:length(useCells)
     thisCell = useCells(cellI);
 
     dotHeat = figure;
-    dotHeat.OuterPosition = [0 0 850 1100];
+    dotHeat.OuterPosition = [400 50 850 1000];
     dotHeat.PaperPositionMode = 'auto';
-    ManyDotPlots(trialbytrial, thisCell, sessionInds, aboveThresh, dotHeat, [4 4], dotlocs, []) %titles
-    ManyHeatPlots(base_path, thisCell, dotHeat, [4 4], heatlocs, [])%titles
+    ManyDotPlots(trialbytrial, thisCell, sortedSessionInds, aboveThresh, dotHeat, dotPos, []) %titles
+    ManyHeatPlots(base_path, thisCell, dotHeat, heatPos, [])%titles
     
-    ManyTuningCurves(dotHeat, thisCell, TMap_gauss, shuffTMap_gauss, meanCurves, ciCurves, curveLocs, titles)
+    ManyTuningCurves(dotHeat, base_path, thisCell, meanCurves, ciCurves, tuningPos, titles)
     
-    
-    cellnums = num2str(sessionInds(thisCell,:));
+    cellnums = num2str(sortedSessionInds(thisCell,:));
     spaces = [-2 strfind(cellnums,'  ')];
     cellnums(spaces(find(diff(spaces)>1)+1))='/';
     cellnums(strfind(cellnums,' '))=[];
