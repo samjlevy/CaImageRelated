@@ -2155,7 +2155,9 @@ if any(auto_frames)
         [~,ia,~] = intersect(auto_frames,excludeFromVel); %returns index vectors ia and ib.
         auto_frames(ia) = [];
     end
+    try
     close(badPoints);
+    end
     numPasses=2;
     %if length(auto_frames) > 500
     %    auto_chunks = 

@@ -9,12 +9,15 @@ function [FToffset, LastUsable, whichEndsFirst ] = JustFToffset(varargin)
 
 useXml = 0;
 overwrite_existing = 0;
+imaging_start_frame = 1;
 for aa=1:length(varargin)
     if strcmp(varargin{aa},'xml_file')
         xml_file = varargin{aa+1};
         useXml = 1;
     elseif strcmp(varargin{aa},'overwrite_existing')    
         overwrite_existing = varargin{aa+1};
+    elseif strcmpe(varargin{aa},'imaging_start_frame')
+        imaging_start_frame = varargin{aa+1};
     end
 end    
 
@@ -72,11 +75,17 @@ switch useXml
 end        
 
 %FToffset gives first imaging frame >= first tracking frame
-FToffset = ceil(time(1)*fps_brainimage);
+FToffset = ceil(time(1)*fps_brainimage);%seconds * (frames / second) = frames
+
+%if any(imaging_start_frame)
+    oldLength = FTlength;
+    FTlength = oldLength - (imaging_start_frame-1);  
+    FToffset = FToffset-1 + imaging_start_frame;
+%end
 
 brainTime = (1:FTlength)*(1/fps_brainimage);
 
-PlexEndsAfterImaging = time(end)-FTlength*(1/fps_brainimage);
+PlexEndsAfterImaging = time(end)-brainTime(end);
 switch PlexEndsAfterImaging > 0
     case 0
         whichEndsFirst = 'tracking';
@@ -86,9 +95,13 @@ switch PlexEndsAfterImaging > 0
         whichEndsFirst = 'imaging';
         %First tracking frame after imaging ends
         LastUsable = find(time >= brainTime(end), 1, 'first');
-end        
+end
 
-save FToffsetSam.mat FToffset LastUsable whichEndsFirst FTlength brainTime time
+if strcmpi(whichEndsFirst,'tracking') && (imaging_start_frame~=1)
+    disp('Be careful, this condition has NOT been validated')
+end
+
+save FToffsetSam.mat FToffset LastUsable whichEndsFirst FTlength brainTime time imaging_start_frame
 
 %FToffset = ceil(time(1)*fps_brainimage)/(1/fps_brainimage);
 

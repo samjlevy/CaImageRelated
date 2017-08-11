@@ -82,9 +82,10 @@ SR=20;
 
 %Rotate to 0
 [rot_x,rot_y,rotang] = rotate_traj(x,y);
+disp(num2str(rotang))
 
 %Convert to CM
-Pix2Cm = Pix2CMlist (RoomStr)
+Pix2Cm = Pix2CMlist (RoomStr);
 x_adj_cm = rot_x.*Pix2Cm;
 y_adj_cm = rot_y.*Pix2Cm;
 

@@ -27,9 +27,10 @@ AdjustBehaviorTimes
     %Brings points across laps as close together as possible so always
     %comparing the same sections of the maze. Right now only works for
     %ginput to pick anchor point, other versions can be added
-FindBadLaps
-    %used to find bad points in individual bad laps, doesn't yet fix
-    %the spreadsheet itself
+FindBadLapsWrapper
+    %calls FindBadLaps
+    %used to find bad points in individual bad laps, writes a new
+    %spreadsheet that has the fixed timestamps
 GetBlockDNMPbehavior
     %Compiles timestamps from a spreadsheet into a
     %struct with pairs of starts and stops, a struct

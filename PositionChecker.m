@@ -146,12 +146,14 @@ if miscVar.VideoLoadedFlag==1
             case 1  
                 jumpFrame=str2double(jumpFrame{:});
                 if jumpFrame>0 && jumpFrame <=miscVar.totalFrames
-                    miscVar.frameNum = jumpFrame-1;
-                    video.CurrentTime = miscVar.frameNum/video.FrameRate;
-                    miscVar.currentFrame = readFrame(video);
-                    miscVar.frameNum = miscVar.frameNum + 1;
-                    videoFig.plotted = imagesc(miscVar.currentFrame);
-                    title(['frame ' num2str(miscVar.frameNum) '/' num2str(miscVar.totalFrames)])
+                    %miscVar.frameNum = jumpFrame-1;
+                    %video.CurrentTime = miscVar.frameNum/video.FrameRate;
+                    %miscVar.currentFrame = readFrame(video);
+                    %miscVar.frameNum = miscVar.frameNum + 1;
+                    %videoFig.plotted = imagesc(miscVar.currentFrame);
+                    %title(['frame ' num2str(miscVar.frameNum) '/' num2str(miscVar.totalFrames)])
+                    miscVar.frameWanted = jumpFrame;
+                    SetAndDisplay
                 else   
                     msgbox('Frame number must in range','Error','error')
                 end

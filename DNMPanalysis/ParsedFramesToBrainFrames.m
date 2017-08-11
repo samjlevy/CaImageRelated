@@ -1,6 +1,8 @@
 function ParsedFramesToBrainFrames ( xls_file)
 %Takes an excell file as input and returns (in same format) all found frame
 %numbers in brain (FT) time.
+%Question for validation: in alignment bit (lines 32/33), should that
+%-FToffset... be there? Make sure to comment why or why not if removing it
 
 if ~exist('xls_file','var')
     try
@@ -28,7 +30,10 @@ newFrames = frames;
 for column = (1+strcmpi(txt{1,1},'Trial #')):size(txt,2)
     if ~isnan(frames(:,column))
        for row = 1:size(frames,1)
-           newFrames(row, column) = findclosest(time(frames(row, column)), brainTime) - FToffset;
+           newFrames(row, column) = findclosest(time(frames(row, column)), brainTime)...
+               - (FToffset - (imaging_start_frame-1));
+           %Probably this -FT offset accounts for frame numbers being
+           %unaligned even after time is aligned
        end
     end
 end

@@ -45,6 +45,7 @@ for thisE = 1:length(epochs)
         plot(x_adj_cm([badLap(1) badLap(end)]), y_adj_cm([badLap(1) badLap(end)]), '.y', 'MarkerSize', 10)
         
         doneFinding = 0;
+        bounds = [1 length(badLap)];
         plotHere = 1;
         while doneFinding == 0
             figure(badFig);
@@ -59,7 +60,7 @@ for thisE = 1:length(epochs)
             plot(x_adj_cm(badLap(plotHere)), y_adj_cm(badLap(plotHere)), '.r', 'MarkerSize', 10)
             plot(x_adj_cm(badLap(plotHere)), y_adj_cm(badLap(plotHere)), 'or', 'MarkerSize', 10)
 
-            ss = input('Next point or previous? (a/d, m for done) > ','s');
+            ss = input('Next point or previous? (a/d, j jump, m for done) > ','s');
             switch ss
                 case 'a'
                     if plotHere > 1; plotHere = plotHere - 1; end
@@ -68,6 +69,11 @@ for thisE = 1:length(epochs)
                 case 'm'
                     doneFinding = 1;  
                     epochs(thisE).starts(badLapNum) = badLap(plotHere);
+                case 'j'
+                    figure(badFig);
+                    [nbx, nby] = ginput(1);
+                    [ bidx ] = findclosest2D (x_adj_cm(badLap), y_adj_cm(badLap), nbx, nby);
+                    plotHere = bidx;
             end
         end
         
@@ -79,6 +85,8 @@ for thisE = 1:length(epochs)
     
     reporter{thisE} = diff([epochs(thisE).starts inEpochs(thisE).starts],1,2);  
 end
+
+close(badFig);
 
 fixedEpochs = epochs;
 
