@@ -32,7 +32,9 @@ for condType=1:4
     sessBreaks = find(diff(trialbytrial(condType).sessID));
     for thisLap = 1:length(trialbytrial(condType).trialsX)
         plotLine = plotLine + 1;
-                
+        
+        %here add loop to plot ticks for each x position this trial in a faint gray
+        
         thesePoints = find(trialbytrial(condType).trialPSAbool{thisLap,1}(thisCell,:));
         
         hold on

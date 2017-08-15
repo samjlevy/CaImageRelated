@@ -14,8 +14,7 @@ function PreProcessMousePosition_autoSL3(varargin)
 %   - Blob restrictions for will and gray
 %   - contrast adjustment
 %   - select points by midpoint between frames to help catch not high
-%   velocity wrong things  
-%   - bring back cluster thresh to allow for more frequent saving 
+%   velocity wrong things   
 %   - how similar is blob to blob correlating to good position on an
 %   adjacent frame?
 %   - reject blobs found near current location

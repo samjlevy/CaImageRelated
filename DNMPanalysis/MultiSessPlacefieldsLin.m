@@ -13,8 +13,8 @@ trialbytrial = PoolTrialsAcrossSessions(correctBounds,all_x_adj_cm,all_y_adj_cm,
 
 save(fullfile(base_path,'trialbytrial.mat'),'trialbytrial','sortedSessionInds')
 
-[~,aboveThresh] = TrialReliability(trialbytrial, 0.5);%sortedReliability
-[~, enoughConsec] = ConsecutiveLaps(trialbytrial,lapThresh);%maxConsec
+[reli,aboveThresh] = TrialReliability(trialbytrial, 0.5);%sortedReliability
+[consec, enoughConsec] = ConsecutiveLaps(trialbytrial,lapThresh);%maxConsec
 
 newUse = cell2mat(cellfun(@(x) sum(x,2) > 0,aboveThresh,'UniformOutput',false));
 newUse2 = cell2mat(cellfun(@(x) sum(x,2) > 0,enoughConsec,'UniformOutput',false));
@@ -95,6 +95,7 @@ end
 
 titles = {'Study Left'; 'Study Right'; 'Test Left'; 'Test Right'};
 mkdir(fullfile(base_path,'tempPlots'))
+figDir = 'F:\Bellatrix\Bellatrix_160831\tempPlots';
 for cellI = 1:length(useCells)
     thisCell = useCells(cellI);
 
@@ -115,13 +116,22 @@ for cellI = 1:length(useCells)
     suptitle(['Cell #: ' cellnums])
     
     resolution_use = '-r600'; % dpi - might not be necessary
-    rastPlot.Renderer = 'painters';
+    dotHeat.Renderer = 'painters';
     
     zzs = num2str(zeros(1,3-length(num2str(thisCell))));
     save_file = fullfile(figDir, ['cell_' zzs num2str(thisCell) '_heatDot']);
-    print(rastPlot, save_file,'-dpdf','-fillpage',resolution_use);
-    close(rastPlot)
+    print(dotHeat, save_file,'-dpdf','-fillpage',resolution_use);
+    close(dotHeat)
 end
+
+fls = dir(figDir);
+fls([fls.isdir]) = [];
+names = {fls.name};
+names2 = cellfun(@(x) fullfile(figDir,x),names,'UniformOutput',false);
+output_file = fullfile(base_path,'Bellatrix DotCurveHeat.pdf');
+copyfile(names2{1},fullfile(output_file));
+append_pdfs(output_file,names2{2:end})
+%rmdir(figDir,'s')
 
 append_pdfs(output file, input files)
 

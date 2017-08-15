@@ -1,6 +1,6 @@
 function PlotAllHeatmaps(base_path, useCells, titles)
 
-load(fullfile(base_path),'PFsLin.mat')
+load(fullfile(base_path,'PFsLin.mat'))
 
 if isempty(useCells)
     useCells = find(~cellfun(@isempty,{TMap_gauss{:,1}}));
