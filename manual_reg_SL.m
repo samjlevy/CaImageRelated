@@ -227,6 +227,8 @@ end
 
 save(fullfile(reg_path,'RegisteredImageSL.mat'),'regImage_shifted','reg_shift_centers','regAvg_shifted','pairedInds')
 
+close(baseFig)
+close(regFig)
 %end
 
 end
