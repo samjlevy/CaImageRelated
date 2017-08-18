@@ -132,8 +132,8 @@ end
 
 %hit selectivity
 figure; histogram(LRhitSelectivity,20); title('Left/Right hit selectivity')
-figure; histogram(ForcedFreeHITselectivity,20); title('Forced/Free hit selectivity')
-figure; plot(LRhitSelectivity, ForcedFreeHITselectivity,'.'); title('X: LR, Y: FoFr')
+figure; histogram(ForcedFreeHITselectivity,20); title('Study/Test hit selectivity')
+figure; plot(LRhitSelectivity, ForcedFreeHITselectivity,'*'); title('X: LR, Y: Study/Test')
 
 %firing duration selectivity
 figure; histogram(LRdurSelectivity,20); title('Left/Right duration selectivity')

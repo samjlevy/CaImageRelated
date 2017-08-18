@@ -13,7 +13,8 @@ end
 [frames, txt] = xlsread(xls_path, xls_sheet_num);
 for label=1:size(frames,2)
     dontCheck(label) = any(strfind(txt{1,label},'L/R'))...
-        || any(strfind(txt{1,label},'Trial #')); %#ok<AGROW>
+        || any(strfind(txt{1,label},'Trial #'))...
+        || any(strfind(txt{1,label},'Trial Type')); %#ok<AGROW>
 end    
 
 try

@@ -136,7 +136,8 @@ if matchup==1
         [overlay,overlayRef] = imfuse(baseUnpaired,regUnpaired,'ColorChannels',[1 2 0]);
 
         if exist('mixFig','var'); delete(mixFig); clear('mixFig'); end
-        mixFig = figure; imshow(overlay,overlayRef)
+        mixFig = figure; imshow(overlay,overlayRef);
+        mixFig.Position = [450 250 900 700]; 
         title(['Base and unpaired reg cells, ' num2str(length(unpairedRegCells))...
             ' cell centers for ' num2str(distanceThreshold) 'um'])
         
@@ -170,19 +171,18 @@ if matchup==1
                 
                 figure(mixFig);
                 hold on
-                plot(fullReg.centers(unmatchedBaseCells(baseCell),1),fullReg.centers(unmatchedBaseCells(baseCell),2),'*r');
-                plot(reg_shift_centers(unpairedRegCells(regCell),1),reg_shift_centers(unpairedRegCells(regCell),2),'*c');
+                plot(fullReg.centers(unmatchedBaseCells(baseCell),1),fullReg.centers(unmatchedBaseCells(baseCell),2),'*c');
+                plot(reg_shift_centers(unpairedRegCells(regCell),1),reg_shift_centers(unpairedRegCells(regCell),2),'*m');
                 
                 doneManual = 0;
                 manGood = questdlg('Good?','Good','Yes','Redo','Cancel','Yes');
                 switch manGood
                     case 'Yes'
+                        removed(size(removed,1)+1,1:2) = [unmatchedBaseCells(baseCell) unpairedRegCells(regCell)];
                         %Move those cells appropriately
                         inRangeIndicesCells = [inRangeIndicesCells unpairedRegCells(regCell)];
                         unpairedRegCells(regCell) = [];
                         unmatchedBaseCells(baseCell) = [];
-                        
-                        removed(size(removed,1)+1,1:2) = [unmatchedBaseCells(baseCell) unpairedRegCells(regCell)];
                         
                         skipPrompt=0;
                     case 'Redo'
@@ -228,6 +228,7 @@ if matchup==1
             save(fullfile(base_path,'fullReg.mat'),'fullReg','-v7.3')
             save(fullfile(base_path,'fullRegImage.mat'),'fullRegImage','-v7.3')
             save(fullfile(base_path,'fullRegROIavg.mat'),'fullRegROIavg','-v7.3')
+            disp('worked, saved')
         catch
             keyboard
         end
@@ -239,6 +240,6 @@ if matchup==1
 end
 end
 
-close(mixFig)
+try; close(mixFig); end
 
 end

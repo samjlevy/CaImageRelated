@@ -1,5 +1,8 @@
-function [fixedEpochs, reporter, epochs] = FindBadLapsWrapper(pos_file,xls_file)
+function [fixedEpochs, reporter, epochs] = FindBadLapsWrapper(pos_file,xls_file,sessionType)
 
+if ~exist('sessionType','var')
+    sessionType = 1; %DNMP
+end
 load(pos_file,'x_adj_cm','y_adj_cm')
 
 [frames, txt] = xlsread(xls_file, 1);
@@ -17,8 +20,12 @@ if sum(free_stem_ends)==0
 end
 
 %Trial directions
+switch sessionType
+    case 1
 [right_forced, left_forced, right_free, left_free] = DNMPtrialDirections(frames, txt);
-
+    case 2
+ [right_forced, left_forced, right_free, left_free] = ForcedUnforcedtrialDirections(frames, txt);       
+end
 forced_r_stem = [forced_starts(right_forced), forced_stem_ends(right_forced)];
 forced_l_stem = [forced_starts(left_forced), forced_stem_ends(left_forced)];
 free_r_stem = [free_starts(right_free), free_stem_ends(right_free)];

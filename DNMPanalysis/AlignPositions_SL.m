@@ -4,7 +4,37 @@ function AlignPositions_SL (RoomStr, varargin)%base_session, reg_session,
 %difference, align to that; base session points can be saved as an initial
 %register, everything else adjusted to them
 %for now, all we're doing is rotating everything the same way
-%{
+load('Pos_brain.mat')
+SR=20;
+
+%Rotate to 0
+[rot_x,rot_y,rotang] = rotate_traj(x,y);
+disp(num2str(rotang))
+
+%Convert to CM
+Pix2Cm = Pix2CMlist (RoomStr);
+x_adj_cm = rot_x.*Pix2Cm;
+y_adj_cm = rot_y.*Pix2Cm;
+
+%Speed for each
+dx = diff(x_adj_cm);
+dy = diff(y_adj_cm);
+speed = hypot(dx,dy)*SR;
+
+
+%Holdover overhead (probably)
+xmax = max(x_adj_cm);
+xmin = min(x_adj_cm);
+ymax = max(y_adj_cm);
+ymin = min(y_adj_cm);    
+
+PSAbool = PSAboolAdjusted;
+
+save('Pos_align.mat','x_adj_cm','y_adj_cm','xmin','xmax','ymin','ymax',...
+                'speed', 'PSAbool');
+            
+            
+            %{
 if strcmpi(base_session.Location,reg_session.Location)
     %Rotate, save anchor points
 end
@@ -77,32 +107,5 @@ ymin = min(y_all);
     
 %}
 
-load('Pos_brain.mat')
-SR=20;
 
-%Rotate to 0
-[rot_x,rot_y,rotang] = rotate_traj(x,y);
-disp(num2str(rotang))
-
-%Convert to CM
-Pix2Cm = Pix2CMlist (RoomStr);
-x_adj_cm = rot_x.*Pix2Cm;
-y_adj_cm = rot_y.*Pix2Cm;
-
-%Speed for each
-dx = diff(x_adj_cm);
-dy = diff(y_adj_cm);
-speed = hypot(dx,dy)*SR;
-
-
-%Holdover overhead (probably)
-xmax = max(x_adj_cm);
-xmin = min(x_adj_cm);
-ymax = max(y_adj_cm);
-ymin = min(y_adj_cm);    
-
-PSAbool = PSAboolAdjusted;
-
-save('Pos_align.mat','x_adj_cm','y_adj_cm','xmin','xmax','ymin','ymax',...
-                'speed', 'PSAbool');
 end

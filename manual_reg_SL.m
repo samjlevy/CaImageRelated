@@ -87,7 +87,7 @@ while reallyDone == 1
 
 while stillLabeling == 1
     
-    disp(['currently have ' num2str(size(pairedInds,1)) ' paired cells'])
+    disp(['currently have ' num2str(size(pairedInds,1)) ' anchor cells'])
     
     if gotPts <= 5
         getAcell=1;
