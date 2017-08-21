@@ -9,51 +9,59 @@ else
     load(fullfile(base_path,'fullReg.mat'))
 end
 
+if ~exist('reg_paths','var')
+    reg_paths = fullReg.RegSessions;
+end
+
 allfiles = [base_path; reg_paths(:)];
 filepts = cellfun(@(x) strsplit(x,'_'),allfiles,'UniformOutput',false);
 dates = cell2mat(cellfun(@(x) str2double(x{2}(1:6)),filepts,'UniformOutput',false));
 [~,howSort] = sort(dates);
 allfiles = allfiles(howSort);
 
-allUse = [1 regUse];
+allUse = logical([1; regUse(:)]);
 allUseSorted = allUse(howSort);
 
-%sort session Inds: comes in in order of session registration
-sortedSessionInds = fullReg.sessionInds(:,howSort);
+sortOnly = howSort(allUseSorted);
 
-TFind = 0;
+allfiles = [allfiles(sortOnly)];
+
+allSessType = [1; fullReg.sessionType(:)];
+sessionType = allSessType(sortOnly);
+%useFiles =[allfiles(allUseSorted)];
+
+
+%sort session Inds: comes in in order of session registration
+sortedSessionInds = fullReg.sessionInds(:,sortOnly);
+
+%TFind = 0;
 for thisFile = 1:length(allfiles)
-    if allUseSorted(thisFile)==1
-    TFind = TFind+1;
+    
+    %TFind = TFind+1;
         
     load(fullfile(allfiles{thisFile},'Pos_align.mat'))
-    xls_file = dir(fullfile(allfiles{thisFile},'*BrainTime_Adjusted.xlsx'));
-    [frames, txt] = xlsread(fullfile(allfiles{thisFile},xls_file.name), 1);
+    xls_file = dir(fullfile(allfiles{thisFile},'*Finalized.xlsx'));
+    xls_file = xls_file.name;
+    [frames, txt] = xlsread(fullfile(allfiles{thisFile},xls_file), 1);
 
-    %bigStuff(thisFile).PSAbool = PSAbool;
-    %bigStuff(thisFile).x_adj_cm = x_adj_cm;
-    all_x_adj_cm{1,TFind} = x_adj_cm;
-    all_y_adj_cm{1,TFind} = y_adj_cm;
-    all_PSAbool{1,TFind} = PSAbool;
+    all_x_adj_cm{1,thisFile} = x_adj_cm;
+    all_y_adj_cm{1,thisFile} = y_adj_cm;
+    all_PSAbool{1,thisFile} = PSAbool;
     
+    %Trial directions
+    switch sessionType(thisFile)
+        case 1
+            
     forced_starts = CondExcelParseout(frames, txt, 'Start on maze (start of Forced', 0);
     free_starts = CondExcelParseout(frames, txt, 'Lift barrier (start of free choice)', 0);
 
     forced_stem_ends = CondExcelParseout(frames, txt, 'ForcedChoiceEnter', 0);
-    if sum(forced_stem_ends)==0
-        forced_stem_ends = CondExcelParseout(frames, txt, 'Forced Stem End', 0);
-    end
+    
     free_stem_ends = CondExcelParseout(frames, txt, 'FreeChoiceEnter', 0);
-    if sum(free_stem_ends)==0
-        free_stem_ends = CondExcelParseout(frames, txt, 'Free Stem End', 0);
-    end
-
-    %Trial directions
-    switch sessionType
-    case 1
-    [right_forced, left_forced, right_free, left_free] = DNMPtrialDirections(frames, txt);
+    
+        [right_forced, left_forced, right_free, left_free] = DNMPtrialDirections(frames, txt);
         case 2
-     [right_forced, left_forced, right_free, left_free] = ForcedUnforcedtrialDirections(frames, txt);       
+        [right_forced, left_forced, right_free, left_free] = ForcedUnforcedtrialDirections(frames, txt);       
     end
     %Good lap timestamps (video too short, FT too short, etc.)
     tooLong = frames >= length(speed);%FTuseIndices(end)
@@ -79,6 +87,10 @@ for thisFile = 1:length(allfiles)
     forced_l_stem = [forced_starts(allGood & left_forced), forced_stem_ends(allGood & left_forced)];
     free_r_stem = [free_starts(allGood & right_free), free_stem_ends(allGood & right_free)];
     free_l_stem = [free_starts(allGood & left_free), free_stem_ends(allGood & left_free)];
+    
+    
+    [start_stop_struct, ~, ~, ~, correct]...
+    = GetBlockDNMPbehavior( xls_file, 'stem_only', length(x_adj_cm));
 
     all_epochs(TFind).epochs(1).starts = forced_l_stem(:,1);
     all_epochs(TFind).epochs(1).stops = forced_l_stem(:,2);
@@ -123,6 +135,15 @@ catch
     end
 end
 useActual = find(sum(bigUse,2) > 0);
+
+%{
+if sum(forced_stem_ends)==0
+        forced_stem_ends = CondExcelParseout(frames, txt, 'Forced Stem End', 0);
+    end
+    if sum(free_stem_ends)==0
+        free_stem_ends = CondExcelParseout(frames, txt, 'Free Stem End', 0);
+    end
+%}
 
 end
 

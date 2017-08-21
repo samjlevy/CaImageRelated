@@ -10,6 +10,21 @@ if nargin==3
     isText=0;
 end
 
+%Exception to handle inconsistent labelling
+columnExists = any(cell2mat(cellfun(@(x) strcmpi(x,columnLabel),txt(1,:),'UniformOutput',false)));
+if columnExists == 0
+    switch columnLabel
+        case 'ForcedChoiceEnter'
+            disp('Switched label')
+            columnLabel = 'Forced Stem End';
+        case 'FreeChoiceEnter'
+            columnLabel = 'Free Stem End';
+            disp('Switched label')
+        otherwise
+            disp('Not going to find this column')
+    end
+end
+
 colNum = [];
 framesWanted = zeros(size(frames,1),1);
 for colLab = 1:size(txt,2)
