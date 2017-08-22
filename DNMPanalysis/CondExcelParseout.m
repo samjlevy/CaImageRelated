@@ -43,23 +43,4 @@ for colLab = 1:size(txt,2)
     end
 end
 
-
-
-%{
-switch columnLabel
-        case 'Start on maze (start of Forced'
-        case 'Lift barrier (start of free choice)'
-        case 'Leave maze'
-        case 'Start in homecage'
-        case 'Leave homecage'
-        case 'Forced Trial Type (L/R)'
-        case 'Free Trial Choice (L/R)'
-        case 'Enter Delay' 
-        case 'Forced Choice' 
-        case 'Free Choice' 
-        case 'Forced Reward'
-        case 'Free Reward'
-    end
-%}
-
 end

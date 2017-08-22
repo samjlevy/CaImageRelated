@@ -9,7 +9,8 @@ numframes = cell2mat(cellfun(@length, all_x_adj_cm, 'UniformOutput',false));
 
 correctBounds = StructCorrect(bounds, correct);
 
-trialbytrial = PoolTrialsAcrossSessions(correctBounds,all_x_adj_cm,all_y_adj_cm,all_PSAbool,sortedSessionInds);
+trialbytrial = PoolTrialsAcrossSessions(correctBounds,position.all_x_adj_cm,position.all_y_adj_cm,...
+    all_PSAbool,sortedSessionInds);
 
 save(fullfile(base_path,'trialbytrial.mat'),'trialbytrial','sortedSessionInds')
 

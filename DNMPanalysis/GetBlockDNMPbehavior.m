@@ -1,4 +1,4 @@
-function [start_stop_struct, include_struct, exclude_struct, pooled, correct]...
+function [start_stop_struct, include_struct, exclude_struct, pooled, correct, lapNumber]...
     = GetBlockDNMPbehavior( xls_file, block_type, sessionLength)
 %Returns frame numbers for what block you want, asking for what type of
 %timestamps
@@ -44,6 +44,11 @@ switch block_type
         start_stop_struct.test_l = [free_starts(left_free), free_stops(left_free)];
         start_stop_struct.test_r = [free_starts(right_free), free_stops(right_free)];
         
+        lapNumber.study_l = frames(left_forced,1);
+        lapNumber.study_r = frames(right_forced,1);
+        lapNumber.test_l = frames(left_free,1);
+        lapNumber.test_r = frames(right_free,1);
+        
         include_struct.study_r = includeBlank;
         for aa = 1:length(start_stop_struct.study_r)
             include_struct.study_r(start_stop_struct.study_r(aa,1):start_stop_struct.study_r(aa,2)) = 1;
@@ -83,6 +88,9 @@ switch block_type
         start_stop_struct.stops_pre_l = stops(left_free);
         start_stop_struct.stops_pre_r = stops(right_free);
         
+        lapNumber.pre_l = frames(left_free,1);
+        lapNumber.pre_r = frames(right_free,1);
+        
         include_struct.pre_l = includeBlank;
         for dd = 1:length(start_stop_struct.starts_pre_l)
             include_struct.pre_l(start_stop_struct.starts_pre_l(dd,1):start_stop_struct.stops_pre_l(dd,1)) = 1;
@@ -106,6 +114,8 @@ switch block_type
     case {'cage', 'on_maze'}
         start_stop_struct.starts = starts;
         start_stop_struct.stops = stops;
+        
+        lapNumber.lap = frames(:,1);
         
         include_struct.test_l = includeBlank;
         for ee = 1:length(starts)

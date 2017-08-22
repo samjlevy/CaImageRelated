@@ -1,4 +1,6 @@
-%Better-validated sequence; uses Sam's version of stuff
+%These are the main ones that need to happen to standardize analaysis. 
+
+%Mostly-validated sequence
 Pix2Cm = 0.0874;
 RoomStr = '201a - 2015';
 
@@ -31,6 +33,31 @@ FindBadLapsWrapper
     %calls FindBadLaps
     %used to find bad points in individual bad laps, writes a new
     %spreadsheet that has the fixed timestamps
+ExcelFinalizer
+    %Writes a final version of the spreadsheet that kicks out laps with
+    %overlapped critical timestamps or timestamps beyond the length of
+    %pos_align
+matchCells
+    %Sam's version of cell registration, calls manual_reg_SL to do cell
+    %registration to the base session, using manual anchors and matlab's
+    %projective geotransform/imwarp. Outputs fullReg.mat in base_session
+    %folder with all the important reg info. Doesn't yet show how well
+    %registration worked
+GetMegaStuff2
+    %Based on data in fullReg, loads all the position and spiking data from
+    %each into big cell arrays for iterating through all of it
+PoolTrialsAcrossSessions
+    %Reorganizes output from GetMegaStuff into activity for individual
+    %trials by session. This makes it very straightforward to analyze lots
+    %of sessions in the same way and enables shuffling between conditions
+    %or across sessions
+PoolPSA
+    %Shuffles rows of PSAbool to align cells' activity across sessions
+    
+
+%Other, smaller scripts. Many are called in other big ones, many have a
+%version 2
+    
 GetBlockDNMPbehavior
     %Compiles timestamps from a spreadsheet into a
     %struct with pairs of starts and stops, a struct

@@ -16,8 +16,9 @@ switch sessionType
         [~, FrScol] = CondExcelParseout(frames, txt, 'Lift barrier (start of free choice)', 0);%free_starts
         [~, FoEcol] = CondExcelParseout(frames, txt, 'ForcedChoiceEnter', 0);%forced_stem_ends
         [~, FrEcol] = CondExcelParseout(frames, txt, 'FreeChoiceEnter', 0);%free_stem_ends
-        [start_stop_struct, ~, ~, ~, ~] = ...
+        [bounds, ~, ~, ~, ~] = ...
             GetBlockDNMPbehavior( xls_file, 'stem_only', sessionLength);
+        [right_forced, left_forced, right_free, left_free] = DNMPtrialDirections(frames, txt);
     case 2
         [~, FoScol] = CondExcelParseout(frames, txt, 'Start on maze (start of Forced', 0);%forced_starts
         [~, FoEcol] = CondExcelParseout(frames, txt, 'Choice enter', 0);%forced_stem_ends
@@ -26,18 +27,18 @@ switch sessionType
         %[trialDir, ~] = CondExcellParseout(frames, txt, 'Trial Dir (L/R)', 1);
         [right_forced, left_forced, right_free, left_free] = ForcedUnforcedtrialDirections(frames, txt);
         
-        [start_stop_struct, ~, ~, ~] =...
+        [bounds, ~, ~, ~] =...
             GetBlockForcedUnforcedBhvr( xls_file, 'stem_only', sessionLength);
 end
 
-epochs(1).starts = forced_l_stem(:,1);
-epochs(1).stops = forced_l_stem(:,2);
-epochs(2).starts = forced_r_stem(:,1);
-epochs(2).stops = forced_r_stem(:,2);
-epochs(3).starts = free_l_stem(:,1);
-epochs(3).stops = free_l_stem(:,2);
-epochs(4).starts = free_r_stem(:,1);
-epochs(4).stops = free_r_stem(:,2);
+epochs(1).starts = bounds.study_l(:,1);
+epochs(1).stops = bounds.study_l(:,2);
+epochs(2).starts = bounds.study_r(:,1);
+epochs(2).stops = bounds.study_r(:,2);
+epochs(3).starts = bounds.test_l(:,1);
+epochs(3).stops = bounds.test_l(:,2);
+epochs(4).starts = bounds.test_r(:,1);
+epochs(4).stops = bounds.test_r(:,2);
 
 for aa = 1:4
     [fixedEpochs{aa}, reporter{aa}] = FindBadLaps(x_adj_cm, y_adj_cm, epochs(aa));

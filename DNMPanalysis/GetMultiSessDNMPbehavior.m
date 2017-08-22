@@ -4,7 +4,7 @@ pooled = cell(length(allfiles),1);
 bounds = cell(length(allfiles),1);
 correct = cell(length(allfiles),1);
 for file = 1:length(allfiles)
-    bta = dir(fullfile(allfiles{file},'*BrainTime_Adjusted*.xlsx'));
+    bta = dir(fullfile(allfiles{file},'*Finalized.xlsx'));
     if length(bta)==1
         bta = bta.name;
     elseif length(bta) > 1
