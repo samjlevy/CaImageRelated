@@ -1,5 +1,6 @@
-function PlotRasterMultiSess2(trialbytrial, thisCell, sessionInds,figHand)
+function PlotRasterMultiSess2(trialbytrial, thisCell, sessionInds,figHand,orientation,dates, plotPos)
 %Works, could be redone to handle session by session
+%Orientation is 'portrait' or 'landscape'
 
 bH = 5;
 plotLabels = {'Study Left','Study Right','Test Left','Test Right'};
@@ -7,11 +8,28 @@ plotColors = [1 0 0.65;... %magenta
               0 0.65 1;... %cyan
               1 0 0;... %red
               0 0 1];   %blue
+posColor = [0.8 0.8 0.8];
 
-%rastPlot = figure('name','Raster Plot','Position',[100 50 1000 800]);
+if isempty('orientation','var')
+    if figHand.OuterPosition(4) >= figHand.OuterPosition(3)
+        orientation = 'portrait';
+    elseif figHand.OuterPosition(4) < figHand.OuterPosition(3)
+        orientation = 'landscape';
+    end
+end
+
+if isempty(dates)
+    filenames = cellstr(num2str(unique(trialbytrial(1).sessID)));
+end
 
 for condType=1:4
-    subHand(condType)=subplot(2,2,condType);
+    switch orientation
+        case 'portrait'
+            subHand(condType)=subplot(2,2,condType);
+        case 'landscape'
+            subHand(condType)=subplot(2,4,[0 4]+condType);
+    end
+            
     ylim([0 bH*length(trialbytrial(condType).trialsX)])
     
     badSess = find(sessionInds(thisCell,:)==0);
@@ -33,7 +51,19 @@ for condType=1:4
     for thisLap = 1:length(trialbytrial(condType).trialsX)
         plotLine = plotLine + 1;
         
-        %here add loop to plot ticks for each x position this trial in a faint gray
+        if plotPos==1
+            sessNum = trialbytrial(condType).sessID(thisLap);
+            if sessionInds(thisCell,sessNum)~=0
+            theseX = trialbytrial(condType).trialsX{thisLap,1};
+            if any(theseX) %probably always good
+            hold on
+            for posp = 1:length(theseX)
+                thisX = theseX(posp);
+                plot(60-[thisX thisX], [0 bH]+bH*(plotLine-1),'Color',posColor);
+            end
+            end
+            end
+        end
         
         thesePoints = find(trialbytrial(condType).trialPSAbool{thisLap,1}(thisCell,:));
         
@@ -77,7 +107,7 @@ for condType=1:4
     yyaxis right
     ylim([0 bH*plotLine])
     subHand(condType).YTick = YTick2*bH-bH/2;
-    subHand(condType).YTickLabel={'160830'; '160831';'160901'};
+    subHand(condType).YTickLabel = dates;%{'160830'; '160831';'160901'}
     ytickangle(90)
     subHand(condType).YColor = [0 0 0];
 end

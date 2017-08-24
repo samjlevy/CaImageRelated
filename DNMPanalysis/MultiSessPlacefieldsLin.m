@@ -14,7 +14,7 @@ trialbytrial = PoolTrialsAcrossSessions(correctBounds,position.all_x_adj_cm,posi
 
 save(fullfile(base_path,'trialbytrial.mat'),'trialbytrial','sortedSessionInds')
 
-[reli,aboveThresh] = TrialReliability(trialbytrial, 0.5);%sortedReliability
+[trialReli,aboveThresh] = TrialReliability(trialbytrial, 0.5);%sortedReliability
 [consec, enoughConsec] = ConsecutiveLaps(trialbytrial,lapThresh);%maxConsec
 
 newUse = cell2mat(cellfun(@(x) sum(x,2) > 0,aboveThresh,'UniformOutput',false));
@@ -45,13 +45,16 @@ figDir = fullfile(base_path,'tempPlots');
 if exist(figDir(1:end-4),'dir')==0
     mkdir(fullfile(base_path,'tempPlots'))
 end
+
+filepts = cellfun(@(x) strsplit(x,'_'),allfiles,'UniformOutput',false);
+dates = cell2mat(cellfun(@(x) str2double(x{2}(1:6)),filepts,'UniformOutput',false));
 for cellJ = 1:length(useCells)
     thisCell = useCells(cellJ);
     
     rastPlot = figure('name','Raster Plot');
     rastPlot.OuterPosition = [0 0 850 1100];
     rastPlot.PaperPositionMode = 'auto';
-    PlotRasterMultiSess2(trialbytrial, thisCell, sortedSessionInds,rastPlot);
+    PlotRasterMultiSess2(trialbytrial, thisCell, sortedSessionInds,rastPlot,orientation,dates);
     
     resolution_use = '-r600'; %'-r600' = 600 dpi - might not be necessary
     rastPlot.Renderer = 'painters';
