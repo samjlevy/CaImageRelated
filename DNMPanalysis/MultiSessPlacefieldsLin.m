@@ -52,7 +52,7 @@ for cellJ = 1:length(useCells)
     thisCell = useCells(cellJ);
     
     rastPlot = figure('name','Raster Plot');
-    rastPlot.OuterPosition = [0 0 850 1100];
+    rastPlot.OuterPosition = [0 0 1100 850];
     rastPlot.PaperPositionMode = 'auto';
     PlotRasterMultiSess2(trialbytrial, thisCell, sortedSessionInds,rastPlot,orientation,dates);
     

@@ -30,7 +30,7 @@ for condType = 1:length(trialbytrial)
         aboveThresh{condType}(:,sess) = reliab >= thresh;
         
         lapSpikes{condType}(:,sess) = sum(spikesThisCond,2)/length(thisLaps);
-        goodSpikes{condType}(:,sess) = sum(spikesThisCond,2)/sum(hitsThisCond,2);
+        goodSpikes{condType}(:,sess) = sum(spikesThisCond,2)./sum(hitsThisCond,2);
         
     end
 end
