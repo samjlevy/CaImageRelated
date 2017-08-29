@@ -1,4 +1,4 @@
-function [LRsel, STsel] = LRSTselectivity(trialbytrial)
+function [LRsel, STsel, eachsel] = LRSTselectivity(trialbytrial)
 
 allnames = {trialbytrial(:).name};
 studyC = find(cell2mat(cellfun(@(x) ~isempty(strfind(x,'study')),allnames,'UniformOutput',false)));
@@ -46,4 +46,6 @@ LRsel.spikes = (rightSpikes - leftSpikes) ./ (rightSpikes + leftSpikes);
 
 STsel.hits = (testHits - studyHits) ./ (testHits + studyHits);
 STsel.spikes = (testSpikes - studySpikes) ./ (testSpikes + studySpikes);
+
+
 end

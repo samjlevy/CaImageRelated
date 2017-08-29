@@ -33,20 +33,33 @@ for cellI = 1:numCells
         Xrange = xmax-xmin;
         nXBins = ceil(Xrange/cmperbin); 
         xEdges = (0:nXBins)*cmperbin+xmin;
-    
+        
+        %This is to correct problems with jumping from one trial to another
+        lapLengths = cell2mat(cellfun(@length, {trialbytrial(condType).trialsX{lapsUse,1}},'UniformOutput',false));
+        for ll = 1:length(lapLengths)
+            trialEdges(ll) = sum(lapLengths(1:ll));
+        end
+        trialEdges = trialEdges(1:end-1);
+       
         SR=20;
-        dx = diff(posX);
+        dx = abs(diff(posX));
+        dx(trialEdges) = dx(trialEdges-1);
         %dy = diff(posY);
         %speed = hypot(dx,dy)*SR;
         speed = dx*SR;
         velocity = convtrim(speed,ones(1,2*20))./(2*20);
         good = true(1,length(posX));
-        isrunning = good;                                   %Running frames that were not excluded. 
+        isrunning = good;                         %Running frames that were not excluded. 
         isrunning(velocity < minspeed) = false;
     
         [OccMap{cellI,condType},RunOccMap{cellI,condType},xBin{cellI,condType}] = MakeOccMapLin(posX,good,isrunning,xEdges);
         [TMap_unsmoothed{cellI,condType},TCounts{cellI,condType},TMap_gauss{cellI,condType}] = ...
                 MakePlacefieldLin(logical(spikeTs),posX,xEdges,RunOccMap{cellI,condType},...
+                'cmperbin',cmperbin,'smooth',true);
+            
+            [OccMap,RunOccMap,xBin] = MakeOccMapLin(posX,good,isrunning,xEdges);
+             [TMap_unsmoothed,TCounts,TMap_gauss] = ...
+                MakePlacefieldLin(logical(spikeTs),posX,xEdges,RunOccMap,...
                 'cmperbin',cmperbin,'smooth',true);
 
         %make tuning curves
@@ -57,7 +70,7 @@ for cellI = 1:numCells
     end
 end
 
-if saveThis==13
+if saveThis==1
     savePath = fullfile(base_path,'PFsLin.mat'); 
 save(savePath,'OccMap','RunOccMap', 'xBin', 'TMap_unsmoothed', 'TCounts', 'TMap_gauss') 
 end
