@@ -10,7 +10,7 @@ xmax = xlims(2);
 
 sessionUse = false(size(aboveThresh{1,1}));
 for ss = 1:numConds
-    sessionUse = sessionUse + aboveThresh{1,ss}(:,:);
+    sessionUse = sessionUse + aboveThresh{ss,1}(:,:);
 end
 sessionUse = sessionUse > 0;
 
@@ -46,22 +46,28 @@ for cellI = 1:numCells
         dx(trialEdges) = dx(trialEdges-1);
         %dy = diff(posY);
         %speed = hypot(dx,dy)*SR;
+        %{
         speed = dx*SR;
         velocity = convtrim(speed,ones(1,2*20))./(2*20);
+        %} 
         good = true(1,length(posX));
         isrunning = good;                         %Running frames that were not excluded. 
-        isrunning(velocity < minspeed) = false;
+        %isrunning(velocity < minspeed) = false;
     
         [OccMap{cellI,condType},RunOccMap{cellI,condType},xBin{cellI,condType}] = MakeOccMapLin(posX,good,isrunning,xEdges);
         [TMap_unsmoothed{cellI,condType},TCounts{cellI,condType},TMap_gauss{cellI,condType}] = ...
                 MakePlacefieldLin(logical(spikeTs),posX,xEdges,RunOccMap{cellI,condType},...
                 'cmperbin',cmperbin,'smooth',true);
             
+            
+            %{
             [OccMap,RunOccMap,xBin] = MakeOccMapLin(posX,good,isrunning,xEdges);
              [TMap_unsmoothed,TCounts,TMap_gauss] = ...
                 MakePlacefieldLin(logical(spikeTs),posX,xEdges,RunOccMap,...
                 'cmperbin',cmperbin,'smooth',true);
 
+            %}
+            
         %make tuning curves
         %PlaceTuningCurveLin(trialbytrial, aboveThresh, nPerms, [xmin xmax], xEdges);
         

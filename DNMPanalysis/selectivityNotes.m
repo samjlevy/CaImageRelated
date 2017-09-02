@@ -225,12 +225,74 @@ for tc = 1:numCells
             [STmeans(tc) STmeans(tc) STmeans(tc)-STstd(tc) STmeans(tc)+STstd(tc)],'m+')
     end
     xlabel('Mean LR selectivity')
-    ylabel(
 end
 
 use = ~isnan(LRstd) 
 
+figure; histogram(LRsel.spikes(~isnan(LRsel.spikes)),[-1.05:0.1:1.05])
+xlim([-1.05 1.05])
+figure; histogram(STsel.spikes(~isnan(STsel.spikes)),[-1.05:0.1:1.05])
+xlim([-1.05 1.05])
 
+threshes = 0:0.05:1;
+for day = 1:size(LRsel.spikes,2)
+for tt = 1:length(threshes)
+    LRselECDF(tt,day) = sum(abs(LRsel.spikes(:,day))<=threshes(tt))/sum(~isnan(LRsel.spikes(:,day)));
+    STselECDF(tt,day) = sum(abs(STsel.spikes(:,day))<=threshes(tt))/sum(~isnan(STsel.spikes(:,day)));
+end
+end
+
+figure;
+subplot(1,2,1); hold on
+for aa = 1:11; plot(threshes,LRselECDF(:,aa),'DisplayName',lg{aa}); end
+legend('show'); legend('Location','northwest'); xlabel('LR Threshold')
+ylabel('Proportion of Cells')
+subplot(1,2,2); hold on
+for aa = 1:11; plot(threshes,STselECDF(:,aa),'DisplayName',lg{aa}); end
+legend('show'); legend('Location','northwest'); xlabel('ST Threshold')
+suptitle('Proportion of cells above selectivity threshold')
+
+for bb = 1:21
+    [~,LRorder(bb,:)] = sort(LRselECDF(bb,:));
+    [~,STorder(bb,:)] = sort(STselECDF(bb,:));
+end
+LRorder = LRorder'; STorder=STorder';
+%column is thresh level, list is rank of days
+figure; subplot(1,2,1);
+hold on; for cc=7:20; plot(1:11,LRorder(:,cc),'-o','DisplayName',num2str(cc)); end
+xlabel('LR');
+subplot(1,2,2); hold on; for cc=7:20; plot(1:11,STorder(:,cc),'-o','DisplayName',num2str(cc)); end
+xlabel('ST')
+suptitle('Sorting of days by selectivity thresh')
+
+check = [1:10, 12:20];
+for cd = 1:length(check)
+    [LRr(cd), LRp(cd)] = corr(LRorder(:,check(cd)),LRorder(:,11));
+    [STr(cd), STp(cd)] = corr(STorder(:,check(cd)),STorder(:,11));
+end
+figure; 
+subplot(1,2,1); plot(check,LRr); hold on; plot(check(LRp<0.05),LRr(LRp<0.05),'*r')
+xlabel('LR, day number'); ylim([-0.5 1])
+subplot(1,2,2); plot(check,STr); hold on; plot(check(STp<0.05),STr(STp<0.05),'*r')
+ xlabel('ST, day number'); ylim([-0.5 1])
+ suptitle('Correlation of rank order with middle threshold');
+
+ 
+ %Least squares curve fitting
+ n = number of x,y data points    
+sumx = ?x    
+sumy = ?y    
+sumxy = ?x*y    
+sumx2 = ?x*x    
+meanx = sumx / n    
+meany = sumy / n    
+slope = (n*sumxy - sumx*sumy) / (n*sumx2 - sumx*sumx)    
+intercept = meany-(slope*meanx)    
+ssy = ?(y-meany)^2    
+ssr = ?(y-intercept-slope*x)^2    
+R2 = 1-(ssr/ssy)
+Standard deviation of the slope = SQRT(ssr/(n-2))*SQRT(n/(n*sumx2 - sumx*sumx))
+Standard deviation of the intercept = SQRT(ssr/(n-2))*SQRT(sumx2/(n*sumx2 - sumx*sumx))
 
 %Frank paper well selectivity
 "To calculate the well specificity index (WSI) of a unit, the well firing rate at each

@@ -14,7 +14,7 @@ trialbytrial = PoolTrialsAcrossSessions(correctBounds,position.all_x_adj_cm,posi
 
 save(fullfile(base_path,'trialbytrial.mat'),'trialbytrial','sortedSessionInds')
 
-[trialReli,aboveThresh] = TrialReliability(trialbytrial, 0.5);%sortedReliability
+[trialReli,aboveThresh] = TrialReliability(trialbytrial, 0.25);%sortedReliability
 [consec, enoughConsec] = ConsecutiveLaps(trialbytrial,lapThresh);%maxConsec
 
 newUse = cell2mat(cellfun(@(x) sum(x,2) > 0,aboveThresh,'UniformOutput',false));

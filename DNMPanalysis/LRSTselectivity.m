@@ -1,4 +1,4 @@
-function [LRsel, STsel, eachsel] = LRSTselectivity(trialbytrial)
+function [LRsel, STsel] = LRSTselectivity(trialbytrial)
 
 allnames = {trialbytrial(:).name};
 studyC = find(cell2mat(cellfun(@(x) ~isempty(strfind(x,'study')),allnames,'UniformOutput',false)));
