@@ -1,5 +1,5 @@
 function [OccMap, RunOccMap, xBin, TMap_unsmoothed, TCounts, TMap_gauss] =...
-    PFsLinTrialbyTrial(trialbytrial,xlims, cmperbin, minspeed, saveThis, base_path)
+    PFsLinTrialbyTrialCONDpool(trialbytrial,xlims, cmperbin, minspeed, saveThis, base_path, Conds)
 %aboveThresh, 
 %Thia version does not pool data across sessions.
 sessions = unique(trialbytrial(1).sessID);
@@ -16,34 +16,48 @@ xmax = xlims(2);
 %end
 %sessionUse = sessionUse > 0;
 
-OccMap = cell(numCells, numConds);
-RunOccMap = cell(numCells, numConds);
-xBin = cell(numCells, numConds);
-TMap_unsmoothed = cell(numCells, numConds);
-TCounts = cell(numCells, numConds);
-TMap_gauss = cell(numCells, numConds);
+OccMap = cell(numCells, numConds, numSess);
+RunOccMap = cell(numCells, numConds, numSess);
+xBin = cell(numCells, numConds, numSess);
+TMap_unsmoothed = cell(numCells, numConds, numSess);
+TCounts = cell(numCells, numConds, numSess);
+TMap_gauss = cell(numCells, numConds, numSess);
 
 p = ProgressBar(100);
 update_inc = ceil(numCells/100);
 update_points = update_inc:update_inc:numCells;
 if length(update_points)==99; update_points(100) = numCells; end
+
+ss = fieldnames(Conds);
 for cellI = 1:numCells
     for condType = 1:4
         for tSess = 1:numSess
-            lapsUse = logical(trialbytrial(condType).sessID == sessions(tSess));
+            lapsUseA = logical(trialbytrial(Conds.(ss{condType})(1)).sessID == sessions(tSess));
+            lapsUseB = logical(trialbytrial(Conds.(ss{condType})(2)).sessID == sessions(tSess));
+        if any(lapsUseA) || any(lapsUseB)  
+            
+        posXA = [trialbytrial(Conds.(ss{condType})(1)).trialsX{lapsUseA,1}];
+        %posYA = [trialbytrial(Conds.(ss{condType})(1)).trialsY{lapsUseA,1}];
+        spikeTsA = [trialbytrial(Conds.(ss{condType})(1)).trialPSAbool{lapsUseA,1}];
+        spikeTsA = spikeTsA(cellI,:);
         
-        if any(lapsUse)
-        posX = [trialbytrial(condType).trialsX{lapsUse,1}];
-        %posY = [trialbytrial(condType).trialsY{lapsUse,1}];
-        spikeTs = [trialbytrial(condType).trialPSAbool{lapsUse,1}];
-        spikeTs = spikeTs(cellI,:);
+        posXB = [trialbytrial(Conds.(ss{condType})(2)).trialsX{lapsUseB,1}];
+        %posYB = [trialbytrial(Conds.(ss{condType})(2)).trialsY{lapsUseB,1}];
+        spikeTsB = [trialbytrial(Conds.(ss{condType})(2)).trialPSAbool{lapsUseB,1}];
+        spikeTsB = spikeTsB(cellI,:);
+        
+        posX = [posXA posXB];
+        %posY = [posYA posYB];
+        spikeTs = [spikeTsA spikeTsB];
         
         Xrange = xmax-xmin;
         nXBins = ceil(Xrange/cmperbin); 
         xEdges = (0:nXBins)*cmperbin+xmin;
         
         %This is to correct problems with jumping from one trial to another
-        lapLengths = cell2mat(cellfun(@length, {trialbytrial(condType).trialsX{lapsUse,1}},'UniformOutput',false));
+        lapLengthsA = cell2mat(cellfun(@length, {trialbytrial(Conds.(ss{condType})(1)).trialsX{lapsUseA,1}},'UniformOutput',false));
+        lapLengthsB = cell2mat(cellfun(@length, {trialbytrial(Conds.(ss{condType})(2)).trialsX{lapsUseB,1}},'UniformOutput',false));
+        lapLengths = [lapLengthsA lapLengthsB];
         trialEdges = [];
         for ll = 1:length(lapLengths)-1
             trialEdges(ll) = sum(lapLengths(1:ll));
@@ -82,13 +96,19 @@ for cellI = 1:numCells
         %PlaceTuningCurveLin(trialbytrial, aboveThresh, nPerms, [xmin xmax], xEdges);
         
         %Spatial information
+        
+        
         end
         end
     end
+    if sum(update_points == cellI)==1
+        p.progress;
+    end
 end
+p.stop;
 
 if saveThis==1
-    savePath = fullfile(base_path,'PFsLin.mat'); 
+    savePath = fullfile(base_path,'PFsLinPOOLED.mat'); 
 save(savePath,'OccMap','RunOccMap', 'xBin', 'TMap_unsmoothed', 'TCounts', 'TMap_gauss') 
 end
     

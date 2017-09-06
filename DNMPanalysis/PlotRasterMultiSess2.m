@@ -1,5 +1,6 @@
 function PlotRasterMultiSess2(trialbytrial, thisCell, sessionInds,figHand,orientation,dates, plotPos)
 %Works, could be redone to handle session by session
+%Dates could be swapped in with anything, like reliability or selectivity
 %Orientation is 'portrait' or 'landscape'
 
 bH = 5;
@@ -10,7 +11,7 @@ plotColors = [1 0 0.65;... %magenta
               0 0 1];   %blue
 posColor = [0.8 0.8 0.8];
 
-if isempty('orientation','var')
+if isempty('orientation')
     if figHand.OuterPosition(4) >= figHand.OuterPosition(3)
         orientation = 'portrait';
     elseif figHand.OuterPosition(4) < figHand.OuterPosition(3)
@@ -108,7 +109,7 @@ for condType=1:4
     ylim([0 bH*plotLine])
     subHand(condType).YTick = YTick2*bH-bH/2;
     subHand(condType).YTickLabel = dates;%{'160830'; '160831';'160901'}
-    ytickangle(90)
+    subhand(condType).YTickLabelRotation = 90;%ytickangle(90)
     subHand(condType).YColor = [0 0 0];
 end
 

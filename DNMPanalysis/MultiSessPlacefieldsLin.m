@@ -15,17 +15,36 @@ trialbytrial = PoolTrialsAcrossSessions(correctBounds,position.all_x_adj_cm,posi
 save(fullfile(base_path,'trialbytrial.mat'),'trialbytrial','sortedSessionInds')
 
 [trialReli,aboveThresh] = TrialReliability(trialbytrial, 0.25);%sortedReliability
-[consec, enoughConsec] = ConsecutiveLaps(trialbytrial,lapThresh);%maxConsec
+[consec, enoughConsec] = ConsecutiveLaps(trialbytrial,3);%maxConsec
 
 newUse = cell2mat(cellfun(@(x) sum(x,2) > 0,aboveThresh,'UniformOutput',false));
 newUse2 = cell2mat(cellfun(@(x) sum(x,2) > 0,enoughConsec,'UniformOutput',false));
+
+for condT = 1:4
+reorgThresh(:,:,condT) = aboveThresh{condT};
+reorgConsec(:,:,condT) = enoughConsec{condT};
+end
+threshAndConsec = reorgThresh | reorgConsec;
+
+dayUse = sum(reorgThresh,3);
+dayUse2 = sum(reorgConsec,3);
+
+threshPerDay = sum(dayUse>0,1);
+consecPerDay = sum(dayUse2>0,1); 
+
+threshUse = sum(dayUse,2)>0;
+consecUse = sum(dayUse2,2)>0;
+
+useCells = find(threshUse+consecUse > 0);
+
+[Conds] = GetTBTconds(trialbytrial);
 
 xlims = [25 60]; cmperbin = 1; minspeed = 0; 
 if exist(fullfile(base_path,'PFsLin.mat'),'file')
     fullfile(base_path,'PFsLin.mat')
 else
 	[~, ~, ~, TMap_unsmoothed, ~, TMap_gauss] =...
-        PFsLinTrialbyTrial(trialbytrial,aboveThresh, xlims, cmperbin, minspeed, 1, base_path);
+        PFsLinTrialbyTrial(trialbytrial, xlims, cmperbin, minspeed, 1, base_path);
 end
 
 numShuffles = 1000;
@@ -52,9 +71,14 @@ for cellJ = 1:length(useCells)
     thisCell = useCells(cellJ);
     
     rastPlot = figure('name','Raster Plot');
-    rastPlot.OuterPosition = [0 0 1100 850];
+    switch orientation
+        case 'landscape'
+            rastPlot.OuterPosition = [0 0 1100 850];
+        case 'portrait'
+            rastPlot.OuterPosition = [0 0 850 1100];
+    end
     rastPlot.PaperPositionMode = 'auto';
-    PlotRasterMultiSess2(trialbytrial, thisCell, sortedSessionInds,rastPlot,orientation,dates);
+    PlotRasterMultiSess2(trialbytrial, thisCell, sortedSessionInds,rastPlot,orientation,dates,1);
     
     resolution_use = '-r600'; %'-r600' = 600 dpi - might not be necessary
     rastPlot.Renderer = 'painters';
