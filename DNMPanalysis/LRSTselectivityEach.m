@@ -49,6 +49,13 @@ LSsel.hits = leftStudyHits ./ (rightStudyHits + leftTestHits + rightTestHits);
 LSsel.spikes = leftStudySpikes ./ (rightStudySpikes + leftTestSpikes + rightTestSpikes);
 
 
+binAmp=binAmp/sum(binAmp);%normalized 
 
+%KL distance
+logAmp=log2(binAmp);
+ShannonH =-sum(binAmp(logAmp~=-Inf).*logAmp(logAmp~=-Inf)); 
+Dkl = log2(numPhaseBins)-ShannonH;
+
+MI=Dkl/log2(numPhaseBins);
 
 end

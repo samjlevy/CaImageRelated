@@ -14,6 +14,11 @@ AlignImagingToTracking_SL
 AlignPositions_SL         
     %Right now just rotates trajectory to 0, scales
     %pix2cm, gets speed. Future versions will align all to a base struct
+AlignPositionsBatch_SL
+    %This is to replace AlignPositions: uses geometric transformations to
+    %align points in the original 
+    %
+    %
 ParsedFramesToBrainFrames
     %Translates a sheet (columnwise) of 
     %timestamps from an AVI into brain 
