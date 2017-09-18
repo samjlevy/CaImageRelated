@@ -43,13 +43,15 @@ rightTestHits = lapHits{rightTest};
 leftStudySpikes = lapSpikes{leftStudy};
 rightStudySpikes = lapSpikes{rightStudy};
 rightStudySpikes = lapSpikes{leftTest};
-rightTestHitsSpikes = lapSpikes{rightTest};
+rightTestSpikes = lapSpikes{rightTest};
 
-LSsel.hits = leftStudyHits ./ (rightStudyHits + leftTestHits + rightTestHits);
-LSsel.spikes = leftStudySpikes ./ (rightStudySpikes + leftTestSpikes + rightTestSpikes);
+%Left Study, Right Study, Left Test, Right Test
+binAmpHits = [leftStudyHits rightStudyHits leftTestHits rightTestHits];
+binAmpHits = binAmpHits/sum(binAmpHits);
 
+binAmpSpikes = [leftStudySpikes rightStudySpikes leftTestSpikes rightTestSpikes];
+binAmpSpikes = binAmpSpikes/sum(binAmpSpikes);
 
-binAmp=binAmp/sum(binAmp);%normalized 
 
 %KL distance
 logAmp=log2(binAmp);

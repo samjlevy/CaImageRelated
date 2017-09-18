@@ -1,18 +1,55 @@
-function AlignPositionsBatch_SL(base_path, align_paths)
+function AlignPositionsBatch_SL(base_path, align_paths, RoomStr)
 %This function is to do a really good alignment of positions, both within
 %days and across
-
-%Step 1: establish baseline orientation of points to align to
-if ~exist(fullfile(base_path,'Pos_anchor.mat'),'file')
-    
-
-
 scaleFactor = 0.6246;
 SR=20;
 
-%From here: get corners function
-load('Pos.mat','v0','xAVI','yAVI')
-load('Pos_brain.mat')%x and y come from here
+if ~exist(fullfile(base_path,'Pos_anchor.mat','file')
+    [cx, cy]=GetCorners(base_path);
+    [xAnchor, yAnchor] = ArrangeBaseAnchors(cx, cy);
+else
+    load(fullfile(base_path,'Pos_anchor.mat'))
+end
+
+allPaths = {base_path, align_paths{:}};
+
+for thisPath = 1:length(allPaths)
+   
+    if ~exist(fullfile(allPaths{thisPath},'Pos_final.mat'),'file')
+    sessPath = allPaths{thisPath};
+    [cx, cy]=GetCorners(sessPath);
+    
+    load(fullfile(sessPath,'Pos_brain.mat'))%x and y come from here
+    
+    tform = fitgeotrans([cx' cy'],[xAnchor' yAnchor'],'affine');
+    [xt, yt] = transformPointsForward(tform,x*scaleFactor,y*scaleFactor);
+
+    %Convert to CM
+    Pix2Cm = Pix2CMlist (RoomStr);
+    x_adj_cm = xt*Pix2Cm;
+    y_adj_cm = yt.*Pix2Cm;
+
+    %Speed for each
+    dx = diff(x_adj_cm);
+    dy = diff(y_adj_cm);
+    speed = hypot(dx,dy)*SR;
+
+    %Holdover overhead (probably)
+    xmax = max(x_adj_cm);
+    xmin = min(x_adj_cm);
+    ymax = max(y_adj_cm);
+    ymin = min(y_adj_cm);    
+
+    PSAbool = PSAboolAdjusted;
+    save('Pos_final.mat','x_adj_cm','y_adj_cm','xmin','xmax','ymin','ymax',...
+                    'speed', 'PSAbool');
+    end
+
+end
+end
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+function [cx, cy]=GetCorners(sessPath)
+load(fullfile(sessPath,'Pos.mat'),'v0','xAVI','yAVI')
 
 flipX = 0; flipY = 0;
 bkg = figure('Position',[100 50 size(v0,2)*1.5 size(v0,1)*1.5]);
@@ -47,11 +84,11 @@ end
 if flipY == 1
     cy = size(v0,1)-cy;
 end
-%get corners end
 
+end
+%%%%%%%%%%%%%%%%
+function [xAnchor, yAnchor] = ArrangeBaseAnchors(cx, cy)
 
-%Set pos anchors function start
-%Choice left of start?
 if cx(3) < cx(1) || cx(4) < cx(2)
     disp('Flipping maze for Start > Choice goes L > R')
     %Xnew = size(v0,2) - xAVI;
@@ -81,43 +118,18 @@ yAnchor([1 3]) = mean(cyNew([1 3]));
 xAnchor([1 2]) = mean(cxNew([1 2]));
 xAnchor([3 4]) = mean(cxNew([3 4]));
 
+%To fix fisheyeing stuff
+%{
+%figure out arrangement 
+if abs(xAnchor(1) - xAnchor(3)) > abs(yAnchor(1) - yAnchor(3))
+    draw a dotted line orthogonal to their orientation, get a 5th and 6th
+    anchor points along that line at the appropriate point at the maze
+    bottom
+
+%}
 if ~exist(fullfile(base_path,'Pos_anchor.mat'),'file')
-save(fullfile(base_path,'Pos_anchor.mat'),'xAnchor','yAnchor')
-%pos anchors function end
-
-%Resume pos align
-tform = fitgeotrans([cx' cy'],[xAnchor' yAnchor'],'affine');
-[xt, yt] = transformPointsForward(tform,x*scaleFactor,y*scaleFactor);
-s
-%Convert to CM
-Pix2Cm = Pix2CMlist (RoomStr);
-x_adj_cm = xt*Pix2Cm;
-y_adj_cm = yt.*Pix2Cm;
-
-%Speed for each
-dx = diff(x_adj_cm);
-dy = diff(y_adj_cm);
-speed = hypot(dx,dy)*SR;
-
-%Holdover overhead (probably)
-xmax = max(x_adj_cm);
-xmin = min(x_adj_cm);
-ymax = max(y_adj_cm);
-ymin = min(y_adj_cm);    
-
-PSAbool = PSAboolAdjusted;
-save('Pos_final.mat','x_adj_cm','y_adj_cm','xmin','xmax','ymin','ymax',...
-                'speed', 'PSAbool');
-            
-%Pos align end
-
+    disp('Did not find Pos_anchor.mat, saving now')
+    save(fullfile(base_path,'Pos_anchor.mat'),'xAnchor','yAnchor')
 end
-%Step 2:  Align other sessions to this session. This should include other
-%days for the same animal, and all other animals' days to the base
-%A: Like above, get the corners in the base of the mase
-%B: Do some basic flipping
-%C: Find the affine transformation, imwarp points to that transformation
-
-
 
 end
