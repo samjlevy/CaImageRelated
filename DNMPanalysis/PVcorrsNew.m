@@ -2,6 +2,12 @@
 %least one of the compared conditions. Should limit the number of cells
 %that end up included but have 0 firing rate 
 %Right now all place maps are end to start, first to last bins
+
+load('PFsLin.mat','TMap_gauss','RunOccMap')
+
+[Conds] = GetTBTconds(trialbytrial);
+
+useBins = 12;
 maxBins = 14;
 posThresh = 3;
 numDays = size(TMap_gauss,3);
@@ -63,7 +69,7 @@ for tDay = 1:numDays
 end
 
 jetTrips = colormap(jet);
-jetUse = round(linspace(64,1,numDays));
+jetUse = round(linspace(1,64,numDays));
 plotColors = jetTrips(jetUse,:);
 
 StudyFig = figure; TestFig = figure; LeftFig = figure; RightFig = figure;
@@ -86,7 +92,59 @@ ylim(TestFig.Children,[-0.95 1])
 ylim(LeftFig.Children,[-0.5 1])
 ylim(RightFig.Children,[-0.5 1])
 
+for nBin = 1:useBins
+    [~,order] = sort(LeftCorrs(:,nBin));
+    [rrLeft(nBin), ppLeft(nBin)] = corr(flipud([1:numDays]'),order,'type','Spearman');
+    [~,order] = sort(RightCorrs(:,nBin));
+    [rrRight(nBin), ppRight(nBin)] = corr(flipud([1:numDays]'),order,'type','Spearman');
+    [~,order] = sort(StudyCorrs(:,nBin));
+    [rrStudy(nBin), ppStudy(nBin)] = corr([1:numDays]',order,'type','Spearman');
+    [~,order] = sort(TestCorrs(:,nBin));
+    [rrTest(nBin), ppTest(nBin)] = corr([1:numDays]',order,'type','Spearman');
+end
+binPlot = 1:useBins;
+binLeft = binPlot(ppLeft<0.05); binRight = binPlot(ppRight<0.05);
+binStudy = binPlot(ppStudy<0.05); binTest = binPlot(ppTest<0.05);
+plot(StudyFig.Children,1:useBins,rrStudy,'-.k')
+plot(TestFig.Children,1:useBins,rrTest,'-.k')
+plot(LeftFig.Children,1:useBins,rrLeft,'-.k')
+plot(RightFig.Children,1:useBins,rrRight,'-.k')
 
+plot(StudyFig.Children,binStudy,rrStudy(binStudy),'*r')
+plot(TestFig.Children,binTest,rrTest(binTest),'*r')
+plot(LeftFig.Children,binLeft,rrLeft(binLeft),'*r')
+plot(RightFig.Children,binRight,rrRight(binRight),'*r')
+
+
+for nBin = 1:useBins
+    [~, orders(:,nBin)] = sort(TestCorrs(:,nBin));
+end
+combos = combnk(1:11,2);
+for cc = 1:size(combos,1)
+    [p(cc),h(cc)] = ranksum(orders(combos(cc,1),:),orders(combos(cc,2),:));
+end
+diffes = combos(:,2) - combos(:,1);
+wDiffs = unique(diffes);
+for dd = 1:10
+    passed(dd) = sum(h(diffes==dd)==1) / sum(diffes==dd);
+    pval(dd) = mean(p(diffes==dd));
+    hm(dd) = sum(diffes==dd);
+        %how many at this diff passed the test / how many at this diff
+        %this is a spot where actual day number would be helpful
+end
+
+maxes = max(TestCorrs,[],1);
+diffes = TestCorrs - maxes;
+figure; 
+for nDay = 1:numDays
+    plot(diffes(nDay,:),'-o','Color',plotColors(nDay,:))
+    hold on
+end
+
+
+
+
+load(fullfile(base_path,'PFsLinPOOLED.mat'),'TMap_gauss','RunOccMap')
 StudyTestCorrs = nan(numDays,maxBins); 
 LeftRightCorrs = nan(numDays,maxBins);
 for tDay = 1:numDays
@@ -110,4 +168,32 @@ for tDay = 1:numDays
             LeftRightCorrs(tDay,binNum) = corr(PFsA(:,binNum),PFsB(:,binNum));
         end
     end
+end
+
+jetTrips = colormap(jet);
+jetUse = round(linspace(1,64,numDays));
+plotColors = jetTrips(jetUse,:);
+
+StudyTestFig = figure; LeftRightFig = figure;
+axes(StudyTestFig); hold(StudyTestFig.Children,'on'); title(StudyTestFig.Children,'Study vs Test')
+axes(LeftRightFig); hold(LeftRightFig.Children,'on'); title(LeftRightFig.Children,'Left vs Right')
+xlabel(StudyTestFig.Children,'Choice Point                      Start')
+xlabel(LeftRightFig.Children,'Choice Point                      Start')
+for uDay = 1:numDays
+    plot(StudyTestFig.Children,StudyTestCorrs(uDay,:),'-o','Color',plotColors(uDay,:))
+    plot(LeftRightFig.Children,LeftRightCorrs(uDay,:),'-o','Color',plotColors(uDay,:))
+end
+ylim(StudyTestFig.Children,[-0.5 1])
+ylim(LeftRightFig.Children,[-0.5 1])
+
+useBins = 12;
+useCorrs = LeftRightCorrs;
+allCorrs = useCorrs(:,1:useBins); allCorrs = allCorrs(:);
+dayG = repmat([1:numDays]',useBins,1);
+binG = repmat([1:useBins],numDays,1); binG = binG(:);
+[p,t,stats] = anovan(allCorrs,{dayG,binG},'varnames',{'Day','Bin'});
+
+for nBin = 1:useBins
+    [~,order] = sort(useCorrs(:,nBin));
+    [rr(nBin), pp(nBin)] = corr([1:numDays]',order,'type','Spearman');
 end

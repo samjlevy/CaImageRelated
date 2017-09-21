@@ -9,6 +9,7 @@ numConds = length(trialbytrial);
 xmin = xlims(1);
 xmax = xlims(2);
 
+[Conds] = GetTBTconds(trialbytrial);
 
 %sessionUse = false(size(aboveThresh{1,1}));
 %for ss = 1:numConds
@@ -55,8 +56,10 @@ for cellI = 1:numCells
         xEdges = (0:nXBins)*cmperbin+xmin;
         
         %This is to correct problems with jumping from one trial to another
-        lapLengthsA = cell2mat(cellfun(@length, {trialbytrial(Conds.(ss{condType})(1)).trialsX{lapsUseA,1}},'UniformOutput',false));
-        lapLengthsB = cell2mat(cellfun(@length, {trialbytrial(Conds.(ss{condType})(2)).trialsX{lapsUseB,1}},'UniformOutput',false));
+        lapLengthsA = cell2mat(cellfun(@length, {trialbytrial(Conds.(ss{condType})(1)).trialsX{lapsUseA,1}},...
+            'UniformOutput',false));
+        lapLengthsB = cell2mat(cellfun(@length, {trialbytrial(Conds.(ss{condType})(2)).trialsX{lapsUseB,1}},...
+            'UniformOutput',false));
         lapLengths = [lapLengthsA lapLengthsB];
         trialEdges = [];
         for ll = 1:length(lapLengths)-1
