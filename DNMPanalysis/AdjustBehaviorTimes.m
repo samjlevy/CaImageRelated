@@ -1,4 +1,4 @@
-function AdjustBehaviorTimes(xls_file, pos_file, column_fix, relation)
+function AdjustBehaviorTimes(pos_file, xls_file, column_fix, relation)
 %For taking in a spreadsheet and adjusting a set of frames. Meant to get
 %behavior times close together to make placefields by behavior better, more
 %comparable

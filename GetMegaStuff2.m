@@ -22,6 +22,7 @@ switch regUseType
         regUse = regUseInput;
     case 'sessionType'
         regUse = fullReg.sessionType==1;
+        %regUse = fullReg.sessionType==regUseInput; %1/2 for DNMP/ForcedUnforced
 end
 
 allfiles = [base_path; reg_paths(:)];

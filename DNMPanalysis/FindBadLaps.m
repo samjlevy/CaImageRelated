@@ -77,8 +77,10 @@ for thisE = 1:length(epochs)
             end
         end
         
-    else
+    elseif anyBad==0
         movingOn = 1;
+    else
+        movingOn = 0;
     end     
         
     end

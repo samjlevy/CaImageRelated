@@ -4,13 +4,13 @@ mapLoc = 'F:\Bellatrix\Bellatrix_160901';
 
 numSessions = length(allfiles); 
 %allInc = cell(4,length(allfiles));
-numframes = cell2mat(cellfun(@length, all_x_adj_cm, 'UniformOutput',false));
+numframes = cell2mat(cellfun(@length, position.all_x_adj_cm, 'UniformOutput',false));
 [bounds, ~, correct] = GetMultiSessDNMPbehavior(allfiles, numframes);
 
 correctBounds = StructCorrect(bounds, correct);
 
-trialbytrial = PoolTrialsAcrossSessions(correctBounds,position.all_x_adj_cm,position.all_y_adj_cm,...
-    all_PSAbool,sortedSessionInds);
+trialbytrial = PoolTrialsAcrossSessions(correctBounds,position.all_x_adj_cm,...
+    position.all_y_adj_cm,all_PSAbool,sortedSessionInds);
 
 save(fullfile(base_path,'trialbytrial.mat'),'trialbytrial','sortedSessionInds')
 

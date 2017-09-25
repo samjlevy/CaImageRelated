@@ -3,7 +3,7 @@ function trialbytrial = PoolTrialsAcrossSessions(bounds,all_x_adj_cm,all_y_adj_c
 
 [~, all_PSAbool_aligned] = PoolPSA(all_PSAbool, sessionInds);
 
-ss = fieldnames(bounds); %should always be 4
+ss = fieldnames(bounds{1}); %should always be 4
 for fn = 1:4
     row = 0;
     for sess = 1:length(all_x_adj_cm)

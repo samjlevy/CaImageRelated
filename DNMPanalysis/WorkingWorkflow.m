@@ -51,6 +51,7 @@ matchCells
 GetMegaStuff2
     %Based on data in fullReg, loads all the position and spiking data from
     %each into big cell arrays for iterating through all of it
+    %Session type is only for reg sessions
 PoolTrialsAcrossSessions
     %Reorganizes output from GetMegaStuff into activity for individual
     %trials by session. This makes it very straightforward to analyze lots

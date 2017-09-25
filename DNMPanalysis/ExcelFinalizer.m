@@ -1,4 +1,8 @@
 function ExcelFinalizer(inputPath)
+%This function arranges the excel spreadsheet for ease of management in
+%later functions. Also deletes some bad indices. Will find highest-numbered
+%braintime_adjusted file and use that.
+
 if ~exist('inputPath','var')
     inputPath = cd;
 end

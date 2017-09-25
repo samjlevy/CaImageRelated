@@ -40,7 +40,7 @@ for rs = 1:numSessions
         disp(['did not find image registration data for ' reg_paths])
         [~, ~, ~] = manual_reg_SL(base_path, reg_paths);
     else 
-        disp(['found registration for ' reg_paths])
+        disp(['found registration for ' reg_path])
     end
 end
 
@@ -48,7 +48,7 @@ for regsess = 1:numSessions
     if numSessions==1
         reg_path = reg_paths;
     else
-        reg_path = reg_paths{rs};
+        reg_path = reg_paths{regsess};
     end
 
     matchup = 0; already = 0;
@@ -153,7 +153,7 @@ if matchup==1
 
                 regFig = figure('name','Reg Session Masks','position',...
                     [100+size(baseUnpaired,2)*1.5 100 size(regUnpaired,2)*1.5 size(regUnpaired,1)*1.5]);
-                hold off; imagesc(regUnpaired); title('Reg Session Masks')
+                hold off; imagesc(regUnpaired); title(['Reg Session Masks for ' reg_path])
                 
                 figure(baseFig);
                 [xBase, yBase] = ginput(1);

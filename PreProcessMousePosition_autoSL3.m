@@ -353,6 +353,7 @@ optionsText={%'h - full explanations';...
              'o - change AOM flag';...
              'l - edit expected locations';...
              'i - edit background image';...
+             'u - load frame nums from file';...
              'd - change whether draw now is used';...
              's - save work';...
              'x - quit without finalizing';...
@@ -419,7 +420,7 @@ switch MorePoints
                 CorrectTheseFrames;
             case 'Manual'
                         manChoice = questdlg('Redo definitely good frames?','Redo DefGood',...
-                    'Yes','No','No');
+                    'Yes','No','Yes');
                 switch manChoice
                     case 'Yes'
                         corrDefGoodFlag=1;
@@ -454,7 +455,7 @@ switch MorePoints
                 CorrectTheseFrames;
             case 'Manual'
                         manChoice = questdlg('Redo definitely good frames?','Redo DefGood',...
-                    'Yes','No','No');
+                    'Yes','No','Yes');
                 switch manChoice
                     case 'Yes'
                         corrDefGoodFlag=1;
@@ -475,7 +476,7 @@ switch MorePoints
         disp(['You are currently editing from ' num2str(sFrame/aviSR) ...
             ' sec to ' num2str(eFrame/aviSR) ' sec, ' num2str(length(auto_frames)) ' frames'])
         manChoice = questdlg('Redo definitely good frames?','Redo DefGood',...
-                    'Yes','No','No');
+                    'Yes','No','Yes');
         switch manChoice
             case 'Yes'
                 corrDefGoodFlag=1;
@@ -502,7 +503,7 @@ switch MorePoints
                 CorrectTheseFrames;
             case 'Manual'
                 manChoice = questdlg('Redo definitely good frames?','Redo DefGood',...
-                    'Yes','No','No');
+                    'Yes','No','Yes');
                 switch manChoice
                     case 'Yes'
                         corrDefGoodFlag=1;
@@ -596,6 +597,8 @@ switch MorePoints
     end
     case 'l'
         editELvectors;
+    case 'u'
+        FramesFromFile;
     case 'g'
         MarkForExclude;
     case 's'
@@ -2207,7 +2210,7 @@ for nStarts = 1:length(starts)
             case 'Manual'
                 disp(['You are currently editing ' num2str(length(auto_frames)) ' frames'])
                 manChoice = questdlg('Redo definitely good frames?','Redo DefGood',...
-                            'Yes','No','No');
+                            'Yes','No','Yes');
                 switch manChoice
                     case 'Yes'
                         corrDefGoodFlag=1;
@@ -2298,6 +2301,43 @@ while velLineGood==0
     end
 end
 close(velthreshing) 
+end
+%% %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+function FramesFromFile(~,~)
+global auto_frames;
+
+[vFile, vDir] = uigetfile('*.mat','Choose file');
+vLoaded = load(fullfile(vDir,vFile));
+
+bits = fieldnames(vLoaded);
+if length(bits) == 1
+    auto_frames = vLoaded.(bits{1}); 
+else
+    [s,~] = listdlg('PromptString','Which var:',...
+                'ListString',bits,'SelectionMode','single');
+    auto_frames = vLoaded.(bits{s});        
+end
+
+mchoice = questdlg(['Edit these ' num2str(length(auto_frames)) ' frames'],...
+            'Edit by frame number','Auto-assist','Manual','Cancel','Manual');
+        switch mchoice
+            case 'Auto-assist'
+                numPasses=2;
+                CorrectTheseFrames;
+            case 'Manual'
+                        manChoice = questdlg('Redo definitely good frames?','Redo DefGood',...
+                    'Yes','No','Yes');
+                switch manChoice
+                    case 'Yes'
+                        corrDefGoodFlag=1;
+                    case 'No'
+                        corrDefGoodFlag=0;
+                end  
+                CorrectManualFrames
+            case 'Cancel'
+                %do nothing
+        end
+
 end
 %% %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 function MarkForExclude(~,~)

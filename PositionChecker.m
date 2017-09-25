@@ -61,7 +61,7 @@ videoFig.NextButton = uicontrol('Style','pushbutton','String','NEXT EVENT',...
                            miscVar.buttonWidth,miscVar.buttonHeight],...
                            'Callback',{@fcnNextButton});   
                                
-videoFig.MarkFrameButton = uicontrol('Style','pushbutton','String','MARK FRAME',...
+videoFig.MarkFrameButton = uicontrol('Style','pushbutton','String','MARK FRAME (space)',...
                            'Position',[miscVar.buttonLeftEdge,miscVar.upperLimit-90,...
                            miscVar.buttonWidth,miscVar.buttonHeight],...
                            'Callback',{@fcnMarkFrame});
@@ -167,7 +167,12 @@ end
 function fcnMarkFrame(~,~)
 global miscVar
 
-miscVar.markedFrames = [miscVar.markedFrames, miscVar.frameNum];
+if sum(miscVar.markedFrames == miscVar.frameNum)==0
+    miscVar.markedFrames = [miscVar.markedFrames, miscVar.frameNum];
+    disp(['Frame ' num2str(miscVar.frameNum) ' marked'])
+else
+    disp('Already got it, not marked')
+end
 end
 %%
 function fcnLoadVideo(~,~)
@@ -277,7 +282,7 @@ switch e.Key
         miscVar.frameWanted = miscVar.frameNum + 100;
         SetAndDisplay;
     case 'space'    
-        disp('Fake player start/stop')
+        fcnMarkFrame;
     case 'j'
         fcnJumpFrameButton;
 end
