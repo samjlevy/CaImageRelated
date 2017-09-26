@@ -1,8 +1,9 @@
-(trialbytrial, allfiles, 
 
+
+[LRsel, STsel] = LRSTselectivity(trialbytrial);
 numCells = size(trialbytrial(1).trialPSAbool{1,1},1);
 numDays = size(LRsel.hits,2);
-[LRsel, STsel] = LRSTselectivity(trialbytrial);
+
 %comparison of how selectivity is different laps with a hit vs. total spikes
 
 figure;
@@ -83,6 +84,9 @@ plot([1:length(LRsem)],LRmeans+LRsem,'r','LineWidth',2)
 %plot([1:length(LRsem)],LRmeans-LRsem,'r','LineWidth',2)
 %plot([1:length(LRstd)],-LRstd,'b','LineWidth',2)
 plot([1:length(LRstd)],LRstd,'b','LineWidth',2)
+
+
+abo = aboveThresh{1}+aboveThresh{2}+aboveThresh{3}+aboveThresh{4};
 
 %maxDiff = max(sels(2:end) - sels(1));
 hold(LRfig.Children,'on')
@@ -230,9 +234,11 @@ end
 use = ~isnan(LRstd) 
 
 figure; histogram(LRsel.spikes(~isnan(LRsel.spikes)),[-1.05:0.1:1.05])
-xlim([-1.05 1.05])
+xlim([-1.05 1.05]); title('Left/Right selectivity')
+xlabel('Left                         Right')
 figure; histogram(STsel.spikes(~isnan(STsel.spikes)),[-1.05:0.1:1.05])
-xlim([-1.05 1.05])
+xlim([-1.05 1.05]); title('Study/Test selectivity')
+xlabel('Study                         Test')
 
 threshes = 0:0.05:1;
 for day = 1:size(LRsel.spikes,2)

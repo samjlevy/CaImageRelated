@@ -24,9 +24,11 @@ TCounts = cell(numCells, numConds);
 TMap_gauss = cell(numCells, numConds);
 
 p = ProgressBar(100);
-update_inc = ceil(numCells/100);
-update_points = update_inc:update_inc:numCells;
-if length(update_points)==99; update_points(100) = numCells; end
+update_points = round(linspace(1,numCells,101));
+update_points = update_points(2:end);
+%update_inc = ceil(numCells/100);
+%update_points = update_inc:update_inc:numCells;
+%if length(update_points)==99; update_points(100) = numCells; end
 for cellI = 1:numCells
     for condType = 1:4
         for tSess = 1:numSess
@@ -85,7 +87,11 @@ for cellI = 1:numCells
         end
         end
     end
+    if sum(update_points == cellI)==1
+        p.progress;
+    end
 end
+p.stop;
 
 if saveThis==1
     savePath = fullfile(base_path,'PFsLin.mat'); 

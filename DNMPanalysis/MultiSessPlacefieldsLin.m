@@ -93,7 +93,7 @@ fls = dir(figDir);
 fls([fls.isdir]) = [];
 names = {fls.name};
 names2 = cellfun(@(x) fullfile(figDir,x),names,'UniformOutput',false);
-output_file = fullfile(base_path,'Bellatrix Stem Rasters.pdf');
+output_file = fullfile(base_path,'Polaris Stem Rasters.pdf');
 copyfile(names2{1},fullfile(output_file));
 append_pdfs(output_file,names2{2:end})
 rmdir(figDir,'s')
