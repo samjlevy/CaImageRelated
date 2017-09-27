@@ -22,8 +22,9 @@ for tDay = 1:numDays
     PFsD = cell2mat(TMap_gauss(cellsInclude,4,tDay)); PFsD(isnan(PFsD)) = 0;
     numCells = sum(cellsInclude);
     %}
-    useCells = dayUse(:,tDay)>0;
-    
+    %useCells = dayUse(:,tDay)>0;
+    useCells = dayAllUse(:,tDay)>0;
+     
     for ct = 1:4
         binsUse(ct,:) = RunOccMap{1,ct,tDay} > posThresh;
     end
@@ -67,8 +68,9 @@ for tDay = 1:numDays
         end 
     end
 end
-
+h = figure;
 jetTrips = colormap(jet);
+close(h)
 jetUse = round(linspace(1,64,numDays));
 plotColors = jetTrips(jetUse,:);
 
@@ -77,20 +79,36 @@ axes(StudyFig); hold(StudyFig.Children,'on'); title(StudyFig.Children,'Study Lef
 axes(TestFig); hold(TestFig.Children,'on'); title(TestFig.Children,'Test Left vs Right')
 axes(LeftFig); hold(LeftFig.Children,'on'); title(LeftFig.Children,'Left Study vs Test')
 axes(RightFig); hold(RightFig.Children,'on'); title(RightFig.Children,'Right Study vs Test')
-xlabel(StudyFig.Children,'Choice Point                      Start')
-xlabel(TestFig.Children,'Choice Point                      Start')
-xlabel(LeftFig.Children,'Choice Point                      Start')
-xlabel(RightFig.Children,'Choice Point                      Start')
+xlabel(StudyFig.Children,'Start                      Choice Point'); ylabel('Correlation')
+xlabel(TestFig.Children,'Start                      Choice Point'); ylabel('Correlation')
+xlabel(LeftFig.Children,'Start                      Choice Point'); ylabel('Correlation')
+xlabel(RightFig.Children,'Start                      Choice Point'); ylabel('Correlation')
 for uDay = 1:numDays
-    plot(StudyFig.Children,StudyCorrs(uDay,:),'-o','Color',plotColors(uDay,:))
-    plot(TestFig.Children,TestCorrs(uDay,:),'-o','Color',plotColors(uDay,:))
-    plot(LeftFig.Children,LeftCorrs(uDay,:),'-o','Color',plotColors(uDay,:))
-    plot(RightFig.Children,RightCorrs(uDay,:),'-o','Color',plotColors(uDay,:))
+    plot(StudyFig.Children,fliplr(StudyCorrs(uDay,:)),'-o','Color',plotColors(uDay,:))
+    plot(TestFig.Children,fliplr(TestCorrs(uDay,:)),'-o','Color',plotColors(uDay,:))
+    plot(LeftFig.Children,fliplr(LeftCorrs(uDay,:)),'-o','Color',plotColors(uDay,:))
+    plot(RightFig.Children,fliplr(RightCorrs(uDay,:)),'-o','Color',plotColors(uDay,:))
 end
-ylim(StudyFig.Children,[-0.95 1])
-ylim(TestFig.Children,[-0.95 1])
-ylim(LeftFig.Children,[-0.5 1])
-ylim(RightFig.Children,[-0.5 1])
+ylim(StudyFig.Children,[-1 1]); xlim(StudyFig.Children,[2 14]);
+ylim(TestFig.Children,[-1 1]); xlim(TestFig.Children,[2 14]);
+ylim(LeftFig.Children,[-1 1]); xlim(LeftFig.Children,[2 14]);
+ylim(RightFig.Children,[-1 1]); xlim(RightFig.Children,[2 14]);
+
+
+dayG = repmat([1:numDays]',useBins,1);
+binG = repmat([1:useBins],1,numDays)';
+allCorrs = StudyCorrs(:,1:useBins); allCorrs = allCorrs(:);
+pStudy = anovan(allCorrs,{dayG,binG},'varnames',{'Day','Bin'},'display','off');
+allCorrs = TestCorrs(:,1:useBins); allCorrs = allCorrs(:);
+pTest = anovan(allCorrs,{dayG,binG},'varnames',{'Day','Bin'},'display','off');
+allCorrs = LeftCorrs(:,1:useBins); allCorrs = allCorrs(:);
+pLeft = anovan(allCorrs,{dayG,binG},'varnames',{'Day','Bin'},'display','off');
+allCorrs = RightCorrs(:,1:useBins); allCorrs = allCorrs(:);
+pRight = anovan(allCorrs,{dayG,binG},'varnames',{'Day','Bin'},'display','off');
+title(StudyFig.Children,['Study Left vs Right, prob>F day= ' num2str(pStudy(1)) ', bin=' num2str(pStudy(2))])
+title(TestFig.Children,['Test Left vs Right, prob>F day= ' num2str(pTest(1)) ', bin=' num2str(pTest(2))])
+title(LeftFig.Children,['Left Study vs Test, prob>F day= ' num2str(pLeft(1)) ', bin=' num2str(pLeft(2))])
+title(RightFig.Children,['Right Study vs Test, prob>F day= ' num2str(pRight(1)) ', bin=' num2str(pRight(2))])
 
 for nBin = 1:useBins
     [~,order] = sort(LeftCorrs(:,nBin));

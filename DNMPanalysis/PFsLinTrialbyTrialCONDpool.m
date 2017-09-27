@@ -25,9 +25,8 @@ TCounts = cell(numCells, numConds, numSess);
 TMap_gauss = cell(numCells, numConds, numSess);
 
 p = ProgressBar(100);
-update_inc = ceil(numCells/100);
-update_points = update_inc:update_inc:numCells;
-if length(update_points)==99; update_points(100) = numCells; end
+update_points = round(linspace(1,numCells,101));
+update_points = update_points(2:end);
 
 ss = fieldnames(Conds);
 for cellI = 1:numCells

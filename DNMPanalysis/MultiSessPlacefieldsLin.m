@@ -29,6 +29,8 @@ threshAndConsec = reorgThresh | reorgConsec;
 dayUse = sum(reorgThresh,3);
 dayUse2 = sum(reorgConsec,3);
 
+dayAllUse = dayUse + dayUse2;
+
 threshPerDay = sum(dayUse>0,1);
 consecPerDay = sum(dayUse2>0,1); 
 
@@ -39,13 +41,17 @@ useCells = find(threshUse+consecUse > 0);
 
 [Conds] = GetTBTconds(trialbytrial);
 
-xlims = [25 60]; cmperbin = 1; minspeed = 0; 
+xlims = [25 60]; cmperbin = 2.5; minspeed = 0; 
 if exist(fullfile(base_path,'PFsLin.mat'),'file')
-    fullfile(base_path,'PFsLin.mat')
+    disp(['Already have ' fullfile(base_path,'PFsLin.mat')])
 else
 	[~, ~, ~, TMap_unsmoothed, ~, TMap_gauss] =...
-        PFsLinTrialbyTrial(trialbytrial, xlims, cmperbin, minspeed, 1, base_path);
+        PFsLinTrialbyTrial(trialbytrial, xlims, cmperbin, minspeed, 1, fullReg.BaseSession);
 end
+
+[OccMap, RunOccMap, xBin, TMap_unsmoothed, TCounts, TMap_gauss] =...
+    PFsLinTrialbyTrialCONDpool(trialbytrial,xlims, cmperbin, minspeed, 1, fullReg.BaseSession, Conds);
+
 
 numShuffles = 1000;
 dimShuffle = 'all'; %'direction' 'studytest'

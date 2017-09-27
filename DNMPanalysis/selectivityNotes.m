@@ -1,4 +1,4 @@
-
+function selectivityNotes
 
 [LRsel, STsel] = LRSTselectivity(trialbytrial);
 numCells = size(trialbytrial(1).trialPSAbool{1,1},1);
@@ -163,8 +163,8 @@ STdiffDiffs = (abs(STdayDiffs(:,2:end) - STdayDiffs(:,1))./STdayDiffs(:,1))*100;
 mn = nanmean(abs(LRdiffDiffs),1);
 std = nanstd(abs(LRdiffDiffs),1);
 sem = std./sqrt(sum(~isnan(LRdiffDiffs),1));
-for nc = 1:numCells
-    if mn
+%for nc = 1:numCells
+    %if mn
 
 for tc = 1:numCells
     selfStd(tc) = nanstd(abs(LRdiffDiffs(tc,:)));
@@ -248,22 +248,30 @@ for tt = 1:length(threshes)
 end
 end
 
+jetTrips = colormap(jet);
+jetUse = round(linspace(1,64,numDays));
+plotColors = jetTrips(jetUse,:);
+
 figure;
 subplot(1,2,1); hold on
-for aa = 1:11; plot(threshes,LRselECDF(:,aa),'DisplayName',lg{aa}); end
-legend('show'); legend('Location','northwest'); xlabel('LR Threshold')
-ylabel('Proportion of Cells')
+for aa = 1:11; plot(threshes,LRselECDF(:,aa),'Color',plotColors(aa,:),'LineWidth',1.5); end %,'DisplayName',lg{aa}
+%legend('show'); legend('Location','northwest'); 
+xlabel('LR Threshold'); ylabel('Proportion of Cells')
 subplot(1,2,2); hold on
-for aa = 1:11; plot(threshes,STselECDF(:,aa),'DisplayName',lg{aa}); end
-legend('show'); legend('Location','northwest'); xlabel('ST Threshold')
-suptitle('Proportion of cells above selectivity threshold')
+for aa = 1:11; plot(threshes,STselECDF(:,aa),'Color',plotColors(aa,:),'LineWidth',1.5); end %,'DisplayName',lg{aa}
+%legend('show'); legend('Location','northwest'); 
+xlabel('ST Threshold')
+suptitle('Proportion of cells above selectivity threshold (Bellatrix)')
+
 
 for bb = 1:21
     [~,LRorder(bb,:)] = sort(LRselECDF(bb,:));
     [~,STorder(bb,:)] = sort(STselECDF(bb,:));
 end
 LRorder = LRorder'; STorder=STorder';
-%column is thresh level, list is rank of days
+%column is thresh level, row is day; list is rank order of days
+
+
 figure; subplot(1,2,1);
 hold on; for cc=7:20; plot(1:11,LRorder(:,cc),'-o','DisplayName',num2str(cc)); end
 xlabel('LR');
@@ -280,25 +288,23 @@ figure;
 subplot(1,2,1); plot(check,LRr); hold on; plot(check(LRp<0.05),LRr(LRp<0.05),'*r')
 xlabel('LR, day number'); ylim([-0.5 1])
 subplot(1,2,2); plot(check,STr); hold on; plot(check(STp<0.05),STr(STp<0.05),'*r')
- xlabel('ST, day number'); ylim([-0.5 1])
- suptitle('Correlation of rank order with middle threshold');
+xlabel('ST, day number'); ylim([-0.5 1])
+suptitle('Correlation of rank order with middle threshold');
 
- 
- %Least squares curve fitting
- n = number of x,y data points    
-sumx = ?x    
-sumy = ?y    
-sumxy = ?x*y    
-sumx2 = ?x*x    
-meanx = sumx / n    
-meany = sumy / n    
-slope = (n*sumxy - sumx*sumy) / (n*sumx2 - sumx*sumx)    
-intercept = meany-(slope*meanx)    
-ssy = ?(y-meany)^2    
-ssr = ?(y-intercept-slope*x)^2    
-R2 = 1-(ssr/ssy)
-Standard deviation of the slope = SQRT(ssr/(n-2))*SQRT(n/(n*sumx2 - sumx*sumx))
-Standard deviation of the intercept = SQRT(ssr/(n-2))*SQRT(sumx2/(n*sumx2 - sumx*sumx))
+LRrankSum = sum(LRorder(:,1:end-1),2);
+LRrankMean = mean(LRorder(:,1:end-1),2);
+STrankSum = sum(STorder(:,1:end-1),2);
+STrankMean = mean(STorder(:,1:end-1),2);
+
+figure; plot(1:11,LRrankMean,'-o')
+figure; plot(1:11,STrankMean,'-o')
+
+[~, ~, ~] = LeastSquaresRegressionSL(1:numDays, LRrankMean);
+[~, ~, ~] = LeastSquaresRegressionSL(1:numDays, STrankMean);
+
+
+end
+
 
 %Frank paper well selectivity
 "To calculate the well specificity index (WSI) of a unit, the well firing rate at each
