@@ -1,4 +1,9 @@
-function [LRsel, STsel, eachsel] = LRSTselectivityEach(trialbytrial)
+function [MIhits, MIspikes] = LRSTselectivityEach(trialbytrial)
+%This is identical in operation to LRSTselectivity, but it produces a
+%Modulation Index score for each cell, based on the formula for
+%phase-amplitude coupling in Tort et al 2010.
+
+numPhaseBins = 4;
 
 allnames = {trialbytrial(:).name};
 studyC = cell2mat(cellfun(@(x) ~isempty(strfind(x,'study')),allnames,'UniformOutput',false));
@@ -42,22 +47,33 @@ rightTestHits = lapHits{rightTest};
 
 leftStudySpikes = lapSpikes{leftStudy};
 rightStudySpikes = lapSpikes{rightStudy};
-rightStudySpikes = lapSpikes{leftTest};
+leftTestSpikes = lapSpikes{leftTest};
 rightTestSpikes = lapSpikes{rightTest};
 
 %Left Study, Right Study, Left Test, Right Test
-binAmpHits = [leftStudyHits rightStudyHits leftTestHits rightTestHits];
-binAmpHits = binAmpHits/sum(binAmpHits);
+binAmpHits(:,:,1) = leftStudyHits; binAmpHits(:,:,2) = rightStudyHits;
+binAmpHits(:,:,3) = leftTestHits; binAmpHits(:,:,4) = rightTestHits;
+binAmpHitsNorm = binAmpHits./sum(binAmpHits,3);
 
-binAmpSpikes = [leftStudySpikes rightStudySpikes leftTestSpikes rightTestSpikes];
-binAmpSpikes = binAmpSpikes/sum(binAmpSpikes);
+binAmpSpikes(:,:,1) = leftStudySpikes; binAmpSpikes(:,:,2) = rightStudySpikes; 
+binAmpSpikes(:,:,3) = leftTestSpikes; binAmpSpikes(:,:,4) = rightTestSpikes;
+binAmpSpikesNorm = binAmpSpikes./sum(binAmpSpikes,3);
 
 
+
+From here needs updating
 %KL distance
-logAmp=log2(binAmp);
-ShannonH =-sum(binAmp(logAmp~=-Inf).*logAmp(logAmp~=-Inf)); 
-Dkl = log2(numPhaseBins)-ShannonH;
+logAmpHits=log2(binAmpHits);
+ShannonH =-sum(binAmpHits(logAmpHits~=-Inf).*logAmpHits(logAmpHits~=-Inf)); 
+DklHits = log2(numPhaseBins)-ShannonH;
 
-MI=Dkl/log2(numPhaseBins);
+MIhits=DklHits/log2(numPhaseBins);
+
+
+logAmpSpikes=log2(binAmpSpikes);
+ShannonH =-sum(binAmpSpikes(logAmpSpikes~=-Inf).*logAmpSpikes(logAmpSpikes~=-Inf)); 
+DklSpikes = log2(numPhaseBins)-ShannonH;
+
+MIspikes=DklSpikes/log2(numPhaseBins);
 
 end

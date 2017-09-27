@@ -187,22 +187,54 @@ for tDay = 1:numDays
         end
     end
 end
-
+h = figure;
 jetTrips = colormap(jet);
+close(h)
 jetUse = round(linspace(1,64,numDays));
 plotColors = jetTrips(jetUse,:);
 
 StudyTestFig = figure; LeftRightFig = figure;
 axes(StudyTestFig); hold(StudyTestFig.Children,'on'); title(StudyTestFig.Children,'Study vs Test')
 axes(LeftRightFig); hold(LeftRightFig.Children,'on'); title(LeftRightFig.Children,'Left vs Right')
-xlabel(StudyTestFig.Children,'Choice Point                      Start')
-xlabel(LeftRightFig.Children,'Choice Point                      Start')
+xlabel(StudyTestFig.Children,'Start                      Choice Point'); ylabel('Correlation')
+xlabel(LeftRightFig.Children,'Start                      Choice Point'); ylabel('Correlation')
 for uDay = 1:numDays
-    plot(StudyTestFig.Children,StudyTestCorrs(uDay,:),'-o','Color',plotColors(uDay,:))
-    plot(LeftRightFig.Children,LeftRightCorrs(uDay,:),'-o','Color',plotColors(uDay,:))
+    plot(StudyTestFig.Children,fliplr(StudyTestCorrs(uDay,:)),'-o','Color',plotColors(uDay,:))
+    plot(LeftRightFig.Children,fliplr(LeftRightCorrs(uDay,:)),'-o','Color',plotColors(uDay,:))
 end
-ylim(StudyTestFig.Children,[-0.5 1])
-ylim(LeftRightFig.Children,[-0.5 1])
+ylim(StudyTestFig.Children,[-0.5 1]); xlim(StudyTestFig.Children,[2 14]);
+ylim(LeftRightFig.Children,[-0.5 1]); xlim(LeftRightFig.Children,[2 14]);
+
+
+dayG = repmat([1:numDays]',useBins,1);
+binG = repmat([1:useBins],1,numDays)';
+allCorrs = StudyTestCorrs(:,1:useBins); allCorrs = allCorrs(:);
+pST = anovan(allCorrs,{dayG,binG},'varnames',{'Day','Bin'},'display','off');
+title(StudyTestFig.Children,['Study vs Test, prob>F day= ' num2str(pST(1)) ', bin=' num2str(pST(2))])
+allCorrs = LeftRightCorrs(:,1:useBins); allCorrs = allCorrs(:);
+pLR = anovan(allCorrs,{dayG,binG},'varnames',{'Day','Bin'},'display','off');
+title(LeftRightFig.Children,['Left vs Right, prob>F day= ' num2str(pLR(1)) ', bin=' num2str(pLR(2))])
+
+
+for bb = 1:useBins
+    [~,LRorder(:,bb)] = sort(LeftRightCorrs(:,bb));
+    [~,STorder(:,bb)] = sort(StudyTestCorrs(:,bb));
+end
+LRorder = LRorder'; STorder=STorder';
+
+LRrankSum = sum(LRorder,1);
+LRrankMean = mean(LRorder,1);
+STrankSum = sum(STorder,1);
+STrankMean = mean(STorder,1);
+
+[~, ~, rsq1] = LeastSquaresRegressionSL(1:numDays, LRrankMean);
+title(['Left vs Right mean rank R^2=' num2str(rsq1)])
+xlabel('Day');ylabel('Mean rank of correlation')
+[~, ~, rsq2] = LeastSquaresRegressionSL(1:numDays, STrankMean);
+title(['Study vs Test mean rank R^2=' num2str(rsq2)])
+xlabel('Day');ylabel('Mean rank of correlation')
+
+
 
 useBins = 12;
 useCorrs = LeftRightCorrs;
