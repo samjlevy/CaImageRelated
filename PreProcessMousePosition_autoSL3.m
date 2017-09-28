@@ -1231,7 +1231,7 @@ for pass=1:numPasses
     %pass 1 skip where bad, pass 2 run skipped, manual correct if still bad
     resol = 1; % Percent resolution for progress bar
     p = ProgressBar(100/resol);
-    update_points = round(linspace(1,length(auto_frames,101)));
+    update_points = round(linspace(1,length(auto_frames),101));
     update_points = update_points(2:end);
     %update_inc = round(length(auto_frames)/(100/resol));
     total=0;

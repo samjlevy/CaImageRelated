@@ -1,9 +1,12 @@
 function [MIhits, MIspikes] = LRSTselectivityEach(trialbytrial)
 %This is identical in operation to LRSTselectivity, but it produces a
 %Modulation Index score for each cell, based on the formula for
-%phase-amplitude coupling in Tort et al 2010.
+%phase-amplitude coupling in Tort et al 2010, describing how well a cell's
+%firing is binned into a single condition
 
-numPhaseBins = 4;
+numPhaseBins = length(trialbytrial);%4;
+numCells = size(trialbytrial(1).trialPSAbool{1,1},1);
+numDays = length(unique(trialbytrial(1).sessID));%max(trialbytrial(condType).sessID)
 
 allnames = {trialbytrial(:).name};
 studyC = cell2mat(cellfun(@(x) ~isempty(strfind(x,'study')),allnames,'UniformOutput',false));
@@ -17,7 +20,7 @@ lapSpikes = cell(length(trialbytrial),1);
 goodSpikes = cell(length(trialbytrial),1);
 
 for condType = 1:length(trialbytrial)
-    for sess = 1:max(trialbytrial(condType).sessID)
+    for sess = 1:numDays
         hitsThisCond = [];
         spikesThisCond = [];
         thisLaps = find(trialbytrial(condType).sessID == sess);
@@ -60,20 +63,25 @@ binAmpSpikes(:,:,3) = leftTestSpikes; binAmpSpikes(:,:,4) = rightTestSpikes;
 binAmpSpikesNorm = binAmpSpikes./sum(binAmpSpikes,3);
 
 
-
-From here needs updating
 %KL distance
-logAmpHits=log2(binAmpHits);
-ShannonH =-sum(binAmpHits(logAmpHits~=-Inf).*logAmpHits(logAmpHits~=-Inf)); 
-DklHits = log2(numPhaseBins)-ShannonH;
+logAmpHits=log2(binAmpHitsNorm);
+logAmpSpikes=log2(binAmpSpikesNorm);
 
-MIhits=DklHits/log2(numPhaseBins);
+for cellI = 1:numCells
+    for dayI = 1:numDays
+        ShannonHhits(cellI,dayI) = ...
+            -sum(binAmpHitsNorm(cellI,dayI,logAmpHits(cellI,dayI,:)~=-Inf)...
+                 .*logAmpHits(cellI,dayI,logAmpHits(cellI,dayI,:)~=-Inf),3);
+        DklHits(cellI,dayI) = log2(numPhaseBins) - ShannonHhits(cellI,dayI);     
+        MIhits(cellI,dayI) = DklHits(cellI,dayI)/log2(numPhaseBins);
+        
+        ShannonHspikes(cellI,dayI) = ...
+            -sum(binAmpSpikesNorm(cellI,dayI,logAmpSpikes(cellI,dayI,:)~=-Inf)...
+                 .*logAmpSpikes(cellI,dayI,logAmpSpikes(cellI,dayI,:)~=-Inf),3);
+        DklSpikes(cellI,dayI) = log2(numPhaseBins) - ShannonHspikes(cellI,dayI);     
+        MIspikes(cellI,dayI) = DklSpikes(cellI,dayI)/log2(numPhaseBins);
+    end
+end
 
-
-logAmpSpikes=log2(binAmpSpikes);
-ShannonH =-sum(binAmpSpikes(logAmpSpikes~=-Inf).*logAmpSpikes(logAmpSpikes~=-Inf)); 
-DklSpikes = log2(numPhaseBins)-ShannonH;
-
-MIspikes=DklSpikes/log2(numPhaseBins);
 
 end

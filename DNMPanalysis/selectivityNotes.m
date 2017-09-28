@@ -3,6 +3,11 @@ function selectivityNotes
 [LRsel, STsel] = LRSTselectivity(trialbytrial);
 numCells = size(trialbytrial(1).trialPSAbool{1,1},1);
 numDays = size(LRsel.hits,2);
+h = figure;
+jetTrips = colormap(jet);
+close(h)
+jetUse = round(linspace(1,64,numDays));
+plotColors = jetTrips(jetUse,:);
 
 %comparison of how selectivity is different laps with a hit vs. total spikes
 
@@ -302,6 +307,70 @@ figure; plot(1:11,STrankMean,'-o')
 [~, ~, ~] = LeastSquaresRegressionSL(1:numDays, LRrankMean);
 [~, ~, ~] = LeastSquaresRegressionSL(1:numDays, STrankMean);
 
+
+%Modulation index stuff
+[MIhits, MIspikes] = LRSTselectivityEach(trialbytrial);
+figure; histogram(MIspikes,[0.05:0.1:1.05]); xlabel('Modulation Index'); ylabel('Frequency')
+
+figure; plot(STsel.spikes,MIspikes,'o')
+ylabel('Modulation Index'); xlabel('Study                    Test')
+figure; plot(LRsel.spikes,MIspikes,'o')
+ylabel('Modulation Index'); xlabel('Study                    Test')
+
+%plot selectivity against place field stuff
+load('PFsLin.mat','TMap_gauss')
+%get bin location of max firing rate (ignoring condition)
+maxRateBin = nan(numCells,numDays);
+for cellI = 1:numCells
+    for dayI = 1:numDays
+        %figure;
+        for condI = 1:4
+            [rate(condI),rInd(condI)] = max(fliplr(TMap_gauss{cellI,condI,dayI}));
+            %subplot(4,1,condI); plot(fliplr(TMap_gauss{cellI,condI,dayI}),'-o'); hold on
+        end
+        if any(rate)
+            [~,loc]=max(rate);
+            maxRateBin(cellI,dayI) = rInd(loc);
+            %subplot(4,1,loc); plot([rInd(loc) rInd(loc)], [max(rate)-1 max(rate)+1],'r') 
+        end
+    end
+end
+figure; plot(maxRateBin(:,:),abs(STsel.spikes(:,:)),'o')
+ylabel('Frequency'); xlabel('Max firing rate position (bin#)')     
+
+%plot against selectivity
+figure; plot(maxRateBin(:,:),abs(STsel.spikes(:,:)),'o')
+ylabel('ST selectivity'); xlabel('Max firing rate position (bin#)')
+figure; plot(maxRateBin(:,:),abs(LRsel.spikes(:,:)),'o')
+ylabel('LR selectivity'); xlabel('Max firing rate position (bin#)')
+%plot against MIscore
+figure; plot(maxRateBin(:,:),MIspikes(:,:),'o')
+ylabel('Modulation Index'); xlabel('Max firing rate position (bin#)')
+
+%any trends over days in selectivity vs rate position?
+for dayJ = 1:numDays
+    for binJ = 1:length(TMap_gauss{1,1,1})
+        selInds = maxRateBin(:,dayJ)==binJ;
+        LRbinSelMean(dayJ,binJ) = nanmean(abs(LRsel.spikes(selInds,dayJ)));
+        STbinSelMean(dayJ,binJ) = nanmean(abs(STsel.spikes(selInds,dayJ)));
+    end
+end
+LRbinSels = [];
+STbinSels = [];
+selsBin = [];
+for binJ = 1:length(TMap_gauss{1,1,1})
+    selInds = maxRateBin==binJ;
+    selsBin = [selsBin; ones(sum(sum(selInds)),1)*binJ];
+    LRbinSels = [LRbinSels; abs(LRsel.spikes(selInds))];
+    STbinSels = [STbinSels; abs(STsel.spikes(selInds))];
+    LRbinSelMean(binJ) = nanmean(abs(LRsel.spikes(selInds)));
+    STbinSelMean(binJ) = nanmean(abs(STsel.spikes(selInds)));
+end
+
+[slope, intercept, rsq] = LeastSquaresRegressionSL(selsBin, STbinSels)
+for dayK = 1:numDays
+    plot(1:14,STbinSelMean(dayK,:),'Color',plotColors(dayK,:),'LineWidth',2)
+end
 
 end
 
