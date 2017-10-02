@@ -1,4 +1,4 @@
-function [xpos_interp,ypos_interp,time_interp,AVItime_interp] = PreProcessMousePosition_autoSL3(varargin);
+function [xpos_interp,ypos_interp,time_interp,AVItime_interp] = PreProcessMousePosition_autoSL3(varargin)
 % Open issues: 6/15/17
 %   
 %   PRIORITY   
@@ -1160,14 +1160,14 @@ lastManualFrame=auto_frames(corrFrame);
 end
 %% %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 function [sFrame, eFrame]=SelectFrameNumbers(~,~)
-global PosAndVel; global time; 
+global PosAndVel time aviSR
 
 disp('click on the good points around the flaw then hit enter');
         
 figure(PosAndVel);
 [DVTsec,~] = ginput(2); % DVTsec is start and end time in DVT seconds
-sFrame = round(min(DVTsec));
-eFrame = round(max(DVTsec));
+sFrame = round(min(DVTsec)*aviSR);
+eFrame = round(max(DVTsec)*aviSR);
 
 eFrame = min([length(time), eFrame]); %make sure we're not to far
 sFrame = max([1, sFrame]); %makesure we're not too early
@@ -1180,7 +1180,7 @@ global markWith; global v0; global pass; global numPasses;
 global overwriteManualFlag; global definitelyGood; global bl;
 
 skipped=[];
-%ManualCorrFig=figure('name','ManualCorrFig'); 
+% ManualCorrFig=figure('name','ManualCorrFig'); 
 imagesc(ManualCorrFig.Children,flipud(v0)); 
 title(ManualCorrFig.Children,'Auto correcting, please wait')
 for pass=1:numPasses
@@ -1694,16 +1694,21 @@ vel_init = hypot(diff(Xpix),diff(Ypix))./diff(time);%(time(2)-time(1));
 forcedExclude = find(excludeFromVel(1:length(vel_init)));
 vel_init(forcedExclude) = min(vel_init);
 
+% Nat's attempt to eliminate any plotting on the x and y position while
+% mouse/rat is off the maze
+Xpix_plot = Xpix; Xpix_plot(forcedExclude) = nan;
+Ypix_plot = Ypix; Ypix_plot(forcedExclude) = nan;
+
 velInds=1:length(vel_init);
-hx0 = subplot(4,3,1:3);plot(time,Xpix);xlabel('time (sec)');ylabel('x position (cm)');yl = get(gca,'YLim');
+hx0 = subplot(4,3,1:3);plot(time,Xpix_plot);xlabel('time (sec)');ylabel('x position (cm)');yl = get(gca,'YLim');
     line([MoMtime MoMtime], [yl(1) yl(2)],'Color','r');axis tight;
-hy0 = subplot(4,3,4:6);plot(time,Ypix);xlabel('time (sec)');ylabel('y position (cm)');yl = get(gca,'YLim');
+hy0 = subplot(4,3,4:6);plot(time,Ypix_plot);xlabel('time (sec)');ylabel('y position (cm)');yl = get(gca,'YLim');
     line([MoMtime MoMtime], [yl(1) yl(2)],'Color','r');axis tight;
-hVel = subplot(4,3,7:12);plot(velInds,vel_init);xlabel('time (sec)');ylabel('velocity');axis tight; %#ok<NASGU>
+hVel = subplot(4,3,7:12);plot(velInds*(time(2)-time(1)),vel_init);xlabel('time (sec)');ylabel('velocity');axis tight; %#ok<NASGU>
 
 hold on 
-plot(velInds(vel_init>auto_vel_thresh),vel_init(vel_init>auto_vel_thresh),'or'); hold off
-linkaxes([hx0 hy0],'x');
+plot((time(2)-time(1))*velInds(vel_init>auto_vel_thresh),vel_init(vel_init>auto_vel_thresh),'or'); hold off
+linkaxes([hx0 hy0 hVel],'x');
 hline=refline(0,auto_vel_thresh);hline.Color='r';hline.LineWidth=1.5;
 end
 %% %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -1942,12 +1947,14 @@ close(MazeFig)
     %}
 %end
 
+SaveTemp;
+
 end
 %% %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 function ChooseStartsStops(~,~)
 global chooseStrs; global starts; global stops; global beOptions;
 global bChoices; global allTxt; global bframes; global allstarts;
-global allstops; global choices; global Xpix
+global allstops; global choices; global Xpix;
 
 if size(chooseStrs,1)==1 && sum(cellfun(@ischar, chooseStrs))/size(chooseStrs,2)==1
 
@@ -2009,7 +2016,7 @@ if sum(starts)==0 || sum(stops)==0
     keyboard
 end
 
-if any(starts>length(xAVI)) || any(stops>length(xAVI))
+if any(starts>length(Xpix)) || any(stops>length(Xpix))
     disp('Look out, some frames in the spreadsheet are longer than the video')
     starts(starts>length(Xpix)) = length(Xpix);
     stops(stops>length(Xpix)) = length(Xpix);
@@ -2090,7 +2097,7 @@ if any(auto_frames)
         [~,ia,~] = intersect(auto_frames,excludeFromVel); %returns index vectors ia and ib.
         auto_frames(ia) = [];
     end
-    close(badPoints);
+%     close(badPoints);
     numPasses=2;
     %if length(auto_frames) > 500
     %    auto_chunks = 
@@ -2176,6 +2183,14 @@ while doneLoading==0
     
     loadChoice = questdlg('Done loading sheets or another?','Done loading?',...
                     'Done','Another!','Done');
+                
+    % NK throw an error to let user know something is up with the
+    % spreadsheet
+    num_trials = size(frameses(loaded).frames,1);
+    temp = sum(isnan(frameses(loaded).frames),1);
+    if any(temp ~= 0 & temp ~= num_trials)
+        error(['Something is wrong with ' xlsFile '. Check and restart PreProcess'])
+    end
     switch loadChoice
         case 'Done'
             doneLoading=1;
