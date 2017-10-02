@@ -626,6 +626,8 @@ MDSL(i).Room = '201a - 2015';
 MDSL(i).RecordStartTime = '11:14:17.394000 AM';
 if strcmp(userstr,'mouseimage')
     MDSL(i).Location = 'I:\Europa\Europa_161013';
+elseif strcmp(userstr,'sam')
+    MDSL(i).Location = 'H:\Europa\Europa_161013';
 end
 MDSL(i).Notes = [];
 
@@ -795,6 +797,8 @@ MDSL(i).Room = '201a - 2015';
 MDSL(i).RecordStartTime = '11:19:41.906000 AM';
 if strcmp(userstr,'mouseimage')
     MDSL(i).Location = 'I:\Europa\Europa_161014';
+elseif strcmp(userstr,'sam')
+    MDSL(i).Location = 'H:\Europa\Europa_161014';
 end
 MDSL(i).Notes = [];
 
@@ -891,6 +895,39 @@ MDSL(i).Room = '201a - 2015';
 MDSL(i).RecordStartTime = '01:39:40.531000 PM';
 if strcmp(userstr,'mouseimage')
     MDSL(i).Location = 'G:\Europa\Europa_161022';
+end
+MDSL(i).Notes = [];
+
+%% G50_open
+G50_open(1) = (i+1);
+
+i = i+1;
+MDSL(i).Animal = 'G50_open';
+MDSL(i).Date = '08_28_2017';
+MDSL(i).Session = 1;
+MDSL(i).Env = 'Mega open field';
+MDSL(i).Room = '721b';
+MDSL(i).RecordStartTime = ' ';
+if strcmp(userstr,'mouseimage')
+    MDSL(i).Location = 'I:\Europa\Europa_161013';
+elseif strcmp(userstr,'sam')
+    MDSL(i).Location = 'F:\G50really';
+end
+MDSL(i).Notes = [];
+
+BOOG05_open(1) = (i+1);
+
+i = i+1;
+MDSL(i).Animal = 'BOOG05_open';
+MDSL(i).Date = '08_27_2017';
+MDSL(i).Session = 1;
+MDSL(i).Env = 'Mega open field';
+MDSL(i).Room = '721b';
+MDSL(i).RecordStartTime = ' ';
+if strcmp(userstr,'mouseimage')
+    MDSL(i).Location = 'I:\Europa\Europa_161013';
+elseif strcmp(userstr,'sam')
+    MDSL(i).Location = 'D:\Boog05_170827\G50ofs';
 end
 MDSL(i).Notes = [];
 %% Compile session_ref

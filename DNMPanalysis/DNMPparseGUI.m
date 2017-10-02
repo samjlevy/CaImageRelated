@@ -204,7 +204,7 @@ ParsedFrames.LeaveHomecage=headings(d);
 
 %% Layout for ForcedUnforced
     case 2
-        miscVar.buttonsInUse={'LapStartButton'; 'ChoiceLeaveButton';...
+        miscVar.buttonsInUse={'LapStartButton'; 'ChoiceEnterButton';'ChoiceLeaveButton';...
                               'TrialTypeButton';'TrialDirButton';...
                               'RewardButton';'EnterDelayButton';'LeaveMazeButton';...
                               'StartHomecageButton';'LeaveHomecageButton'};
@@ -212,10 +212,19 @@ bs=0;
 videoFig.LapStartButton = uicontrol('Style','pushbutton','String','LAP START',...
                            'Position',[miscVar.buttonLeftEdge,miscVar.upperLimit,miscVar.buttonWidth,30],...
                            'Callback',{@fcnLapStartButton});
-
+                       
+videoFig.ChoiceEnterButton = uicontrol('Style','pushbutton','String','CHOICE ENTER',...
+                             'Position',[miscVar.buttonSecondCol,miscVar.upperLimit - miscVar.buttonStepDown*bs,130,30],...
+                             'Callback',{@fcnChoiceEnterButton});
+                         
+bs=bs+1;
 videoFig.ChoiceLeaveButton = uicontrol('Style','pushbutton','String','CHOICE LEAVE',...
+                             'Position',[miscVar.buttonLeftEdge,miscVar.upperLimit - miscVar.buttonStepDown*bs,miscVar.buttonWidth,30],...
+                             'Callback',{@fcnChoiceLeaveButton});
+                         
+videoFig.RewardButton = uicontrol('Style','pushbutton','String','REWARD',...
                              'Position',[miscVar.buttonSecondCol,miscVar.upperLimit - miscVar.buttonStepDown*bs,miscVar.buttonWidth,30],...
-                             'Callback',{@fcnChoiceLeaveButton});   
+                             'Callback',{@fcnRewardButton}); 
 
 bs=bs+1;
 videoFig.TrialTypeButton = uicontrol('Style','pushbutton','String','TRIAL TYPE',...
@@ -236,17 +245,13 @@ videoFig.PopTrialDir = uicontrol('Style','popup',...
                              'Position',[miscVar.buttonLeftEdge+130+10,miscVar.upperLimit - miscVar.buttonStepDown*bs-7,110,30],...
                              'string',{'          LEFT   ';'         RIGHT   '},...
                              'Value', 1); 
-                                          
-bs=bs+1;
-videoFig.RewardButton = uicontrol('Style','pushbutton','String','REWARD',...
-                             'Position',[miscVar.buttonLeftEdge,miscVar.upperLimit - miscVar.buttonStepDown*bs,miscVar.buttonWidth,30],...
-                             'Callback',{@fcnRewardButton}); 
 
+bs=bs+1;
 videoFig.EnterDelayButton = uicontrol('Style','pushbutton','String','ENTER DELAY',...
-                             'Position',[miscVar.buttonSecondCol,miscVar.upperLimit - miscVar.buttonStepDown*bs, miscVar.buttonWidth,30],...
+                             'Position',[miscVar.buttonLeftEdge,miscVar.upperLimit - miscVar.buttonStepDown*bs, miscVar.buttonWidth,30],...
                              'Callback',{@fcnEnterDelayButton});
                          
-bs=bs+1;
+
 videoFig.LeaveMazeButton = uicontrol('Style','pushbutton','String','LEAVE MAZE',...
                              'Position',[miscVar.buttonSecondCol,miscVar.upperLimit - miscVar.buttonStepDown*bs,...
                              miscVar.buttonWidth,30], 'Callback',{@fcnLeaveMazeButton});
@@ -264,20 +269,21 @@ videoFig.LeaveHomecageButton = uicontrol('Style','pushbutton','String','LEAVE HO
 
 
                          
-headings={'Trial #'; 'Start on maze (start of Forced)'; 'Choice leave';...
+headings={'Trial #'; 'Start on maze (start of Forced)'; 'Choice enter'; 'Choice leave';...
             'Reward'; 'Leave maze'; 'Start in homecage'; 'Leave homecage'; 'Trial Type (FORCED/FREE)';...
             'Trial Dir (L/R)';'Enter delay'};
 
 ParsedFrames.LapNumber=headings(1);        
 ParsedFrames.LapStart=headings(2);
-ParsedFrames.ChoiceLeave=headings(3);
-ParsedFrames.Reward=headings(4);
-ParsedFrames.LeaveMaze=headings(5);
-ParsedFrames.StartHomecage=headings(6);
-ParsedFrames.LeaveHomecage=headings(7);
-ParsedFrames.TrialType=headings(8);
-ParsedFrames.TrialDir=headings(9);
-ParsedFrames.EnterDelay=headings(10);
+ParsedFrames.ChoiceEnter=headings(3);
+ParsedFrames.ChoiceLeave=headings(4);
+ParsedFrames.Reward=headings(5);
+ParsedFrames.LeaveMaze=headings(6);
+ParsedFrames.StartHomecage=headings(7);
+ParsedFrames.LeaveHomecage=headings(8);
+ParsedFrames.TrialType=headings(9);
+ParsedFrames.TrialDir=headings(10);
+ParsedFrames.EnterDelay=headings(11);
 
     case 3
         disp('Sorry bro')
@@ -399,6 +405,17 @@ if miscVar.VideoLoadedFlag==1
     videoFig.LapStartButton.BackgroundColor=miscVar.Gray;
 end
 end
+function fcnChoiceEnterButton(~,~)
+disp('Choice Enter')
+global miscVar
+global ParsedFrames
+global videoFig
+if miscVar.VideoLoadedFlag==1
+    ParsedFrames.ChoiceEnter{miscVar.LapNumber+1,1}=miscVar.frameNum;
+    disp(num2str(ParsedFrames.ChoiceEnter{miscVar.LapNumber+1,1}))
+    videoFig.ChoiceEnterButton.BackgroundColor=miscVar.Gray;
+end
+end
 function fcnForcedChoiceEnterButton(~,~)
 disp('Forced Choice Enter')
 global miscVar
@@ -434,7 +451,7 @@ if miscVar.VideoLoadedFlag==1
 end
 end
 function fcnForcedRewardButton(~,~)
-disp('Enter Delay')
+disp('Forced Reward')
 global miscVar
 global ParsedFrames
 global videoFig
@@ -650,7 +667,8 @@ miscVar.currentTime = 0;
 miscVar.currentFrame = readFrame(video);
 miscVar.currentTime = miscVar.currentTime+video.FrameRate^-1;
 miscVar.frameNum = 1;
-miscVar.totalFrames = video.Duration/video.FrameRate^-1;
+%miscVar.totalFrames = video.Duration/video.FrameRate^-1;
+miscVar.totalFrames = video.Duration*video.FrameRate;
 videoFig.plotted;
 imagesc(rot90(miscVar.currentFrame,miscVar.rot90));
 title(['Frame ' num2str(miscVar.frameNum) '/' num2str(miscVar.totalFrames)])
@@ -824,60 +842,24 @@ global video
 
 switch e.Key
     case 'q' %Step back 100
-        if video.currentTime > 100/video.FrameRate
-            miscVar.frameNum = miscVar.frameNum - 101;
-            video.CurrentTime = miscVar.frameNum/video.FrameRate;
-            miscVar.currentFrame = readFrame(video);
-            miscVar.frameNum = miscVar.frameNum + 1;
-            videoFig.plotted = imagesc(rot90(miscVar.currentFrame,miscVar.rot90));
-            title(['Frame ' num2str(miscVar.frameNum) ' / ' num2str(miscVar.totalFrames)])
-        end
+        miscVar.frameChangeWanted = -100;
+        SetAndDisplay;
     case 'a' %Step back 10
-        if video.currentTime > 10/video.FrameRate
-            miscVar.frameNum = miscVar.frameNum - 11;
-            video.CurrentTime = miscVar.frameNum/video.FrameRate;
-            miscVar.currentFrame = readFrame(video);
-            miscVar.frameNum = miscVar.frameNum + 1;
-            videoFig.plotted = imagesc(rot90(miscVar.currentFrame,miscVar.rot90));
-            title(['Frame ' num2str(miscVar.frameNum) ' / ' num2str(miscVar.totalFrames)])
-        end
+        miscVar.frameChangeWanted = -10;
+        SetAndDisplay;
     case 's'   %Step back
-        %can't do frame 0/1
-        if video.currentTime > 1/video.FrameRate
-            miscVar.frameNum = miscVar.frameNum - 2;
-            video.CurrentTime = miscVar.frameNum/video.FrameRate;
-            miscVar.currentFrame = readFrame(video);
-            miscVar.frameNum = miscVar.frameNum + 1;
-            videoFig.plotted = imagesc(rot90(miscVar.currentFrame,miscVar.rot90));
-            title(['Frame ' num2str(miscVar.frameNum) ' / ' num2str(miscVar.totalFrames)])
-        end
+        miscVar.frameChangeWanted = -1;
+        SetAndDisplay;
     case 'd' %Step forward 1
-        if video.currentTime < miscVar.totalFrames
-            miscVar.frameNum = min([miscVar.frameNum, miscVar.totalFrames-1]);
-            video.CurrentTime = miscVar.frameNum/video.FrameRate;
-            miscVar.currentFrame = readFrame(video);
-            miscVar.frameNum = miscVar.frameNum + 1;
-            videoFig.plotted = imagesc(rot90(miscVar.currentFrame,miscVar.rot90));
-            title(['Frame ' num2str(miscVar.frameNum) ' / ' num2str(miscVar.totalFrames)])
-        end
+        miscVar.frameChangeWanted = 1;
+        SetAndDisplay;
     case 'f' %Step forward 10  
-        if video.currentTime+10 < miscVar.totalFrames
-            miscVar.frameNum = min([miscVar.frameNum + 9, miscVar.totalFrames-1]);
-            video.CurrentTime = miscVar.frameNum/video.FrameRate;
-            miscVar.currentFrame = readFrame(video);
-            miscVar.frameNum = miscVar.frameNum + 1;
-            videoFig.plotted = imagesc(rot90(miscVar.currentFrame,miscVar.rot90));
-            title(['Frame ' num2str(miscVar.frameNum) ' / ' num2str(miscVar.totalFrames)])
-        end
+        miscVar.frameChangeWanted = 10;
+        SetAndDisplay;
     case 'r' %Step forward 100
-        if video.currentTime+100 < miscVar.totalFrames
-            miscVar.frameNum = min([miscVar.frameNum + 99, miscVar.totalFrames-1]);
-            video.CurrentTime = miscVar.frameNum/video.FrameRate;
-            miscVar.currentFrame = readFrame(video);
-            miscVar.frameNum = miscVar.frameNum + 1;
-            videoFig.plotted = imagesc(rot90(miscVar.currentFrame,miscVar.rot90));
-            title(['Frame ' num2str(miscVar.frameNum) ' / ' num2str(miscVar.totalFrames)])
-        end    
+        %if video.currentTime+100 < miscVar.totalFrames
+        miscVar.frameChangeWanted = 100;
+        SetAndDisplay;
     case 'space'    
         disp('Fake player start/stop')
     case 'j'
@@ -885,6 +867,7 @@ switch e.Key
 end
          
 end
+
 
 %% Fix any fields that might be missing/unclicked on previous lap
 function fix_missed_fields(~,~)
@@ -908,3 +891,41 @@ elseif sum(something_wrong) == 0
 end
 
 end
+
+%%
+function SetAndDisplay(~,~)
+global miscVar
+global videoFig
+global video
+
+
+if miscVar.frameNum + miscVar.frameChangeWanted <= miscVar.totalFrames...
+        && miscVar.frameNum + miscVar.frameChangeWanted >= 1
+    miscVar.frameNum = miscVar.frameNum + miscVar.frameChangeWanted - 1;
+elseif miscVar.frameNum + miscVar.frameChangeWanted > miscVar.totalFrames
+    miscVar.frameNum = miscVar.totalFrames - 1;
+elseif miscVar.frameNum + miscVar.frameChangeWanted < 1    
+    miscVar.frameNum = 0;
+end
+
+video.CurrentTime = miscVar.frameNum/video.FrameRate;
+miscVar.currentFrame = readFrame(video);
+miscVar.frameNum = miscVar.frameNum + 1;
+videoFig.plotted = imagesc(miscVar.currentFrame);
+title(['Frame ' num2str(miscVar.frameNum) ' / ' num2str(miscVar.totalFrames)])
+
+%Old logic
+  %{
+        if miscVar.frameNum+100 <= miscVar.totalFrames
+if video.currentTime > 10/video.FrameRate
+            miscVar.frameNum = miscVar.frameNum + 99;
+            video.CurrentTime = miscVar.frameNum/video.FrameRate;
+            miscVar.currentFrame = readFrame(video);
+            miscVar.frameNum = miscVar.frameNum + 1;
+            videoFig.plotted = imagesc(miscVar.currentFrame);
+            title(['Frame ' num2str(miscVar.frameNum) ' / ' num2str(miscVar.totalFrames)])
+            
+        end   
+ %}
+end
+

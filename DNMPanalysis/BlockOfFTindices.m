@@ -1,5 +1,5 @@
 function [ blockIndices, edges ] = BlockOfFTindices( starts, stops)
-
+    
 edges = 1;
 blockIndices = [];
 for trialNum = 1:length(starts)
