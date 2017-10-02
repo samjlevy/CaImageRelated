@@ -122,6 +122,7 @@ max_pixel_jump = 45;
 corrDefGoodFlag = 0;
 overwriteManualFlag=0;
 drawnowEnable=1;
+PosSR = 30; %default
 for j = 1:length(varargin)
     if strcmpi('filepath', varargin{j})
         filepath = varargin{j+1};
@@ -134,6 +135,9 @@ for j = 1:length(varargin)
     end
     if strcmpi('max_pixel_jump', varargin{j})
         max_pixel_jump = varargin{j+1};
+    end
+    if strcmpi('PosSR', varargin{j})
+        PosSR = varargin{j+1}; % native sampling rate in Hz of position data (used only in smoothing)
     end
 end
 %%
@@ -149,8 +153,8 @@ cd(DVTpath);
 %%
 findingContrast=0;
 bl = 10000;
-PosSR = 30; % native sampling rate in Hz of position data (used only in smoothing)
-aviSR = 30.0003; % the framerate that the .avi thinks it's at
+% PosSR = 30; % native sampling rate in Hz of position data (used only in smoothing)
+% aviSR = 30.0003; % the framerate that the .avi thinks it's at
 cluster_thresh = 40; % For auto thresholding - any time there are events above
 % the velocity threshold specified by auto_thresh that are less than this
 % number of frames apart they will be grouped together
@@ -177,6 +181,7 @@ if size(avi_filepath,1)~=1
 end
 disp(['Using ' avi_filepath ])
 obj = VideoReader(avi_filepath);
+aviSR = obj.FrameRate;
 
 if exist('Pos_temp.mat','file') || exist('Pos.mat','file')
     % Determine if either Pos_temp or Pos file already exists in the
@@ -2486,9 +2491,10 @@ bkgChoice = questdlg('Supply/Load background image or composite?', ...
             title(['Top Clear Frame ' num2str(topClearNum)]) 
         Bot=figure('name','Bot'); imagesc(bottomClearFrame); %#ok<NASGU>
             title(['Bottom Clear Frame ' num2str(bottomClearNum)]) 
-        compositeBkg=uint8(zeros(480,640,3));
-        compositeBkg(1:240,:,:)=topClearFrame(1:240,:,:);
-        compositeBkg(241:480,:,:)=bottomClearFrame(241:480,:,:);
+        compositeBkg=uint8(zeros(obj.Height,obj.Width,3));
+        compositeBkg(1:(obj.Height/2),:,:)=topClearFrame(1:(obj.Height/2),:,:);
+        compositeBkg((obj.Height/2+1):obj.Height,:,:)= ...
+            bottomClearFrame((obj.Height/2+1):obj.Height,:,:);
         close Top; close Bot;
         %backgroundFrame=figure('name','backgroundFrame'); imagesc(compositeBkg); title('Composite Background Image')
         backgroundImage=compositeBkg;
