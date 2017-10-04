@@ -1,5 +1,5 @@
 function PreProcessMousePosition_autoSL3(varargin)
-% [xpos_interp,ypos_interp,time_interp,AVItime_interp] = 
+% PreProcessMousePosition_autoSL3(varargin)
 % Open issues: 6/15/17
 %   
 %   PRIORITY   
@@ -96,6 +96,8 @@ if ~isempty(strfind(version,'R2016a'))
     disp('Sorry, 2016a not going to work; use 2016b')
     return
 end
+
+clear global
 %% Need these for better organization
 clear global
 
@@ -122,6 +124,7 @@ max_pixel_jump = 45;
 corrDefGoodFlag = 0;
 overwriteManualFlag=0;
 drawnowEnable=1;
+PosSR = 30; %default
 for j = 1:length(varargin)
     if strcmpi('filepath', varargin{j})
         filepath = varargin{j+1};
@@ -134,6 +137,9 @@ for j = 1:length(varargin)
     end
     if strcmpi('max_pixel_jump', varargin{j})
         max_pixel_jump = varargin{j+1};
+    end
+    if strcmpi('PosSR', varargin{j})
+        PosSR = varargin{j+1}; % native sampling rate in Hz of position data (used only in smoothing)
     end
 end
 %%
@@ -149,8 +155,8 @@ cd(DVTpath);
 %%
 findingContrast=0;
 bl = 10000;
-PosSR = 30; % native sampling rate in Hz of position data (used only in smoothing)
-aviSR = 30.0003; % the framerate that the .avi thinks it's at
+% PosSR = 30; % native sampling rate in Hz of position data (used only in smoothing)
+% aviSR = 30.0003; % the framerate that the .avi thinks it's at
 cluster_thresh = 40; % For auto thresholding - any time there are events above
 % the velocity threshold specified by auto_thresh that are less than this
 % number of frames apart they will be grouped together
@@ -177,6 +183,7 @@ if size(avi_filepath,1)~=1
 end
 disp(['Using ' avi_filepath ])
 obj = VideoReader(avi_filepath);
+aviSR = obj.FrameRate;
 
 if exist('Pos_temp.mat','file') || exist('Pos.mat','file')
     % Determine if either Pos_temp or Pos file already exists in the
@@ -1203,14 +1210,14 @@ lastManualFrame=auto_frames(corrFrame);
 end
 %% %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 function [sFrame, eFrame]=SelectFrameNumbers(~,~)
-global PosAndVel; global time; 
+global PosAndVel time aviSR
 
 disp('click on the good points around the flaw then hit enter');
         
 figure(PosAndVel);
 [DVTsec,~] = ginput(2); % DVTsec is start and end time in DVT seconds
-sFrame = round(min(DVTsec));
-eFrame = round(max(DVTsec));
+sFrame = round(min(DVTsec)*aviSR);
+eFrame = round(max(DVTsec)*aviSR);
 
 eFrame = min([length(time), eFrame]); %make sure we're not to far
 sFrame = max([1, sFrame]); %makesure we're not too early
@@ -1223,7 +1230,7 @@ global markWith; global v0; global pass; global numPasses;
 global overwriteManualFlag; global definitelyGood; global bl;
 
 skipped=[];
-%ManualCorrFig=figure('name','ManualCorrFig'); 
+% ManualCorrFig=figure('name','ManualCorrFig'); 
 imagesc(ManualCorrFig.Children,flipud(v0)); 
 title(ManualCorrFig.Children,'Auto correcting, please wait')
 for pass=1:numPasses
@@ -1742,16 +1749,21 @@ vel_init = hypot(diff(Xpix),diff(Ypix))./diff(time);%(time(2)-time(1));
 forcedExclude = find(excludeFromVel(1:length(vel_init)));
 vel_init(forcedExclude) = min(vel_init);
 
+% Nat's attempt to eliminate any plotting on the x and y position while
+% mouse/rat is off the maze
+Xpix_plot = Xpix; Xpix_plot(forcedExclude) = nan;
+Ypix_plot = Ypix; Ypix_plot(forcedExclude) = nan;
+
 velInds=1:length(vel_init);
 hx0 = subplot(4,3,1:3);plot([1:length(Xpix)],Xpix);xlabel('time (sec)');ylabel('x position (cm)');yl = get(gca,'YLim');
     line([MoMtime MoMtime], [yl(1) yl(2)],'Color','r');axis tight;
 hy0 = subplot(4,3,4:6);plot([1:length(Ypix)],Ypix);xlabel('time (sec)');ylabel('y position (cm)');yl = get(gca,'YLim');
     line([MoMtime MoMtime], [yl(1) yl(2)],'Color','r');axis tight;
-hVel = subplot(4,3,7:12);plot(velInds,vel_init);xlabel('time (sec)');ylabel('velocity');axis tight; %#ok<NASGU>
+hVel = subplot(4,3,7:12);plot(velInds*(time(2)-time(1)),vel_init);xlabel('time (sec)');ylabel('velocity');axis tight; %#ok<NASGU>
 
 hold on 
-plot(velInds(vel_init>auto_vel_thresh),vel_init(vel_init>auto_vel_thresh),'or'); hold off
-linkaxes([hx0 hy0],'x');
+plot((time(2)-time(1))*velInds(vel_init>auto_vel_thresh),vel_init(vel_init>auto_vel_thresh),'or'); hold off
+linkaxes([hx0 hy0 hVel],'x');
 hline=refline(0,auto_vel_thresh);hline.Color='r';hline.LineWidth=1.5;
 end
 %% %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -1990,12 +2002,14 @@ close(MazeFig)
     %}
 %end
 
+SaveTemp;
+
 end
 %% %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 function ChooseStartsStops(~,~)
 global chooseStrs; global starts; global stops; global beOptions;
 global bChoices; global allTxt; global bframes; global allstarts;
-global allstops; global choices; global xAVI
+global allstops; global choices; global Xpix;
 
 if size(chooseStrs,1)==1 && sum(cellfun(@ischar, chooseStrs))/size(chooseStrs,2)==1
 
@@ -2078,8 +2092,8 @@ end
 
 if any(starts>length(xAVI)) || any(stops>length(xAVI))
     disp('Look out, some frames in the spreadsheet are longer than the video')
-    starts(starts>length(xAVI)) = length(xAVI);
-    stops(stops>length(xAVI)) = length(xAVI);
+    starts(starts>length(Xpix)) = length(Xpix);
+    stops(stops>length(Xpix)) = length(Xpix);
 end
 if any(starts<1) || any(stops<1)
     disp('Look out, some frames in the spreadsheet are less than 1??')
@@ -2162,9 +2176,11 @@ if any(auto_frames)
         [~,ia,~] = intersect(auto_frames,excludeFromVel); %returns index vectors ia and ib.
         auto_frames(ia) = [];
     end
+
     try
     close(badPoints);
     end
+
     numPasses=2;
     %if length(auto_frames) > 500
     %    auto_chunks = 
@@ -2250,6 +2266,14 @@ while doneLoading==0
     
     loadChoice = questdlg('Done loading sheets or another?','Done loading?',...
                     'Done','Another!','Done');
+                
+    % NK throw an error to let user know something is up with the
+    % spreadsheet
+    num_trials = size(frameses(loaded).frames,1);
+    temp = sum(isnan(frameses(loaded).frames),1);
+    if any(temp ~= 0 & temp ~= num_trials)
+        error(['Something is wrong with ' xlsFile '. Check and restart PreProcess'])
+    end
     switch loadChoice
         case 'Done'
             doneLoading=1;
@@ -2486,9 +2510,10 @@ bkgChoice = questdlg('Supply/Load background image or composite?', ...
             title(['Top Clear Frame ' num2str(topClearNum)]) 
         Bot=figure('name','Bot'); imagesc(bottomClearFrame); %#ok<NASGU>
             title(['Bottom Clear Frame ' num2str(bottomClearNum)]) 
-        compositeBkg=uint8(zeros(480,640,3));
-        compositeBkg(1:240,:,:)=topClearFrame(1:240,:,:);
-        compositeBkg(241:480,:,:)=bottomClearFrame(241:480,:,:);
+        compositeBkg=uint8(zeros(obj.Height,obj.Width,3));
+        compositeBkg(1:(obj.Height/2),:,:)=topClearFrame(1:(obj.Height/2),:,:);
+        compositeBkg((obj.Height/2+1):obj.Height,:,:)= ...
+            bottomClearFrame((obj.Height/2+1):obj.Height,:,:);
         close Top; close Bot;
         %backgroundFrame=figure('name','backgroundFrame'); imagesc(compositeBkg); title('Composite Background Image')
         backgroundImage=compositeBkg;
@@ -2535,7 +2560,7 @@ while compGood==0
             %might replace with 2 field dialog box
             obj.CurrentTime = (swapInNum-1)/obj.FrameRate;
             swapClearFrame = readFrame(obj);
-            [rows,cols]=ind2sub([480,640],find(swapRegion));
+            [rows,cols]=ind2sub([obj.Height,obj.Width],find(swapRegion));
             backgroundImage(rows,cols,:)=swapClearFrame(rows,cols,:);
             figure(backgroundFrame);imagesc(backgroundImage)
             compGood=0;

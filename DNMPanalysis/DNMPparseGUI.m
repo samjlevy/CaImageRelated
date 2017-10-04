@@ -1,4 +1,4 @@
-function DNMPparseGUI( ~,~ )
+function DNMPparseGUI( rot90,~ )
 % Tool to facilitate parsing AVI for DNMP task into event time stamps (frame numbers),
 % export those numbers in an excel sheet for using with Nat's DNMP
 % functions. Select lap number, toggle between frames, click button to set
@@ -17,11 +17,21 @@ function DNMPparseGUI( ~,~ )
 %       same line
 %       eval stuff to get button properties...
 %       loading needs to get generalized too
+
+% To start, clear out any previous session global variables...
+clear global miscVar ParsedFrames videoFig video
+
+%% Rotate 90 if needed
+if nargin < 1
+    rot90 = 0;
+end
+disp(['Movie rotated ' num2str(rot90*90) ' degrees'])
 %%
 global miscVar
 global ParsedFrames
 global videoFig
-global video
+% global video
+miscVar.rot90 = rot90;
 
 msgbox({'Notes on use:';' Q/R - step back/forward 100';...
         ' A/F - step back/forward 10'; ' S/D  - step back/forward 1';' ';...
@@ -293,7 +303,7 @@ videoFig.JumpFrameButton = uicontrol('Style','pushbutton','String','JUMP TO FRAM
                              miscVar.buttonWidth,30], 'Callback',{@fcnJumpFrameButton});
 
 
-videoFig.LoadSheetExcel = uicontrol('Style','pushbutton','String','LOAD SHEET',...                         
+videoFig.LoadSheetExcel = uicontrol('Style','pushbutton','String','LOAD PREV. SESH',...                         
                              'Position',[miscVar.buttonSecondCol,miscVar.controlButtonHeight - miscVar.buttonStepDown*1,...
                              miscVar.buttonWidth,30],'Callback',{@fcnLoadSheet});     
 %{                         
@@ -314,6 +324,8 @@ end
 function fcnLapNumberButton(~,~)
 global miscVar
 global videoFig
+global video
+global ParsedFrames
 
 disp('Lap number')
 try 
@@ -344,6 +356,15 @@ catch
     videoFig.LapNumberBox.BackgroundColor=miscVar.Red;
 end
 
+% Fix any fields that might have been missed
+% if miscVar.LapNumber > 1
+fix_missed_fields;
+% end
+    
+
+save(fullfile(miscVar.PathName,'ParsedFramesTest.mat'), 'ParsedFrames',...
+    'videoFig', 'video', 'miscVar')
+
 end
 function fcnLapNumberPlus(~,~)
 global videoFig
@@ -368,6 +389,7 @@ switch mod(str2double(videoFig.LapNumberBox.String),1)~=0
     videoFig.LapNumberButton.BackgroundColor=miscVar.Red;
     case 1
     msgbox('Lap number must be an integer.', 'Error','error');
+
 end     
 end
 end
@@ -621,7 +643,7 @@ if miscVar.VideoLoadedFlag==1
                     video.CurrentTime = miscVar.frameNum/video.FrameRate;
                     miscVar.currentFrame = readFrame(video);
                     miscVar.frameNum = miscVar.frameNum + 1;
-                    videoFig.plotted = imagesc(miscVar.currentFrame);
+                    videoFig.plotted = imagesc(rot90(miscVar.currentFrame,miscVar.rot90));
                     title(['frame ' num2str(miscVar.frameNum) '/' num2str(miscVar.totalFrames)])
                 else   
                     msgbox('Frame number must in range','Error','error')
@@ -638,6 +660,7 @@ global miscVar
 global video
 
 try
+miscTemp = miscVar; % Save miscVar in case you cancel this later
 [miscVar.FileName,miscVar.PathName] = uigetfile('*.AVI','Select the AVI file');
 video = VideoReader(fullfile(miscVar.PathName,miscVar.FileName));
 miscVar.currentTime = 0;
@@ -647,12 +670,13 @@ miscVar.frameNum = 1;
 %miscVar.totalFrames = video.Duration/video.FrameRate^-1;
 miscVar.totalFrames = video.Duration*video.FrameRate;
 videoFig.plotted;
-imagesc(miscVar.currentFrame);
+imagesc(rot90(miscVar.currentFrame,miscVar.rot90));
 title(['Frame ' num2str(miscVar.frameNum) '/' num2str(miscVar.totalFrames)])
 miscVar.VideoLoadedFlag=1;
 videoFig.Name=miscVar.FileName;
 catch
     disp('Something went wrong')
+    miscVar = miscTemp; % Re-load previous miscVar to prevent later save errors
 end
 
 end
@@ -660,13 +684,23 @@ end
 function fcnSaveSheet(~,~)
 global ParsedFrames
 global miscVar
+global video %#ok<*NUSED>
+global videoFig %#ok<*NUSED>
+
 disp('Save sheet')
 
+% keyboard
 for laps=1:(size(ParsedFrames.LapStart,1)-1)
     ParsedFrames.LapNumber{laps+1,1}=laps;
 end  
-save 'ParsedFramesTest.mat' 'ParsedFrames'
 
+save(fullfile(miscVar.PathName, 'ParsedFramesTest.mat'), 'ParsedFrames', ...
+    'video', 'videoFig', 'miscVar') %#ok<*NOPRT>
+
+% Fix any fields that might have been missed
+fix_missed_fields;
+% keyboard
+% Removes all fields that have never been clicked/entered.
 fields = fieldnames(ParsedFrames);
 for i = 1:numel(fields)
     if length(ParsedFrames.(fields{i}))<=1 %fields get pre-loaded with their names
@@ -739,19 +773,30 @@ if saveNow==1
         xlswrite(fullfile(miscVar.PathName,[saveName{1}(1:end-5) '_bonus.xlsx']),table2cell(bonusTable));
         end
     catch
-        disp('Some saving error')   
-        save 'luckyYou.mat' 'ParsedFrames'
+        disp('Some saving error') 
+        keyboard
+        save(fullfile(miscVar.PathName, 'luckyYou.mat'), 'ParsedFrames')
     end    
 end
 end
 
 
 function fcnLoadSheet(~,~)
-disp('Load sheet')
+disp('Load Previous ParsedFramesTest file')
 global ParsedFrames
 global miscVar
+global video
+global videoFig
 
-disp('Not working right now, needs to be redone')
+[tempFileName, tempPathName] = uigetfile('*.mat','Select the MAT file (ParsedFramesTest.mat)');
+if tempFileName == 0
+    disp('Loading canceled - previous work NOT loaded')
+else
+    load(fullfile(tempPathName,tempFileName));
+    disp('Previous work loaded')
+end
+
+% disp('Not working right now, needs to be redone')
 %{
 [filename, pathname, ext] = uigetfile({'*.xlsx', 'Excel Files'; '*.xls', 'Excel Files'}, 'Select previously saved sheet: ');
 
@@ -822,6 +867,31 @@ switch e.Key
 end
          
 end
+
+
+%% Fix any fields that might be missing/unclicked on previous lap
+function fix_missed_fields(~,~)
+% Put NaNs in any fields that are somehow missing values and spit this
+% info out to the screen
+
+global ParsedFrames
+
+num_laps = structfun(@length, ParsedFrames); % Get number of laps/entries for each field
+correct_num_laps = max(num_laps);
+too_few = num_laps == (correct_num_laps - 1); % ID fields missing entries
+something_wrong = num_laps < (correct_num_laps -1); % ID fields missing 2 or more entries
+if sum(something_wrong) > 0
+    disp('Something is wrong.  Too few entires in some fields in ParsedFrames')
+elseif sum(something_wrong) == 0
+    names = fieldnames(ParsedFrames);
+    fields_to_fix = names(too_few); % Get fieldnames to update/fix
+    for j = 1:length(fields_to_fix)
+        ParsedFrames.(fields_to_fix{j}){correct_num_laps,1} = nan;
+    end
+end
+
+end
+
 %%
 function SetAndDisplay(~,~)
 global miscVar
