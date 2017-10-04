@@ -34,7 +34,7 @@ plot(base_picked_centers(:,1),base_picked_centers(:,2),'*c')
 
 reg_cellCentersShifted = getAllCellCenters(regImage_shifted2);
 
-%{
+
 figure; imshow(reg_allMask_shifted, shiftRef)
 hold on
 plot(X, Y, 'r*')
@@ -50,7 +50,20 @@ yShift = regCOM(2) - baseCOM(2);
 reg_picked_shifted = reg_picked_centers - [xShift yShift];
 
 
-
+%{
+regImage_shifted_cropped = cell(1,numRegCells);
+    rect = [-regShiftRef{1,regCell}.XWorldLimits(1) -regShiftRef{1,regCell}.YWorldLimits(1)...
+        regShiftRef{1,regCell}.XWorldLimits(2)+regShiftRef{1,regCell}.XWorldLimits(1)...
+        regShiftRef{1,regCell}.YWorldLimits(2)+regShiftRef{1,regCell}.YWorldLimits(1)];
+    regImage_shifted_cropped2 = imcrop(regImage_shifted{1,regCell},rect); {1,regCell}
+%}
+%shift centers: remake from image vs. transform old point
+T = projective2d(tform.T);%affine2d
+[reg_shift_centers(:,1),reg_shift_centers(:,2)] =...
+    transformPointsForward(T,reg_cellCenters(:,1),reg_cellCenters(:,2));
+%reg_cellCenters_shifted = getAllCellCenters(regImage_shifted); 
+%adjust = -1*[regShiftRef{1,1}.XWorldLimits(1), regShiftRef{1,1}.YWorldLimits(1)];
+%reg_cellCenters_shifted = reg_cellCenters_shifted - adjust;
 
 COMtranslation = [1 0 0; 0 1 0; -xShift -yShift 1];
 tform = affine2d(COMtranslation);
@@ -59,10 +72,12 @@ tform = affine2d(COMtranslation);
  figure; imshow(reg_allMask_shifted,shiftRef)
  
  
- 
- 
- Roriginal = imref2d(size(original));
- recovered = imwarp(distorted,tform,'OutputView',Roriginal);
+ closer = min(distance(matchedCells));
+    if sum(distance(matchedCells)==closer)
+        useCell = matchedCells(distance(matchedCells)==closer);
+        closestCell(useCell) = NaN;
+        distance(matchedCells(matchedCells~=useCell)) = NaN;
+    end
  
  
  

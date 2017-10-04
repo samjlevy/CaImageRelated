@@ -1,4 +1,4 @@
-function [ framesWanted ] = CondExcelParseout( frames, txt, columnLabel, isText )
+function [ framesWanted, colNum ] = CondExcelParseout( frames, txt, columnLabel, isText )
 %loads one of our DNMP/ForcedUnforced excell sheets and parses out frame
 %identity by looking at txt for column names; column names have to meet
 %hardcoded labels
@@ -10,13 +10,31 @@ if nargin==3
     isText=0;
 end
 
+%Exception to handle inconsistent labelling
+columnExists = any(cell2mat(cellfun(@(x) strcmpi(x,columnLabel),txt(1,:),'UniformOutput',false)));
+if columnExists == 0
+    switch columnLabel
+        case 'ForcedChoiceEnter'
+            disp('Switched label')
+            columnLabel = 'Forced Stem End';
+        case 'FreeChoiceEnter'
+            columnLabel = 'Free Stem End';
+            disp('Switched label')
+        otherwise
+            disp('Not going to find this column')
+    end
+end
+
+colNum = [];
 framesWanted = zeros(size(frames,1),1);
 for colLab = 1:size(txt,2)
     if strcmpi(columnLabel,txt{1,colLab})
         if isText==1
             framesWanted = txt(2:end,colLab);
+            colNum = colLab;
         else
-            framesWanted = frames(:,colLab); 
+            framesWanted = frames(:,colLab);
+            colNum = colLab;
             if sum(framesWanted)==0
                 framesWanted = [];
                 disp(['No frames with this label:' columnLabel])
@@ -24,24 +42,5 @@ for colLab = 1:size(txt,2)
         end    
     end
 end
-
-
-
-%{
-switch columnLabel
-        case 'Start on maze (start of Forced'
-        case 'Lift barrier (start of free choice)'
-        case 'Leave maze'
-        case 'Start in homecage'
-        case 'Leave homecage'
-        case 'Forced Trial Type (L/R)'
-        case 'Free Trial Choice (L/R)'
-        case 'Enter Delay' 
-        case 'Forced Choice' 
-        case 'Free Choice' 
-        case 'Forced Reward'
-        case 'Free Reward'
-    end
-%}
 
 end

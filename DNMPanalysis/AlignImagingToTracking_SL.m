@@ -19,10 +19,14 @@ fps_brainimage = 20;
 TrackingLength = length(Xpix);
 
 if ~exist('FToffsetSam.mat','file')
-    disp('Didn"t find Sam"s FToffset, running it now')
+    disp('Did not find Sam"s FToffset, running it now')
     [~, ~, ~ ] = JustFToffset; %FToffset LastUsable whichEndsFirst FTlength brainTime time
 end
 load FToffsetSam.mat
+
+if strcmpi(whichEndsFirst,'tracking') && (imaging_start_frame~=1)
+    disp('Be careful, this condition has NOT been validated')
+end
 
 FTfileMaybe = dir('FinalOutput.mat');
 if length(FTfileMaybe) ~= 1
@@ -45,30 +49,35 @@ else
     eval(['FT = FTstuff.' names{s} ';'])
 end
         
-FTlength = size(FT,2);
-brainTime = (1:FTlength)*(1/fps_brainimage);
+%both of these now come from FToffsetSam
+actualFTlength = size(FT,2); %not ideal length
+%brainTime = (1:FTlength)*(1/fps_brainimage);
 
 switch whichEndsFirst
     case 'imaging'
         %LastUsable is a frame in tracking 
-        FTuse = [FToffset FTlength];
+        FTuse = [FToffset actualFTlength];
         TrackingUse = [1 LastUsable];
     case 'tracking'
         %LastUsable is a frame for FT (i.e., FToffsetRear)
         FTuse = [FToffset LastUsable];
         TrackingUse = [1 TrackingLength];
 end
+brainTimeUse = FTuse;
+if imaging_start_frame~=1
+    brainTimeUse = brainTimeUse - (imaging_start_frame-1);
+end 
 
 %Interpolate 
 %vq = interp1(x,v,xq)
 x = interp1( time(TrackingUse(1):TrackingUse(2)),...
                   Xpix(TrackingUse(1):TrackingUse(2)),...
-                  brainTime(FTuse(1):FTuse(2)));
+                  brainTime(brainTimeUse(1):brainTimeUse(2)));
 y = interp1( time(TrackingUse(1):TrackingUse(2)),...
                   Ypix(TrackingUse(1):TrackingUse(2)),...
-                  brainTime(FTuse(1):FTuse(2)));
+                  brainTime(brainTimeUse(1):brainTimeUse(2)));
               
-brain_time = brainTime(FTuse(1):FTuse(2));
+brain_time = brainTime(brainTimeUse(1):brainTimeUse(2));
               
 PSAboolUseIndices = FTuse(1):FTuse(2);
 PSAboolAdjusted = FT(:,PSAboolUseIndices);

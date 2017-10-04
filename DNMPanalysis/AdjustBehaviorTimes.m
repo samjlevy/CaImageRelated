@@ -1,4 +1,4 @@
-function AdjustBehaviorTimes(xls_file, pos_file, column_fix, relation)
+function AdjustBehaviorTimes(pos_file, xls_file, column_fix, relation)
 %For taking in a spreadsheet and adjusting a set of frames. Meant to get
 %behavior times close together to make placefields by behavior better, more
 %comparable
@@ -188,6 +188,7 @@ end
 
 [newAll] = CombineForExcel(adjustedFrames, txt);
 saveName = [xls_file(1:end-5) '_Adjusted.xlsx'];
+%{
 if strcmpi(xls_file(end-12:end-5),'adjusted')
     reuse = input('Overwrite existing adjusted file? (0/1)') %#ok<NOPRT>
     switch reuse
@@ -198,16 +199,23 @@ if strcmpi(xls_file(end-12:end-5),'adjusted')
                 xlswrite( saveName, newAll);
             end
     end
+    %}
+if exist(saveName,'file') == 2
+    fexists=1;
+    while fexists==1
+        newName = inputdlg('File name already exists, give new name','File name bad',...
+                            1,{[saveName(1:end-5) '_2.xlsx']});
+        if exist(saveName,'file') == 2
+            disp('Nope, try again')
+            fexists = 1;
+        elseif exist(saveName,'file') == 0
+            fexists = 0;
+            saveName = newName;
+            xlswrite( saveName, newAll);
+        end
+    end
 else   
     xlswrite( saveName, newAll);
-    %overwrite = input('Already exists. Overwrite? (0/1)') %#ok<NOPRT>
-    %switch overwrite
-    %    case 0
-    %        disp('not writing file')
-    %        save('luckout.mat','newFrame')
-    %    case 1
-    %        xlswrite( saveName, newAll);
-    %end
 end        
 
 end

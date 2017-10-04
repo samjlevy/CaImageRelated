@@ -1,4 +1,5 @@
-function [xpos_interp,ypos_interp,time_interp,AVItime_interp] = PreProcessMousePosition_autoSL3(varargin)
+function PreProcessMousePosition_autoSL3(varargin)
+% PreProcessMousePosition_autoSL3(varargin)
 % Open issues: 6/15/17
 %   
 %   PRIORITY   
@@ -13,8 +14,7 @@ function [xpos_interp,ypos_interp,time_interp,AVItime_interp] = PreProcessMouseP
 %   - Blob restrictions for will and gray
 %   - contrast adjustment
 %   - select points by midpoint between frames to help catch not high
-%   velocity wrong things  
-%   - bring back cluster thresh to allow for more frequent saving 
+%   velocity wrong things   
 %   - how similar is blob to blob correlating to good position on an
 %   adjacent frame?
 %   - reject blobs found near current location
@@ -99,8 +99,9 @@ end
 
 clear global
 %% Need these for better organization
-global obj; global aviSR; global auto_frames; global corrFrame;
-global xAVI; global yAVI; global Xpix; global Ypix; global definitelyGood;
+clear global
+
+global obj aviSR auto_frames corrFrame xAVI yAVI Xpix Ypix definitelyGood
 global fixedThisFrameFlag; global numPasses; global v; global maskx;
 global masky; global v0; global maze; global lastManualFrame; lastManualFrame=[];
 global grayThresh; global gaussThresh; global willThresh; global distLim2;
@@ -123,6 +124,7 @@ max_pixel_jump = 45;
 corrDefGoodFlag = 0;
 overwriteManualFlag=0;
 drawnowEnable=1;
+PosSR = 30; %default
 for j = 1:length(varargin)
     if strcmpi('filepath', varargin{j})
         filepath = varargin{j+1};
@@ -135,6 +137,9 @@ for j = 1:length(varargin)
     end
     if strcmpi('max_pixel_jump', varargin{j})
         max_pixel_jump = varargin{j+1};
+    end
+    if strcmpi('PosSR', varargin{j})
+        PosSR = varargin{j+1}; % native sampling rate in Hz of position data (used only in smoothing)
     end
 end
 %%
@@ -150,8 +155,8 @@ cd(DVTpath);
 %%
 findingContrast=0;
 bl = 10000;
-PosSR = 30; % native sampling rate in Hz of position data (used only in smoothing)
-aviSR = 30.0003; % the framerate that the .avi thinks it's at
+% PosSR = 30; % native sampling rate in Hz of position data (used only in smoothing)
+% aviSR = 30.0003; % the framerate that the .avi thinks it's at
 cluster_thresh = 40; % For auto thresholding - any time there are events above
 % the velocity threshold specified by auto_thresh that are less than this
 % number of frames apart they will be grouped together
@@ -173,8 +178,12 @@ catch
 end
 
 avi_filepath = ls('*.avi');
+if size(avi_filepath,1)~=1
+    [avi_filepath,~] = uigetfile('*.avi','Choose appropriate video:');
+end
 disp(['Using ' avi_filepath ])
 obj = VideoReader(avi_filepath);
+aviSR = obj.FrameRate;
 
 if exist('Pos_temp.mat','file') || exist('Pos.mat','file')
     % Determine if either Pos_temp or Pos file already exists in the
@@ -340,7 +349,8 @@ optionsText={%'h - full explanations';...
              'z - (0,0) and out-of-bounds frames';...
              'y - attempt auto, manual when missed';...
              'm - all manual';...
-             'n - frame numbers';...
+             'n - frame number range';...
+             'a - frame number array';...
              'p - select points by position';...
              't - reset auto-velocity threshold';...
              'v - run auto on high velocity points';...
@@ -350,6 +360,7 @@ optionsText={%'h - full explanations';...
              'o - change AOM flag';...
              'l - edit expected locations';...
              'i - edit background image';...
+             'u - load frame nums from file';...
              'd - change whether draw now is used';...
              's - save work';...
              'x - quit without finalizing';...
@@ -416,7 +427,7 @@ switch MorePoints
                 CorrectTheseFrames;
             case 'Manual'
                         manChoice = questdlg('Redo definitely good frames?','Redo DefGood',...
-                    'Yes','No','No');
+                    'Yes','No','Yes');
                 switch manChoice
                     case 'Yes'
                         corrDefGoodFlag=1;
@@ -427,6 +438,41 @@ switch MorePoints
             case 'Cancel'
                 %do nothing
         end
+    case 'a'
+        prompt = 'Edit frames:';
+        %defaultans = ' ';
+        numbch = questdlg('Number or load?','Frames by number','Number','Load','Number');
+        switch numbch
+            case 'Number'
+        answer = inputdlg(prompt,'Edit by frame numbers',1);
+        auto_frames = cell2mat(cellfun(@str2num,strsplit(answer{1},' '),'UniformOutput',false)');
+            case 'Load'
+                [file,pathloc] = uigetfile('Choose file with vector only');
+                loadedFrames = load(fullfile(pathloc,file));
+                names = fieldnames(loadedFrames);
+                eval(['auto_frames = loadedFrames.' names{1} ';'])
+        end
+        corrFrame = 1;
+            
+        mchoice = questdlg(['Edit these ' num2str(length(auto_frames)) ' frames'],...
+            'Edit by frame number','Auto-assist','Manual','Cancel','Manual');
+        switch mchoice
+            case 'Auto-assist'
+                numPasses=2;
+                CorrectTheseFrames;
+            case 'Manual'
+                        manChoice = questdlg('Redo definitely good frames?','Redo DefGood',...
+                    'Yes','No','Yes');
+                switch manChoice
+                    case 'Yes'
+                        corrDefGoodFlag=1;
+                    case 'No'
+                        corrDefGoodFlag=0;
+                end  
+                CorrectManualFrames
+            case 'Cancel'
+                %do nothing
+        end       
     case 'm'
         %select a bunch of frames and manual correct all of them       
         disp('correcting manually')
@@ -437,7 +483,7 @@ switch MorePoints
         disp(['You are currently editing from ' num2str(sFrame/aviSR) ...
             ' sec to ' num2str(eFrame/aviSR) ' sec, ' num2str(length(auto_frames)) ' frames'])
         manChoice = questdlg('Redo definitely good frames?','Redo DefGood',...
-                    'Yes','No','No');
+                    'Yes','No','Yes');
         switch manChoice
             case 'Yes'
                 corrDefGoodFlag=1;
@@ -450,10 +496,10 @@ switch MorePoints
         posSelect=figure('name','posSelect','Position',[250 250 640*1.5 480*1.5]); imagesc(flipud(v0))
         title('Drag region around points to correct')
         hold on
-        plot(xAVI,yAVI,'.')
+        plot(xAVI(excludeFromVel==0),yAVI(excludeFromVel==0),'.')
         [~, pointBoxX, pointBoxY] = roipoly;
         [editLogical,~] = inpolygon(xAVI, yAVI, pointBoxX, pointBoxY);
-        auto_frames=find(editLogical);
+        auto_frames = find(editLogical & (excludeFromVel==0)); %find(editLogical);
         hold on
         plot(xAVI(editLogical),yAVI(editLogical),'.r')
         poschoice = questdlg(['Edit these ' num2str(length(auto_frames)) ' points?'],...
@@ -464,7 +510,7 @@ switch MorePoints
                 CorrectTheseFrames;
             case 'Manual'
                 manChoice = questdlg('Redo definitely good frames?','Redo DefGood',...
-                    'Yes','No','No');
+                    'Yes','No','Yes');
                 switch manChoice
                     case 'Yes'
                         corrDefGoodFlag=1;
@@ -475,7 +521,9 @@ switch MorePoints
             case 'No'
                 %Do nothing
         end
+        try
         close(posSelect);
+        end
     %{    
     case 'g'
         % generate a movie and show it
@@ -556,6 +604,8 @@ switch MorePoints
     end
     case 'l'
         editELvectors;
+    case 'u'
+        FramesFromFile;
     case 'g'
         MarkForExclude;
     case 's'
@@ -1188,7 +1238,9 @@ for pass=1:numPasses
     %pass 1 skip where bad, pass 2 run skipped, manual correct if still bad
     resol = 1; % Percent resolution for progress bar
     p = ProgressBar(100/resol);
-    update_inc = round(length(auto_frames)/(100/resol));
+    update_points = round(linspace(1,length(auto_frames),101));
+    update_points = update_points(2:end);
+    %update_inc = round(length(auto_frames)/(100/resol));
     total=0;
     bounds=[0 floor(length(auto_frames)/3) 2*floor(length(auto_frames)/3)];
     
@@ -1239,7 +1291,10 @@ for pass=1:numPasses
                 end 
 
                 total=total+1;
-                if round(total/update_inc) == (total/update_inc) % Update progress bar
+                %if round(total/update_inc) == (total/update_inc) % Update progress bar
+                %    p.progress;
+                %end
+                if sum(update_points == total)==1
                     p.progress;
                 end
             end
@@ -1700,9 +1755,9 @@ Xpix_plot = Xpix; Xpix_plot(forcedExclude) = nan;
 Ypix_plot = Ypix; Ypix_plot(forcedExclude) = nan;
 
 velInds=1:length(vel_init);
-hx0 = subplot(4,3,1:3);plot(time,Xpix_plot);xlabel('time (sec)');ylabel('x position (cm)');yl = get(gca,'YLim');
+hx0 = subplot(4,3,1:3);plot([1:length(Xpix)],Xpix);xlabel('time (sec)');ylabel('x position (cm)');yl = get(gca,'YLim');
     line([MoMtime MoMtime], [yl(1) yl(2)],'Color','r');axis tight;
-hy0 = subplot(4,3,4:6);plot(time,Ypix_plot);xlabel('time (sec)');ylabel('y position (cm)');yl = get(gca,'YLim');
+hy0 = subplot(4,3,4:6);plot([1:length(Ypix)],Ypix);xlabel('time (sec)');ylabel('y position (cm)');yl = get(gca,'YLim');
     line([MoMtime MoMtime], [yl(1) yl(2)],'Color','r');axis tight;
 hVel = subplot(4,3,7:12);plot(velInds*(time(2)-time(1)),vel_init);xlabel('time (sec)');ylabel('velocity');axis tight; %#ok<NASGU>
 
@@ -1959,12 +2014,13 @@ global allstops; global choices; global Xpix;
 if size(chooseStrs,1)==1 && sum(cellfun(@ischar, chooseStrs))/size(chooseStrs,2)==1
 
 selectedTwo=0;
-while selectedTwo==0
-    [choices,~] = listdlg('PromptString','A pair of timestamps:',...
-                'SelectionMode','multiple',...
+for tt = 1:2
+    [choices(tt),~] = listdlg('PromptString',['Select timestamps #' num2str(tt) ':'],...
+                'SelectionMode','single',...
                 'ListString',chooseStrs);
-    if length(choices)==2; selectedTwo=1; end
 end
+   % if length(choices)==2; selectedTwo=1; end
+
     
 [ss,~] = listdlg('PromptString','Which comes first:',...
                     'SelectionMode','single',...
@@ -2016,10 +2072,33 @@ if sum(starts)==0 || sum(stops)==0
     keyboard
 end
 
-if any(starts>length(Xpix)) || any(stops>length(Xpix))
+for aa = 1:2
+    bumpFr = questdlg(['Bump ' chooseStrs{choices(aa)} ' forward or back?'],'bump frames',...
+        'Forward','Back','No','No');
+    bump = 0;
+    if strcmpi(bumpFr,'Forward') || strcmpi(bumpFr,'Back')
+        bump = str2double(cell2mat(inputdlg('How many frames?')));
+        if strcmpi(bumpFr,'Back')
+            bump = bump*-1;
+        end
+    end
+    switch aa
+        case 1
+            starts = starts + bump;
+        case 2
+            stops = stops + bump;
+    end
+end
+
+if any(starts>length(xAVI)) || any(stops>length(xAVI))
     disp('Look out, some frames in the spreadsheet are longer than the video')
     starts(starts>length(Xpix)) = length(Xpix);
     stops(stops>length(Xpix)) = length(Xpix);
+end
+if any(starts<1) || any(stops<1)
+    disp('Look out, some frames in the spreadsheet are less than 1??')
+    starts(starts<1) = 1;
+    stops(stops<1) = 1;
 end
     
 else
@@ -2097,7 +2176,11 @@ if any(auto_frames)
         [~,ia,~] = intersect(auto_frames,excludeFromVel); %returns index vectors ia and ib.
         auto_frames(ia) = [];
     end
-%     close(badPoints);
+
+    try
+    close(badPoints);
+    end
+
     numPasses=2;
     %if length(auto_frames) > 500
     %    auto_chunks = 
@@ -2110,7 +2193,7 @@ end
 function BehaviorFrames(~,~)
 global chooseStrs; global starts; global stops;
 global bstr; global auto_frames; global numPasses;
-global corrDefGoodFlag;
+global corrDefGoodFlag; global choices;
 
 chooseStrs = bstr;
 ChooseStartsStops;
@@ -2148,7 +2231,7 @@ for nStarts = 1:length(starts)
             case 'Manual'
                 disp(['You are currently editing ' num2str(length(auto_frames)) ' frames'])
                 manChoice = questdlg('Redo definitely good frames?','Redo DefGood',...
-                            'Yes','No','No');
+                            'Yes','No','Yes');
                 switch manChoice
                     case 'Yes'
                         corrDefGoodFlag=1;
@@ -2247,6 +2330,43 @@ while velLineGood==0
     end
 end
 close(velthreshing) 
+end
+%% %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+function FramesFromFile(~,~)
+global auto_frames;
+
+[vFile, vDir] = uigetfile('*.mat','Choose file');
+vLoaded = load(fullfile(vDir,vFile));
+
+bits = fieldnames(vLoaded);
+if length(bits) == 1
+    auto_frames = vLoaded.(bits{1}); 
+else
+    [s,~] = listdlg('PromptString','Which var:',...
+                'ListString',bits,'SelectionMode','single');
+    auto_frames = vLoaded.(bits{s});        
+end
+
+mchoice = questdlg(['Edit these ' num2str(length(auto_frames)) ' frames'],...
+            'Edit by frame number','Auto-assist','Manual','Cancel','Manual');
+        switch mchoice
+            case 'Auto-assist'
+                numPasses=2;
+                CorrectTheseFrames;
+            case 'Manual'
+                        manChoice = questdlg('Redo definitely good frames?','Redo DefGood',...
+                    'Yes','No','Yes');
+                switch manChoice
+                    case 'Yes'
+                        corrDefGoodFlag=1;
+                    case 'No'
+                        corrDefGoodFlag=0;
+                end  
+                CorrectManualFrames
+            case 'Cancel'
+                %do nothing
+        end
+
 end
 %% %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 function MarkForExclude(~,~)
@@ -2390,9 +2510,10 @@ bkgChoice = questdlg('Supply/Load background image or composite?', ...
             title(['Top Clear Frame ' num2str(topClearNum)]) 
         Bot=figure('name','Bot'); imagesc(bottomClearFrame); %#ok<NASGU>
             title(['Bottom Clear Frame ' num2str(bottomClearNum)]) 
-        compositeBkg=uint8(zeros(480,640,3));
-        compositeBkg(1:240,:,:)=topClearFrame(1:240,:,:);
-        compositeBkg(241:480,:,:)=bottomClearFrame(241:480,:,:);
+        compositeBkg=uint8(zeros(obj.Height,obj.Width,3));
+        compositeBkg(1:(obj.Height/2),:,:)=topClearFrame(1:(obj.Height/2),:,:);
+        compositeBkg((obj.Height/2+1):obj.Height,:,:)= ...
+            bottomClearFrame((obj.Height/2+1):obj.Height,:,:);
         close Top; close Bot;
         %backgroundFrame=figure('name','backgroundFrame'); imagesc(compositeBkg); title('Composite Background Image')
         backgroundImage=compositeBkg;
@@ -2439,7 +2560,7 @@ while compGood==0
             %might replace with 2 field dialog box
             obj.CurrentTime = (swapInNum-1)/obj.FrameRate;
             swapClearFrame = readFrame(obj);
-            [rows,cols]=ind2sub([480,640],find(swapRegion));
+            [rows,cols]=ind2sub([obj.Height,obj.Width],find(swapRegion));
             backgroundImage(rows,cols,:)=swapClearFrame(rows,cols,:);
             figure(backgroundFrame);imagesc(backgroundImage)
             compGood=0;
