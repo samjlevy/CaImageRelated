@@ -7,6 +7,7 @@ function [start_stop_struct, include_struct, exclude_struct, pooled, correct, la
 includeBlank = zeros(1, sessionLength);
 
 [right_forced, left_forced, right_free, left_free] = DNMPtrialDirections(frames, txt);
+%[sStarts, sStops, tStarts, tStops] = BlockTypeStartStops(block_type)
 
 %Get epoch boundaries
 switch block_type
@@ -24,7 +25,7 @@ switch block_type
         [ forced_starts ] = CondExcelParseout( frames, txt, 'Forced Choice', 0 );
         [ forced_stops ] = CondExcelParseout( frames, txt, 'Forced Reward', 0 );
         [ free_starts ] = CondExcelParseout( frames, txt, 'Free Choice', 0);
-        [ free_stops ] = CondExcelParseout( frames, txt, 'Forced Reward', 0 );
+        [ free_stops ] = CondExcelParseout( frames, txt, 'Free Reward', 0 );
     case 'delay'
         [ starts ] = CondExcelParseout( frames, txt, 'Enter Delay', 0);
         [ stops ] = CondExcelParseout( frames, txt, 'Lift barrier (start of free choice)', 0);

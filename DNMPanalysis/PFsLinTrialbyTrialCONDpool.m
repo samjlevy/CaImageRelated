@@ -1,7 +1,9 @@
 function [OccMap, RunOccMap, xBin, TMap_unsmoothed, TCounts, TMap_gauss] =...
-    PFsLinTrialbyTrialCONDpool(trialbytrial,xlims, cmperbin, minspeed, saveThis, base_path, Conds)
-%aboveThresh, 
-%Thia version does not pool data across sessions.
+    PFsLinTrialbyTrialCONDpool(trialbytrial,xlims, cmperbin, minspeed, saveThis, base_path)
+%Thia version does not pool data across sessions. 
+%This one pools trials by overarching trial type, as in all Study, all Test, all Left
+%all Right
+
 sessions = unique(trialbytrial(1).sessID);
 numSess = length(sessions);
 numCells = length(trialbytrial(1).trialPSAbool{1,1});

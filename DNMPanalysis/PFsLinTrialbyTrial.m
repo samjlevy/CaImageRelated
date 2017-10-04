@@ -1,5 +1,5 @@
 function [OccMap, RunOccMap, xBin, TMap_unsmoothed, TCounts, TMap_gauss] =...
-    PFsLinTrialbyTrial(trialbytrial,xlims, cmperbin, minspeed, saveThis, base_path)
+    PFsLinTrialbyTrial(trialbytrial,xlims, cmperbin, minspeed, saveThis, saveName)
 %aboveThresh, 
 %Thia version does not pool data across sessions.
 sessions = unique(trialbytrial(1).sessID);
@@ -71,7 +71,6 @@ for cellI = 1:numCells
             = MakePlacefieldLin(logical(spikeTs),posX,xEdges,RunOccMap{cellI,condType,tSess},...
                 'cmperbin',cmperbin,'smooth',true);
             
-            
             %{
             [OccMap,RunOccMap,xBin] = MakeOccMapLin(posX,good,isrunning,xEdges);
              [TMap_unsmoothed,TCounts,TMap_gauss] = ...
@@ -94,8 +93,11 @@ end
 p.stop;
 
 if saveThis==1
-    savePath = fullfile(base_path,'PFsLin.mat'); 
-save(savePath,'OccMap','RunOccMap', 'xBin', 'TMap_unsmoothed', 'TCounts', 'TMap_gauss') 
+    if ~exist('saveName','var')
+        saveName = 'PFsLin.mat';
+    end
+    savePath = saveName; 
+    save(savePath,'OccMap','RunOccMap', 'xBin', 'TMap_unsmoothed', 'TCounts', 'TMap_gauss') 
 end
     
 end

@@ -9,10 +9,15 @@ end
 
 load('Pos_align.mat','x_adj_cm')
 dirls_file = dir(fullfile(inputPath,'*.xlsx'));
+bitt = 'BrainTime_AllAdjusted';
 
-bitt = 'BrainTime_Adjusted';
+startAt = cellfun(@(x) strfind(x,bitt),{dirls_file(:).name},'UniformOutput',false);%
 
-startAt = cellfun(@(x) strfind(x,bitt),{dirls_file(:).name},'UniformOutput',false);
+foundFile = ~cellfun(@isempty,startAt);
+if sum(foundFile)==0
+    disp('Did not find the AllAdjusted file')
+    return
+else
 
 rankF = zeros(length(dirls_file),1);
 for df = 1:length(dirls_file)
@@ -60,6 +65,7 @@ newTxt(logical([0; badLaps]), :) = [];
 saveName = [xls_use(1:startAt{i}-1) 'Finalized.xlsx'];
 xlswrite(fullfile(inputPath,saveName), newAll);
 disp('saved corrected sheet')
+end
 
 end
 

@@ -11,20 +11,14 @@ useBins = 12;
 maxBins = 14;
 posThresh = 3;
 numDays = size(TMap_gauss,3);
+
+%Individual condition comparisons
 StudyCorrs = nan(numDays,maxBins); TestCorrs = nan(numDays,maxBins);
 LeftCorrs = nan(numDays,maxBins); RightCorrs = nan(numDays,maxBins);
 for tDay = 1:numDays
-    %{
-    cellsInclude = dayUse(:,tDay)>0;
-    PFsA = cell2mat(TMap_gauss(cellsInclude,1,tDay)); PFsA(isnan(PFsA)) = 0;
-    PFsB = cell2mat(TMap_gauss(cellsInclude,2,tDay)); PFsB(isnan(PFsB)) = 0;
-    PFsC = cell2mat(TMap_gauss(cellsInclude,3,tDay)); PFsC(isnan(PFsC)) = 0;
-    PFsD = cell2mat(TMap_gauss(cellsInclude,4,tDay)); PFsD(isnan(PFsD)) = 0;
-    numCells = sum(cellsInclude);
-    %}
-    %useCells = dayUse(:,tDay)>0;
     useCells = dayAllUse(:,tDay)>0;
-     
+    
+    %Which bins pass position threshold
     for ct = 1:4
         binsUse(ct,:) = RunOccMap{1,ct,tDay} > posThresh;
     end
@@ -34,7 +28,7 @@ for tDay = 1:numDays
         if sum(binsUse(Conds.Study,binNum)) == 2
             conds = Conds.Study;
             useCells = sum(threshAndConsec(:,tDay,conds),3)>0;
-            studyCells(tDay) = sum(useCells);
+            studyCells(tDay) = sum(useCells); %Number of cells, this condition this day
             PFsA = cell2mat(TMap_gauss(useCells,conds(1),tDay)); PFsA(isnan(PFsA)) = 0;
             PFsB = cell2mat(TMap_gauss(useCells,conds(2),tDay)); PFsB(isnan(PFsB)) = 0;
             StudyCorrs(tDay,binNum) = corr(PFsA(:,binNum),PFsB(:,binNum));
@@ -74,6 +68,7 @@ close(h)
 jetUse = round(linspace(1,64,numDays));
 plotColors = jetTrips(jetUse,:);
 
+%Plot them
 StudyFig = figure; TestFig = figure; LeftFig = figure; RightFig = figure;
 axes(StudyFig); hold(StudyFig.Children,'on'); title(StudyFig.Children,'Study Left vs Right')
 axes(TestFig); hold(TestFig.Children,'on'); title(TestFig.Children,'Test Left vs Right')
@@ -94,7 +89,7 @@ ylim(TestFig.Children,[-1 1]); xlim(TestFig.Children,[2 14]);
 ylim(LeftFig.Children,[-1 1]); xlim(LeftFig.Children,[2 14]);
 ylim(RightFig.Children,[-1 1]); xlim(RightFig.Children,[2 14]);
 
-
+%Add a p-value using a 2-way anova
 dayG = repmat([1:numDays]',useBins,1);
 binG = repmat([1:useBins],1,numDays)';
 allCorrs = StudyCorrs(:,1:useBins); allCorrs = allCorrs(:);
@@ -110,6 +105,75 @@ title(TestFig.Children,['Test Left vs Right, prob>F day= ' num2str(pTest(1)) ', 
 title(LeftFig.Children,['Left Study vs Test, prob>F day= ' num2str(pLeft(1)) ', bin=' num2str(pLeft(2))])
 title(RightFig.Children,['Right Study vs Test, prob>F day= ' num2str(pRight(1)) ', bin=' num2str(pRight(2))])
 
+%Within condition position comparison
+CondsA.StudyLeft = intersect(Conds.Study,Conds.Left);
+CondsA.StudyRight = intersect(Conds.Study,Conds.Right);
+CondsA.TestLeft = intersect(Conds.Test,Conds.Left);
+CondsA.TestRight = intersect(Conds.Test,Conds.Right);
+compBins = combnk(1:useBins,2);
+SLCorrs = nan(numDays,maxBins); SRCorrs = nan(numDays,maxBins);
+TLCorrs = nan(numDays,maxBins); TRCorrs = nan(numDays,maxBins);
+for tDay = 1:numDays
+    useCells = dayAllUse(:,tDay)>0;
+     
+    %Which bins pass position threshold
+    for ct = 1:4
+        binsUse(ct,:) = RunOccMap{1,ct,tDay} > posThresh;
+    end
+
+    for binNums = 1:length(compBins)
+        %Study left
+        conds = CondsA.StudyLeft;
+        PFs = cell2mat(TMap_gauss(useCells,conds,tDay)); PFs(isnan(PFs)) = 0;
+        if sum(binsUse(conds,compBins(binNums,:))) == 2
+            useCells = sum(threshAndConsec(:,tDay,conds),3)>0;
+            %studyCells(tDay) = sum(useCells);
+            SLCorrs(tDay,binNums) = corr(PFs(:,compBins(binNums,1)),PFs(:,compBins(binNums,2)));
+        end
+        conds = CondsA.StudyRight;
+        PFs = cell2mat(TMap_gauss(useCells,conds,tDay)); PFs(isnan(PFs)) = 0;
+        if sum(binsUse(conds,compBins(binNums,:))) == 2
+            useCells = sum(threshAndConsec(:,tDay,conds),3)>0;
+            SRCorrs(tDay,binNums) = corr(PFs(:,compBins(binNums,1)),PFs(:,compBins(binNums,2)));
+        end
+        conds = CondsA.TestLeft;
+        PFs = cell2mat(TMap_gauss(useCells,conds,tDay)); PFs(isnan(PFs)) = 0;
+        if sum(binsUse(conds,compBins(binNums,:))) == 2
+            useCells = sum(threshAndConsec(:,tDay,conds),3)>0;
+            TLCorrs(tDay,binNums) = corr(PFs(:,compBins(binNums,1)),PFs(:,compBins(binNums,2)));
+        end
+        conds = CondsA.TestRight;
+        PFs = cell2mat(TMap_gauss(useCells,conds,tDay)); PFs(isnan(PFs)) = 0;
+        if sum(binsUse(conds,compBins(binNums,:))) == 2
+            useCells = sum(threshAndConsec(:,tDay,conds),3)>0;
+            TRCorrs(tDay,binNums) = corr(PFs(:,compBins(binNums,1)),PFs(:,compBins(binNums,2)));
+        end
+    end
+end
+
+binDistEach = diff(compBins,1,2);
+binDist = unique(binDistEach);
+SLFig = figure; SRFig = figure; TLFig = figure; TRFig = figure;
+axes(SLFig); hold(SLFig.Children,'on'); title(SLFig.Children,'Study Left vs self by position')
+axes(SRFig); hold(SRFig.Children,'on'); title(SRFig.Children,'Study Right vs self by position')
+axes(TLFig); hold(TLFig.Children,'on'); title(TLFig.Children,'Test Left vs self by position')
+axes(TRFig); hold(TRFig.Children,'on'); title(TRFig.Children,'Test Right vs self by position')
+xlabel(SLFig.Children,'Num bins apart'); xlabel(SRFig.Children,'Num bins apart'); 
+xlabel(TLFig.Children,'Num bins apart'); xlabel(TRFig.Children,'Num bins apart');
+for tDay = 1:numDays
+    for bD = 1:length(binDist)
+        yPoints = SLCorrs(tDay,binDistEach==binDist(bD));
+        plot(SLFig.Children,ones(length(yPoints),1)*bD,yPoints,'o','Color',plotColors(tDay,:))
+        yPoints = SRCorrs(tDay,binDistEach==binDist(bD));
+        plot(SRFig.Children,ones(length(yPoints),1)*bD,yPoints,'o','Color',plotColors(tDay,:))
+        yPoints = TLCorrs(tDay,binDistEach==binDist(bD));
+        plot(TLFig.Children,ones(length(yPoints),1)*bD,yPoints,'o','Color',plotColors(tDay,:))
+        yPoints = TRCorrs(tDay,binDistEach==binDist(bD));
+        plot(TRFig.Children,ones(length(yPoints),1)*bD,yPoints,'o','Color',plotColors(tDay,:))
+    end
+end    
+        
+%This part tries to add a rank order correlation
 for nBin = 1:useBins
     [~,order] = sort(LeftCorrs(:,nBin));
     [rrLeft(nBin), ppLeft(nBin)] = corr(flipud([1:numDays]'),order,'type','Spearman');

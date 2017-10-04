@@ -29,6 +29,7 @@ for thisE = 1:length(epochs)
         figure(badFig)
         [xBad, yBad] = ginput(1);   
         [ idx ] = findclosest2D (x_adj_cm(nowInds), y_adj_cm(nowInds), xBad, yBad);
+        
         meansX = [mean(x_adj_cm(epochs(thisE).starts)) mean(x_adj_cm(epochs(thisE).stops))];
         meansY = [mean(y_adj_cm(epochs(thisE).starts)) mean(y_adj_cm(epochs(thisE).stops))];
         [ startORend ] = findclosest2D (meansX, meansY, xBad, yBad);
@@ -44,18 +45,32 @@ for thisE = 1:length(epochs)
         plot(x_adj_cm(badLap), y_adj_cm(badLap), '.m', 'MarkerSize', 10)
         plot(x_adj_cm([badLap(1) badLap(end)]), y_adj_cm([badLap(1) badLap(end)]), '.y', 'MarkerSize', 10)
         
+        switch startORend
+            case 1
+                plotHere = 1;
+                findingA = 'start';
+            case 2
+                plotHere = length(badLap);
+                findingA = 'end';
+        end
+        
         doneFinding = 0;
-        bounds = [1 length(badLap)];
-        plotHere = 1;
+        %bounds = [1 length(badLap)];
         while doneFinding == 0
             figure(badFig);
-            title('finding a new start')
+            title(['finding a new ' findingA])
             set(gca,'Color',[0.8 0.8 0.8]);
             plot(x_adj_cm,y_adj_cm,'.k','MarkerSize',8)
             hold on
             badLap = epochs(thisE).starts(badLapNum):epochs(thisE).stops(badLapNum);
             plot(x_adj_cm(badLap), y_adj_cm(badLap), '.m', 'MarkerSize', 10)
-            plot(x_adj_cm(badLap(plotHere:end)), y_adj_cm(badLap(plotHere:end)), '.c', 'MarkerSize', 10)
+            switch startORend
+                case 1
+                    stillGood = plotHere:length(badLap); 
+                case 2
+                    stillGood = 1:plotHere;
+            end
+            plot(x_adj_cm(badLap(stillGood)), y_adj_cm(badLap(stillGood)), '.c', 'MarkerSize', 10)
             plot(x_adj_cm([badLap(1) badLap(end)]), y_adj_cm([badLap(1) badLap(end)]), '.y', 'MarkerSize', 10)
             plot(x_adj_cm(badLap(plotHere)), y_adj_cm(badLap(plotHere)), '.r', 'MarkerSize', 10)
             plot(x_adj_cm(badLap(plotHere)), y_adj_cm(badLap(plotHere)), 'or', 'MarkerSize', 10)
@@ -68,7 +83,12 @@ for thisE = 1:length(epochs)
                     if plotHere < length(badLap); plotHere = plotHere + 1; end
                 case 'm'
                     doneFinding = 1;  
-                    epochs(thisE).starts(badLapNum) = badLap(plotHere);
+                    switch startORend
+                        case 1
+                            epochs(thisE).starts(badLapNum) = badLap(plotHere);
+                        case 2
+                            epochs(thisE).stops(badLapNum) = badLap(plotHere);
+                    end
                 case 'j'
                     figure(badFig);
                     [nbx, nby] = ginput(1);
@@ -79,13 +99,17 @@ for thisE = 1:length(epochs)
         
     elseif anyBad==0
         movingOn = 1;
+    elseif anyBad==2
+        keyboard
     else
         movingOn = 0;
     end     
         
     end
     
-    reporter{thisE} = diff([epochs(thisE).starts inEpochs(thisE).starts],1,2);  
+    %Identify which were changed by comparing to original
+    reporter{thisE} = diff([epochs(thisE).starts inEpochs(thisE).starts],1,2) |...
+                      diff([epochs(thisE).stops inEpochs(thisE).stops],1,2)  ;  
 end
 
 close(badFig);

@@ -1,4 +1,5 @@
-function [fixedEpochs, reporter, epochs] = FindBadLapsWrapper(pos_file,xls_file,sessionType)
+function [fixedEpochs, reporter, epochs] = FindBadLapsWrapper(pos_file,xls_file,editSection,sessionType)
+%Edit section describes which part of the maze we're editing; Stem_only and whole_arm are most common 
 
 if ~exist('sessionType','var')
     sessionType = 1; %DNMP
@@ -9,15 +10,18 @@ sessionLength = length(x_adj_cm);
 
 [frames, txt] = xlsread(xls_file, 1);
 
+
+[sStarts, sStops, tStarts, tStops] = BlockTypeStartStops(editSection);
+
 %Trial directions
 switch sessionType
     case 1
-        [~, FoScol] = CondExcelParseout(frames, txt, 'Start on maze (start of Forced', 0);%forced_starts
-        [~, FrScol] = CondExcelParseout(frames, txt, 'Lift barrier (start of free choice)', 0);%free_starts
-        [~, FoEcol] = CondExcelParseout(frames, txt, 'ForcedChoiceEnter', 0);%forced_stem_ends
-        [~, FrEcol] = CondExcelParseout(frames, txt, 'FreeChoiceEnter', 0);%free_stem_ends
+        [~, FoScol] = CondExcelParseout(frames, txt, sStarts, 0);%forced_starts
+        [~, FrScol] = CondExcelParseout(frames, txt, tStarts, 0);%free_starts
+        [~, FoEcol] = CondExcelParseout(frames, txt, sStops, 0);%forced_stem_ends
+        [~, FrEcol] = CondExcelParseout(frames, txt, tStops, 0);%free_stem_ends
         [bounds, ~, ~, ~, ~] = ...
-            GetBlockDNMPbehavior( xls_file, 'stem_only', sessionLength);
+            GetBlockDNMPbehavior( xls_file, editSection, sessionLength);
         [right_forced, left_forced, right_free, left_free] = DNMPtrialDirections(frames, txt);
     case 2
         [~, FoScol] = CondExcelParseout(frames, txt, 'Start on maze (start of Forced', 0);%forced_starts
@@ -29,7 +33,7 @@ switch sessionType
         
         [bounds, ~, ~, ~] =...
             GetBlockForcedUnforcedBhvr( xls_file, 'stem_only', sessionLength);
-end
+end 
 
 epochs(1).starts = bounds.study_l(:,1);
 epochs(1).stops = bounds.study_l(:,2);
