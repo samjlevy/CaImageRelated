@@ -8,7 +8,7 @@ rTest =  find(strcmpi({trialbytrial(:).name},'test_r'));
 moreTrials = max(cellfun(@length, {trialbytrial(:).trialPSAbool}));
 
 switch dimShuffle
-    case 'direction'
+    case {'direction','leftright'}
         useSess = [lStudy rStudy lTest rTest];
         
         shuffleThis = round(rand(mostTrials,2));

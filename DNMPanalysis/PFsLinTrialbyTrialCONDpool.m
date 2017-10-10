@@ -38,14 +38,14 @@ for cellI = 1:numCells
             lapsUseB = logical(trialbytrial(Conds.(ss{condType})(2)).sessID == sessions(tSess));
         if any(lapsUseA) || any(lapsUseB)  
             
-        posXA = [trialbytrial(Conds.(ss{condType})(1)).trialsX{lapsUseA,1}];
+        posXA = [trialbytrial(Conds.(ss{condType})(1)).trialsX{lapsUseA}];
         %posYA = [trialbytrial(Conds.(ss{condType})(1)).trialsY{lapsUseA,1}];
-        spikeTsA = [trialbytrial(Conds.(ss{condType})(1)).trialPSAbool{lapsUseA,1}];
+        spikeTsA = [trialbytrial(Conds.(ss{condType})(1)).trialPSAbool{lapsUseA}];
         spikeTsA = spikeTsA(cellI,:);
         
-        posXB = [trialbytrial(Conds.(ss{condType})(2)).trialsX{lapsUseB,1}];
+        posXB = [trialbytrial(Conds.(ss{condType})(2)).trialsX{lapsUseB}];
         %posYB = [trialbytrial(Conds.(ss{condType})(2)).trialsY{lapsUseB,1}];
-        spikeTsB = [trialbytrial(Conds.(ss{condType})(2)).trialPSAbool{lapsUseB,1}];
+        spikeTsB = [trialbytrial(Conds.(ss{condType})(2)).trialPSAbool{lapsUseB}];
         spikeTsB = spikeTsB(cellI,:);
         
         posX = [posXA posXB];
@@ -57,9 +57,9 @@ for cellI = 1:numCells
         xEdges = (0:nXBins)*cmperbin+xmin;
         
         %This is to correct problems with jumping from one trial to another
-        lapLengthsA = cell2mat(cellfun(@length, {trialbytrial(Conds.(ss{condType})(1)).trialsX{lapsUseA,1}},...
+        lapLengthsA = cell2mat(cellfun(@length, {trialbytrial(Conds.(ss{condType})(1)).trialsX{lapsUseA}},...
             'UniformOutput',false));
-        lapLengthsB = cell2mat(cellfun(@length, {trialbytrial(Conds.(ss{condType})(2)).trialsX{lapsUseB,1}},...
+        lapLengthsB = cell2mat(cellfun(@length, {trialbytrial(Conds.(ss{condType})(2)).trialsX{lapsUseB}},...
             'UniformOutput',false));
         lapLengths = [lapLengthsA lapLengthsB];
         trialEdges = [];
@@ -69,8 +69,8 @@ for cellI = 1:numCells
         %trialEdges = trialEdges(1:end-1);
        
         SR=20;
-        dx = abs(diff(posX));
-        dx(trialEdges) = dx(trialEdges-1);
+        %dx = abs(diff(posX));
+        %dx(trialEdges) = dx(trialEdges-1);
         %dy = diff(posY);
         %speed = hypot(dx,dy)*SR;
         %{
@@ -100,7 +100,6 @@ for cellI = 1:numCells
         %PlaceTuningCurveLin(trialbytrial, aboveThresh, nPerms, [xmin xmax], xEdges);
         
         %Spatial information
-        
         
         end
         end

@@ -24,28 +24,57 @@ numShuffles = 100;
 %cmperbin = 2.5
 minspeed = 0;
 zeronans = 1;
+posThresh = 3;
 
-%Make original
-%[~, RunOccMap, ~, ~, ~, TMap_gauss] =...
-%    PFsLinTrialbyTrial(trialbytrial,xlims, cmperbin, minspeed, 0, []);   
+lapPctThresh = 0.25;
+consecLapThresh = 3;
+[dayAllUse] = GetUseCells(trialbytrial, lapPctThresh, consecLapThresh);
+
+%Make original   
 [~, RunOccMap, ~, ~, ~, TMap_gauss] =...
 PFsLinTrialbyTrialCONDpool(trialbytrial,xlims, cmperbin, minspeed, 0, []);
 
-[TMap_zscore{1}] = ZScoreLinPFs(TMGforShuff{shuffI}, zeronans);   
+[TMap_zscore] = ZScoreLinPFs(TMap_gauss, zeronans);   
 
 %PV corrs for original
+[StudyTestCorrs, LeftRightCorrs] = PVcorrDimPooled(TMap_zscore, RunOccMap, posThresh, dayAllUse);
 
-%Get some shuffled distributions
+%Days, pooled
+%Get some shuffled distributions for Days
+STcorrsShuff = nan(11,10,100);
+LRcorrsShuff = nan(11,10,100);
 for shuffI = 1:numShuffles
+    shuffledTBT = []; ROMforShuff = []; TMGforShuff = []; TMap_zscoreShuff = [];
+    
     shuffledTBT = ShuffleTrialsAcrossDays(trialbytrial);
     
     %[~, ROMforShuff{shuffI}, ~, ~, ~, TMGforShuff{shuffI}] =...
     %PFsLinTrialbyTrial(trialbytrial,xlims, cmperbin, minspeed, 0, []);
-    [~, ROMforShuff{shuffI}, ~, ~, ~, TMGforShuff{shuffI}] =...
-    PFsLinTrialbyTrialCONDpool(trialbytrial,xlims, cmperbin, minspeed, 0, []);
-    [TMap_zscore{1}] = ZScoreLinPFs(TMGforShuff{shuffI}, zeronans);
+    [~, ROMforShuff, ~, ~, ~, TMGforShuff] =...
+    PFsLinTrialbyTrialCONDpool(shuffledTBT,xlims, cmperbin, minspeed, 0, []);
+    
+    [TMap_zscoreShuff] = ZScoreLinPFs(TMGforShuff, zeronans);
+    
+    [dayUseShuff] = GetUseCells(trialbytrial, lapPctThresh, consecLapThresh);
+    %PV corrs for shuffle
+    [STcorrsShuff(:,:,shuffI), LRcorrsShuff(:,:,shuffI)] = PVcorrDimPooled(TMap_zscoreShuff, ROMforShuff, posThresh, dayUseShuff);
+    %delete old TMap stuff (memory space)
+    shuffI
 end
 
-%PV corrs for shuffle
-
 %Statistical comparison
+
+
+
+%Conditions, unpooled
+
+[~, RunOccMap, ~, ~, ~, TMap_gauss] =...
+    PFsLinTrialbyTrial(trialbytrial,xlims, cmperbin, minspeed, 0, []);
+%
+shuffledTBT = ShuffleTrialsAcrossConditions(trialbytrial,'leftright')
+shuffledTBT = ShuffleTrialsAcrossConditions(trialbytrial,'studytest')
+
+
+
+
+
