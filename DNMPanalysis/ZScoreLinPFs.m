@@ -36,8 +36,10 @@ for dayI = 1:numDays
 
         allRateBins(zeroThese) = 0;
         
-        zRates = nan(size(allRateBins));
-        zRates(~zeroThese) = zscore(allRateBins(~zeroThese));
+        %zRates = nan(size(allRateBins));
+        %zRates(~zeroThese) = zscore(allRateBins(~zeroThese));
+        zRates = zeros(size(allRateBins));
+        zRates = zscore(allRateBins);
         
         for condI = 1:numConds
             TMap_zscore{cellI,condI,dayI} =...

@@ -26,7 +26,7 @@ minspeed = 0;
 zeronans = 1;
 posThresh = 3;
 
-lapPctThresh = 0.25;
+lapPctThresh = 0.3;
 consecLapThresh = 3;
 [dayAllUse] = GetUseCells(trialbytrial, lapPctThresh, consecLapThresh);
 
