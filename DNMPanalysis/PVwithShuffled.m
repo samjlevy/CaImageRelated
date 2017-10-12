@@ -28,7 +28,7 @@ posThresh = 3;
 
 lapPctThresh = 0.3;
 consecLapThresh = 3;
-[dayAllUse] = GetUseCells(trialbytrial, lapPctThresh, consecLapThresh);
+[dayAllUse, threshAndConsec] = GetUseCells(trialbytrial, lapPctThresh, consecLapThresh);
 
 %Make original   
 [~, RunOccMap, ~, ~, ~, TMap_gauss] =...
@@ -57,7 +57,8 @@ for shuffI = 1:numShuffles
     
     [dayUseShuff] = GetUseCells(trialbytrial, lapPctThresh, consecLapThresh);
     %PV corrs for shuffle
-    [STcorrsShuff(:,:,shuffI), LRcorrsShuff(:,:,shuffI)] = PVcorrDimPooled(TMap_zscoreShuff, ROMforShuff, posThresh, dayUseShuff);
+    [STcorrsShuff(:,:,shuffI), LRcorrsShuff(:,:,shuffI)] =...
+        PVcorrDimPooled(TMap_zscoreShuff, ROMforShuff, posThresh, dayUseShuff);
     %delete old TMap stuff (memory space)
     shuffI
 end
@@ -74,7 +75,27 @@ end
 shuffledTBT = ShuffleTrialsAcrossConditions(trialbytrial,'leftright')
 shuffledTBT = ShuffleTrialsAcrossConditions(trialbytrial,'studytest')
 
+%Separate Conditions corrs
+[~, RunOccMap, ~, ~, ~, TMap_gauss] =...
+    PFsLinTrialbyTrial(trialbytrial,xlims, cmperbin, minspeed, 0, []);
 
+%[~, RunOccMap, ~, ~, ~, TMap_gauss, ~] =...
+[OccMapSplit, RunOccMapSplit, xBinSplit, TMap_unsmoothedSplit, TCountsSplit, TMap_gaussSplit, LapIDs, Conditions]=...    
+    PFsLinTrialbyTrialSplit(trialbytrial,xlims, cmperbin, minspeed, 1, 'PFsLinSplit.mat', 0);
 
-
-
+[StudyCorrs, TestCorrs, LeftCorrs, RightCorrs, numCells] =...
+    PVcorrAllCond(TMap_gauss, RunOccMap, posThresh, threshAndConsec, Conds);
+%{
+studyFig=figure; PlotPVCorrsDays(StudyCorrs, studyFig, 'Study LvR')
+testFig=figure; PlotPVCorrsDays(TestCorrs, testFig, 'Test LvR')
+leftFig=figure; PlotPVCorrsDays(LeftCorrs, leftFig, 'Left SvT')
+rightFig=figure; PlotPVCorrsDays(RightCorrs, rightFig, 'Right SvT')
+%}
+[StudyLCorrs, StudyRCorrs, TestLCorrs, TestRCorrs, numCells2] =...
+    PVcorrAllCondSelf(TMap_gaussSplit, RunOccMap, posThresh, threshAndConsec);
+%{
+studyLFig=figure; PlotPVCorrsDays(StudyLCorrs, studyLFig, 'Study L self')
+studyRFig=figure; PlotPVCorrsDays(StudyRCorrs, studyRFig, 'Study R self')
+testLFig=figure; PlotPVCorrsDays(TestLCorrs, testLFig, 'Test L self')
+testRFig=figure; PlotPVCorrsDays(TestRCorrs, testRFig, 'Test R self')
+%}

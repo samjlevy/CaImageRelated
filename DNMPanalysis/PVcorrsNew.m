@@ -16,7 +16,7 @@ numDays = size(TMap_gauss,3);
 StudyCorrs = nan(numDays,maxBins); TestCorrs = nan(numDays,maxBins);
 LeftCorrs = nan(numDays,maxBins); RightCorrs = nan(numDays,maxBins);
 for tDay = 1:numDays
-    useCells = dayAllUse(:,tDay)>0;
+    %useCells = dayAllUse(:,tDay)>0;
     
     %Which bins pass position threshold
     for ct = 1:4

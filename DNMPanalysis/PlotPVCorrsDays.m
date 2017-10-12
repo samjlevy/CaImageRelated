@@ -14,6 +14,8 @@ xlabel(figHand.Children,'Start                      Choice Point'); ylabel('Corr
 for uDay = 1:numDays
     plot(figHand.Children,fliplr(Corrs(uDay,:)),'-o','Color',plotColors(uDay,:))
 end
+plot(figHand.Children,figHand.Children.XLim,[0 0],'k') 
 ylim(figHand.Children,[-1 1]); %xlim(figHand.Children,[2 14]);
+figHand.Children.XLim(1) = 1;
 
 end

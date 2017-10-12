@@ -1,4 +1,4 @@
-function [dayAllUse] = GetUseCells(trialbytrial, lapPctThresh, consecLapThresh)
+function [dayAllUse, threshAndConsec] = GetUseCells(trialbytrial, lapPctThresh, consecLapThresh)
 
 %lapPctThresh = 0.25
 %consecLapThresh = 3;
