@@ -1,8 +1,10 @@
 function [varargin] = GenerateFigsAndHandles(numFigs, indivORsubplot)
 %If you want separate figures, set indivORsubplot to 'indiv'
 %If you want the figures in a subplot, set it to 'subplot'
+%varargin is the names for handles; should be 1 for subplot, or equal in
+%length to numfigs for individual plots
 
-
+%Needs testing
 for NF = 1:numFigs
     switch indivORsubplot
         case 'indiv'

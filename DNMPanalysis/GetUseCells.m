@@ -18,6 +18,7 @@ threshAndConsec = reorgThresh | reorgConsec;
 dayUse = sum(reorgThresh,3);
 dayUse2 = sum(reorgConsec,3);
 
-dayAllUse = dayUse + dayUse2;
+%dayAllUse = dayUse + dayUse2;
+dayAllUse = sum(threshAndConsec,3);
 
 end

@@ -1,4 +1,4 @@
-function ParsedFramesToBrainFrames ( xls_file)
+function ParsedFramesToBrainFrames( xls_file)
 %Takes an excell file as input and returns (in same format) all found frame
 %numbers in brain (FT) time.
 %Question for validation: in alignment bit (lines 32/33), should that

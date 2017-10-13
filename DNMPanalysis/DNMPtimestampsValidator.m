@@ -1,4 +1,4 @@
-function reportedBad = DNMPtimestampsValidator ( pos_file, xls_path, xls_sheet_num )
+function reportedBad = DNMPtimestampsValidator( pos_file, xls_path, xls_sheet_num )
 %Loads an excell file and position file and position file, plots each type
 %of behavior timestamp (by lap dir?) onto a map of the positions to
 %highlight where they are for confirmation that they are right. 
@@ -55,11 +55,13 @@ for framesColumn = checkThese
     if howManyBad > 0
     while movingOn==0
         title('Click next to each bad point')
-        [xBad, yBad] = ginput(howManyBad);   
-        [ idx ] = findclosest2D ( theseX, theseY, xBad, yBad);
-        hold on
-        plot( theseX(idx), theseY(idx), 'om', 'MarkerSize', 10)
-        reportedBad{1,framesColumn} = idx;
+        for bb = 1:howManyBad
+            [xBad(bb), yBad(bb)] = ginput(1);   
+            [ idx(bb) ] = findclosest2D ( theseX, theseY, xBad(bb), yBad(bb));
+            hold on
+            plot( theseX(idx(bb)), theseY(idx(bb)), 'om', 'MarkerSize', 10)
+            reportedBad{1,framesColumn}(bb) = idx(bb);
+        end
         movingOn = input('Are we good? 1/0 for yes/no') %#ok<NOPRT>
     end
     end   

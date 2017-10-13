@@ -230,10 +230,10 @@ if exist(saveName,'file') == 2
     while fexists==1
         newName = inputdlg('File name already exists, give new name','File name bad',...
                             1,{[saveName(1:end-5) '_2.xlsx']});
-        if exist(saveName,'file') == 2
+        if exist(newName,'file') == 2
             disp('Nope, try again')
             fexists = 1;
-        elseif exist(saveName,'file') == 0
+        elseif exist(newName,'file') == 0
             fexists = 0;
             saveName = newName;
             xlswrite( saveName, newAll);
