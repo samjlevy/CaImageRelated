@@ -9,8 +9,10 @@ StudyCorrs = nan(numDays,maxBins); TestCorrs = nan(numDays,maxBins);
 LeftCorrs = nan(numDays,maxBins); RightCorrs = nan(numDays,maxBins);
 for tDay = 1:numDays
     
+    goodRows = ~cellfun(@isempty,{RunOccMap{:,1,tDay}});
+    useRow = find(goodRows,1,'first');
     for ct = 1:4
-        binsUse(ct,:) = RunOccMap{1,ct,tDay} > posThresh;
+        binsUse(ct,:) = RunOccMap{useRow,ct,tDay} > posThresh;
     end
 
     for binNum = 1:maxBins

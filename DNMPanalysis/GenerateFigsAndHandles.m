@@ -13,7 +13,7 @@ for NF = 1:numFigs
             
         case 'subplot'
             if NF==1
-                varargin{1} = figure;
+                varargin(1).fig = figure;
             
                 numCols = ceil(sqrt(numFigs));
                 numRows = floor(sqrt(numFigs));
@@ -26,8 +26,8 @@ for NF = 1:numFigs
                     end
                 end
             end
-            varargin{1}(NF).pl = subplot(numRows,numCols,NF);
-            varargin{1}(NF).ax = axes(varargin{1}(NF).pl;
+            varargin(NF).pl = subplot(numRows,numCols,NF);
+            %varargin(NF).ax = axes(varargin(NF).pl);
             
     end
 end

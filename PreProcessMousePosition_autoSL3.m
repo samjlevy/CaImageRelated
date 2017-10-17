@@ -2009,7 +2009,7 @@ end
 function ChooseStartsStops(~,~)
 global chooseStrs; global starts; global stops; global beOptions;
 global bChoices; global allTxt; global bframes; global allstarts;
-global allstops; global choices; global Xpix;
+global allstops; global choices; global Xpix; global xAVI
 
 if size(chooseStrs,1)==1 && sum(cellfun(@ischar, chooseStrs))/size(chooseStrs,2)==1
 

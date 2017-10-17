@@ -1,5 +1,5 @@
 function [OccMap, RunOccMap, xBin, TMap_unsmoothed, TCounts, TMap_gauss] =...
-    PFsLinTrialbyTrial(trialbytrial,xlims, cmperbin, minspeed, saveThis, saveName)
+    PFsLinTrialbyTrial(trialbytrial,xlims, cmperbin, minspeed, saveThis, saveName, sortedSessionInds)
 %aboveThresh, 
 %Thia version does not pool data across sessions.
 sessions = unique(trialbytrial(1).sessID);
@@ -9,7 +9,9 @@ numConds = length(trialbytrial);
 xmin = xlims(1);
 xmax = xlims(2);
 
-
+if isempty(sortedSessionInds)
+    sortedSessionInds = ones(numCells,numSess);
+end
 %sessionUse = false(size(aboveThresh{1,1}));
 %for ss = 1:numConds
 %    sessionUse = sessionUse + aboveThresh{ss,1}(:,:);
@@ -32,6 +34,8 @@ update_points = update_points(2:end);
 for cellI = 1:numCells
     for condType = 1:4
         for tSess = 1:numSess
+        
+        if sortedSessionInds(cellI,tSess) > 0
             lapsUse = logical(trialbytrial(condType).sessID == sessions(tSess));
         
         if any(lapsUse)
@@ -51,6 +55,10 @@ for cellI = 1:numCells
             trialEdges(ll) = sum(lapLengths(1:ll));
         end
         %trialEdges = trialEdges(1:end-1);
+        if any(trialEdges==0)
+            disp(['found a bad trial, condition:' num2str(condType) ', sess ' num2str(tSess)])
+        end
+        trialEdges(trialEdges==0) = [];
        
         SR=20;
         dx = abs(diff(posX));
@@ -83,7 +91,8 @@ for cellI = 1:numCells
         %PlaceTuningCurveLin(trialbytrial, aboveThresh, nPerms, [xmin xmax], xEdges);
         
         %Spatial information
-        end
+        end %any laps
+        end %use this sess
         end
     end
     if sum(update_points == cellI)==1

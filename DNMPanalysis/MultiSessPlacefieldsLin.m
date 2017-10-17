@@ -1,21 +1,11 @@
-function MultiSessPlacefieldsLin( allfiles, all_x_adj_cm, all_y_adj_cm, sortedSessionInds, all_PSAbool, cmperbin, all_useLogical, useActual)
+function MultiSessPlacefieldsLin( base_path, lapThresh, reliableThresh)
 lapThresh = 3;
-mapLoc = 'F:\Bellatrix\Bellatrix_160901';
+reliableThresh = 0.25;
 
-numSessions = length(allfiles); 
-%allInc = cell(4,length(allfiles));
-numframes = cell2mat(cellfun(@length, position.all_x_adj_cm, 'UniformOutput',false));
-[bounds, ~, correct] = GetMultiSessDNMPbehavior(allfiles, numframes);
+load(base_path,'trialbytrial.mat')
 
-correctBounds = StructCorrect(bounds, correct);
-
-trialbytrial = PoolTrialsAcrossSessions(correctBounds,position.all_x_adj_cm,...
-    position.all_y_adj_cm,all_PSAbool,sortedSessionInds);
-
-save(fullfile(base_path,'trialbytrial.mat'),'trialbytrial','sortedSessionInds')
-
-[trialReli,aboveThresh] = TrialReliability(trialbytrial, 0.25);%sortedReliability
-[consec, enoughConsec] = ConsecutiveLaps(trialbytrial,3);%maxConsec
+[trialReli,aboveThresh] = TrialReliability(trialbytrial, reliableThresh);%sortedReliability
+[consec, enoughConsec] = ConsecutiveLaps(trialbytrial,lapThresh);%maxConsec
 
 newUse = cell2mat(cellfun(@(x) sum(x,2) > 0,aboveThresh,'UniformOutput',false));
 newUse2 = cell2mat(cellfun(@(x) sum(x,2) > 0,enoughConsec,'UniformOutput',false));

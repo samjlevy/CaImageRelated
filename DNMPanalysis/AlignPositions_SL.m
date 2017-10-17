@@ -1,4 +1,4 @@
-function AlignPositions_SL (RoomStr, varargin)%base_session, reg_session,
+function AlignPositions_SL (RoomStr)%, varargin)%base_session, reg_session,
 %Future work: align everything together; align to start base by getting
 %base session coordinates for choice and start points, look at angle
 %difference, align to that; base session points can be saved as an initial

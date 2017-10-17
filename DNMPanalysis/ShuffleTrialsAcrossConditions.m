@@ -1,40 +1,108 @@
 function shuffledTBT = ShuffleTrialsAcrossConditions(trialbytrial,dimShuffle)
+%This one only shuffles trials across conditions, maintains day assignment
 
 lStudy = find(strcmpi({trialbytrial(:).name},'study_l'));
 rStudy =  find(strcmpi({trialbytrial(:).name},'study_r'));
 lTest =  find(strcmpi({trialbytrial(:).name},'test_l'));
 rTest =  find(strcmpi({trialbytrial(:).name},'test_r'));
 
-moreTrials = max(cellfun(@length, {trialbytrial(:).trialPSAbool}));
+sessions = unique(trialbytrial(1).sessID);
+shuffledTBT = trialbytrial;
+ss = fieldnames(trialbytrial);
+sessIDlong = [];
+shuffTBTassign = [];
 
-switch dimShuffle
-    case {'direction','leftright'}
-        useSess = [lStudy rStudy lTest rTest];
-        
-        shuffleThis = round(rand(mostTrials,2));
-        trialShuffAssign = [useSess(shuffleThis(:,1)+1)' useSess(~shuffleThis(:,1)+1)' ...
-                            useSess(shuffleThis(:,2)+3)' useSess(~shuffleThis(:,2)+3)'];
-    case {'studytest','trialtype'}
-        useSess = [lStudy lTest rStudy rTest];
-        
-        shuffleThis = round(rand(mostTrials,2));
-        trialShuffAssign = [useSess(shuffleThis(:,1)+1)' useSess(~shuffleThis(:,1)+1)' ...
-                            useSess(shuffleThis(:,2)+3)' useSess(~shuffleThis(:,2)+3)'];
-    case 'all'
-        useSess = [lStudy rStudy lTest rTest];
-        
-        for tt = 1:moreTrials
-            trialShuffAssign(tt,:) = useSess(randperm(4));
+%Figure out where trials need to go
+for sessI = 1:length(sessions)
+    %moreTrials = max(cellfun(@length, {trialbytrial(:).trialPSAbool}));
+    for aa = 1:length(trialbytrial)
+        howManyTrials(aa) = sum(trialbytrial(aa).sessID==sessions(sessI));
+        whichTrials{aa} = find(trialbytrial(aa).sessID==sessions(sessI));
+    end
+    moreTrials = max(howManyTrials);
+
+    switch dimShuffle
+        case {'direction','leftright'}
+            useSess = [lStudy rStudy lTest rTest];
+
+            shuffleThis = round(rand(moreTrials,2));
+            trialShuffAssign = [useSess(shuffleThis(:,1)+1)' useSess(~shuffleThis(:,1)+1)' ...
+                                useSess(shuffleThis(:,2)+3)' useSess(~shuffleThis(:,2)+3)'];
+        case {'studytest','trialtype'}
+            useSess = [lStudy lTest rStudy rTest];
+
+            shuffleThis = round(rand(moreTrials,2));
+            trialShuffAssign = [useSess(shuffleThis(:,1)+1)' useSess(~shuffleThis(:,1)+1)' ...
+                                useSess(shuffleThis(:,2)+3)' useSess(~shuffleThis(:,2)+3)'];
+            trialShuffAssign = trialShuffAssign(:, [1 3 2 4]);
+        case 'all'
+            useSess = [lStudy rStudy lTest rTest];
+
+            for tt = 1:moreTrials
+                trialShuffAssign(tt,:) = useSess(randperm(4));
+            end
+    end
+    
+    %Mod assignments to better index
+    for cc = 1:4
+        if howManyTrials(cc) < moreTrials
+            zeroOut = trialShuffAssign(howManyTrials(cc)+1:end,:) == cc;
+            zeroOutA = [zeros(howManyTrials(cc),4); zeroOut];
+            trialShuffAssign(logical(zeroOutA)) = 0;
         end
+    end
+    
+    shuffTBTassign = [shuffTBTassign; trialShuffAssign];
+    sessIDlong = [sessIDlong; ones(moreTrials,1)*sessI];
 end
 
-shuffledTBT = trialbytrial;
+%Preallocate
+for condJ = 1:4
+    shuffledTBT(condJ).trialsX = cell(length(sessIDlong),1);
+    shuffledTBT(condJ).trialsY = cell(length(sessIDlong),1);
+    shuffledTBT(condJ).trialPSAbool = cell(length(sessIDlong),1);
+    shuffledTBT(condJ).sessID = sessIDlong;
+    shuffledTBT(condJ).sessID(shuffTBTassign(:,condJ)==0) = 0;
+    shuffledTBT(condJ).name = trialbytrial(condJ).name;
+end
 
-ss = fieldnames(trialbytrial);
-%First equalize these cell arrays
-for fn = 1:length(ss)
-    if iscell(trialbytrial(1).(ss{fn}))
-        for condType = 1:4
+%Deal out trials to new conditions
+for sessJ = 1:length(sessions)
+    for fn = 1:length(ss)
+        if iscell(trialbytrial(1).(ss{fn}))
+            for condType = 1:4
+                for condDraw = 1:4
+                    %Get the indices to fill
+                    allDeal = shuffTBTassign(:,condType)==condDraw;
+                    indDealTo = allDeal & (sessIDlong==sessJ);
+                    %Get the indices to draw from
+                    findDrawFrom = find(shuffTBTassign(sessIDlong==sessJ,condType)==condDraw);
+                    allDrawFrom = find(trialbytrial(condDraw).sessID == sessJ);
+                    indDrawFrom = allDrawFrom(findDrawFrom); %#ok<FNDSB>
+                    shuffledTBT(condType).(ss{fn})(indDealTo) =...
+                        trialbytrial(condDraw).(ss{fn})(indDrawFrom);
+                end
+            end
+        end
+    end
+end
+
+%Delete empty cells
+for condK = 1:4
+    shuffledTBT(condK).trialsX(shuffTBTassign(:,condK)==0) = [];
+    shuffledTBT(condK).trialsY(shuffTBTassign(:,condK)==0) = [];
+    shuffledTBT(condK).trialPSAbool(shuffTBTassign(:,condK)==0) = [];
+    shuffledTBT(condK).sessID(shuffTBTassign(:,condK)==0) = [];
+end
+
+%{    
+    %First equalize these cell arrays
+    
+    %There used to be more stuff here but now it's gone
+                    
+                if howManyTrials(condType) < moreTrials
+
+        
             if length(shuffledTBT(condType).(ss{fn})) < moreTrials
                 neededInds = length(shuffledTBT(condType).(ss{fn}))+1:moreTrials;
                 shuffledTBT(condType).(ss{fn})(neededInds) = cell(length(neededInds),1);
@@ -67,6 +135,7 @@ for fn = 1:length(ss)
         end
     end
 end
+%}
 
 end
 
