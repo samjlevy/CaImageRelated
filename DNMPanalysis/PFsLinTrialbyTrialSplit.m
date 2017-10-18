@@ -1,5 +1,5 @@
 function [OccMap, RunOccMap, xBin, TMap_unsmoothed, TCounts, TMap_gauss, LapIDs, Conditions] =...
-    PFsLinTrialbyTrialSplit(trialbytrial,xlims, cmperbin, minspeed, saveThis, saveName, randLaps)
+    PFsLinTrialbyTrialSplit(trialbytrial,xlims, cmperbin, minspeed, saveThis, saveName, sortedSessionInds, randLaps)
 %aboveThresh, 
 %This version does not pool data across sessions.
 %This version splits each condition (for each cell/day) into two halves for
@@ -33,6 +33,9 @@ update_points = update_points(2:end);
 for cellI = 1:numCells
     for condType = 1:4
         for tSess = 1:numSess
+            
+            if sortedSessionInds(cellI,tSess) > 0
+                
             lapsUse = []; lapsSess = [];
             lapsSess = logical(trialbytrial(condType).sessID == sessions(tSess));
             lapsSess = find(lapsSess);
@@ -82,21 +85,14 @@ for cellI = 1:numCells
     
         [OccMap{cellI,condType,tSess,condHalf},RunOccMap{cellI,condType,tSess,condHalf},xBin{cellI,condType,tSess,condHalf}]...
             = MakeOccMapLin(posX,good,isrunning,xEdges);
-        [TMap_unsmoothed{cellI,condType,tSess,condHalf},TCounts{cellI,condType,tSess,condHalf},TMap_gauss{cellI,condType,tSess,condHalf}]...
+        [TMap_unsmoothed{cellI,condType,tSess,condHalf},TCounts{cellI,condType,tSess,condHalf},...
+            TMap_gauss{cellI,condType,tSess,condHalf}]...
             = MakePlacefieldLin(logical(spikeTs),posX,xEdges,RunOccMap{cellI,condType,tSess,condHalf},...
                 'cmperbin',cmperbin,'smooth',true);
-         
-        
-            %{
-            [OccMap,RunOccMap,xBin] = MakeOccMapLin(posX,good,isrunning,xEdges);
-             [TMap_unsmoothed,TCounts,TMap_gauss] = ...
-                MakePlacefieldLin(logical(spikeTs),posX,xEdges,RunOccMap,...
-                'cmperbin',cmperbin,'smooth',true);
-
-            %}
             
         %Spatial information
         
+        end
         end %if any laps
         end %cond half
         end %tSess

@@ -6,7 +6,9 @@ function [StudyLCorrs, StudyRCorrs, TestLCorrs, TestRCorrs, numCells] = PVcorrAl
 %some indices here assume hardcoded test condition orders
 
 numDays = size(TMap_gaussSplit,3);
-maxBins = length(TMap_gaussSplit{1,1,1});
+hasStuff = ~cellfun(@isempty,{TMap_gaussSplit{:,1,1}});
+firstHas = find(hasStuff,1,'first');
+maxBins = length(TMap_gaussSplit{firstHas,1,1,1});
 
 StudyLCorrs = nan(numDays,maxBins); StudyRCorrs = nan(numDays,maxBins);
 TestLCorrs = nan(numDays,maxBins); TestRCorrs = nan(numDays,maxBins);

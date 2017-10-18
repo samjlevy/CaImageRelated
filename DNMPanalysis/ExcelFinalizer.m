@@ -15,8 +15,9 @@ startAt = cellfun(@(x) strfind(x,bitt),{dirls_file(:).name},'UniformOutput',fals
 
 foundFile = ~cellfun(@isempty,startAt);
 if sum(foundFile)==0
-    disp('Did not find the AllAdjusted file')
-    return
+    disp('Did not find the AllAdjusted file, running')
+    DNMPexcelCombiner(inputPath)
+    %return
 else
 
 rankF = zeros(length(dirls_file),1);

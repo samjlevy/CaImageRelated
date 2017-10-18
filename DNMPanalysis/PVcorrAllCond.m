@@ -1,9 +1,10 @@
 function [StudyCorrs, TestCorrs, LeftCorrs, RightCorrs, numCells] = PVcorrAllCond(TMap_gauss, RunOccMap, posThresh, threshAndConsec, Conds)
 
 %posThresh = 3;
-
+hasStuff = ~cellfun(@isempty,{TMap_gauss{:,1,1}});
+firstHas = find(hasStuff,1,'first');
+maxBins = length(TMap_gauss{firstHas,1,1});
 numDays = size(TMap_gauss,3);
-maxBins = length(TMap_gauss{1,1,1});
 
 StudyCorrs = nan(numDays,maxBins); TestCorrs = nan(numDays,maxBins);
 LeftCorrs = nan(numDays,maxBins); RightCorrs = nan(numDays,maxBins);
@@ -23,7 +24,9 @@ for tDay = 1:numDays
             studyCells(tDay) = sum(useCells); %Number of cells, this condition this day
             PFsA = cell2mat(TMap_gauss(useCells,conds(1),tDay)); PFsA(isnan(PFsA)) = 0;
             PFsB = cell2mat(TMap_gauss(useCells,conds(2),tDay)); PFsB(isnan(PFsB)) = 0;
+            if any(PFsA) & any(PFsB)
             StudyCorrs(tDay,binNum) = corr(PFsA(:,binNum),PFsB(:,binNum));
+            end
         end
          %Test
         if sum(binsUse(Conds.Test,binNum)) == 2
@@ -32,7 +35,9 @@ for tDay = 1:numDays
             testCells(tDay) = sum(useCells);
             PFsC = cell2mat(TMap_gauss(useCells,conds(1),tDay)); PFsC(isnan(PFsC)) = 0;
             PFsD = cell2mat(TMap_gauss(useCells,conds(2),tDay)); PFsD(isnan(PFsD)) = 0;
+            if any(PFsC) & any(PFsD)
             TestCorrs(tDay,binNum) = corr(PFsC(:,binNum),PFsD(:,binNum));
+            end
         end
         %Left
         if sum(binsUse(Conds.Left,binNum)) == 2
@@ -41,7 +46,9 @@ for tDay = 1:numDays
             leftCells(tDay) = sum(useCells);
             PFsA = cell2mat(TMap_gauss(useCells,conds(1),tDay)); PFsA(isnan(PFsA)) = 0;
             PFsC = cell2mat(TMap_gauss(useCells,conds(2),tDay)); PFsC(isnan(PFsC)) = 0;
+            if any(PFsA) & any(PFsC)
             LeftCorrs(tDay,binNum) = corr(PFsA(:,binNum),PFsC(:,binNum));
+            end
         end
         %Right
         if sum(binsUse(Conds.Right,binNum)) == 2
@@ -50,7 +57,9 @@ for tDay = 1:numDays
             rightCells(tDay) = sum(useCells);
             PFsB = cell2mat(TMap_gauss(useCells,conds(1),tDay)); PFsB(isnan(PFsB)) = 0;
             PFsD = cell2mat(TMap_gauss(useCells,conds(2),tDay)); PFsD(isnan(PFsD)) = 0;
+            if any(PFsB) & any(PFsD)
             RightCorrs(tDay,binNum) = corr(PFsB(:,binNum),PFsD(:,binNum));
+            end
         end 
     end
 end

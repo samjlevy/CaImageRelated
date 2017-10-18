@@ -19,12 +19,14 @@ numBins = 10;
 cmperbin = (xmax-xmin)/numBins;
 xlims = [xmin xmax];
 
-numShuffles = 25;
+numSess = length(unique(trialbytrial(1).sessID));
 %xlims = [25 60]
 %cmperbin = 2.5
 minspeed = 0;
 zeronans = 1;
 posThresh = 3;
+
+numShuffles = 25;
 
 lapPctThresh = 0.25;
 consecLapThresh = 3;
@@ -42,6 +44,7 @@ PFsLinTrialbyTrialCONDpool(trialbytrial,xlims, cmperbin, minspeed, 0, []);
 
 %Days, pooled
 %% Get some shuffled distributions for Days
+
 
 sdStudyCorrs = nan(11,10,numShuffles); sdTestCorrs = nan(11,10,numShuffles);
 sdLeftCorrs = nan(11,10,numShuffles); sdRightCorrs = nan(11,10,numShuffles);
@@ -90,7 +93,11 @@ toc
 [~, threshAndConsec] = GetUseCells(trialbytrial, lapPctThresh, consecLapThresh);
 [StudyCorrs, TestCorrs, LeftCorrs, RightCorrs, numCells] =...
     PVcorrAllCond(TMap_gauss, RunOccMap, posThresh, threshAndConsec, Conds);
-
+bbb = GenerateFigsAndHandles(4,'subplot');
+PlotPVCorrsDays(StudyCorrs, bbb(1).pl, 'Study lr')
+PlotPVCorrsDays(TestCorrs, bbb(2).pl, 'Test lr')
+PlotPVCorrsDays(LeftCorrs, bbb(3).pl, 'Left st')
+PlotPVCorrsDays(RightCorrs, bbb(4).pl, 'Right st')
 %% Shuffle across 1 dimension
 tempDir = fullfile(cd,'tempPFs');
 shStudyCorrs = nan(11,10,numShuffles); shTestCorrs = nan(11,10,numShuffles);
@@ -135,34 +142,33 @@ PlotPVCorrsDays(mean(shStudyCorrs,3), aaa(1).pl, 'Study shuff-lr')
 PlotPVCorrsDays(mean(shTestCorrs,3), aaa(2).pl, 'Test shuff-lr')
 PlotPVCorrsDays(mean(shLeftCorrs,3), aaa(3).pl, 'Left shuff-st')
 PlotPVCorrsDays(mean(shRightCorrs,3), aaa(4).pl, 'Right shuff-st')
-bbb = GenerateFigsAndHandles(4,'subplot');
-PlotPVCorrsDays(StudyCorrs, bbb(1).pl, 'Study lr')
-PlotPVCorrsDays(TestCorrs, bbb(2).pl, 'Test lr')
-PlotPVCorrsDays(LeftCorrs, bbb(3).pl, 'Left st')
-PlotPVCorrsDays(RightCorrs, bbb(4).pl, 'Right st')
-%%
- PlotPVCorrsDays(mean(shStudyCorrs,3), aaa(1).pl, 'Study shuff-lr')   
-%Separate Conditions corrs
+%% Corrs Against Self
+
+
 [~, RunOccMap, ~, ~, ~, TMap_gauss] =...
     PFsLinTrialbyTrial(trialbytrial,xlims, cmperbin, minspeed, 0, []);
 
-%[~, RunOccMap, ~, ~, ~, TMap_gauss, ~] =...
-[OccMapSplit, RunOccMapSplit, xBinSplit, TMap_unsmoothedSplit, TCountsSplit, TMap_gaussSplit, LapIDs, Conditions]=...    
-    PFsLinTrialbyTrialSplit(trialbytrial,xlims, cmperbin, minspeed, 1, 'PFsLinSplit.mat', 0);
 
-[StudyCorrs, TestCorrs, LeftCorrs, RightCorrs, numCells] =...
-    PVcorrAllCond(TMap_gauss, RunOccMap, posThresh, threshAndConsec, Conds);
-%{
-studyFig=figure; PlotPVCorrsDays(StudyCorrs, studyFig, 'Study LvR')
-testFig=figure; PlotPVCorrsDays(TestCorrs, testFig, 'Test LvR')
-leftFig=figure; PlotPVCorrsDays(LeftCorrs, leftFig, 'Left SvT')
-rightFig=figure; PlotPVCorrsDays(RightCorrs, rightFig, 'Right SvT')
-%}
-[StudyLCorrs, StudyRCorrs, TestLCorrs, TestRCorrs, numCells2] =...
-    PVcorrAllCondSelf(TMap_gaussSplit, RunOccMap, posThresh, threshAndConsec);
-%{
-studyLFig=figure; PlotPVCorrsDays(StudyLCorrs, studyLFig, 'Study L self')
-studyRFig=figure; PlotPVCorrsDays(StudyRCorrs, studyRFig, 'Study R self')
-testLFig=figure; PlotPVCorrsDays(TestLCorrs, testLFig, 'Test L self')
-testRFig=figure; PlotPVCorrsDays(TestRCorrs, testRFig, 'Test R self')
-%}
+numSplits = 10;
+
+StudyLCorrs = nan(numSess,numBins,numSplits); StudyRCorrs = nan(numSess,numBins,numSplits); 
+TestLCorrs = nan(numSess,numBins,numSplits); TestRCorrs = nan(numSess,numBins,numSplits);
+for ns = 1:numSplits
+    TMap_gaussSplit = [];
+    [~, RunOccMapSplit, ~, TMap_unsmoothedSplit, ~, TMap_gaussSplit, LapIDs, Conditions]=...    
+        PFsLinTrialbyTrialSplit(trialbytrial,xlims, cmperbin, minspeed, 0, [],sortedSessionInds, 1);
+    
+    %[corrs, cells, dayPairs] =...
+    %    PVcorrAcrossDays(TMap_gaussSplit,RunOccMap,posThresh,threshAndConsec,sortedSessionInds);
+    
+    %[corrs.StudyLCorrs(:,:,ns), corrs.StudyRCorrs(:,:,ns),...
+    %    corrs.TestLCorrs(:,:,ns), corrs.TestRCorrs(:,:,ns), numCells2(:,:,ns)] =...
+    %    PVcorrAllCondSelf(TMap_gaussSplit, RunOccMap, posThresh, threshAndConsec);
+    disp(['finished split ' num2str(ns)])
+end
+
+corrs.StudyLCorrs = StudyLCorrs;
+corrs.StudyRCorrs = StudyRCorrs;
+corrs.TestLCorrs = TestLCorrs;
+corrs.TestRCorrs = TestRCorrs;
+[corrMeans, corrStds, corrSEMs] = processPVcorrsSelfAcrossDays(corrs,dayPairs);

@@ -25,7 +25,7 @@ for regI = 1:length(reg_paths)
     %Assign matched cells' indices to corresponding base cells
     fullReg.sessionInds(newFakeCells, newCol) = 1:length(NeuronImage);
 
-    fulReg.RegSessions{regI} = reg_path;
+    fullReg.RegSessions{regI} = reg_path;
 
     try
         save(fullfile(base_path,'fullRegFake.mat'),'fullReg','-v7.3')
