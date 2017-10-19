@@ -1,5 +1,5 @@
 function PlotPVCorrsDays(Corrs, figHand, figTitle)
-
+%plots each day's corrs, one condition against self for that day
 numDays = size(Corrs,1);
 
 h = figure;

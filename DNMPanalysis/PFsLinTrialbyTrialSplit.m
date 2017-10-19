@@ -3,8 +3,8 @@ function [OccMap, RunOccMap, xBin, TMap_unsmoothed, TCounts, TMap_gauss, LapIDs,
 %aboveThresh, 
 %This version does not pool data across sessions.
 %This version splits each condition (for each cell/day) into two halves for
-%doing within condition comparisons. Use randLaps to decide whether to
-%just take even/odd or randomly pick which to use
+%doing within condition comparisons. These are indicated by the 4th dimension
+%Use randLaps to decide whether to just take even/odd or randomly pick which to use
 sessions = unique(trialbytrial(1).sessID);
 numSess = length(sessions);
 numCells = length(trialbytrial(1).trialPSAbool{1,1});
@@ -63,7 +63,8 @@ for cellI = 1:numCells
         xEdges = (0:nXBins)*cmperbin+xmin;
         
         %This is to correct problems with jumping from one trial to another
-        lapLengths = cell2mat(cellfun(@length, {trialbytrial(condType).trialsX{lapsUse{condHalf},1}},'UniformOutput',false));
+        lapLengths =...
+            cell2mat(cellfun(@length, {trialbytrial(condType).trialsX{lapsUse{condHalf},1}},'UniformOutput',false));
         trialEdges = [];
         for ll = 1:length(lapLengths)-1
             trialEdges(ll) = sum(lapLengths(1:ll));

@@ -33,6 +33,8 @@ consecLapThresh = 3;
 [dayAllUse, threshAndConsec] = GetUseCells(trialbytrial, lapPctThresh, consecLapThresh);
 [Conds] = GetTBTconds(trialbytrial);
 
+[StudyCorrs, TestCorrs, LeftCorrs, RightCorrs, numCells] =...
+    PVcorrAllCond(TMap_gauss, RunOccMap, posThresh, threshAndConsec, Conds);
 %Make original   
 [~, RunOccMap, ~, ~, ~, TMap_gauss] =...
 PFsLinTrialbyTrialCONDpool(trialbytrial,xlims, cmperbin, minspeed, 0, []);
@@ -43,8 +45,7 @@ PFsLinTrialbyTrialCONDpool(trialbytrial,xlims, cmperbin, minspeed, 0, []);
 [StudyTestCorrs, LeftRightCorrs] = PVcorrDimPooled(TMap_gauss, RunOccMap, posThresh, dayAllUse);
 
 %Days, pooled
-%% Get some shuffled distributions for Days
-
+%% Shuffle across Days
 
 sdStudyCorrs = nan(11,10,numShuffles); sdTestCorrs = nan(11,10,numShuffles);
 sdLeftCorrs = nan(11,10,numShuffles); sdRightCorrs = nan(11,10,numShuffles);
@@ -71,13 +72,13 @@ for shuffI = 1:numShuffles
     disp(['shuffle' num2str(shuffI)])
 end
 
-
 ccc = GenerateFigsAndHandles(4,'subplot');
 PlotPVCorrsDays(mean(sdStudyCorrs,3), ccc(1).pl, 'Study lr shuffDays')
 PlotPVCorrsDays(mean(sdTestCorrs,3), ccc(2).pl, 'Test lr shuffDays')
 PlotPVCorrsDays(mean(sdLeftCorrs,3), ccc(3).pl, 'Left st shuffDays')
 PlotPVCorrsDays(mean(sdRightCorrs,3), ccc(4).pl, 'Right st shuffDays')
-%Statistical comparison
+
+%Statistical comparison goes here
 
 
 
@@ -94,37 +95,34 @@ toc
 [StudyCorrs, TestCorrs, LeftCorrs, RightCorrs, numCells] =...
     PVcorrAllCond(TMap_gauss, RunOccMap, posThresh, threshAndConsec, Conds);
 bbb = GenerateFigsAndHandles(4,'subplot');
-PlotPVCorrsDays(StudyCorrs, bbb(1).pl, 'Study lr')
-PlotPVCorrsDays(TestCorrs, bbb(2).pl, 'Test lr')
-PlotPVCorrsDays(LeftCorrs, bbb(3).pl, 'Left st')
-PlotPVCorrsDays(RightCorrs, bbb(4).pl, 'Right st')
+PlotPVCorrsDays(StudyCorrs, bbb(1).pl, 'Study LvR')
+PlotPVCorrsDays(TestCorrs, bbb(2).pl, 'Test LvR')
+PlotPVCorrsDays(LeftCorrs, bbb(3).pl, 'Left SvT')
+PlotPVCorrsDays(RightCorrs, bbb(4).pl, 'Right SvT')
 %% Shuffle across 1 dimension
-tempDir = fullfile(cd,'tempPFs');
+
+%Left/Right shuffle
 shStudyCorrs = nan(11,10,numShuffles); shTestCorrs = nan(11,10,numShuffles);
 for shuffI = 1:numShuffles
     try
     shuffledTBTlr = [];
-
-    %Left/Right shuffle
     shuffledTBTlr = ShuffleTrialsAcrossConditions(trialbytrial,'leftright');
     [~, threshAndConsecShufflr] = GetUseCells(shuffledTBTlr, lapPctThresh, consecLapThresh);
     [~, RunOccMapShufflr, ~, ~, ~, TMap_gaussShufflr] =...
     PFsLinTrialbyTrial(shuffledTBTlr,xlims, cmperbin, minspeed, 0, []);
     [shStudyCorrs(:,:,shuffI), shTestCorrs(:,:,shuffI), ~, ~, shnumCellslr(shuffI)] =...
     PVcorrAllCond(TMap_gaussShufflr, RunOccMap, posThresh, threshAndConsecShufflr, Conds);
-    shuffI
+    disp(['finished shuffle ' num2str(shuffI)])
     catch
         keyboard
     end
 end    
-%saveLR = fullfile(tempDir,['shuffPFsLR' num2str(shuffI) '.mat'])
-    %save(saveLR,'
     
+%Study test shuffle    
 shLeftCorrs = nan(11,10,numShuffles); shRightCorrs = nan(11,10,numShuffles);
 for shuffI = 1:numShuffles
     shuffledTBTst = [];
     try
-    %Study test shuffle
     shuffledTBTst = ShuffleTrialsAcrossConditions(trialbytrial,'studytest');
     [~, threshAndConsecShuffst] = GetUseCells(shuffledTBTst, lapPctThresh, consecLapThresh);
     [~, RunOccMapShuffst, ~, ~, ~, TMap_gaussShuffst] =...
@@ -143,11 +141,8 @@ PlotPVCorrsDays(mean(shTestCorrs,3), aaa(2).pl, 'Test shuff-lr')
 PlotPVCorrsDays(mean(shLeftCorrs,3), aaa(3).pl, 'Left shuff-st')
 PlotPVCorrsDays(mean(shRightCorrs,3), aaa(4).pl, 'Right shuff-st')
 %% Corrs Against Self
-
-
 [~, RunOccMap, ~, ~, ~, TMap_gauss] =...
     PFsLinTrialbyTrial(trialbytrial,xlims, cmperbin, minspeed, 0, []);
-
 
 numSplits = 10;
 
@@ -161,11 +156,105 @@ for ns = 1:numSplits
     %[corrs, cells, dayPairs] =...
     %    PVcorrAcrossDays(TMap_gaussSplit,RunOccMap,posThresh,threshAndConsec,sortedSessionInds);
     
-    %[corrs.StudyLCorrs(:,:,ns), corrs.StudyRCorrs(:,:,ns),...
-    %    corrs.TestLCorrs(:,:,ns), corrs.TestRCorrs(:,:,ns), numCells2(:,:,ns)] =...
-    %    PVcorrAllCondSelf(TMap_gaussSplit, RunOccMap, posThresh, threshAndConsec);
+    [StudyLCorrs(:,:,ns), StudyRCorrs(:,:,ns),...
+        TestLCorrs(:,:,ns), TestRCorrs(:,:,ns), numCells2(:,:,ns)] =...
+        PVcorrAllCondSelf(TMap_gaussSplit, RunOccMap, posThresh, threshAndConsec);
     disp(['finished split ' num2str(ns)])
 end
+%Mean split corrs
+meanStudyL = mean(StudyLCorrs,3); meanStudyR = mean(StudyRCorrs,3);
+meanTestL = mean(TestLCorrs,3); meanTestR = mean(TestRCorrs,3);
+
+
+ddd = GenerateFigsAndHandles(4,'subplot');
+PlotPVCorrsDays(meanStudyL, ddd(1).pl, 'StudyL vs self')
+PlotPVCorrsDays(meanStudyR, ddd(2).pl, 'StudyR vs self')
+PlotPVCorrsDays(meanTestL, ddd(3).pl, 'TestL vs self')
+PlotPVCorrsDays(meanTestR, ddd(4).pl, 'TestR vs self')
+
+%% Compare population vectors within a condition across days
+[daysStudyLCorrs, daysStudyRCorrs, daysTestLCorrs, daysTestRCorrs, cells, dayPairs] =...
+    PVcorrAcrossDays(TMap,RunOccMap,posThresh,threshAndConsec,sortedSessionInds);
+
+corrs.daysStudyLCorrs = daysStudyLCorrs; corrs.daysStudyRCorrs = daysStudyRCorrs;
+corrs.daysTestLCorrs = daysTestLCorrs; corrs.daysTestRCorrs = daysTestRCorrs;
+[corrMeans, corrStds, corrSEMs, rawSort] = processPVcorrsSelfAcrossDays(corrs, dayPairs);
+%% Quantify: Is the difference between conditions greater or less than the difference across days?
+%Note: none of these are flipped LR; they go choice....stem 
+    %Could (and probably should) do each of these for each day, rather than
+    %mean-ing across days
+    
+    %Is the mean correlation within a condition within a day greater than
+    %the mean correlation between  conditions within a day?
+    mwdcSL = mean(meanStudyL,1);
+    mwdcSR = mean(meanStudyR,1);
+    mwdcTL = mean(meanTestL,1);
+    mwdcTR = mean(meanTestR,1);
+    
+    mwdcSPV = mean(StudyCorrs,1); %Study LvR
+    mwdcTPV = mean(TestCorrs,1);  %Test LvR
+    mwdcLPV = mean(LeftCorrs,1);  %Left SvT
+    mwdcRPV = mean(RightCorrs,1); %Right SvT
+    
+    studyLvR = mean([mwdcSL; mwdcSR],1) > mwdcSPV;
+    testLvR = mean([mwdcTL; mwdcTR],1) > mwdcTPV;
+    leftSvT = mean([mwdcSL; mwdcTL],1) > mwdcLPV;
+    rightSvT = mean([mwdcSR; mwdcTR],1) > mwdcRPV;
+
+    %Is the 1) mean correlation within a condition across days greater than the
+    % 2) mean correlation across conditions within a single day?
+    %(greater stability within a condition across days than across a condition within days)
+    adselfSL = corrMeans{1}(1,:);
+    adselfSR = corrMeans{2}(1,:);
+    adselfTL = corrMeans{3}(1,:);
+    adselfTR = corrMeans{4}(1,:);
+    
+    mwdcSPV = mean(StudyCorrs,1);
+    mwdcTPV = mean(TestCorrs,1);
+    mwdcLPV = mean(LeftCorrs,1);
+    mwdcRPV = mean(RightCorrs,1);
+    
+    studyLvR = mean([adselfSL; adselfSR],1) > mwdcSPV;
+    testLvR = mean([adselfTL; adselfTR],1) > mwdcTPV;
+    leftSvT = mean([adselfSL; adselfTL],1) > mwdcLPV;
+    rightSvT = mean([adselfSR; adselfTR],1) > mwdcRPV;
+    
+    %Is the mean correlation within a condition across a single day less
+    %than the mean correlation bewteen conditions across a single day?
+    msdcdSL = mean(diff(meanStudyL,1,1),1);
+    msdcdSR = mean(diff(meanStudyR,1,1),1);
+    msdcdTL = mean(diff(meanTestL,1,1),1);
+    msdcdTR = mean(diff(meanTestR,1,1),1);
+    
+    msdcdSPV = mean(diff(StudyCorrs,1,1),1);
+    msdcdTPV = mean(diff(TestCorrs,1,1),1);
+    msdcdLPV = mean(diff(LeftCorrs,1,1),1);
+    msdcdRPV = mean(diff(RightCorrs,1,1),1);
+    
+    studyLvR = mean([msdcdSL; msdcdSR],1) < msdcdSPV;
+    testLvR = mean([msdcdTL; msdcdTR],1) < msdcdTPV;
+    leftSvT = mean([msdcdSL; msdcdTL],1) < msdcdLPV;
+    rightSvT = mean([msdcdSR; msdcdTR],1) < msdcdRPV;
+    
+    
+    
+
+
+
+%{
+studyFig=figure; PlotPVCorrsDays(StudyCorrs, studyFig, 'Study LvR')
+testFig=figure; PlotPVCorrsDays(TestCorrs, testFig, 'Test LvR')
+leftFig=figure; PlotPVCorrsDays(LeftCorrs, leftFig, 'Left SvT')
+rightFig=figure; PlotPVCorrsDays(RightCorrs, rightFig, 'Right SvT')
+%}
+[StudyLCorrs, StudyRCorrs, TestLCorrs, TestRCorrs, numCells2] =...
+    PVcorrAllCondSelf(TMap_gaussSplit, RunOccMap, posThresh, threshAndConsec);
+%{
+studyLFig=figure; PlotPVCorrsDays(StudyLCorrs, studyLFig, 'Study L self')
+studyRFig=figure; PlotPVCorrsDays(StudyRCorrs, studyRFig, 'Study R self')
+testLFig=figure; PlotPVCorrsDays(TestLCorrs, testLFig, 'Test L self')
+testRFig=figure; PlotPVCorrsDays(TestRCorrs, testRFig, 'Test R self')
+%}
 
 corrs.StudyLCorrs = StudyLCorrs;
 corrs.StudyRCorrs = StudyRCorrs;

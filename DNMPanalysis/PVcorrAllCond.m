@@ -17,7 +17,7 @@ for tDay = 1:numDays
     end
 
     for binNum = 1:maxBins
-        %Study
+        %Study LvR
         if sum(binsUse(Conds.Study,binNum)) == 2%sum(binsUse([1 2],binNum)) == 2
             conds = Conds.Study;
             useCells = sum(threshAndConsec(:,tDay,conds),3)>0;
@@ -28,7 +28,7 @@ for tDay = 1:numDays
             StudyCorrs(tDay,binNum) = corr(PFsA(:,binNum),PFsB(:,binNum));
             end
         end
-         %Test
+         %Test LvR
         if sum(binsUse(Conds.Test,binNum)) == 2
             conds = Conds.Test;
             useCells = sum(threshAndConsec(:,tDay,conds),3)>0;
@@ -39,7 +39,7 @@ for tDay = 1:numDays
             TestCorrs(tDay,binNum) = corr(PFsC(:,binNum),PFsD(:,binNum));
             end
         end
-        %Left
+        %Left SvT
         if sum(binsUse(Conds.Left,binNum)) == 2
             conds = Conds.Left;
             useCells = sum(threshAndConsec(:,tDay,conds),3)>0;
@@ -50,7 +50,7 @@ for tDay = 1:numDays
             LeftCorrs(tDay,binNum) = corr(PFsA(:,binNum),PFsC(:,binNum));
             end
         end
-        %Right
+        %Right SvT
         if sum(binsUse(Conds.Right,binNum)) == 2
             conds = Conds.Right;
             useCells = sum(threshAndConsec(:,tDay,conds),3)>0;

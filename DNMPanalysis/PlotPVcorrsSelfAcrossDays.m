@@ -1,4 +1,6 @@
 function PVcorrsSelfAcrossDays(corrs,dayPairs)
+%corrs from...PVcorrAcrossDays, but that's getting structured
+
 
 daysApart = diff(dayPairs,1,2);
 
