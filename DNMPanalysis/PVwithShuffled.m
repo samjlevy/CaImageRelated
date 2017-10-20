@@ -54,22 +54,30 @@ for shuffI = 1:numShuffles
     
     shuffledTBT = ShuffleTrialsAcrossDays(trialbytrial);
     
-    [~, ROMforShuff, ~, ~, ~, TMGforShuff] =...
-    PFsLinTrialbyTrial(shuffledTBT,xlims, cmperbin, minspeed, 0, []);
+    [~, RunOccMapDayShuff, ~, TMap_unsmoothedDayShuff, ~, TMap_gaussDayShuff] =...
+    PFsLinTrialbyTrial(shuffledTBT,xlims, cmperbin, minspeed, 0, [], sortedSessionInds);
+   
+    if shuffI<100; zerosBuff = '0'; end
+    if shuffI<10; zerosBuff = '00'; end
+    if shuffI>=100; zerosBuff = []; end
+    saveName = ['PFsLinDayShuff' zerosBuff num2str(shuffI) '.mat'];
+    save(fullfile(cd,'ShufflesDay',saveName),'RunOccMapDayShuff','TMap_unsmoothedDayShuff','TMap_gaussDayShuff')
+    %[dayUseShuff,threshAndConShuff] = GetUseCells(shuffledTBT, lapPctThresh, consecLapThresh);
+
+    %[sdStudyCorrs(:,:,shuffI), sdTestCorrs(:,:,shuffI),...
+    %    sdLeftCorrs(:,:,shuffI), sdRightCorrs(:,:,shuffI), sdnumCellslr(shuffI)] =...
+    %    PVcorrAllCond(TMGforShuff, RunOccMap, posThresh, threshAndConShuff, Conds);
+    %delete old TMap stuff (memory space)
+    disp(['shuffle' num2str(shuffI)])
+    
+    
     %[~, ROMforShuff, ~, ~, ~, TMGforShuff] =...
     %PFsLinTrialbyTrialCONDpool(shuffledTBT,xlims, cmperbin, minspeed, 0, []);
-    
     %[TMap_zscoreShuff] = ZScoreLinPFs(TMGforShuff, zeronans);
-    
-    [dayUseShuff,threshAndConShuff] = GetUseCells(shuffledTBT, lapPctThresh, consecLapThresh);
     %PV corrs for shuffle
     %[STcorrsShuff(:,:,shuffI), LRcorrsShuff(:,:,shuffI)] =...
     %    PVcorrDimPooled(TMap_zscoreShuff, RunOccMap, posThresh, threshAndConShuff);
-    [sdStudyCorrs(:,:,shuffI), sdTestCorrs(:,:,shuffI),...
-        sdLeftCorrs(:,:,shuffI), sdRightCorrs(:,:,shuffI), sdnumCellslr(shuffI)] =...
-        PVcorrAllCond(TMGforShuff, RunOccMap, posThresh, threshAndConShuff, Conds);
-    %delete old TMap stuff (memory space)
-    disp(['shuffle' num2str(shuffI)])
+
 end
 
 ccc = GenerateFigsAndHandles(4,'subplot');
@@ -108,10 +116,17 @@ for shuffI = 1:numShuffles
     shuffledTBTlr = [];
     shuffledTBTlr = ShuffleTrialsAcrossConditions(trialbytrial,'leftright');
     [~, threshAndConsecShufflr] = GetUseCells(shuffledTBTlr, lapPctThresh, consecLapThresh);
-    [~, RunOccMapShufflr, ~, ~, ~, TMap_gaussShufflr] =...
-    PFsLinTrialbyTrial(shuffledTBTlr,xlims, cmperbin, minspeed, 0, []);
-    [shStudyCorrs(:,:,shuffI), shTestCorrs(:,:,shuffI), ~, ~, shnumCellslr(shuffI)] =...
-    PVcorrAllCond(TMap_gaussShufflr, RunOccMap, posThresh, threshAndConsecShufflr, Conds);
+    [~, RunOccMapShufflr, ~, TMap_unsmoothedDayShuff, ~, TMap_gaussShufflr] =...
+    PFsLinTrialbyTrial(shuffledTBTlr,xlims, cmperbin, minspeed, 0, [], sortedSessionInds);
+    
+    if shuffI<100; zerosBuff = '0'; end
+    if shuffI<10; zerosBuff = '00'; end
+    if shuffI>=100; zerosBuff = []; end
+    saveName = ['PFsLinLRShuff' zerosBuff num2str(shuffI) '.mat'];
+    save(fullfile(cd,'ShufflesConditionLR',saveName),'RunOccMapShufflr','TMap_unsmoothedDayShuff','TMap_gaussShufflr')
+
+    %[shStudyCorrs(:,:,shuffI), shTestCorrs(:,:,shuffI), ~, ~, shnumCellslr(shuffI)] =...
+    %PVcorrAllCond(TMap_gaussShufflr, RunOccMap, posThresh, threshAndConsecShufflr, Conds);
     disp(['finished shuffle ' num2str(shuffI)])
     catch
         keyboard
@@ -125,10 +140,18 @@ for shuffI = 1:numShuffles
     try
     shuffledTBTst = ShuffleTrialsAcrossConditions(trialbytrial,'studytest');
     [~, threshAndConsecShuffst] = GetUseCells(shuffledTBTst, lapPctThresh, consecLapThresh);
-    [~, RunOccMapShuffst, ~, ~, ~, TMap_gaussShuffst] =...
-    PFsLinTrialbyTrial(shuffledTBTst,xlims, cmperbin, minspeed, 0, []);
-    [~, ~, shLeftCorrs(:,:,shuffI), shRightCorrs(:,:,shuffI), shnumCellsst(shuffI)] =...
-    PVcorrAllCond(TMap_gaussShuffst, RunOccMap, posThresh, threshAndConsecShuffst, Conds);
+    [~, RunOccMapShuffst, ~, TMap_unsmoothedDayShuff, ~, TMap_gaussShuffst] =...
+    PFsLinTrialbyTrial(shuffledTBTst,xlims, cmperbin, minspeed, 0, [], sortedSessionInds);
+    
+    if shuffI<100; zerosBuff = '0'; end
+    if shuffI<10; zerosBuff = '00'; end
+    if shuffI>=100; zerosBuff = []; end
+    saveName = ['PFsLinSTShuff' zerosBuff num2str(shuffI) '.mat'];
+    save(fullfile(cd,'ShufflesConditionST',saveName),'RunOccMapShuffst','TMap_unsmoothedDayShuff','TMap_gaussShuffst')
+
+
+    %[~, ~, shLeftCorrs(:,:,shuffI), shRightCorrs(:,:,shuffI), shnumCellsst(shuffI)] =...
+    %PVcorrAllCond(TMap_gaussShuffst, RunOccMap, posThresh, threshAndConsecShuffst, Conds);
     disp(['finished shuffle ' num2str(shuffI)])
     catch
         keyboard
@@ -236,7 +259,7 @@ corrs.daysTestLCorrs = daysTestLCorrs; corrs.daysTestRCorrs = daysTestRCorrs;
     leftSvT = mean([msdcdSL; msdcdTL],1) < msdcdLPV;
     rightSvT = mean([msdcdSR; msdcdTR],1) < msdcdRPV;
     
-    
+                   
     
 
 

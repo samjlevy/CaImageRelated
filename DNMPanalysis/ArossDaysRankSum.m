@@ -13,3 +13,7 @@ for apartI = 1:length(apart)
         [p(pairI),h(pairI)] = ranksum(corrs(days(1),:)',corrs(days(2),:)');
     end
 end
+
+ks test for diffs between curves, then ttest those differences against 0?
+h = kstest(corrs(1,:)-corrs(2,:))
+ttest(corrs(1,:)-corrs(2,:))

@@ -1216,11 +1216,14 @@ disp('click on the good points around the flaw then hit enter');
         
 figure(PosAndVel);
 [DVTsec,~] = ginput(2); % DVTsec is start and end time in DVT seconds
-sFrame = round(min(DVTsec)*aviSR);
-eFrame = round(max(DVTsec)*aviSR);
+%sFrame = round(min(DVTsec)*aviSR);
+%eFrame = round(max(DVTsec)*aviSR);
 
 eFrame = min([length(time), eFrame]); %make sure we're not to far
 sFrame = max([1, sFrame]); %makesure we're not too early
+
+eFrame = min([length(time), round(max(DVTsec))]); %make sure we're not to far
+sFrame = max([1, round(min(DVTsec))]); %makesure we're not too early
 end
 %% %%%%%%%%%%%%%%%%%%%%%%%%%%%%
 function CorrectTheseFrames(~,~)
@@ -1753,16 +1756,18 @@ vel_init(forcedExclude) = min(vel_init);
 % mouse/rat is off the maze
 Xpix_plot = Xpix; Xpix_plot(forcedExclude) = nan;
 Ypix_plot = Ypix; Ypix_plot(forcedExclude) = nan;
-
+frameInds = 1:length(Xpix);
 velInds=1:length(vel_init);
-hx0 = subplot(4,3,1:3);plot([1:length(Xpix)],Xpix);xlabel('time (sec)');ylabel('x position (cm)');yl = get(gca,'YLim');
+hx0 = subplot(4,3,1:3);plot(frameInds,Xpix);xlabel('time (sec)');ylabel('x position (cm)');yl = get(gca,'YLim');
     line([MoMtime MoMtime], [yl(1) yl(2)],'Color','r');axis tight;
-hy0 = subplot(4,3,4:6);plot([1:length(Ypix)],Ypix);xlabel('time (sec)');ylabel('y position (cm)');yl = get(gca,'YLim');
+hy0 = subplot(4,3,4:6);plot(frameInds,Ypix);xlabel('time (sec)');ylabel('y position (cm)');yl = get(gca,'YLim');
     line([MoMtime MoMtime], [yl(1) yl(2)],'Color','r');axis tight;
-hVel = subplot(4,3,7:12);plot(velInds*(time(2)-time(1)),vel_init);xlabel('time (sec)');ylabel('velocity');axis tight; %#ok<NASGU>
+velTemp = velInds*(time(2)-time(1));
+hVel = subplot(4,3,7:12); plot(frameInds(1:end-1),vel_init); xlabel('time (sec)');ylabel('velocity');axis tight; %#ok<NASGU>
 
 hold on 
-plot((time(2)-time(1))*velInds(vel_init>auto_vel_thresh),vel_init(vel_init>auto_vel_thresh),'or'); hold off
+frameIndss = frameInds(1:end-1);
+plot(frameIndss(vel_init>auto_vel_thresh),vel_init(vel_init>auto_vel_thresh),'or'); hold off
 linkaxes([hx0 hy0 hVel],'x');
 hline=refline(0,auto_vel_thresh);hline.Color='r';hline.LineWidth=1.5;
 end
