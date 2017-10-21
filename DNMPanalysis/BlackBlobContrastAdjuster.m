@@ -2,6 +2,9 @@ function BlackBlobContrastAdjuster
 %This is to get some new contrast values for use in
 %PreProcessMousePosition_autoSL3. Doesn't yet do contrast proper, just
 %thresholding
+
+%Long term fixes:
+%   - upper limit on axis length
 global fig
 global grayThresh %inherited
 global frames
@@ -11,7 +14,10 @@ global findingContrast %inherited
 global v0
 global grayLength
 global grayBlobArea
-
+global avi_filepath
+global grayLengthUpper
+global maskx
+global masky
 
 %{
     J = imadjust(I,[LOW_IN; HIGH_IN],[LOW_OUT; HIGH_OUT],GAMMA) maps the
@@ -112,12 +118,20 @@ fig.gaussLabel = uicontrol('style','text','String',...
 
 fig.sizeSlider = uicontrol('Style','slider','Position',...
     [figWidth/2-300,(row2-edgeBuffer*4)*800-124,280,25],...
-    'Value',grayLength, 'min',0.1, 'max',50,...
-    'Callback',{@updateAxisSize},'SliderStep',[0.01 0.01],'Parent',fig.f);
+    'Value',grayLength, 'min',1, 'max',50,...
+    'Callback',{@updateAxisSize},'SliderStep',[1/50 1/50],'Parent',fig.f);
 fig.sizeLabel = uicontrol('style','text','String',...
     ['Axis Length: ' num2str(grayLength)],...
     'Position',[420,(row2-edgeBuffer*4)*800-156,220,25],'FontSize',12,'Parent',fig.f);
-
+%{
+fig.sizeSlider = uicontrol('Style','slider','Position',...
+    [figWidth/2-300,(row2-edgeBuffer*4)*800-124,280,25],...
+    'Value',grayLength, 'min',0.1, 'max',50,...
+    'Callback',{@updateAxisSize},'SliderStep',[0.25 0.25],'Parent',fig.f);
+fig.sizeLabel = uicontrol('style','text','String',...
+    ['Axis Length: ' num2str(grayLength)],...
+    'Position',[420,(row2-edgeBuffer*4)*800-156,220,25],'FontSize',12,'Parent',fig.f);
+%}
 
 fig.plotSelect = uicontrol('Style','popup','Position',[150,200,200,20],...
                              'string',{'Raw frame';'Gray Threshold';'Gauss smoothed';...
@@ -142,13 +156,19 @@ fig.useExpected = uicontrol('Style','checkbox','Position',[205,105,25,25],...
 fig.useLabel = uicontrol('style','text','String','Use expected:',...
                           'Position',[48,105,150,25],'FontSize',12,'Parent',fig.f);
                       
+fig.useMask = uicontrol('Style','checkbox','Position',[205,75,25,25],...
+                             'Value', 0,'Parent',fig.f);
+fig.MaskLabel = uicontrol('style','text','String','Use maze mask:',...
+                          'Position',[48,105,150,25],'FontSize',12,'Parent',fig.f);
+
+                      
 fig.QuitButton = uicontrol('style','pushbutton','String','Save & Quit',...
                           'Position',[figWidth-200,20,125,35],...
                           'Callback',{@savequit},'Parent',fig.f);
                       
 fig.FramesButton = uicontrol('style','pushbutton','String','New frames',...
                           'Position',[figWidth-200,60,125,35],...
-                          'Callback',{@WhichFrames},'Parent',fig.f);
+                          'Callback',{@WhichFramesNew},'Parent',fig.f);
                       
 fig.InquireButton = uicontrol('style','pushbutton','String','Value ??',...
                           'Position',[figWidth-200,100,125,35],...
@@ -192,6 +212,19 @@ gaussThresh = fig.gaussSlider.Value/100;
 fig.gaussLabel.String = ['Gauss Threshold: ' num2str(gaussThresh)];
 fig.expectedBlobs=logical(imgaussfilt(double(fig.v0thresh),10) <= gaussThresh);
 imagesc(fig.expected.axx,fig.expectedBlobs)
+PlotFrames;
+PlotExpectedBlobs;
+end
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+function updateAxisSize(~,~)
+global fig
+global grayLength
+
+fig.sizeSlider.Value = round(fig.sizeSlider.Value);
+grayLength = fig.sizeSlider.Value;
+fig.sizeLabel.String = ['Axis Length: ' num2str(grayLength)];
+%fig.expectedBlobs=logical(imgaussfilt(double(fig.v0thresh),10) <= grayLength);
+%imagesc(fig.expected.axx,fig.expectedBlobs)
 PlotFrames;
 PlotExpectedBlobs;
 end
@@ -257,6 +290,8 @@ global fig
 global frames
 global grayBlobArea
 global grayLength
+global grayLengthUpper
+global pp
 
 
 for pp = 1:length(fig.spot)
@@ -272,13 +307,38 @@ for pp = 1:length(fig.spot)
     
     frames(pp).grayStats = grayStats( [grayStats.Area] > grayBlobArea &...
                        [grayStats.MajorAxisLength] > grayLength &...
-                       [grayStats.MinorAxisLength] > grayLength);
+                       [grayStats.MinorAxisLength] > grayLength &...
+                       [grayStats.MajorAxisLength] < grayLengthUpper &...
+                       [grayStats.MinorAxisLength] < grayLengthUpper);
+    
+    if fig.useMask.Value==1; LimitCenters; end
+    
     if ~isempty(frames(pp).grayStats)
         for gg=1:length(frames(pp).grayStats)
             plot(fig.spot(pp).axx,frames(pp).grayStats(gg).Centroid(1),...
                 frames(pp).grayStats(gg).Centroid(2),'r*')
+            rectangle(fig.spot(pp).axx,'Position',[50 50 grayLength grayLength],...
+                'Curvature',[1 1],'EdgeColor','c')
         end
     end
+end
+
+end
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+function LimitCenters(~,~)
+global frames
+global pp
+global mazex
+global mazey
+
+if ~isempty(mazex) && ~isempty(mazeY)
+stats =frames(pp).grayStats;
+statsCenters = reshape([stats.Centroid],2,length(stats))';
+[inmask, onmask] = inpolygon(statsCenters(:,1),statsCenters(:,2),mazex,mazey);
+inMask = inmask | onmask;
+frames(pp).grayStats = stats(inMask);
+else
+    disp('no maze mask found')
 end
 
 end
@@ -286,9 +346,10 @@ end
 function WhichFrames(~,~)
 global obj
 global frames
+global avi_filepath
 
 prompt = {'Frame 1:','Frame 2:','Frame 3:','Frame 4:','Frame 5:','Frame 6:'};
-defaultans = {'971','','','','',''};
+defaultans = {'','','','','',''};
 answer = inputdlg(prompt,'Frames to test',1,defaultans);
 
 avi_filepath = ls('*.avi');
@@ -308,11 +369,18 @@ end
 
 end
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+function WhichFramesNew(~,~)
+
+WhichFrames;
+PlotFrames;
+
+end
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 function savequit(~,~)
 global fig
 global findingContrast
 
-disp('wew dub')
+
 close(fig.f)
 try %#ok<TRYNC>
     close(fig.expect)

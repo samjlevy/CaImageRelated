@@ -172,16 +172,21 @@ numSplits = 10;
 StudyLCorrs = nan(numSess,numBins,numSplits); StudyRCorrs = nan(numSess,numBins,numSplits); 
 TestLCorrs = nan(numSess,numBins,numSplits); TestRCorrs = nan(numSess,numBins,numSplits);
 for ns = 1:numSplits
-    TMap_gaussSplit = [];
+    TMap_gaussSplit = []; TMap_unsmoothedSplit = [];
     [~, RunOccMapSplit, ~, TMap_unsmoothedSplit, ~, TMap_gaussSplit, LapIDs, Conditions]=...    
         PFsLinTrialbyTrialSplit(trialbytrial,xlims, cmperbin, minspeed, 0, [],sortedSessionInds, 1);
     
+    if shuffI<100; zerosBuff = '0'; end
+    if shuffI<10; zerosBuff = '00'; end
+    if shuffI>=100; zerosBuff = []; end
+    saveName = ['PFsLinSplit' zerosBuff num2str(ns) '.mat'];
+    save(fullfile(cd,'Splits',saveName),'RunOccMapSplit','TMap_unsmoothedSplit','TMap_gaussSplit,','LapIDs','Conditions')
     %[corrs, cells, dayPairs] =...
     %    PVcorrAcrossDays(TMap_gaussSplit,RunOccMap,posThresh,threshAndConsec,sortedSessionInds);
     
-    [StudyLCorrs(:,:,ns), StudyRCorrs(:,:,ns),...
-        TestLCorrs(:,:,ns), TestRCorrs(:,:,ns), numCells2(:,:,ns)] =...
-        PVcorrAllCondSelf(TMap_gaussSplit, RunOccMap, posThresh, threshAndConsec);
+    %[StudyLCorrs(:,:,ns), StudyRCorrs(:,:,ns),...
+    %    TestLCorrs(:,:,ns), TestRCorrs(:,:,ns), numCells2(:,:,ns)] =...
+    %    PVcorrAllCondSelf(TMap_gaussSplit, RunOccMap, posThresh, threshAndConsec);
     disp(['finished split ' num2str(ns)])
 end
 %Mean split corrs

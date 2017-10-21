@@ -5,6 +5,7 @@ hasStuff = ~cellfun(@isempty,{TMap_gauss{:,1,1}});
 firstHas = find(hasStuff,1,'first');
 maxBins = length(TMap_gauss{firstHas,1,1});
 numDays = size(TMap_gauss,3);
+corrType = 'Pearson';
 
 StudyCorrs = nan(numDays,maxBins); TestCorrs = nan(numDays,maxBins);
 LeftCorrs = nan(numDays,maxBins); RightCorrs = nan(numDays,maxBins);
@@ -25,7 +26,7 @@ for tDay = 1:numDays
             PFsA = cell2mat(TMap_gauss(useCells,conds(1),tDay)); PFsA(isnan(PFsA)) = 0;
             PFsB = cell2mat(TMap_gauss(useCells,conds(2),tDay)); PFsB(isnan(PFsB)) = 0;
             if any(PFsA) & any(PFsB)
-            StudyCorrs(tDay,binNum) = corr(PFsA(:,binNum),PFsB(:,binNum));
+            StudyCorrs(tDay,binNum) = corr(PFsA(:,binNum),PFsB(:,binNum),'type',corrType);
             end
         end
          %Test LvR
@@ -36,7 +37,7 @@ for tDay = 1:numDays
             PFsC = cell2mat(TMap_gauss(useCells,conds(1),tDay)); PFsC(isnan(PFsC)) = 0;
             PFsD = cell2mat(TMap_gauss(useCells,conds(2),tDay)); PFsD(isnan(PFsD)) = 0;
             if any(PFsC) & any(PFsD)
-            TestCorrs(tDay,binNum) = corr(PFsC(:,binNum),PFsD(:,binNum));
+            TestCorrs(tDay,binNum) = corr(PFsC(:,binNum),PFsD(:,binNum),'type',corrType);
             end
         end
         %Left SvT
@@ -47,7 +48,7 @@ for tDay = 1:numDays
             PFsA = cell2mat(TMap_gauss(useCells,conds(1),tDay)); PFsA(isnan(PFsA)) = 0;
             PFsC = cell2mat(TMap_gauss(useCells,conds(2),tDay)); PFsC(isnan(PFsC)) = 0;
             if any(PFsA) & any(PFsC)
-            LeftCorrs(tDay,binNum) = corr(PFsA(:,binNum),PFsC(:,binNum));
+            LeftCorrs(tDay,binNum) = corr(PFsA(:,binNum),PFsC(:,binNum),'type',corrType);
             end
         end
         %Right SvT
@@ -58,7 +59,7 @@ for tDay = 1:numDays
             PFsB = cell2mat(TMap_gauss(useCells,conds(1),tDay)); PFsB(isnan(PFsB)) = 0;
             PFsD = cell2mat(TMap_gauss(useCells,conds(2),tDay)); PFsD(isnan(PFsD)) = 0;
             if any(PFsB) & any(PFsD)
-            RightCorrs(tDay,binNum) = corr(PFsB(:,binNum),PFsD(:,binNum));
+            RightCorrs(tDay,binNum) = corr(PFsB(:,binNum),PFsD(:,binNum),'type',corrType);
             end
         end 
     end

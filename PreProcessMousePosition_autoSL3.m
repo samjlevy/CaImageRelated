@@ -113,12 +113,15 @@ global velchoice; global AMchoice; global corrDefGoodFlag; global elChoiceFlag;
 global elVector; global mazeEl; global bstr; global allTxt; global bframes;
 global update_pos_realtime; global blankVector; global isGrayThresh;
 global findingContrast; global excludeFromVel; global grayLength; global avi_filepath;
-global bl; global drawnowEnable
+global bl; global drawnowEnable; global mcfScaleFactor; global mcfOriginalSize
+global grayLengthUpper;
 
 
 %% Get varargin
     
 %epoch_length_lim = 200; % default
+mcfScaleFactor = 1;
+mcfOriginalSize = [680 558 560 420];
 update_pos_realtime = 1;
 max_pixel_jump = 45;
 corrDefGoodFlag = 0;
@@ -225,10 +228,12 @@ if ~any(excludeFromVel)
     excludeFromVel = Xpix*0;
 end
 
+%% Background Image
+DealWithBackgroundImage;
+
 %% Cage mask
 %Comes out flipped
-dummy = readFrame(obj);
-MaskFig=figure('name', 'Cage Mask'); imagesc(flipud(dummy));
+MaskFig=figure('name', 'Cage Mask'); imagesc(flipud(v0));
 maskSwitch = exist('maskx','var') && exist('masky','var') && exist('maze','var')...
     && any(maskx) && any(masky) && any(maze(:)); 
 switch maskSwitch  
@@ -251,7 +256,7 @@ while cageMaskGood==0
             disp('Proceeding with this cage mask')
             cageMaskGood=1;
         case 'No redraw'
-            figure(MaskFig); imagesc(flipud(dummy));
+            figure(MaskFig); imagesc(flipud(v0));
             title('Draw position mask');
             [maze, maskx, masky] = roipoly;
             hold on; plot([maskx; maskx(1)],[masky; masky(1)],'r','LineWidth',2)
@@ -260,8 +265,6 @@ while cageMaskGood==0
 end 
 close(MaskFig)
 
-%% Background Image
-DealWithBackgroundImage;
 %% Position and velocity
 vel_init = hypot(diff(Xpix),diff(Ypix))/(time(2)-time(1));
 vel_init = [vel_init(1); vel_init];
@@ -313,6 +316,12 @@ end
 if isempty(gaussThresh)
     gaussThresh = 0.21;
 end
+if isempty(grayLength)
+    grayLength = 15;
+end
+if isempty(grayLengthUpper)
+    grayLengthUpper = 250;
+end
  
 isGrayThresh = 0.04;
 distLim2 = max_pixel_jump;
@@ -320,7 +329,7 @@ grayBlobArea = 60; %Could probably be raised
 got=[];
 skipped=[];
 blankVector = zeros(size(xAVI));
-grayLength = 15;
+
 
 constr = {'Find thresholds manually?';
           ['grayThresh = ' num2str(grayThresh)];
@@ -361,6 +370,8 @@ optionsText={%'h - full explanations';...
              'l - edit expected locations';...
              'i - edit background image';...
              'u - load frame nums from file';...
+             'e - run BlackBlobsContrastAdjuster';...
+             'w - change ManCorrFig scaling';...
              'd - change whether draw now is used';...
              's - save work';...
              'x - quit without finalizing';...
@@ -394,6 +405,8 @@ MorePoints = input('Is there a flaw that needs to be corrected?','s');
 %end 
 
 switch MorePoints
+    case 'e'
+        BlackBlobContrastAdjuster;
     case 'z'
         ZeroBounds;
     case 'b'
@@ -627,6 +640,10 @@ switch MorePoints
         defaultans = {num2str(bl)};
         answer = inputdlg(prompt,'Change block length:',1,defaultans);
         bl=cell2mat(cellfun(@str2num,answer,'UniformOutput',false));
+    case 'w'
+        disp(['ManualCorrFig current scale factor is: ' num2str(mcfScaleFactor)]);
+        mcfScaleFactor = input('Enter new scale factor:') %#ok<NOPRT>
+        CheckManCorrFig;
     otherwise
         disp('Not a recognized input')
 end
@@ -683,7 +700,7 @@ save Pos.mat Xpix_filt Ypix_filt xpos_interp ypos_interp time_interp start_time.
     MoMtime Xpix Ypix xAVI yAVI MouseOnMazeFrame...
     AVItime_interp maze v0 maskx masky definitelyGood expectedBlobs mazeEl...
     elVector bstr allTxt bframes DVTtime willThresh grayThresh gaussThresh time...
-    auto_vel_thresh excludeFromVel
+    auto_vel_thresh excludeFromVel grayLength
 
 ClearStuff;
 
@@ -693,7 +710,7 @@ end
 %Functions
 %% %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 function CheckManCorrFig(~,~)
-global ManualCorrFig; global v0; global PosAndVel; 
+global ManualCorrFig; global v0; global PosAndVel; global mcfScaleFactor; global mcfOriginalSize
 
 figsOpen = findall(0,'type','figure');
 isManCorr = strcmp({figsOpen.Name},'ManualCorrFig');
@@ -704,7 +721,16 @@ elseif sum(isManCorr)==0
 elseif sum(isManCorr) > 1
     manCorrInds = find(isManCorr);
     close(figsOpen(manCorrInds(2:end)))
+    try
+        clear(figsOpen(manCorrInds(2:end)))
+    catch 
+        disp('delete mancorrfigs did not work')
+    end
 end
+
+%ManualCorrFig.Position([3 4]) = mcfOriginalSize([3 4])*mcfScaleFactor; 
+%ManualCorrFig.Position(1) = mcfOriginalSize(1) - ((mcfScaleFactor-1)*mcfOriginalSize(3))/2;
+%ManualCorrFig.Position(2) = mcfOriginalSize(2) - (mcfScaleFactor-1)*mcfOriginalSize(4);
 
 end
 %% %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -1219,8 +1245,8 @@ figure(PosAndVel);
 %sFrame = round(min(DVTsec)*aviSR);
 %eFrame = round(max(DVTsec)*aviSR);
 
-eFrame = min([length(time), eFrame]); %make sure we're not to far
-sFrame = max([1, sFrame]); %makesure we're not too early
+%eFrame = min([length(time), eFrame]); %make sure we're not to far
+%sFrame = max([1, sFrame]); %makesure we're not too early
 
 eFrame = min([length(time), round(max(DVTsec))]); %make sure we're not to far
 sFrame = max([1, round(min(DVTsec))]); %makesure we're not too early
@@ -1354,7 +1380,7 @@ global grayBlobArea; global skipped; global putativeMouseX; global putativeMouse
 global willThresh; global grayThresh; global gaussThresh; global distLim2;
 global xm; global ym; global elChoiceFlag; global elVector; global mazeEl;
 global maskx; global masky;  global isGrayThresh; global auto_vel_thresh;
-global definitelyGood; global grayLength; global drawnowEnable
+global definitelyGood; global grayLength; global drawnowEnable; global grayLengthUpper
 
 xm=[]; ym=[];
 marker = {'go' 'yo' 'ro'};
@@ -1570,7 +1596,9 @@ elseif length(stats) > 1
             grayStats = regionprops(maybeMouseGray,'centroid','area','majoraxislength','minoraxislength'); %flipped
             grayStats = grayStats( [grayStats.Area] > grayBlobArea &...
                        [grayStats.MajorAxisLength] > grayLength &...
-                       [grayStats.MinorAxisLength] > grayLength);
+                       [grayStats.MinorAxisLength] > grayLength &...
+                       [grayStats.MajorAxisLength] < grayLengthUpper &...
+                       [grayStats.MinorAxisLength] < grayLengthUpper);
 
                        
             possible=[];
@@ -1777,11 +1805,11 @@ global MoMtime; global MouseOnMazeFrame; global maskx; global masky
 global definitelyGood; global xAVI; global yAVI; global Xpix; global Ypix;
 global maze; global expectedBlobs; global v0; global mazeEl; global elVector;
 global bstr; global allTxt; global bframes; global willThresh; global grayThresh;
-global gaussThresh; global time; global auto_vel_thresh; global excludeFromVel
+global gaussThresh; global time; global auto_vel_thresh; global excludeFromVel; global grayLength
 
 save Pos_temp.mat Xpix Ypix xAVI yAVI MoMtime MouseOnMazeFrame maskx v0 maze masky...
     definitelyGood expectedBlobs mazeEl elVector bstr allTxt bframes willThresh...
-    grayThresh gaussThresh time auto_vel_thresh excludeFromVel
+    grayThresh gaussThresh time auto_vel_thresh excludeFromVel grayLength
 
 disp('Saved!')
 end
