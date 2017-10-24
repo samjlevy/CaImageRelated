@@ -233,37 +233,8 @@ DealWithBackgroundImage;
 
 %% Cage mask
 %Comes out flipped
-MaskFig=figure('name', 'Cage Mask'); imagesc(flipud(v0));
-maskSwitch = exist('maskx','var') && exist('masky','var') && exist('maze','var')...
-    && any(maskx) && any(masky) && any(maze(:)); 
-switch maskSwitch  
-    case 1
-        title('Found cage mask')
-    case 0 
-        title('Draw position mask');
-        [maze, maskx, masky] = roipoly;        
-end
-hold on; plot([maskx; maskx(1)],[masky; masky(1)],'r','LineWidth',2)
+DealWithCageMask;
 
-cageMaskGood=0;
-while cageMaskGood==0
-    figure(MaskFig); title('Cage Mask')
-    choice = questdlg('Is this cage mask good?', ...
-	'Cage Mask', ...
-	'Yes','No redraw','Yes');
-    switch choice
-        case 'Yes'
-            disp('Proceeding with this cage mask')
-            cageMaskGood=1;
-        case 'No redraw'
-            figure(MaskFig); imagesc(flipud(v0));
-            title('Draw position mask');
-            [maze, maskx, masky] = roipoly;
-            hold on; plot([maskx; maskx(1)],[masky; masky(1)],'r','LineWidth',2)
-            cageMaskGood=0;       
-    end
-end 
-close(MaskFig)
 
 %% Position and velocity
 vel_init = hypot(diff(Xpix),diff(Ypix))/(time(2)-time(1));
@@ -371,6 +342,7 @@ optionsText={%'h - full explanations';...
              'i - edit background image';...
              'u - load frame nums from file';...
              'e - run BlackBlobsContrastAdjuster';...
+             'r - edit default CageMask';...
              'w - change ManCorrFig scaling';...
              'd - change whether draw now is used';...
              's - save work';...
@@ -407,6 +379,8 @@ MorePoints = input('Is there a flaw that needs to be corrected?','s');
 switch MorePoints
     case 'e'
         BlackBlobContrastAdjuster;
+    case 'r'
+        DealWithCageMask;
     case 'z'
         ZeroBounds;
     case 'b'
@@ -1398,6 +1372,7 @@ else
     mazey = masky; 
 end
 fixedThisFrameFlag=0;
+skippedFrame = 0;
     
 obj.CurrentTime=(auto_frames(corrFrame)-1)/aviSR;
 v = readFrame(obj);
@@ -1427,8 +1402,8 @@ stats=[]; %#ok<NASGU>
 d = imgaussfilt(flipud(rgb2gray(v0-v)),10);
 stats = regionprops(d>willThresh & mazeMask,'area','centroid','majoraxislength','minoraxislength');%flipped %'solidity'
 MouseBlob = [stats.Area] > 250 & ... %[stats.Area] < 3500...
-            [stats.MajorAxisLength] > 10 & ...
-            [stats.MinorAxisLength] > 10;
+            [stats.MajorAxisLength] > 8 & ...
+            [stats.MinorAxisLength] > 8; %10
 stats=stats(MouseBlob);
         
 %Sam's gray version
@@ -1469,7 +1444,7 @@ elseif isempty(stats)
                 [xm,ym] = EnhancedManualCorrect;
             case 1
                 %Should it be try gray?
-                skipped = [skipped; auto_frames(corrFrame)]; 
+                skippedFrame = 0; %skipped = [skipped; auto_frames(corrFrame)]; 
                 fixedThisFrameFlag=0;
         end
     end 
@@ -1639,7 +1614,7 @@ elseif length(stats) > 1
                                     [xm,ym] = EnhancedManualCorrect;
                             elseif pass==1 && auto_frames(corrFrame)~=1
                                     %Here too?
-                                    skipped = [skipped; auto_frames(corrFrame)]; 
+                                    skippedFrame = 1;%skipped = [skipped; auto_frames(corrFrame)]; 
                                     fixedThisFrameFlag=0;
                             end    
                         end
@@ -1673,7 +1648,7 @@ elseif length(stats) > 1
                 case 0 %isempty(grayStats) && isempty(stats)
                     switch pass
                         case 1
-                            skipped = [skipped; auto_frames(corrFrame)]; 
+                            skippedFrame = 1; %skipped = [skipped; auto_frames(corrFrame)]; 
                         case 2
                             [xm,ym] = EnhancedManualCorrect;
                     end
@@ -1704,7 +1679,11 @@ elseif length(stats) > 1
         %}
     if fixedThisFrameFlag==0
         if pass==1
+            if skippedFrame == 1
             skipped = [skipped; auto_frames(corrFrame)];
+            else 
+                disp('missed something skipping')
+            end
         else
             [xm,ym] = EnhancedManualCorrect;
         end
@@ -2601,6 +2580,42 @@ while compGood==0
 end
 v0 = backgroundImage; %Comes out rightside up
 close(backgroundFrame);
+
+end
+%% %%%%%%%%%%%%%%%%%%%%%
+function DealWithCageMask
+global v0 maskx masky maze 
+MaskFig=figure('name', 'Cage Mask'); imagesc(flipud(v0));
+maskSwitch = exist('maskx','var') && exist('masky','var') && exist('maze','var')...
+    && any(maskx) && any(masky) && any(maze(:)); 
+switch maskSwitch  
+    case 1
+        title('Found cage mask')
+    case 0 
+        title('Draw position mask');
+        [maze, maskx, masky] = roipoly;        
+end
+hold on; plot([maskx; maskx(1)],[masky; masky(1)],'r','LineWidth',2)
+
+cageMaskGood=0;
+while cageMaskGood==0
+    figure(MaskFig); title('Cage Mask')
+    choice = questdlg('Is this cage mask good?', ...
+	'Cage Mask', ...
+	'Yes','No redraw','Yes');
+    switch choice
+        case 'Yes'
+            disp('Proceeding with this cage mask')
+            cageMaskGood=1;
+        case 'No redraw'
+            figure(MaskFig); imagesc(flipud(v0));
+            title('Draw position mask');
+            [maze, maskx, masky] = roipoly;
+            hold on; plot([maskx; maskx(1)],[masky; masky(1)],'r','LineWidth',2)
+            cageMaskGood=0;       
+    end
+end 
+close(MaskFig)
 
 end
 %%

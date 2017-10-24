@@ -21,7 +21,7 @@ for apartI = 1:length(apart)
 
             corrMeans{condI}(apartI,1:numBins) = mean(corrMat,1);
             corrStds{condI}(apartI,:) = std(corrMat,1);
-            corrSEMs{condI}(apartI,:) = std(corrMat,1)/size(corrMat,1);
+            corrSEMs{condI}(apartI,:) = std(corrMat,1)/sqrt(size(corrMat,1));
         end
     end
 end

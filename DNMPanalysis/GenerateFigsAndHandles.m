@@ -18,7 +18,7 @@ for NF = 1:numFigs
                 numCols = ceil(sqrt(numFigs));
                 numRows = floor(sqrt(numFigs));
 
-                if numCols + numRows < numFigs
+                if numCols*numRows < numFigs
                     if ((numCols+1) * numRows) > ((numRows+1) * numCols)
                         numCols = numCols + 1;
                     else 

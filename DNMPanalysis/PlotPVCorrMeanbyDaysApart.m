@@ -1,4 +1,4 @@
-function PlotPVCorrsDays(Corrs, figHand, figTitle, rawDays)
+function PlotPVCorrMeanbyDaysApart(Corrs, figHand, figTitle, rawDays)
 %plots each day's corrs, one condition against self for that day
 numDays = size(Corrs,1);
 
