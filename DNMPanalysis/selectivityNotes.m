@@ -261,12 +261,34 @@ figure;
 subplot(1,2,1); hold on
 for aa = 1:11; plot(threshes,LRselECDF(:,aa),'Color',plotColors(aa,:),'LineWidth',1.5); end %,'DisplayName',lg{aa}
 %legend('show'); legend('Location','northwest'); 
-xlabel('LR Threshold'); ylabel('Proportion of Cells')
+xlabel('Left/Right Turn Direction Threshold'); ylabel('Proportion of Cells')
 subplot(1,2,2); hold on
 for aa = 1:11; plot(threshes,STselECDF(:,aa),'Color',plotColors(aa,:),'LineWidth',1.5); end %,'DisplayName',lg{aa}
 %legend('show'); legend('Location','northwest'); 
+xlabel('Study/Test Task Phase Threshold')
+suptitle('Cumulative Desinsity of Selectivity')
+
+figure;
+gg = subplot(1,2,1); hold on
+for aa = 1:11
+    plot(threshes(1:end-1),LRselECDF(1:end-1,aa),'Color',plotColors(aa,:),'LineWidth',1.5);
+    plot(threshes(end-1:end),[LRselECDF(end-1,aa) 0.6],'--','Color',plotColors(aa,:),'LineWidth',1.5);
+end %,'DisplayName',lg{aa}
+hh.YTick = [0 0.1 0.2 0.3 0.4 0.5 0.6];
+gg.YTickLabel = {'0'; '0.1'; '0.2'; '0.3'; '0.4'; '0.5'; '1'};
+%legend('show'); legend('Location','northwest'); 
+xlabel('LR Threshold'); ylabel('Proportion of Cells')
+hh = subplot(1,2,2); hold on
+for aa = 1:11
+    plot(threshes(1:end-1),STselECDF(1:end-1,aa),'Color',plotColors(aa,:),'LineWidth',1.5);
+    plot(threshes(end-1:end),[STselECDF(end-1,aa) 0.6],'--','Color',plotColors(aa,:),'LineWidth',1.5);
+end   
+hh.YTick = [0 0.1 0.2 0.3 0.4 0.5 0.6];
+hh.YTickLabel = {'0'; '0.1'; '0.2'; '0.3'; '0.4'; '0.5'; '1'};
+%legend('show'); legend('Location','northwest'); 
 xlabel('ST Threshold')
 suptitle('Proportion of cells above selectivity threshold (Bellatrix)')
+
 
 
 for bb = 1:21
@@ -373,7 +395,6 @@ for dayK = 1:numDays
 end
 
 end
-
 
 %Frank paper well selectivity
 "To calculate the well specificity index (WSI) of a unit, the well firing rate at each

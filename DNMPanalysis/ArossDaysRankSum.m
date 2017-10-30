@@ -1,9 +1,19 @@
-AcrossDaysRankSum(corrs)
+AcrossDaysRankSum(corrs, realDays)
 
-numDays = size(corrs,1);
+numDays = length(realDays);
 dayPairs = combnk(1:numDays,2);
-daysApart = diff(dayPairs,1,2);
+realDayPairs = [realDays(dayPairs(:,1))' realDays(dayPairs(:,2))']; 
+daysApart = abs(diff(realDayPairs,1,2));
 apart = unique(daysApart);
+
+for pairI = 1:length(dayPairs)
+    [p(pairI),h(pairI)] = ranksum(corrs(dayPairs(pairI,1),:)',corrs(dayPairs(pairI,2),:)');
+end
+
+for apartI = 1:length(apart)
+    pctDiff(apartI,1) = apart(apartI);
+    pctDiff(apartI,2) = sum(h(daysApart==apart(apartI)))/sum(daysApart==apart(apartI));
+end
 
 for apartI = 1:length(apart)
     

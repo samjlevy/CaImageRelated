@@ -1,6 +1,7 @@
 function [corrMeans, corrStd, corrSEM] = processPVacacad(bigCorrs, cells, dayPairs, condPairs, realDays)
 %Takes outputs from PVcorrsAllCorrsAllCondsAllDays to draw a curve for each
 %condition pair showing mean correlation drop off by number of days apart
+%{condition Pair} (days apart, binNum)
 
 numCondPairs = size(condPairs,1);
 numDayPairs = size(dayPairs,1);

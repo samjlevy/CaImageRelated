@@ -95,6 +95,35 @@ append_pdfs(output_file,names2{2:end})
 rmdir(figDir,'s')
     
 
+sessUse = [4 5 6]
+deleteSess = 1:length(allfiles); deleteSess(sessUse) = [];
+smallAllFiles = allfiles;
+smallAllFiles(deleteSess) = [];
+smallSortedSessionInds = sortedSessionInds;
+smallSortedSessionInds(:,deleteSess) = [];
+tbtSmall = trialbytrial;
+smallAboveThresh = aboveThresh;
+for condI = 1:4
+    deleteRows = zeros(length(tbtSmall(condI).sessID),1);
+    for ss = 1:length(deleteSess)
+        deleteRows(tbtSmall(condI).sessID==deleteSess(ss))=1;
+    end
+    deleteRows = logical(deleteRows);
+    
+    tbtSmall(condI).trialsX(deleteRows) = [];
+    tbtSmall(condI).trialsY(deleteRows) = [];
+    tbtSmall(condI).trialPSAbool(deleteRows) = [];
+    tbtSmall(condI).sessID(deleteRows) = [];
+    tbtSmall(condI).sessID = tbtSmall(condI).sessID - min(tbtSmall(condI).sessID) + 1;
+    
+    smallAboveThresh{condI}(:,deleteSess) = [];
+end
+
+rastPlot = figure('name','Raster Plot');
+rastPlot.OuterPosition = [0 0 850 1100];
+PlotRasterMultiSess2(tbtSmall, thisCell, smallSortedSessionInds,rastPlot,'portrait',{'160830';'160831';'160901'},1);
+
+
 dotlocs = [5 6; 7 8; 13 14; 15 16];
 heatlocs = [1 2; 3 4; 9 10; 11 12];
 %left bottom width height
@@ -116,6 +145,12 @@ for condType = 1:4
     heatPos(condType,:) = [dotPos(condType,1:3) 0] + [0 rowBuf+dotH 0 heatH]; 
     tuningPos(condType,:) = [heatPos(condType,1:3) 0] + [0 rowBuf+heatH 0 tuningH];
 end
+
+
+
+
+
+
 
 titles = {'Study Left'; 'Study Right'; 'Test Left'; 'Test Right'};
 mkdir(fullfile(base_path,'tempPlots'))

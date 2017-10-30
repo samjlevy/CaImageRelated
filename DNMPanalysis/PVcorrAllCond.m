@@ -5,7 +5,7 @@ hasStuff = ~cellfun(@isempty,{TMap_gauss{:,1,1}});
 firstHas = find(hasStuff,1,'first');
 maxBins = length(TMap_gauss{firstHas,1,1});
 numDays = size(TMap_gauss,3);
-corrType = 'Pearson';
+corrType = 'Spearman';
 
 StudyCorrs = nan(numDays,maxBins); TestCorrs = nan(numDays,maxBins);
 LeftCorrs = nan(numDays,maxBins); RightCorrs = nan(numDays,maxBins);

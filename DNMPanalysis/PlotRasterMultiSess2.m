@@ -30,9 +30,14 @@ for condType=1:4
         case 'landscape'
             subHand(condType)=subplot(2,4,[0 4]+condType);
     end
-            
+    
+    %Here is where we could trim out sessions with no firing
+    %Would have to identify bad sess first, then get a height that is
+    %cumulative good sess * bH and bad sess* bH/5 or 10 
     ylim([0 bH*length(trialbytrial(condType).trialsX)])
     
+    %Here too we'd have to cut this down, like change the local bH to 1 or
+    %0.5 or something
     badSess = find(sessionInds(thisCell,:)==0);
     if any(badSess)
          for bS = 1:length(badSess)
@@ -54,7 +59,7 @@ for condType=1:4
         
         if plotPos==1
             sessNum = trialbytrial(condType).sessID(thisLap);
-            if sessionInds(thisCell,sessNum)~=0
+            if sessionInds(thisCell,sessNum)~=0 %doesn't work if sessID isn't 1:1:numSess
             theseX = trialbytrial(condType).trialsX{thisLap,1};
             if any(theseX) %probably always good
             hold on
@@ -72,7 +77,7 @@ for condType=1:4
         if any(thesePoints)
         for point = 1:length(thesePoints)
             plotX = trialbytrial(condType).trialsX{thisLap,1}(thesePoints(point));
-            plot(60-[plotX plotX], [0 bH]+bH*(plotLine-1),'Color',plotColors(condType,:))
+            plot(60-[plotX plotX], [0 bH]+bH*(plotLine-1),'Color',plotColors(condType,:),'LineWidth',1)
         end
         end
     end
@@ -89,8 +94,8 @@ for condType=1:4
         YTickPre = [YTickPre 1:numLaps];
     end
     YTick = 1:length(YTickPre);
-    YTickLabels = {YTickPre(rem(YTickPre,2)==0)};
-    YTick = YTick(rem(YTickPre,2)==0);
+    YTickLabels = {YTickPre(rem(YTickPre,3)==0)};
+    YTick = YTick(rem(YTickPre,3)==0);
     
     title(plotLabels{condType})
     
@@ -109,7 +114,7 @@ for condType=1:4
     ylim([0 bH*plotLine])
     subHand(condType).YTick = YTick2*bH-bH/2;
     subHand(condType).YTickLabel = dates;%{'160830'; '160831';'160901'}
-    subhand(condType).YTickLabelRotation = 90;%ytickangle(90)
+    subHand(condType).YTickLabelRotation = 90;%ytickangle(90)
     subHand(condType).YColor = [0 0 0];
 end
 

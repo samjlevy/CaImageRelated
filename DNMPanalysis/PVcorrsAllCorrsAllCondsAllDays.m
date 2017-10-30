@@ -11,6 +11,7 @@ dayPairs = combnk(1:numSess,2);
 %dayPairs = flipud(dayPairs); %for checking against self
 %numBins = length(TMap{1,1,1});
 numBins = 7;
+corrType = 'Spearman';
 
 selfconds = repmat([1:numConds]',1,2);
 condPairsTemp = flipud(combnk(1:numConds,2));
@@ -37,15 +38,17 @@ for cpI = 1:length(condPairs)
         
         days = dayPairs(dpI,:);
         
-        %day1Use = RunOccMap{1,conds(1),days(1)} > posThresh;
-        %day2Use = RunOccMap{1,conds(2),days(2)} > posThresh;
-        %binsUse(ct,:) = day1Use + day2Use;
+        day1Use = RunOccMap{1,conds(1),days(1)} > posThresh;
+        day2Use = RunOccMap{1,conds(2),days(2)} > posThresh;
+        binsUse = day1Use + day2Use;
         
         cpLogical = []; cellsPresent = []; useCells = []; studyCells = [];
         
+        %Put dummy entries in 0s of sortedSessionInds to include silent cells
         cpLogical = sortedSessionInds(:,days) > 0;
         cellsPresent = sum(cpLogical,2)==2;
-    
+        
+        %Make threshAndConsec all 1s to remove activity threshold
         useCells1 = threshAndConsec(:,day(1),cond(1));
         useCells2 = threshAndConsec(:,day(2),cond(2));
         useCells = ((useCells1 + useCells2) > 0) & cellsPresent;
@@ -54,7 +57,11 @@ for cpI = 1:length(condPairs)
         PFsB = cell2mat(TMap(useCells,conds(2),days(2))); PFsB(isnan(PFsB)) = 0;
         for binNum = 1:numBins
         %if sum(binsUse(condI,binNum)) == 2
-            bigCorrs{cpI}(dpI,binNum) = corr(PFsA(:,binNum),PFsB(:,binNum));
+            bigCorrs{cpI}(dpI,binNum) = corr(PFsA(:,binNum),PFsB(:,binNum),'type',corrType);
+            %if any(isnan(bigCorrs{cpI}(dpI,binNum)))
+            %    disp('found some nans')
+            %    keyboard
+            %end
         %end
         end
     end

@@ -56,14 +56,15 @@ for shuffI = 1:numShuffles
     
     [~, RunOccMapDayShuff, ~, TMap_unsmoothedDayShuff, ~, TMap_gaussDayShuff] =...
     PFsLinTrialbyTrial(shuffledTBT,xlims, cmperbin, minspeed, 0, [], sortedSessionInds);
-   
+    
+    [dayUseShuff,threshAndConShuff] = GetUseCells(shuffledTBT, lapPctThresh, consecLapThresh);
+
     if shuffI<100; zerosBuff = '0'; end
     if shuffI<10; zerosBuff = '00'; end
     if shuffI>=100; zerosBuff = []; end
     saveName = ['PFsLinDayShuff' zerosBuff num2str(shuffI) '.mat'];
-    save(fullfile(cd,'ShufflesDay',saveName),'RunOccMapDayShuff','TMap_unsmoothedDayShuff','TMap_gaussDayShuff')
-    %[dayUseShuff,threshAndConShuff] = GetUseCells(shuffledTBT, lapPctThresh, consecLapThresh);
-
+    save(fullfile(cd,'ShufflesDay2',saveName),'RunOccMapDayShuff','TMap_unsmoothedDayShuff','TMap_gaussDayShuff',...
+        'shuffledTBT','dayUseShuff','threshAndConShuff')
     %[sdStudyCorrs(:,:,shuffI), sdTestCorrs(:,:,shuffI),...
     %    sdLeftCorrs(:,:,shuffI), sdRightCorrs(:,:,shuffI), sdnumCellslr(shuffI)] =...
     %    PVcorrAllCond(TMGforShuff, RunOccMap, posThresh, threshAndConShuff, Conds);
@@ -123,7 +124,8 @@ for shuffI = 1:numShuffles
     if shuffI<10; zerosBuff = '00'; end
     if shuffI>=100; zerosBuff = []; end
     saveName = ['PFsLinLRShuff' zerosBuff num2str(shuffI) '.mat'];
-    save(fullfile(cd,'ShufflesConditionLR',saveName),'RunOccMapShufflr','TMap_unsmoothedDayShuff','TMap_gaussShufflr')
+    save(fullfile(cd,'ShufflesConditionLR2',saveName),'RunOccMapShufflr','TMap_unsmoothedDayShuff','TMap_gaussShufflr',...
+        'shuffledTBTlr','threshAndConsecShufflr')
 
     %[shStudyCorrs(:,:,shuffI), shTestCorrs(:,:,shuffI), ~, ~, shnumCellslr(shuffI)] =...
     %PVcorrAllCond(TMap_gaussShufflr, RunOccMap, posThresh, threshAndConsecShufflr, Conds);
@@ -273,7 +275,7 @@ corrs.daysTestLCorrs = daysTestLCorrs; corrs.daysTestRCorrs = daysTestRCorrs;
     
 %%
 [bigCorrs, cells, dayPairs, condPairs ] =...
-    PVcorrsAllCorrsAllCondsAllDays(TMap,RunOccMap,posThresh,threshAndConsec,sortedSessionInds,Conds);
+    PVcorrsAllCorrsAllCondsAllDays(TMap_gauss,RunOccMap,posThresh,threshAndConsec,sortedSessionInds,Conds);
 [corrMeans, corrStd, corrSEM] = processPVacacad(bigCorrs, cells, dayPairs, condPairs,realDays);
 
 eee = GenerateFigsAndHandles(4,'subplot');
@@ -282,98 +284,70 @@ PlotPVCorrsDays(corrMeans{2,1}, eee(2).pl, 'StudyR vs self')
 PlotPVCorrsDays(corrMeans{3,1}, eee(3).pl, 'TestL vs self')
 PlotPVCorrsDays(corrMeans{4,1}, eee(4).pl, 'TestR vs self')
 
-fff = GenerateFigsAndHandles(6,'subplot');
+
+fff = GenerateFigsAndHandles(4,'subplot');
 PlotPVCorrsDays(corrMeans{5,1}, fff(1).pl, 'StudyL vs StudyR')
 PlotPVCorrsDays(corrMeans{10,1}, fff(2).pl, 'TestL vs TestR')
 PlotPVCorrsDays(corrMeans{6,1}, fff(3).pl, 'StudyL vs TestL')
 PlotPVCorrsDays(corrMeans{9,1}, fff(4).pl, 'StudyR vs TestR')
-PlotPVCorrsDays(corrMeans{7,1}, fff(5).pl, 'StudyL vs TestR')
-PlotPVCorrsDays(corrMeans{8,1}, fff(6).pl, 'StudyR vs TestL')
+%PlotPVCorrsDays(corrMeans{7,1}, fff(5).pl, 'StudyL vs TestR')
+%PlotPVCorrsDays(corrMeans{8,1}, fff(6).pl, 'StudyR vs TestL')
 
-for qq = 1:100
-    if qq<100; zerosBuff = '0'; end
-    if qq<10; zerosBuff = '00'; end
-    if qq>=100; zerosBuff = []; end
-    saveName = ['PFsLinLRShuff' zerosBuff num2str(qq) '.mat'];
-    load(fullfile(cd,'ShufflesConditionLR',saveName),'TMap_gaussShufflr')
-    [lrbigCorrs, cells, dayPairs, condPairs ] =...
-    PVcorrsAllCorrsAllCondsAllDays(TMap_gaussShufflr,RunOccMap,posThresh,threshAndConsec,sortedSessionInds,Conds);
-        [lrcorrMeans{qq}, lrcorrStd{qq}, lrcorrSEM{qq}] = processPVacacad(lrbigCorrs, cells, dayPairs, condPairs,realDays);
-    disp(['finished corrs ' num2str(qq)])
+suptitle('Found both days, active above thresh on one')
+
+% No activity threshold
+alwaysAboveThresh = threshAndConsec;
+alwaysAboveThresh = ones(size(threshAndConsec));
+[bigCorrs, cells, dayPairs, condPairs ] =...
+    PVcorrsAllCorrsAllCondsAllDays(TMap_gauss,RunOccMap,posThresh,alwaysAboveThresh,sortedSessionInds,Conds);
+[corrMeans, corrStd, corrSEM] = processPVacacad(bigCorrs, cells, dayPairs, condPairs,realDays);
+
+suptitle('Found both days, no activity thresh')
+
+%Include silent cells
+newDummyRow = size(sortedSessionInds,1)+1;
+blankRates = zeros(1,numBins);
+TMap_bonus = TMap_gauss;
+for condI = 1:size(TMap_gauss,2)
+    for dayI = 1:size(TMap_gauss,3)
+        TMap_bonus{newDummyRow,condI,dayI} = blankRates;
+    end
 end
+silentSessionInds = sortedSessionInds;
+silentSessionInds(silentSessionInds==0) = newDummyRow;
+[bigCorrs, cells, dayPairs, condPairs ] =...
+    PVcorrsAllCorrsAllCondsAllDays(TMap_bonus,RunOccMap,posThresh,alwaysAboveThresh,silentSessionInds,Conds);
+[corrMeans, corrStd, corrSEM] = processPVacacad(bigCorrs, cells, dayPairs, condPairs,realDays);
 
-for qq = 1:25 
-    if qq<100; zerosBuff = '0'; end
-    if qq<10; zerosBuff = '00'; end
-    if qq>=100; zerosBuff = []; end
-    saveName = ['PFsLinSTShuff' zerosBuff num2str(qq) '.mat'];
-    load(fullfile(cd,'ShufflesConditionST',saveName),'TMap_gaussShuffst')
-    [stbigCorrs, cells, dayPairs, condPairs ] =...
-    PVcorrsAllCorrsAllCondsAllDays(TMap_gaussShuffst,RunOccMap,posThresh,threshAndConsec,sortedSessionInds,Conds);
-        [stcorrMeans{qq}, stcorrStd{qq}, stcorrSEM{qq}] = processPVacacad(stbigCorrs, cells, dayPairs, condPairs,realDays);
-    disp(['finished corrs ' num2str(qq)])
-end
+suptitle('Includes silent cells, no activity thresh')
 
-for dayCheck = 1:11
 
-%dayCheck = 1;
-%plot(plotBins,fliplr(StudyCorrs(dayCheck,:)),'-o','Color','b','LineWidth',1.5)
+
 for qq = 1:100 
-    %{
     if qq<100; zerosBuff = '0'; end
     if qq<10; zerosBuff = '00'; end
     if qq>=100; zerosBuff = []; end
-    saveName = ['PFsLinLRShuff' zerosBuff num2str(qq) '.mat'];
-    load(fullfile(cd,'ShufflesConditionLR',saveName),'TMap_gaussShufflr')
-     [lrStudyCorrs, ~, ~, ~, ~] =...
-    PVcorrAllCond(TMap_gaussShufflr, RunOccMap, posThresh, threshAndConsec, Conds);
-    lrDayKeep{dayCheck}(qq,:) = lrStudyCorrs(dayCheck,:);
-    %}
+    saveName = ['PFsLinDayShuff' zerosBuff num2str(qq) '.mat'];
+    load(fullfile(cd,'ShufflesDay',saveName),'TMap_gaussDayShuff')
+    [daybigCorrs, cells, dayPairs, condPairs ] =...
+    PVcorrsAllCorrsAllCondsAllDays(TMap_gaussDayShuff,RunOccMap,posThresh,threshAndConsec,sortedSessionInds,Conds);
+    [daycorrMeans{qq}, daycorrStd{qq}, daycorrSEM{qq}] = processPVacacad(daybigCorrs, cells, dayPairs, condPairs,realDays);
+    %{shuffle}{condition pair}(days apart, bin num)
+    disp(['finished corrs ' num2str(qq)])
 end
-figure;
-plotBins = 1:10;
+ meanCorrDaysApart = processPCadacadStep2(dayCorrMeans);
+ 
+for dayCheck = 1:10 
+figure; 
 for qq = 1:100 
     %}
     hold on
-    plot(plotBins,fliplr(lrDayKeep{dayCheck}(qq,:)),'Color',[0.85 0.85 0.85],'LineWidth',1)
-%disp(['finished corrs ' num2str(qq)])
+    plot(meanCorrDaysApart{dayCheck}(:,qq),'Color',[0.85 0.85 0.85],'LineWidth',1)
+end
+plot(mean(corrMeans{dayCheck},2),'b','LineWidth',1.5)
+title(['condition pair ' num2str(condPairs(dayCheck,:))])
 end
 
-plot(plotBins,fliplr(StudyCorrs(dayCheck,:)),'-o','Color','b','LineWidth',1.5)
-xlim([0.99 10.01]); ylim([-1 1]);
-title(['Day ' num2str(dayCheck) ' Study Left vs. Study Right, shuffled in gray'])
-ylabel('R value'); xlabel('Position (Start to Choice)')
 
-%for dayCheck = 1:11
-%numShuffs = size(lrDay5Keep,1);
-cis = [ceil(0.025*numShuffs) ceil(0.975*numShuffs)];
-sortedlr = sort(lrDayKeep{dayCheck},1);
-for vv = 1:numBins
-    isOut(dayCheck,vv) = StudyCorrs(dayCheck,vv) < sortedlr(cis(1),vv) | StudyCorrs(dayCheck,vv) > sortedlr(cis(2),vv);
-end
 
-isOut = fliplr(isOut(dayCheck,:));
-tCorrs = fliplr(StudyCorrs(dayCheck,:))-0.1;
-plot(plotBins(isOut(dayCheck,:)),tCorrs(isOut(dayCheck,:)),'*r','MarkerSize',7)
-end
 
-%{
-studyFig=figure; PlotPVCorrsDays(StudyCorrs, studyFig, 'Study LvR')
-testFig=figure; PlotPVCorrsDays(TestCorrs, testFig, 'Test LvR')
-leftFig=figure; PlotPVCorrsDays(LeftCorrs, leftFig, 'Left SvT')
-rightFig=figure; PlotPVCorrsDays(RightCorrs, rightFig, 'Right SvT')
-%}
-[StudyLCorrs, StudyRCorrs, TestLCorrs, TestRCorrs, numCells2] =...
-    PVcorrAllCondSelf(TMap_gaussSplit, RunOccMap, posThresh, threshAndConsec);
-%{
-studyLFig=figure; PlotPVCorrsDays(StudyLCorrs, studyLFig, 'Study L self')
-studyRFig=figure; PlotPVCorrsDays(StudyRCorrs, studyRFig, 'Study R self')
-testLFig=figure; PlotPVCorrsDays(TestLCorrs, testLFig, 'Test L self')
-testRFig=figure; PlotPVCorrsDays(TestRCorrs, testRFig, 'Test R self')
-%}
-
-corrs.StudyLCorrs = StudyLCorrs;
-corrs.StudyRCorrs = StudyRCorrs;
-corrs.TestLCorrs = TestLCorrs;
-corrs.TestRCorrs = TestRCorrs;
-[corrMeans, corrStds, corrSEMs] = processPVcorrsSelfAcrossDays(corrs,dayPairs);
