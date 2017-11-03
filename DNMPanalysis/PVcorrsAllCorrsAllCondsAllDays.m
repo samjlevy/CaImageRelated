@@ -11,7 +11,7 @@ dayPairs = combnk(1:numSess,2);
 %dayPairs = flipud(dayPairs); %for checking against self
 %numBins = length(TMap{1,1,1});
 numBins = 7;
-corrType = 'Spearman';
+corrType = 'Pearson';
 
 selfconds = repmat([1:numConds]',1,2);
 condPairsTemp = flipud(combnk(1:numConds,2));

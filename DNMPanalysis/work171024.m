@@ -20,7 +20,7 @@ for ncp = [6 9]
 end
 title('study/test comparisons')
 
-title('blue = self, red = LvR, green = SvT')
+title('blue = self, red = LvR, green = SvT pearson')
 
 ncpUse = [1:4 5 10 6 9];
 for ncp = 1:length(ncpUse)
@@ -200,6 +200,7 @@ meanmean(2,:) = mean(meanCurves([5 8],:),1);
 meanmean(3,:) = mean(meanCurves([6 7],:),1);
 meanmean = meanmean';
 meanmean(1,:) = []
-curveID = ones(17,3) .* [1 2 3]
-apartlong = repmat([1:17]',3,1)
-[h,atab,ctab,stats] = aoctool(apartlong, meanmean(:), curveID(:))
+curveID = ones(17,3) .* [1 2 3]; curveID = ones(17,2) .* [1 2];
+apartlong = repmat([1:17]',3,1); apartlong = repmat([1:17]',2,1);
+meanmean = meanmean(:,[1 2]);
+[h,atab,ctab,stats] = aoctool(apartlong, meanmean(:), curveID(:));

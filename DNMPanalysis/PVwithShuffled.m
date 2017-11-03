@@ -108,6 +108,15 @@ PlotPVCorrsDays(StudyCorrs, bbb(1).pl, 'Left vs. Right: Study')
 PlotPVCorrsDays(TestCorrs, bbb(2).pl, 'Left vs. Right: Test')
 PlotPVCorrsDays(LeftCorrs, bbb(3).pl, 'Study vs. Test: Left')
 PlotPVCorrsDays(RightCorrs, bbb(4).pl, 'Study vs. Test: Right')
+
+[accuracy] = sessionAccuracy(allfiles);
+[colorOrder,~] = tiedrank(accuracy);
+bbb = GenerateFigsAndHandles(4,'subplot');
+PlotPVCorrsDays(StudyCorrs, bbb(1).pl, 'Left vs. Right: Study',colorOrder)
+PlotPVCorrsDays(TestCorrs, bbb(2).pl, 'Left vs. Right: Test',colorOrder)
+PlotPVCorrsDays(LeftCorrs, bbb(3).pl, 'Study vs. Test: Left',colorOrder)
+PlotPVCorrsDays(RightCorrs, bbb(4).pl, 'Study vs. Test: Right',colorOrder)
+suptitle('Colored by accuracy rank')
 %% Shuffle across 1 dimension
 
 %Left/Right shuffle

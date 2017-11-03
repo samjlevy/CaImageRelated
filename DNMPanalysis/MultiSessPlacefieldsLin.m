@@ -95,34 +95,35 @@ append_pdfs(output_file,names2{2:end})
 rmdir(figDir,'s')
     
 
-sessUse = [4 5 6]
-deleteSess = 1:length(allfiles); deleteSess(sessUse) = [];
-smallAllFiles = allfiles;
-smallAllFiles(deleteSess) = [];
-smallSortedSessionInds = sortedSessionInds;
-smallSortedSessionInds(:,deleteSess) = [];
-tbtSmall = trialbytrial;
-smallAboveThresh = aboveThresh;
-for condI = 1:4
-    deleteRows = zeros(length(tbtSmall(condI).sessID),1);
-    for ss = 1:length(deleteSess)
-        deleteRows(tbtSmall(condI).sessID==deleteSess(ss))=1;
-    end
-    deleteRows = logical(deleteRows);
+%sessUse = [4 5 6]
+thisCell = 55;
+sessUse = sortedSessionInds(thisCell,:)>0;
+smallAllFiles = allfiles(sessUse);
+filepts = cellfun(@(x) strsplit(x,'_'),smallAllFiles,'UniformOutput',false);
+dates = cell2mat(cellfun(@(x) str2double(x{2}(1:6)),filepts,'UniformOutput',false));
+smallSortedSessionInds = sortedSessionInds(:,sessUse);
+
+for condI = 1:length(trialbytrial)
+    keepRows = find(sum(trialbytrial(condI).sessID == find(sessUse),2));
     
-    tbtSmall(condI).trialsX(deleteRows) = [];
-    tbtSmall(condI).trialsY(deleteRows) = [];
-    tbtSmall(condI).trialPSAbool(deleteRows) = [];
-    tbtSmall(condI).sessID(deleteRows) = [];
-    tbtSmall(condI).sessID = tbtSmall(condI).sessID - min(tbtSmall(condI).sessID) + 1;
+    tbtSmall(condI).trialsX = trialbytrial(condI).trialsX(keepRows);
+    tbtSmall(condI).trialsY = trialbytrial(condI).trialsY(keepRows);
+    tbtSmall(condI).trialPSAbool = trialbytrial(condI).trialPSAbool(keepRows);
+    tbtSmall(condI).sessID = trialbytrial(condI).sessID(keepRows);
     
-    smallAboveThresh{condI}(:,deleteSess) = [];
+    sessNumDiffs = diff([0; tbtSmall(condI).sessID],1,1);
+    diffInds = flipud(find(sessNumDiffs > 1));
+    diffVal = sessNumDiffs(diffInds);
+    for dd = 1:length(diffInds)
+        tbtSmall(condI).sessID(diffInds(dd):end) =...
+            tbtSmall(condI).sessID(diffInds(dd):end) - (diffVal(dd)-1);  
+    end      
 end
-
+    
 rastPlot = figure('name','Raster Plot');
-rastPlot.OuterPosition = [0 0 850 1100];
-PlotRasterMultiSess2(tbtSmall, thisCell, smallSortedSessionInds,rastPlot,'portrait',{'160830';'160831';'160901'},1);
-
+rastPlot.OuterPosition = [0 0 1100 850];
+PlotRasterMultiSess2(tbtSmall, thisCell, smallSortedSessionInds,rastPlot,'landscape',dates,1);
+suptitle(['Cell #' num2str(thisCell)])
 
 dotlocs = [5 6; 7 8; 13 14; 15 16];
 heatlocs = [1 2; 3 4; 9 10; 11 12];
