@@ -1,26 +1,26 @@
-function PlotAllHeatmaps(base_path, useCells, titles)
+function [tuningCurves] = PlotAllHeatmaps(TMap_gauss, useCells, dayI, plotTitles)
 
-load(fullfile(base_path,'PFsLin.mat'))
+%load(fullfile(base_path,'PFsLin.mat'))
 
 if isempty(useCells)
-    useCells = find(~cellfun(@isempty,{TMap_gauss{:,1}}));
+    useCells = find(~cellfun(@isempty,{TMap_gauss{:,1,dayI}}));
 end
 
 numCells = length(useCells);
 
-vBord = 0.001;
+vBord = 0.005;
 blockHeight = (1 - 0.04 - vBord*(numCells+1)) / numCells;
 hBord = 0.01;
 blockWidth = (1 - 0.025*2 - hBord*5)/4;
 
 tuningCurves = figure;
-tuningCurves.OuterPosition = [0 0 850 1000];
+tuningCurves.OuterPosition = [0 0 1000 850];
 tuningCurves.PaperPositionMode = 'auto';
 
 
 for tc = 1:numCells
     thisCell = useCells(tc);
-    theseTMaps = {TMap_gauss{thisCell,:}};
+    theseTMaps = {TMap_gauss{thisCell,:,dayI}};
     maxRate = max([theseTMaps{:}]);
     
     for condType = 1:4
@@ -40,9 +40,9 @@ for tc = 1:numCells
             aa(tc,condType).YTickLabel = (num2str(thisCell)); %tc
         end
         
-        if tc == 1
-            title(titles{condType});
-        end
+        %if tc == 1
+        %    title(plotTitles{condType});
+        %end
     end
 end
 

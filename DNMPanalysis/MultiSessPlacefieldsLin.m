@@ -29,6 +29,7 @@ consecUse = sum(dayUse2,2)>0;
 
 useCells = find(threshUse+consecUse > 0);
 
+[dayAllUse, threshAndConsec] = GetUseCells(trialbytrial, lapThresh, reliableThresh);
 [Conds] = GetTBTconds(trialbytrial);
 
 xlims = [25 60]; cmperbin = 2.5; minspeed = 0; 
@@ -96,7 +97,7 @@ rmdir(figDir,'s')
     
 
 %sessUse = [4 5 6]
-thisCell = 55;
+thisCell = 44;
 sessUse = sortedSessionInds(thisCell,:)>0;
 smallAllFiles = allfiles(sessUse);
 filepts = cellfun(@(x) strsplit(x,'_'),smallAllFiles,'UniformOutput',false);
@@ -122,7 +123,7 @@ end
     
 rastPlot = figure('name','Raster Plot');
 rastPlot.OuterPosition = [0 0 1100 850];
-PlotRasterMultiSess2(tbtSmall, thisCell, smallSortedSessionInds,rastPlot,'landscape',dates,1);
+PlotRasterMultiSess2(tbtSmall, thisCell, smallSortedSessionInds,rastPlot,'landscape',dates,0);
 suptitle(['Cell #' num2str(thisCell)])
 
 dotlocs = [5 6; 7 8; 13 14; 15 16];

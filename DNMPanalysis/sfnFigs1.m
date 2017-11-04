@@ -1,3 +1,29 @@
+figure;
+for cellI = 1:length(NeuronImage)
+B = bwboundaries(NeuronImage{cellI});
+hold on
+plot(B{1,1}(:,2),500-B{1,1}(:,1),'LineWidth',1.5)
+end
+title('Cell Outlines 160831')
+
+
+duration = 12.5*60*20-1;
+tStart = 10000;
+cellsUse = [xx xx xx xx xx xx xx];
+lineOffset = 1.25
+hh = figure;
+for cellJ = 1:length(cellsUse)
+    hold on
+    traceUse = NeuronTraces.LPtrace(tStart:tStart+duration);
+    traceUse = traceUse/max(traceUse);
+    plot(1:duration,traceUse+lineOffset)
+end
+title('Fluoresence Over Time')
+xlabel('Minutes')
+hh.YTickLabels
+hh.XTickLabels
+
+%%
 load('trialbytrial.mat')
 lapThresh = 3;
 reliableThresh = 0.25;
@@ -101,4 +127,38 @@ for aa = 1:11; plot(threshes,STselECDF(:,aa),'Color',plotColors(aa,:),'LineWidth
 %legend('show'); legend('Location','northwest'); 
 xlabel('Study/Test Selectivity Threshold')
 suptitle('Cumulative Density of Selectivity')
+
+%% Plot many heatmaps
+
+xmin = 25.5; xmax = 56; xlims = [xmin xmax];
+numBins = 30;
+cmperbin = (xmax-xmin)/numBins;
+[~, ~, ~, ~, ~, TMap_gauss] =...
+    PFsLinTrialbyTrial(trialbytrial,xlims, cmperbin, 0, 0, [], []);
+dayUse = sum(dayAllUse>0,2);
+plotTitles={'Study Left','Study Right','Test Left','Test Right'};
+dayI = 5;
+useCells = [11 14 15 18 37 40 43 51 54 77 87 89 90 104 130];    %      44    96  55 58 72 73  80  91 92  105  132 150 162 175 188 193 194];
+PlotAllHeatmaps(TMap_gauss, useCells, dayI, plotTitles)
+
+
+%% Session accuracy
+
+load('trialbytrial.mat')
+[accuracy] = sessionAccuracy(allfiles);
+[numCells] = sessionNumcells(allfiles);
+figure; plot(accuracy,'-o','LineWidth',2,'MarkerFaceColor','b')
+xlim([0.9 11.1]); xlabel('Recording Day'); ylabel('Percent Correct'); title('Performance')
+
+[LRsel, STsel] = LRSTselectivity(trialbytrial);
+lapThresh = 3;
+reliableThresh = 0.25;
+[dayAllUse, threshAndConsec] = GetUseCells(trialbytrial, lapPctThresh, consecLapThresh);
+
+
+[~, ~, rsq1] = LeastSquaresRegressionSL(numCells, accuracy,1);
+xlabel('Number of Cells Active'); ylabel('Session Accuracy'); ylim([0.5 1])
+
+
+
 

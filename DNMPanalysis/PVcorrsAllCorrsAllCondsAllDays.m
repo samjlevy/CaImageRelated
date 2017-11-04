@@ -58,10 +58,10 @@ for cpI = 1:length(condPairs)
         for binNum = 1:numBins
         %if sum(binsUse(condI,binNum)) == 2
             bigCorrs{cpI}(dpI,binNum) = corr(PFsA(:,binNum),PFsB(:,binNum),'type',corrType);
-            %if any(isnan(bigCorrs{cpI}(dpI,binNum)))
-            %    disp('found some nans')
-            %    keyboard
-            %end
+            if any(isnan(bigCorrs{cpI}(dpI,binNum)))
+                disp('found some nans')
+                dbstop
+            end
         %end
         end
     end

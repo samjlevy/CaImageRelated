@@ -11,35 +11,7 @@ plotColors = jetTrips(jetUse,:);
 if isempty(colorOrder)
     colorOrder = 1:numDays;
 else
-    bins = [0.25:1:numDays+0.25];
-    [counts] = histcounts(colorOrder,bins);
-    tooMany = find(counts>=2);%This means it's this rank and the one below
-    for tm = 1:length(tooMany)
-        problemRank = colorOrder(bins(tooMany(tm)) <= colorOrder & colorOrder <= bins(tooMany(tm)+1));
-        if length(unique(problemRank))~=1
-            disp('iono man'); keyboard
-        else
-            numWrong = length(problemRank);
-            problemRank = problemRank(1);
-
-            switch rem(problemRank,floor(problemRank))
-                case 0
-                    reach = (numWrong-1)/2;
-                    rankFills = problemRank-reach:1:problemRank+reach;
-                case 0.5
-                    reach = numWrong/2;
-                    rankFills = (problemRank+0.5-reach):1:(problemRank-0.5+reach);
-            end
-        end
-        
-        inds = find(colorOrder==problemRank);
-        if length(inds)~=length(rankFills); disp('spaghetti'); keyboard; end
-        for ii = 1:length(inds)
-            colorOrder(inds(ii)) = rankFills(ii);
-        end
-        %colorOrder(inds(1)) = colorOrder(inds(1))-0.5;
-        %colorOrder(inds(2)) = colorOrder(inds(2))+0.5;
-    end
+   
 end
 
 plotColors = plotColors(colorOrder,:);

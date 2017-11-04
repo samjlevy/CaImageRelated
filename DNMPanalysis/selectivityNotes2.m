@@ -123,11 +123,6 @@ end
 
 
 
-
-
-
-
-
 LRcounts = sum(~isnan(LRsel.spikes),2);
 LRminusOne = LRsel.spikes==-1;
 LRplusOne = LRsel.spikes==1;
@@ -222,6 +217,43 @@ title('Other Cells'); xlabel('Average Selectivity Change')
 figure; histogram(averageStep(~alwaysOne & actuallyActive),h.BinEdges,'FaceColor',allColor); 
 title('Cells Always Completely Selective'); xlabel('Average Selectivity Change')
 
+%% Pct selective & accuracy
+load('trialbytrial.mat')
+[LRsel, STsel] = LRSTselectivity(trialbytrial);
+[accuracy] = sessionAccuracy(allfiles);
+numDays = size(LRsel.spikes,2);
+lapPctThresh = 0.25; consecLapThresh = 3;
+[dayAllUse, threshAndConsec] = GetUseCells(trialbytrial, lapPctThresh, consecLapThresh);
+
+numAboveThresh = sum(dayAllUse,1);
+
+dayAllUse = ones(size(dayAllUse));
+
+LRselSpikes = LRsel.spikes.*(dayAllUse>0);
+STselSpikes = STsel.spikes.*(dayAllUse>0);
+
+LRcount = sum(~isnan(LRselSpikes),1);
+STcount = sum(~isnan(STselSpikes),1);
+
+LRone = abs(LRselSpikes==1);
+STone = abs(STselSpikes==1);
+
+howManyOnesLR = sum(LRone,1)./LRcount;
+howManyOnesST = sum(STone,1)./STcount;
+
+
+for dayI = 1:numDays
+    howManyOnesBoth(dayI) = sum(LRone(:,dayI) | STone(:,dayI),1);
+end
+ct = 'Spearman';
+[rho(1),pval(1)] = corr(accuracy,howManyOnesLR','type',ct);
+[rho(2),pval(2)] = corr(accuracy,howManyOnesST','type',ct);
+[r ,p] = corr(accuracy,(howManyOnesBoth./numAboveThresh)','type',ct)
+
+[~, ~, rsq1] = LeastSquaresRegressionSL((howManyOnesBoth./numAboveThresh), accuracy,1);
+xlabel('Percent of cells completely selective'); ylabel('Session Accuracy'); ylim([0.5 1])
+
+
 %% Convex hull area of points
 
 load('trialbytrial.mat')
@@ -229,8 +261,7 @@ load('trialbytrial.mat')
 numDays = size(LRsel.spikes,2);
 numCells = size(LRsel.spikes,1);
 
-lapPctThresh = 0.25;
-consecLapThresh = 3;
+lapPctThresh = 0.25; consecLapThresh = 3;
 [dayAllUse, threshAndConsec] = GetUseCells(trialbytrial, lapPctThresh, consecLapThresh);
 
 daysActive = sum(~isnan(LRsel.spikes),2)>1;

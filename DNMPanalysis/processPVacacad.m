@@ -23,6 +23,7 @@ corrSEM = cell(numCondPairs,1);
 
 for cpI = 1:numCondPairs
     for dpI = 1:length(apart)
+        
         pairCorrs = []; pairSEM = []; pairStd = [];
         pairUse = daysApart==apart(dpI);
         
@@ -31,6 +32,10 @@ for cpI = 1:numCondPairs
         corrMeans{cpI}(dpI,:) = nanmean(pairCorrs,1);
         corrStd{cpI}(dpI,:) = nanstd(pairCorrs,1);
         corrSEM{cpI}(dpI,:) = nanstd(pairCorrs,1)/sqrt(size(pairCorrs,1));
+        
+        if sum(isnan(corrMeans{cpI}(dpI,:)))>0
+            keyboard
+        end
     end
 end
 
