@@ -8,10 +8,14 @@ close(h)
 jetUse = round(linspace(1,64,numDays));
 plotColors = jetTrips(jetUse,:);
 
+if ~exist('colorOrder','var')
+    colorOrder = 1:numDays;
+end
+
 if isempty(colorOrder)
     colorOrder = 1:numDays;
 else
-   
+   [colorOrder] = GetRanksSL(colorOrder, 0);
 end
 
 plotColors = plotColors(colorOrder,:);

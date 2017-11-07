@@ -1,3 +1,4 @@
+apart = 0:17
 
 figure;
 for ncp = 1:4

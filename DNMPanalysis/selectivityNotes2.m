@@ -264,15 +264,72 @@ numCells = size(LRsel.spikes,1);
 lapPctThresh = 0.25; consecLapThresh = 3;
 [dayAllUse, threshAndConsec] = GetUseCells(trialbytrial, lapPctThresh, consecLapThresh);
 
-daysActive = sum(~isnan(LRsel.spikes),2)>1;
+daysActive = sum(~isnan(LRsel.spikes),2);
+
+convAreas = nan(numCells,1);
+for cellI = 1:numCells
+    x1 = LRsel.spikes(cellI,:); x1(isnan(x1)) = [];
+    y1 = STsel.spikes(cellI,:); y1(isnan(y1)) = [];
+    
+    if length(x1) > 2
+        if (length(unique(x1))>2 || length(unique(y1))>2) &&...
+                (max(x1)-min(x1))*(max(y1)-min(y1)) > 0
+            vi = convhull(x1,y1);
+            convAreas(cellI) = polyarea(x1(vi),y1(vi));
+        else
+            convAreas(cellI) = 0;
+        end
+    elseif length(x1) == 2
+        convAreas(cellI) = 0;
+    end
+    
+end
+
+    %{
+     x1 = LRsel.spikes(cellI,:); x1(isnan(x1)) = [];
+    y1 = STsel.spikes(cellI,:); y1(isnan(y1)) = [];
+     plot(x1,y1,'o')
+     xlim([-1 1]); ylim([-1 1])
+     axis equal
+     hold on
+     fill ( x1(vi), y1(vi), 'r','facealpha', 0.5 ); 
+     hold off
+    %}
+
+%% Marc's table
 
 
-vi = convhull(x1,y1);
-polyarea(x1(vi),y1(vi))
+lapPctThresh = 0.25; consecLapThresh = 3;
+[dayAllUse, threshAndConsec] = GetUseCells(trialbytrial, lapPctThresh, consecLapThresh);
 
- plot(x1,y1,'.')
- axis equal
- hold on
- fill ( x1(vi), y1(vi), 'r','facealpha', 0.5 ); 
- hold off
+LRdata = LRsel.spikes;
+STdata = STsel.spikes;
 
+LRdata(dayAllUse==0) = NaN;
+STdata(dayAllUse==0) = NaN;
+
+countsTable = nan(3,3,numDays);
+for dayI = 1:numDays
+    
+    
+    LRplus1 = LRdata(:,dayI) >= 0.95;
+    LRmid1 = (LRdata(:,dayI) > -0.95) & (LRdata(:,dayI) < 0.95);
+    LRminus1 = LRdata(:,dayI) <= -0.95;
+    
+    STplus1 = STdata(:,dayI) >= 0.95;
+    STmid1 = (STdata(:,dayI) > -0.95) & (STdata(:,dayI) < 0.95);
+    STminus1 = STdata(:,dayI) <= -0.95;
+    
+    countsTable(1,1,dayI) = sum(sum([LRplus1 STplus1],2));
+    countsTable(1,2,dayI) = sum(sum([LRplus1 STmid1],2));
+    countsTable(1,3,dayI) = sum(sum([LRplus1 STminus1],2));
+    
+    countsTable(2,1,dayI) = sum(sum([LRmid1 STplus1],2));
+    countsTable(2,2,dayI) = sum(sum([LRmid1 STmid1],2));
+    countsTable(2,3,dayI) = sum(sum([LRmid1 STminus1],2));
+    
+    countsTable(3,1,dayI) = sum(sum([LRminus1 STplus1],2));
+    countsTable(3,2,dayI) = sum(sum([LRminus1 STmid1],2));
+    countsTable(3,3,dayI) = sum(sum([LRminus1 STminus1],2));
+end
+    

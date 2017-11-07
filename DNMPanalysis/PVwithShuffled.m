@@ -92,14 +92,9 @@ PlotPVCorrsDays(mean(sdRightCorrs,3), ccc(4).pl, 'Right st shuffDays')
 
 
 %% Conditions, unpooled
-tic
-[~, RunOccMap, ~, ~, ~, TMap_gauss] =...
-    PFsLinTrialbyTrial(trialbytrial,xlims, cmperbin, minspeed, 0, [], []);
-toc
-tic
 [~, RunOccMap, ~, ~, ~, TMap_gauss] =...
     PFsLinTrialbyTrial(trialbytrial,xlims, cmperbin, minspeed, 0, [], sortedSessionInds);
-toc
+
 [~, threshAndConsec] = GetUseCells(trialbytrial, lapPctThresh, consecLapThresh);
 [StudyCorrs, TestCorrs, LeftCorrs, RightCorrs, numCells] =...
     PVcorrAllCond(TMap_gauss, RunOccMap, posThresh, threshAndConsec, Conds);
@@ -284,7 +279,7 @@ corrs.daysTestLCorrs = daysTestLCorrs; corrs.daysTestRCorrs = daysTestRCorrs;
     
 %%
 [bigCorrs, cells, dayPairs, condPairs ] =...
-    PVcorrsAllCorrsAllCondsAllDays(TMap_gauss,RunOccMap,posThresh,threshAndConsec,sortedSessionInds,Conds);
+    PVcorrsAllCorrsAllCondsAllDays(TMap_gauss,RunOccMap,posThresh,threshAndConsec,sortedSessionInds,[]);
 [corrMeans, corrStd, corrSEM] = processPVacacad(bigCorrs, cells, dayPairs, condPairs,realDays);
 
 eee = GenerateFigsAndHandles(4,'subplot');
@@ -325,7 +320,7 @@ end
 silentSessionInds = sortedSessionInds;
 silentSessionInds(silentSessionInds==0) = newDummyRow;
 [bigCorrs, cells, dayPairs, condPairs ] =...
-    PVcorrsAllCorrsAllCondsAllDays(TMap_bonus,RunOccMap,posThresh,alwaysAboveThresh,silentSessionInds,Conds);
+    PVcorrsAllCorrsAllCondsAllDays(TMap_bonus,RunOccMap,posThresh,alwaysAboveThresh,silentSessionInds,[]);
 [corrMeans, corrStd, corrSEM] = processPVacacad(bigCorrs, cells, dayPairs, condPairs,realDays);
 
 suptitle('Includes silent cells, no activity thresh')

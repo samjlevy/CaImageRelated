@@ -10,8 +10,8 @@ numConds = size(TMap,2);
 dayPairs = combnk(1:numSess,2);
 %dayPairs = flipud(dayPairs); %for checking against self
 %numBins = length(TMap{1,1,1});
-numBins = 7;
-corrType = 'Pearson';
+numBins = 10;
+corrType = 'Spearman';
 
 selfconds = repmat([1:numConds]',1,2);
 condPairsTemp = flipud(combnk(1:numConds,2));
@@ -32,6 +32,7 @@ for ddd = 1:length(condPairs)
 end
 cells = nan(length(condPairs),length(dayPairs));
 
+nanCount  = 0;
 for cpI = 1:length(condPairs)
     conds = condPairs(cpI,:);
     for dpI = 1:length(dayPairs)
@@ -59,13 +60,16 @@ for cpI = 1:length(condPairs)
         %if sum(binsUse(condI,binNum)) == 2
             bigCorrs{cpI}(dpI,binNum) = corr(PFsA(:,binNum),PFsB(:,binNum),'type',corrType);
             if any(isnan(bigCorrs{cpI}(dpI,binNum)))
-                disp('found some nans')
-                dbstop
+                %disp('found some nans')
+                nanCount = nanCount + 1;
+                bigCorrs{cpI}(dpI,binNum) = 0;
+                %keyboard
             end
         %end
         end
     end
     %disp(['finished cond pair ' num2str(cpI) '/' num2str(length(condPairs))])
 end
+disp(['found nans ' num2str(nanCount) 'times'])
 
 end

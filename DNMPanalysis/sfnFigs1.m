@@ -15,6 +15,7 @@ hh = figure;
 for cellJ = 1:length(cellsUse)
     hold on
     traceUse = NeuronTraces.LPtrace(tStart:tStart+duration);
+    traceUse = traceUse - min(traceUse);
     traceUse = traceUse/max(traceUse);
     plot(1:duration,traceUse+lineOffset)
 end

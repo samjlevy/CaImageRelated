@@ -43,10 +43,10 @@ meanCurves = cell2mat(cellfun(@(x) mean(x,2)',corrMeans,'UniformOutput',false));
 %1:4 is self, 5:6 is svt, 7:8 is lvr
 curvesUse = [1:4 6 9 5 10];
 meanCurves = meanCurves(curvesUse,:)';
-meanCurves = meanCurves(2:17,:);
+meanCurves = meanCurves(2:14,:);
 meanCurvesOld = meanCurves; 
 meanCurves = [];
-meanCurves = [nanmean(meanCurvesOld(:,1:4),2 nanmean(meanCurvesOld(:,5:6),2) nanmean(meanCurvesOld(:,7:8),2)];
+meanCurves = [nanmean(meanCurvesOld(:,1:4),2) nanmean(meanCurvesOld(:,5:6),2) nanmean(meanCurvesOld(:,7:8),2)];
 %Where is the nan coming in in col 4?
 
 %Normally distributed
