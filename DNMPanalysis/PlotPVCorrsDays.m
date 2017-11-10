@@ -36,6 +36,7 @@ if strcmpi(class(figHand),'matlab.ui.Figure')
     plot(figHand.Children,figHand.Children.XLim,[0 0],'k') 
     ylim(figHand.Children,[-1 1]); %xlim(figHand.Children,[2 14]);
     figHand.Children.XLim(1) = 1;
+    box(figHand.Children,'on')
 elseif strcmpi(class(figHand),'matlab.graphics.axis.Axes')
     hold(figHand,'on'); 
     title(figHand,figTitle)
@@ -49,7 +50,9 @@ elseif strcmpi(class(figHand),'matlab.graphics.axis.Axes')
     plot(figHand,figHand.XLim,[0 0],'k') 
     ylim(figHand,[-1 1]); %xlim(figHand,[2 14]);
     figHand.XLim(1) = 1;
+    box(figHand,'on')
 end
+
 
 %for uDay = 1:numDays
 %    plot(figHand.Children,fliplr(Corrs(uDay,:)),'-o','Color',plotColors(uDay,:))

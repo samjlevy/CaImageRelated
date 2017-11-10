@@ -43,8 +43,11 @@ PFsLinTrialbyTrialCONDpool(trialbytrial,xlims, cmperbin, minspeed, 0, []);
 
 %PV corrs for original
 [StudyTestCorrs, LeftRightCorrs] = PVcorrDimPooled(TMap_gauss, RunOccMap, posThresh, dayAllUse);
+ccc = GenerateFigsAndHandles(2,'subplot');
+PlotPVCorrsDays(StudyTestCorrs, ccc(1).pl, 'Study vs. Test')
+PlotPVCorrsDays(LeftRightCorrs, ccc(2).pl, 'Left vs. Right')
 
-%Days, pooled
+
 %% Shuffle across Days
 
 sdStudyCorrs = nan(11,10,numShuffles); sdTestCorrs = nan(11,10,numShuffles);

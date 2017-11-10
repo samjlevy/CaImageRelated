@@ -28,6 +28,8 @@ consecLapThresh = 3;
 [StudyCorrs, TestCorrs, LeftCorrs, RightCorrs, numCells] =...
     PVcorrAllCond(TMap_gauss, RunOccMap, posThresh, threshAndConsec, Conds);
 
+[StudyCorrs, TestCorrs, LeftCorrs, RightCorrs, numCells] =...
+PVcorrAllCondConfusion(TMap_gauss, RunOccMap, posThresh, threshAndConsec, Conds);
 %{
 bbb = GenerateFigsAndHandles(4,'subplot');
 PlotPVCorrsDays(StudyCorrs, bbb(1).pl, 'Left vs. Right: Study')
@@ -106,7 +108,7 @@ groups = [1 1 1 1 2 2 3 3];
 groupAll = repmat(groups,size(meanCurves,1),1);
 apartAll = repmat(apart,1,size(meanCurves,2)); 
 
-condsCompareNow = [1 3];
+condsCompareNow = [2 3];
 useCols = logical(sum(groups==condsCompareNow',1));
 daysUse = (2:15);
 

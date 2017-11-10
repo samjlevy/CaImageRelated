@@ -36,6 +36,7 @@ nanCount  = 0;
 for cpI = 1:length(condPairs)
     conds = condPairs(cpI,:);
     for dpI = 1:length(dayPairs)
+        PFsA = []; PFsB = [];
         
         days = dayPairs(dpI,:);
         
@@ -58,7 +59,11 @@ for cpI = 1:length(condPairs)
         PFsB = cell2mat(TMap(useCells,conds(2),days(2))); PFsB(isnan(PFsB)) = 0;
         for binNum = 1:numBins
         %if sum(binsUse(condI,binNum)) == 2
+        try
             bigCorrs{cpI}(dpI,binNum) = corr(PFsA(:,binNum),PFsB(:,binNum),'type',corrType);
+        catch 
+            keyboard
+        end
             if any(isnan(bigCorrs{cpI}(dpI,binNum)))
                 %disp('found some nans')
                 nanCount = nanCount + 1;

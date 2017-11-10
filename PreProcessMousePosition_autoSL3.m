@@ -790,7 +790,7 @@ switch AMchoice
                             tryF = auto_frames;
                             auto_frames = tryF-3:tryF+3;
                             for corrFrame=1:length(auto_frames)
-                                if definitelyGood(auto_frames(corrFrame))==0 || strcmp(manChoice,'Yes')
+                                if definitelyGood(auto_frames(corrFrame))==0 % || strcmp(manChoice,'Yes')
                                     obj.CurrentTime=(auto_frames(corrFrame)-1)/aviSR;
                                     v = readFrame(obj);
                                     fixedThisFrameFlag=0;
