@@ -557,6 +557,7 @@ switch MorePoints
                 bounds(round(frameRange/3)+1:2*round(frameRange/3))=2;
                 bounds(2*round(frameRange/3):frameRange)=3;
                 bounds = [ones(1,sFrame-1), bounds, ones(1,length(xAVI)-eFrame+1)*3]; %#ok<AGROW>
+                disp(['selected ' num2str(frameRange) ' frames'])
         end
         
         AMchoice = questdlg('Manual only or auto-assist?', 'Auto or manual',...
@@ -1233,6 +1234,7 @@ global markWith; global v0; global pass; global numPasses;
 global overwriteManualFlag; global definitelyGood; global bl;
 
 skipped=[];
+CheckManCorrFig;
 % ManualCorrFig=figure('name','ManualCorrFig'); 
 imagesc(ManualCorrFig.Children,flipud(v0)); 
 title(ManualCorrFig.Children,'Auto correcting, please wait')

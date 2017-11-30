@@ -1,4 +1,4 @@
-function trialbytrial = PoolTrialsAcrossSessions(bounds,all_x_adj_cm,all_y_adj_cm,all_PSAbool,sessionInds)
+function trialbytrial = PoolTrialsAcrossSessions(bounds,all_x_adj_cm,all_y_adj_cm,all_PSAbool,sessionInds,lapNumber)
 %Assumes fields are in the order you want
 
 [~, all_PSAbool_aligned] = PoolPSA(all_PSAbool, sessionInds);
@@ -15,6 +15,7 @@ for fn = 1:4 %condition
             trialbytrial(fn).trialPSAbool{row,1} = logical(all_PSAbool_aligned{sess}(:,getInds));
             trialbytrial(fn).sessID(row,1) = sess;
             trialbytrial(fn).name = ss{fn};
+            trialbytrial(fn).lapNumber(row,1) = lapNumber(sess).(ss{fn}).correct(lap);
         end
     end
 end

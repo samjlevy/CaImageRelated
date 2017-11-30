@@ -68,7 +68,9 @@ for thisFile = 1:length(allfiles)
         correctBounds(thisFile).(ss{block}) =...
             [bounds.(ss{block})(correct.(ss{block}),1)...
             bounds.(ss{block})(correct.(ss{block}),2)];
-           
+        
+        lapNumber(thisFile).(ss{block}).all = lapNum.(ss{block});
+        
         lapNumber(thisFile).(ss{block}).correct =...
             lapNum.(ss{block})(correct.(ss{block}));
         
