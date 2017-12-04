@@ -1,4 +1,4 @@
-function lapbylapActivity(trialbytrial,xmin,xmax)
+function lapbylapActivity(trialbytrial)
 
 numConds = length(trialbytrial);
 numSess = length(unique(trialbytrial(1).sessID));
@@ -19,14 +19,19 @@ for condI = 1:numConds
     transLength{condI} = zeros(laps,numCells);
     transLengthPosNorm{condI} = zeros(laps,numCells);
     
-    for lapI = 1:length(laps) 
+    for lapI = 1:laps
         for cellI = 1:numCells
             
-            thisCellActivity = trialbytrial(condI).trialsX{lapI}(trialbytrial(condI).trialPSAbool{lapI}(cellI,:));
+            %if lapI == 81 && cellI == 14 && condI == 14
+            %    keyboard
+            %end
             
-            minimumX{condI}(lapI,cellI) = min([0 thisCellActivity]);
-            maximumX{condI}(lapI,cellI) = max([0 thisCellActivity]);
-            transientDur{condI}(lapI,cellI) = sum(trialbytrial(condI).trialPSAbool{lapI}(cellI));
+            thisCellActivity = trialbytrial(condI).trialPSAbool{lapI}(cellI,:);
+            thisCellPosX = trialbytrial(condI).trialsX{lapI}(thisCellActivity);
+            
+            minimumX{condI}(lapI,cellI) = min([0 thisCellPosX]);
+            maximumX{condI}(lapI,cellI) = max([0 thisCellPosX]);
+            transientDur{condI}(lapI,cellI) = sum(thisCellActivity);
             transLength{condI}(lapI,cellI) = maximumX{condI}(lapI,cellI) - minimumX{condI}(lapI,cellI);
             transLengthPosNorm{condI}(lapI,cellI) = transLength{condI}(lapI,cellI) / transientDur{condI}(lapI,cellI);
         end

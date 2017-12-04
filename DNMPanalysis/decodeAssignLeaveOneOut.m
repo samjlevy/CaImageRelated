@@ -15,9 +15,10 @@ for condI = 1:numConds
     for sessI = 1:numSess
         theseLaps = find(trialbytrial(condI).sessID == sessI);
         
-        testingLaps(condI).lapNums{sessI} = randi(length(theseLaps));
+        randomLap = randi(length(theseLaps));
+        testingLaps(condI).lapNums{sessI} = theseLaps(randomLap);
         
-        tls = theseLaps; tls(testingLaps(condI).lapNums{sessI}) = [];
+        tls = theseLaps; tls(randomLap) = [];
         trainingLaps(condI).lapNums{sessI} = tls;
     end
 end
