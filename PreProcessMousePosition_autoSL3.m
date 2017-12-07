@@ -358,11 +358,12 @@ optionsText={%'h - full explanations';...
              'to accept existing position. You can also';...
              'middle-mouse to go back to the last manually';...
              'corrected frame to re-do it.'};
-msgbox(optionsText,'PreProcess Keys')
+global hbox; hbox = msgbox(optionsText,'PreProcess Keys');
 
 disp('Highly recommended to do behavior flag (b), then (0,0) and OOB (z)')
              
 stillEditingFlag=1;
+% try
 while stillEditingFlag==1
 UpdatePosAndVel;
 %figsOpen=get(0,'children');
@@ -604,10 +605,12 @@ switch MorePoints
         close(figsOpen(isPreKeys));
         SaveTemp;
         ClearStuff;
+        close(hbox)
         return
     case 'q'
         SaveTemp;
         stillEditingFlag=0; 
+        close(hbox)
     case 'i'
         DealWithBackgroundImage;
     case 'c'
@@ -624,6 +627,11 @@ switch MorePoints
 end
 
 end
+
+% catch ME
+%     disp('Error. Info below'); disp(ME.stack);
+%     close(hbox)
+% end
 
 %% Final stuff
 
@@ -1403,10 +1411,21 @@ end
 stats=[]; %#ok<NASGU>
 d = imgaussfilt(flipud(rgb2gray(v0-v)),10);
 stats = regionprops(d>willThresh & mazeMask,'area','centroid','majoraxislength','minoraxislength');%flipped %'solidity'
-MouseBlob = [stats.Area] > 250 & ... %[stats.Area] < 3500...
+MouseBlob = [stats.Area] > 50 & ... %[stats.Area] < 3500...
             [stats.MajorAxisLength] > 8 & ...
             [stats.MinorAxisLength] > 8; %10
 stats=stats(MouseBlob);
+
+if isempty(stats) % Adaptively threshold if nothing shows up - good for dark rooms? NK edit
+    [ff, xx] = ecdf(d(:));
+    natThresh = xx(findclosest(ff,0.97));
+    stats = regionprops(d>natThresh & mazeMask,'area','centroid','majoraxislength','minoraxislength');
+    MouseBlob = [stats.Area] > 20 & ... %[stats.Area] < 3500...
+            [stats.MajorAxisLength] > 3 & ...
+            [stats.MinorAxisLength] > 3; %10
+stats=stats(MouseBlob);
+end
+
         
 %Sam's gray version
 grayFrameThresh = rgb2gray(flipud(v)) < grayThresh; %flipud
@@ -1440,6 +1459,7 @@ elseif isempty(stats)
     if auto_frames(corrFrame)==1
         [xm,ym]=ManualOnlyCorr;
     elseif auto_frames(corrFrame)~=1
+        keyboard
         switch pass
             case 2
                 %Should it be try gray?
@@ -1505,6 +1525,7 @@ elseif length(stats) > 1
         end
         %}
     else %if sum(NearBothDG)>1
+%         keyboard
         %One of these cases is where it splits the mouse in two around a
         %corner or something
         
@@ -1557,6 +1578,7 @@ elseif length(stats) > 1
         
         %If all above fails, drop back into old logic (now in PPMP2,
         if fixedThisFrameFlag==0
+%             keyboard
             stats=[];
             d = imgaussfilt(flipud(rgb2gray(v0-v)),10);
             stats = regionprops(d>willThresh & mazeMask,'area','centroid',...
@@ -1633,6 +1655,7 @@ elseif length(stats) > 1
                     end
 
                 case 1  %only one is empty
+%                     keyboard
                     %either grayStats or will stats is empty
                     %A: whichever is not, use blob closest to last known good
                     if ~isempty(grayStats) && isempty(stats)
@@ -1648,11 +1671,13 @@ elseif length(stats) > 1
 
                         TryAdjacentFrames;
                 case 0 %isempty(grayStats) && isempty(stats)
+%                     keyboard
                     switch pass
                         case 1
                             skippedFrame = 1; %skipped = [skipped; auto_frames(corrFrame)]; 
                         case 2
                             [xm,ym] = EnhancedManualCorrect;
+                            
                     end
             end    
         end
@@ -1680,6 +1705,7 @@ elseif length(stats) > 1
     end
         %}
     if fixedThisFrameFlag==0
+%         keyboard
         if pass==1
             if skippedFrame == 1
             skipped = [skipped; auto_frames(corrFrame)];
