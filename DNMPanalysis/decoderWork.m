@@ -11,3 +11,9 @@ answer = lapBlockNums{condI,1}(testingLaps(condI).lapNums{sessI,1});
 Mdl = fitcnb(X,Y,'distributionnames','mn');
 
 [decodedTrial,postProbs] = predict(Mdl,testX);
+
+
+% Here what we're gonna do is build a model and test each 
+load('trialbytrial.mat');
+[tbtActivity] = lapbylapActivity(trialbytrial);
+[trainingLaps, testingLaps] = leaveOneOutAllCombs(trialbytrial);

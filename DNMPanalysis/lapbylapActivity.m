@@ -1,4 +1,4 @@
-function lapbylapActivity(trialbytrial)
+function [tbtActivity] = lapbylapActivity(trialbytrial)
 
 numConds = length(trialbytrial);
 numSess = length(unique(trialbytrial(1).sessID));
@@ -37,5 +37,11 @@ for condI = 1:numConds
         end
     end
 end
-            
+      
+tbtActivity.minimumX = minimumX;
+tbtActivity.maximumX = maximumX;
+tbtActivity.transientDur = transientDur;
+tbtActivity.transLength = transLength;
+tbtActivity.transLengthPosNorm = transLengthPosNorm;
+
 end

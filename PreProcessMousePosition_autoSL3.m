@@ -358,7 +358,7 @@ optionsText={%'h - full explanations';...
              'to accept existing position. You can also';...
              'middle-mouse to go back to the last manually';...
              'corrected frame to re-do it.'};
-msgbox(optionsText,'PreProcess Keys')
+hbox = msgbox(optionsText,'PreProcess Keys');
 
 disp('Highly recommended to do behavior flag (b), then (0,0) and OOB (z)')
              
@@ -602,6 +602,7 @@ switch MorePoints
         figsOpen = findall(0,'type','figure');
         isPreKeys = strcmp({figsOpen.Name},'PreProcess Keys');
         close(figsOpen(isPreKeys));
+        close(hbox);
         SaveTemp;
         ClearStuff;
         return
@@ -624,6 +625,7 @@ switch MorePoints
 end
 
 end
+close(hbox);
 
 %% Final stuff
 
@@ -1679,17 +1681,18 @@ elseif length(stats) > 1
         %????????
     end
         %}
-    if fixedThisFrameFlag==0
-        if pass==1
-            if skippedFrame == 1
-            skipped = [skipped; auto_frames(corrFrame)];
-            else 
-                disp('missed something skipping')
-            end
-        else
-            [xm,ym] = EnhancedManualCorrect;
-        end
     end
+end
+
+if fixedThisFrameFlag==0
+    if pass==1
+        if skippedFrame == 1
+            skipped = [skipped; auto_frames(corrFrame)];
+        else
+            disp('missed something skipping')
+        end
+    else
+        [xm,ym] = EnhancedManualCorrect;
     end
 end
 
