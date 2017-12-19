@@ -602,7 +602,9 @@ switch MorePoints
         figsOpen = findall(0,'type','figure');
         isPreKeys = strcmp({figsOpen.Name},'PreProcess Keys');
         close(figsOpen(isPreKeys));
+        try
         close(hbox);
+        end
         SaveTemp;
         ClearStuff;
         return

@@ -4,7 +4,7 @@ load('trialbytrial.mat')
 load('realDays.mat')
 xmin = 25.5;
 xmax = 56;
-numBins = 10;
+numBins = 10; numBins = 8
 cmperbin = (xmax-xmin)/numBins;
 xlims = [xmin xmax];
 numSess = length(unique(trialbytrial(1).sessID));

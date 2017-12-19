@@ -40,6 +40,8 @@ consecLapThresh = 3;
 PFsLinTrialbyTrialCONDpool(trialbytrial,xlims, cmperbin, minspeed, 0, []);
 
 %[TMap_zscore] = ZScoreLinPFs(TMap_gauss, zeronans);   
+[OccMap, RunOccMap, xBin, TMap_unsmoothed, TCounts, TMap_gauss] = ...
+    PFsLinTrialbyTrial(trialbytrial,xlims, cmperbin, minspeed, 1, 'PFsLin8bin.mat', sortedSessionInds);
 
 %PV corrs for original
 [StudyTestCorrs, LeftRightCorrs] = PVcorrDimPooled(TMap_gauss, RunOccMap, posThresh, dayAllUse);
