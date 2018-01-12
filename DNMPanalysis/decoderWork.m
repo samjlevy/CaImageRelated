@@ -45,21 +45,22 @@ end
 
 
 %% Splitters
-
+load('trialbytrial.mat')
 xlims = [25.5 56];
 numXbins = 8;
 cmperbin = (max(xlims) - min(xlims))/numXbins;
 minspeed = 0;
-numShuffles = 25;
+numShuffles = 100;
 shuffThresh = 0.9;
 lapPctThresh = 0.25;
 consecLapThresh = 3;
 binsMin = 2;
 [Conds] = GetTBTconds(trialbytrial);
 %load('PFsLin8bin.mat')
-[rates, normrates, rateDiff] = LookAtSplitters2(TMap_unsmoothed);
+[rates, normrates, rateDiff, rateDIall, rateDI] = LookAtSplitters2(TMap_unsmoothed);
 [dayUse,threshAndConsec] = GetUseCells(trialbytrial, lapPctThresh, consecLapThresh);
 
+%Left/Right
 rates_shuffLR = cell(numShuffles,1);
 normrates_shuffLR = cell(numShuffles,1);
 rateDiff_shuffLR = cell(numShuffles,1);
@@ -69,11 +70,36 @@ for shuffI = 1:numShuffles
     [~, RunOccMapShufflr, ~, shuffLR_TMap_unsmoothed, ~, ~] =...
     PFsLinTrialbyTrial(shuffledTBTlr,xlims, cmperbin, minspeed, 0, [], sortedSessionInds);
     [rates_shuffLR{shuffI}, normrates_shuffLR{shuffI}, rateDiff_shuffLR{shuffI}] = LookAtSplitters2(shuffLR_TMap_unsmoothed);
+    disp(['Finished shuffle ' num2str(shuffI)])
 end
-[binsAboveShuffle, thisCellSplits] = SplitterRateRank(rateDiff, shuffledRateDiff, shuffThresh, binsMin);
+[binsAboveShuffleLR, thisCellSplitsLR] = SplitterRateRank(rateDiff, rateDiff_shuffLR, shuffThresh, binsMin);
 
+%Study/Test
+rates_shuffST = cell(numShuffles,1);
+normrates_shuffST = cell(numShuffles,1);
+rateDiff_shuffST = cell(numShuffles,1);
+for shuffI = 1:numShuffles
+    shuffledTBTst = []; shuffST_TMap_unsmoothed = [];   %#ok<NASGU>
+    shuffledTBTst= ShuffleTrialsAcrossConditions(trialbytrial,'studytest');
+    [~, RunOccMapShuffst, ~, shuffST_TMap_unsmoothed, ~, ~] =...
+    PFsLinTrialbyTrial(shuffledTBTst,xlims, cmperbin, minspeed, 0, [], sortedSessionInds);
+    [rates_shuffST{shuffI}, normrates_shuffST{shuffI}, rateDiff_shuffST{shuffI}] = LookAtSplitters2(shuffST_TMap_unsmoothed);
+    disp(['Finished shuffle ' num2str(shuffI)])
+end
+[binsAboveShuffleST, thisCellSplitsST] = SplitterRateRank(rateDiff, rateDiff_shuffST, shuffThresh, binsMin);
 
-
+%Look at how many splitters
+for dayI = 1:size(dayUse,2)
+    howManySplittersCell{dayI,1} = find(dayUse(:,dayI).*thisCellSplitsLR.StudyLvR(:,dayI));
+    howManySplittersCell{dayI,2} = find(dayUse(:,dayI).*(thisCellSplitsLR.StudyLvR(:,dayI)==0));
+    howManySplittersCell{dayI,3} = find(dayUse(:,dayI).*thisCellSplitsLR.TestLvR(:,dayI));
+    howManySplittersCell{dayI,4} = find(dayUse(:,dayI).*(thisCellSplitsLR.TestLvR(:,dayI)==0));
+    howManySplittersCell{dayI,5} = find(dayUse(:,dayI).*thisCellSplitsST.LeftSvT(:,dayI));
+    howManySplittersCell{dayI,6} = find(dayUse(:,dayI).*(thisCellSplitsST.LeftSvT(:,dayI)==0));
+    howManySplittersCell{dayI,7} = find(dayUse(:,dayI).*thisCellSplitsST.RightSvT(:,dayI));
+    howManySplittersCell{dayI,8} = find(dayUse(:,dayI).*(thisCellSplitsST.RightSvT(:,dayI)==0));
+end
+howManySplitters = cellfun(@length,howManySplittersCell,'UniformOutput',false);
 
 trainLapNumbers = [];
 trainLapConds = []; 
@@ -126,10 +152,85 @@ end
 
 
 %% Decode across days
+%condsInclude = Conds.Test
+%typePredict = 'leftright'
+%trainingCells = [];
+%testingCells = [];
 
-sessPairs = GetAllCombs(trainingSess, testingSess);
+%Set up all permutations of things to run
+condsInclude = [Conds.Study; Conds.Test; Conds.Left; Conds.Right]; 
+    condsInclude = [condsInclude; condsInclude]; condsInclude = [condsInclude; condsInclude];
+titles = {'StudyLvR', 'TestLvR', 'LeftSvT', 'RightSvT'}; 
+    titles = [titles titles]; titles = [titles titles];
+typePredict = {'leftright', 'leftright', 'studytest', 'studytest'}; 
+    typePredict = [typePredict typePredict]; typePredict = [typePredict typePredict];
+randomizeNow = [0 0 0 0 1 1 1 1]; randomizeNow = [randomizeNow randomizeNow];
+usesplitters = [1 1 1 1 1 1 1 1 0 0 0 0 0 0 0 0];
 
-%First Step is organize which day, which condition, which trials
-for sessPairI = 1:size(sessPairs,1)
-    trainSess = sessPairs(sessPairI,1);
-    testSess = sessPairs(sessPairI,2);
+trainingSessions = 1:length(realDays);
+testingSessions = 1:length(realDays);
+sessPairs = GetAllCombs(trainingSessions, testingSessions);
+
+
+%[ some comment here ] 
+performance = [];
+numSetups = length(condsInclude);
+for setupI = 1:numSetups
+    decoded = [];
+    testing = [];
+    actual = [];
+    
+    for sessPairI = 1:size(sessPairs,1)
+        %Assign sessions
+        trainSess = sessPairs(sessPairI,1);
+        testSess = sessPairs(sessPairI,2);
+        
+        %Select cells
+        if strcmp(typePredict{setupI}, 'leftright')
+                cellsUse = dayUse(:,trainSess).*(thisCellSplitsLR.(titles{setupI})(:,trainSess)==usesplitters(setupI));
+        elseif strcmp(typePredict{setupI}, 'studytest')
+                cellsUse = dayUse(:,trainSess).*(thisCellSplitsST.(titles{setupI})(:,trainSess)==usesplitters(setupI));
+        end
+        
+        trainingCells = cellsUse;
+        testingCells = cellsUse;
+        
+        %Decode the things
+        [~, testing, decoded{sessPairI}, ~] = decodeAcrossConditions2(trialbytrial,...
+            condsInclude(setupI,:), typePredict{setupI}, trainSess, testSess,...
+            trainingCells, testingCells, trainingLaps, testingLaps, lblActivity, randomizeNow(setupI));
+        
+        actual{sessPairI} = [testing(:).answers]';
+        
+    end
+    
+    %Log performance
+    [performance{setupI}, miscoded] = decoderResults2(decoded, actual, sessPairs, realDays);
+
+    disp(['Finished combination ' num2str(setupI)])
+end
+
+daysApart = diff(realDays(sessPairs), 1, 2);
+daysApart = abs(daysApart);
+
+%Make some figures
+notRandom = find(randomizeNow==0);
+for plotI = 1:length(notRandom)
+    figure; 
+    plot(daysApart,performance{notRandom(plotI)},'*b')
+    hold on
+    plot(daysApart,performance{notRandom(plotI)+4},'*r')
+    ylim([0 1])
+    xlabel('Days apart')
+    ylabel('Proportion decoded correctly')
+    switch usesplitters(notRandom(plotI)); case 1; sps = 'Splitters Only'; case 0; sps = 'Non-Splitters Only'; end
+    %switch randomizeNow(plotI); case 1; rdr = 'Shuffled Training Data'; case 0; rdr = 'Original Training Data'; end
+    %titleText = [titles{plotI} ', ' sps ', ' rdr];
+    titleText = [titles{notRandom(plotI)} ', ' sps ', blue/red real/shuffled'];
+    title(titleText)
+end
+
+%Test significance of differences
+data = [performance{11}; performance{15}];
+group = [zeros(length(performance{11}),1); ones(length(performance{15}),1)];
+[h,atab,ctab,stats] = aoctool([daysApart; daysApart], data, group,[], [], [], [],'on');

@@ -897,6 +897,42 @@ if strcmp(userstr,'mouseimage')
     MDSL(i).Location = 'G:\Europa\Europa_161022';
 end
 MDSL(i).Notes = [];
+%% Calisto
+i = i+1;
+MDSL(i).Animal = 'Calisto_DNMP';
+MDSL(i).Date = '10_27_2016';
+MDSL(i).Session = 1;
+MDSL(i).Env = 'Continuous T Maze';
+MDSL(i).Room = '201a - 2015';
+MDSL(i).RecordStartTime = '01:39:40.531000 PM';
+if strcmp(userstr,'sam')
+    MDSL(i).Location = 'I:\Calisto\Calisto_161027';
+end
+MDSL(i).Notes = [];
+
+i = i+1;
+MDSL(i).Animal = 'Calisto_DNMP';
+MDSL(i).Date = '10_28_2016';
+MDSL(i).Session = 1;
+MDSL(i).Env = 'Continuous T Maze';
+MDSL(i).Room = '201a - 2015';
+MDSL(i).RecordStartTime = '01:39:40.531000 PM';
+if strcmp(userstr,'sam')
+    MDSL(i).Location = 'I:\Calisto\Calisto_161028';
+end
+MDSL(i).Notes = [];
+
+i = i+1;
+MDSL(i).Animal = 'Calisto_DNMP';
+MDSL(i).Date = '11_02_2016';
+MDSL(i).Session = 1;
+MDSL(i).Env = 'Continuous T Maze';
+MDSL(i).Room = '201a - 2015';
+MDSL(i).RecordStartTime = '01:39:40.531000 PM';
+if strcmp(userstr,'sam')
+    MDSL(i).Location = 'I:\Calisto\Calisto_161102';
+end
+MDSL(i).Notes = [];
 
 %% G50_open
 G50_open(1) = (i+1);
