@@ -158,7 +158,7 @@ base_picked_centers = [base_cellCenters(pairedInds(:,1),1) base_cellCenters(pair
 reg_picked_centers = [reg_cellCenters(pairedInds(:,2),1) reg_cellCenters(pairedInds(:,2),2)];
 
 %fitgeotrans
-moreCells = questdlg('Alignment method?','Type','Affine','Projective','Polynomial','Projective');
+moreCells = questdlg('Alignment method?','Type','Affine','Projective','Polynomial','Affine');
 switch moreCells
     case 'Affine'
         tform = fitgeotrans(reg_picked_centers,base_picked_centers,'affine');
@@ -201,7 +201,7 @@ end
 [overlay,overlayRef] = imfuse(base_allMask,reg_allMask_shifted,'ColorChannels',[1 2 0]);
 if exist('mixFig','var'); delete(mixFig); clear('mixFig'); end
 mixFig = figure; imshow(overlay,overlayRef)
-title(['Base and reg shifted overlay, ' num2str(sum(distance<distanceThreshold)) ' cell centers < 3um'])
+title(['Base (red) and reg (green) shifted overlay, ' num2str(sum(distance<distanceThreshold)) ' cell centers < 3um'])
 hold on
 plot(reg_shift_centers(distance<distanceThreshold,1),reg_shift_centers(distance<distanceThreshold,2),'*r')
 

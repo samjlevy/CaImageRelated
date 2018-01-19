@@ -126,7 +126,9 @@ if matchup==1
     %Show image of cells that aren't matched for forced matching
     if any(unpairedRegCells) && any(unmatchedBaseCells)
     doneManual = 0;
-    skipPrompt=0;
+    skipPrompt = 0;
+    zoomedIn = 0;
+    zoomCenterAdjust = [0 0];
     while doneManual == 0
         if exist('baseFig','var'); delete(baseFig); clear('baseFig'); end
         if exist('regFig','var'); delete(regFig); clear('regFig'); end
@@ -141,10 +143,64 @@ if matchup==1
         title(['Base and unpaired reg cells, ' num2str(length(unpairedRegCells))...
             ' cell centers for ' num2str(distanceThreshold) 'um'])
         
-        if skipPrompt==0
-        forceAssign = questdlg('Want to force assignments?','Force assign','Yes','No','No'); 
-        end
+        didSomething = 0;
+        while didSomething==0 
+            if skipPrompt==0 
+                %forceAssign = questdlg('Want to force assignments?','Force assign','Yes','No','No'); 
+                forceAssign = questdlg('Want to force assignments?','Force assign','Yes','No','Zoom/Unzoom','No'); 
+            end
         switch forceAssign
+            case 'Zoom/Unzoom'
+                figure(mixFig);
+                switch zoomedIn
+                    case 1 %Set to original
+                        imshow(overlay,overlayRef);
+                        zoomedIn = 0;
+                        zoomCenterAdjust = [0 0];
+                        
+                        zoomBot = size(overlay,1);
+                        zoomTop = 1;
+                        zoomLeft = 1;
+                        zoomRight = size(overlay,2);
+                        
+                    case 0 %Get "zoom" area
+                        [zx, zy] = ginput(1); zx = round(zx); zy = round(zy);
+                        zoomRange = 100;
+                        zoomBot = min([zy+zoomRange-1 size(overlay,1)]);
+                        zoomTop = max([zy-zoomRange 1]);
+                        zoomLeft = max([zx-zoomRange 1]);
+                        zoomRight = min([zx+zoomRange-1 size(overlay,2)]);
+                        
+                        zoomCenterAdjust = [zoomLeft zoomTop] - 1; %Not sure about this -1, may now matter since should only affect plotting
+                        
+                        %Replot overlay for zooming
+                        zoomOverlay = overlay(zoomTop:zoomBot, zoomLeft:zoomRight, :);
+                        zXWL =[overlayRef.XWorldLimits(1) overlayRef.XWorldLimits(1)+size(zoomOverlay,1)];
+                        zYWL =[overlayRef.YWorldLimits(1) overlayRef.YWorldLimits(1)+size(zoomOverlay,2)];
+                        zoomRef = imref2d([size(zoomOverlay)],zXWL,zYWL);
+                        
+                        imshow(zoomOverlay,zoomRef);
+                        
+                        %Plot cell outlines
+                        zoomCentersBase = find(inpolygon(fullReg.centers(unmatchedBaseCells,1),fullReg.centers(unmatchedBaseCells,2),...
+                            [zoomLeft; zoomLeft; zoomRight; zoomRight],[zoomTop; zoomBot; zoomBot; zoomTop]));
+                        zoomCentersReg = find(inpolygon(reg_shift_centers(unpairedRegCells,1),reg_shift_centers(unpairedRegCells,2),...
+                            [zoomLeft; zoomLeft; zoomRight; zoomRight],[zoomTop; zoomBot; zoomBot; zoomTop]));
+                        
+                        for zcbI = 1:length(zoomCentersBase)
+                            bw = bwboundaries(fullRegImage{unmatchedBaseCells(zoomCentersBase(zcbI))}); bww = bw{1};
+                            hold on
+                            plot(bww(:,2)-zoomCenterAdjust(1)+zoomRef.XWorldLimits(1),bww(:,1)-zoomCenterAdjust(2)+zoomRef.XWorldLimits(1),'c','LineWidth',2)
+                        end
+                        for zcrI = 1:length(zoomCentersReg)
+                            bw = bwboundaries(regImage_shifted{unpairedRegCells(zoomCentersReg(zcrI))}); bww = bw{1};
+                            hold on
+                            plot(bww(:,2)-zoomCenterAdjust(1)+overlayRef.XWorldLimits(1),bww(:,1)-zoomCenterAdjust(2)+overlayRef.YWorldLimits(1),'w','LineWidth',2)
+                        end
+                end %zoom
+                
+                mixFig.Position = [450 250 900 700];
+                didSomething = 0;
             case 'Yes'
                 %Get pair of cells to force like in manual_reg_SL
                 baseFig = figure('name','Base Session Masks','position',...
@@ -157,6 +213,7 @@ if matchup==1
                 
                 figure(baseFig);
                 [xBase, yBase] = ginput(1);
+                xBase = xBase + zoomCenterAdjust(1); yBase = yBase + zoomCenterAdjust(2);
                 [baseCell, ~] = findclosest2D(fullReg.centers(unmatchedBaseCells,1),...
                     fullReg.centers(unmatchedBaseCells,2), xBase, yBase);
                 hold on
@@ -164,6 +221,7 @@ if matchup==1
         
                 figure(regFig);
                 [xReg, yReg] = ginput(1);
+                xReg = xReg + zoomCenterAdjust(1); yReg = yReg + zoomCenterAdjust(2);
                 [regCell, ~] = findclosest2D(reg_shift_centers(unpairedRegCells,1),...
                     reg_shift_centers(unpairedRegCells,2), xReg, yReg);
                 hold on
@@ -175,7 +233,7 @@ if matchup==1
                 plot(reg_shift_centers(unpairedRegCells(regCell),1),reg_shift_centers(unpairedRegCells(regCell),2),'*m');
                 
                 doneManual = 0;
-                manGood = questdlg('Good?','Good','Yes','Redo','Cancel','Yes');
+                manGood = questdlg('Was this good?','Was this good','Yes','No','Yes');
                 switch manGood
                     case 'Yes'
                         removed(size(removed,1)+1,1:2) = [unmatchedBaseCells(baseCell) unpairedRegCells(regCell)];
@@ -185,16 +243,23 @@ if matchup==1
                         unmatchedBaseCells(baseCell) = [];
                         
                         skipPrompt=0;
-                    case 'Redo'
-                        skipPrompt=1;
-                    case 'Cancel'
+                    %case 'No'
+                    %    skipPrompt=1;
+                    case 'No'
                         skipPrompt=0;
                 end
+                zoomedIn = 0;
+                didSomething = 1;
             case 'No'
+                zoomedIn = 0;
                 doneManual = 1;
-        end
-    end
-    end
+                didSomething = 1;
+        end %forceAssign/zoom
+        end %didSomething
+    end %doneManual
+    
+    
+    end %any unpaired/unmatched
     matchedBaseCells = allClosestCells(inRangeIndicesCells);
     
     foundTwice = intersect(inRangeIndicesCells,unpairedRegCells);
@@ -240,6 +305,6 @@ if matchup==1
 end
 end
 
-try; close(mixFig); end
+try; close(mixFig); end %#ok<NOSEM>
 
 end

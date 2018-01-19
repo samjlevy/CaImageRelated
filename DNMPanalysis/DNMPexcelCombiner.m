@@ -1,11 +1,12 @@
 function DNMPexcelCombiner(input_path)
+%   DNMPexcelCombiner(cd)
 %This function looks for all the unique adjusted_ files, finds the highest
 %number for each, and puts together the appropriate ones. Uses original
 %BrainTime sheet to idenify columns that have been adjusted, 
 
 %Find the sheets we need
 original_path = ls('*BrainTime.xlsx');
-adjustedSheets = dir('*BrainTime_Adjusted_*.xlsx');
+adjustedSheets = dir('*BrainTime_Adjusted-*.xlsx');
 adjustedSheets = {adjustedSheets(:).name};
 
 %Identify the highest ranked of each 'adjusted' type
