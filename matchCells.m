@@ -143,6 +143,21 @@ if matchup==1
         title(['Base and unpaired reg cells, ' num2str(length(unpairedRegCells))...
             ' cell centers for ' num2str(distanceThreshold) 'um'])
         
+        if any(removed)
+            undoForce = questdlg('Undo last removal?','Undo last','No','Yes','No');
+            if strcmpi(undoForce,'No')
+                code here to undo the last removal, this backwards
+                %could even show all removed silhouettes...
+                %{
+                removed(size(removed,1)+1,1:2) = [unmatchedBaseCells(baseCell) unpairedRegCells(regCell)];
+                        %Move those cells appropriately
+                        inRangeIndicesCells = [inRangeIndicesCells unpairedRegCells(regCell)];
+                        unpairedRegCells(regCell) = [];
+                        unmatchedBaseCells(baseCell) = [];
+                %}
+            end
+        end
+        
         didSomething = 0;
         while didSomething==0 
             if skipPrompt==0 
