@@ -966,6 +966,22 @@ elseif strcmp(userstr,'sam')
     MDSL(i).Location = 'D:\Boog05_170827\G50ofs';
 end
 MDSL(i).Notes = [];
+
+ACM1(1) = (i+1);
+
+i = i+1;
+MDSL(i).Animal = 'ACM1';
+MDSL(i).Date = '08_28_2017';
+MDSL(i).Session = 1;
+MDSL(i).Env = 'Mega open field';
+MDSL(i).Room = '721b';
+MDSL(i).RecordStartTime = ' ';
+if strcmp(userstr,'mouseimage')
+    MDSL(i).Location = 'I:\Europa\Europa_161013';
+elseif strcmp(userstr,'sam')
+    MDSL(i).Location = 'C:\Users\Sam\Desktop\CM_Miniscope\ACM1';
+end
+MDSL(i).Notes = [];
 %% Compile session_ref
 
 session_ref.Polaris_DNMP = Polaris_DNMP;

@@ -16,7 +16,7 @@ for aa=1:length(varargin)
         useXml = 1;
     elseif strcmp(varargin{aa},'overwrite_existing')    
         overwrite_existing = varargin{aa+1};
-    elseif strcmpe(varargin{aa},'imaging_start_frame')
+    elseif strcmpi(varargin{aa},'imaging_start_frame')
         imaging_start_frame = varargin{aa+1};
     end
 end    

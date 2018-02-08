@@ -11,14 +11,12 @@ AlignImagingToTracking_SL
     %Produces Pos_brain.mat, Xpix and Ypix (from
     %Pos.mat) interpolated to imaging timestamps,
     %returns PSAboolAdjusted, x and y all of the same length
-AlignPositions_SL         
+AlignPositions_SL(RoomStr)         
     %Right now just rotates trajectory to 0, scales
     %pix2cm, gets speed. Future versions will align all to a base struct
 AlignPositionsBatch_SL
     %This is to replace AlignPositions: uses geometric transformations to
     %align points in the original 
-    %
-    %
 ParsedFramesToBrainFrames
     %Translates a sheet (columnwise) of 
     %timestamps from an AVI into brain 
@@ -38,7 +36,9 @@ FindBadLapsWrapper
     %calls FindBadLaps
     %used to find bad points in individual bad laps, writes a new
     %spreadsheet that has the fixed timestamps
-ExcelFinalizer
+DNMPexcelCombiner(cd)
+    %Combines all found Adjusted Sheets into a single one
+ExcelFinalizer(cd)
     %Writes a final version of the spreadsheet that kicks out laps with
     %overlapped critical timestamps or timestamps beyond the length of
     %pos_align
