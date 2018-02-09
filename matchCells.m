@@ -1,5 +1,19 @@
-function matchCells(base_path, reg_paths)
+function matchCells(base_path, reg_paths, bufferEdges)
+%bufferEdges should be used when there are cell masks out near the edges of
+%the imaging window. During alignment, they can be pushed out of view,
+%which can cause problems leading to those cells' not being registered. 
+if ~exist('bufferEdges','var'); bufferEdges = 0; end
+try
+    load(fullfile(reg_paths{1},'RegisteredImageSLbuffered.mat'),'bufferWidth')
+catch
+    bufferWidth = 100; %could also load this 
+    disp(['No bufferWidth found, using default ' num2str(bufferWidth) ])
+end
 
+screensize = get( groot, 'Screensize' );
+Aspect = 900/700;
+mixFigPos = [0 250 floor(screensize(3)/2) floor(screensize(3)/2)/Aspect];
+regMixFigPos = [ceil(screensize(3)/2) 250 floor(screensize(3)/2) floor(screensize(3)/2)/Aspect];
 
 distanceThreshold = 3;
 numSessions = size(reg_paths,1);
@@ -13,11 +27,17 @@ else
     load(fullfile(base_path,'FinalOutput.mat'),'NeuronImage','NeuronAvg')
     baseImage = NeuronImage;
     
+    if bufferEdges == 1
+        bufferedNeuronImage = AddCellMaskBuffer(baseImage, bufferWidth);
+    end
+    baseImage = bufferedNeuronImage;
+        
     base_cellCenters = getAllCellCenters(baseImage);
     baseOrientation = cellfun(@(x) regionprops(x,'Orientation'), baseImage,'UniformOutput',false);
     
     fullReg.sessionInds = [1:length(baseImage)]'; %#ok<NBRAK>
     fullReg.BaseSession = base_path;
+    fullReg.BufferedEdge(1) = 1;
     fullReg.RegSessions = {};
     fullReg.centers = base_cellCenters; 
     fullReg.orientation = cell2mat(cellfun(@(x) x.Orientation, baseOrientation, 'UniformOutput',false))';
@@ -71,7 +91,16 @@ if matchup==1
     fullReg.RegSessions{length(fullReg.RegSessions)+1} = reg_path;
 
     load(fullfile(reg_path,'RegisteredImageSL.mat'))
-
+    if bufferEdges == 1
+        try
+            load(fullfile(reg_path,'RegisteredImageSLbuffered.mat'))
+        catch
+            disp(['Failed to find buffered image for ' regtitle ', fixing now'])
+            AddRegBuffer(baseImage, reg_path, bufferWidth)
+            load(fullfile(reg_path,'RegisteredImageSLbuffered.mat'))
+        end
+    end
+    
     numRegCells = length(regImage_shifted);
     numBaseCells = length(fullRegImage);
 
@@ -147,11 +176,16 @@ if matchup==1
         if exist('mixFig','var'); delete(mixFig); clear('mixFig'); end
         [overlay,overlayRef] = imfuse(baseUnpaired,regUnpaired,'ColorChannels',[1 2 0]);
         mixFig = figure; imshow(overlay,overlayRef);
-        mixFig.Position = [50 250 900 700];
+        mixFig.Position = mixFigPos;
         title(['UPAIRED base (red) and reg (green) unpaired cells; ' num2str(length(unpairedRegCells))...
             'UNPAIRED reg cell centers at ' num2str(distanceThreshold) 'um'])
         %mixFig = plotMixFig(baseUnpaired, regUnpaired, unpairedRegCells, distanceThreshold);
         mixFigChildPos = mixFig.Children.Position;
+        vertLines = 150:150:size(overlay,2); horizLines = 150:150:size(overlay,1);
+        hold on
+        for vl = 1:length(vertLines); plot([vertLines(vl) vertLines(vl)], [0 size(overlay,1)],'w'); end
+        for hl = 1:length(horizLines); plot([0 size(overlay,2)], [horizLines(hl) horizLines(hl)],'w'); end
+        hold off
         
         %Show matched cells
         %basePaired = create_AllICmask(fullRegImage(fullReg.sessionInds(matchedHere,1)));
@@ -159,16 +193,21 @@ if matchup==1
         regPaired = create_AllICmask(regImage_shifted(inRangeIndicesCells));
         if exist('regMixFig','var'); delete(regMixFig); clear('regMixFig'); end
         matchedBaseCells = allClosestCells(inRangeIndicesCells);
-        matchedHere = length(matchedBaseCells);
+        numMatchedHere = length(matchedBaseCells);
         [regOverlay,regOverlayRef] = imfuse(basePaired,regPaired,'ColorChannels',[1 2 0]);
         regMixFig = figure; imshow(regOverlay,regOverlayRef);
         hold on
         plot(fullReg.centers(matchedBaseCells,1),fullReg.centers(matchedBaseCells,2),'*m')
-        regMixFig.Position = [900 250 900 700];
-        title(['PAIRED base and reg cells; ' num2str(length(matchedHere))...
+        regMixFig.Position = regMixFigPos;
+        title(['PAIRED base and reg cells; ' num2str(length(numMatchedHere))...
             ' registered cell centers at ' num2str(distanceThreshold) 'um'])
         %regMixFig = plotRegMixFig(basePaired, regPaired, fullReg, matchedBaseCells, distanceThreshold);
-        regMixFigChildPos = regMixFig.Children.Position;        
+        regMixFigChildPos = regMixFig.Children.Position;
+        rvertLines = 150:150:size(regOverlay,2); rhorizLines = 150:150:size(regOverlay,1);
+        hold on
+        for rvl = 1:length(rvertLines); plot([rvertLines(rvl) rvertLines(rvl)], [0 size(regOverlay,1)],'w'); end
+        for rhl = 1:length(rhorizLines); plot([0 size(regOverlay,2)], [rhorizLines(rhl) rhorizLines(rhl)],'w'); end
+        hold off
         
         %Offer editing
         workWith = questdlg('Want to edit registration?','Edit registration','Paired','Unpaired','Done','Done');
@@ -178,7 +217,7 @@ if matchup==1
                 while didSomething==0 
                     if skipPrompt==0 
                         %forceAssign = questdlg('Want to force assignments?','Force assign','Yes','No','No'); 
-                        forceAssign = questdlg('Want to force assignments?','Force assign','Yes','Back','Zoom/Unzoom','Back'); 
+                        forceAssign = questdlg('Want to force assignments?','Force assign','Yes','Zoom/Unzoom','Back','Back'); 
                     end
                 switch forceAssign
                     case 'Zoom/Unzoom'
@@ -211,8 +250,8 @@ if matchup==1
                                 zoomRows = zoomTop:zoomBot; zoomCols = zoomLeft:zoomRight;
                                 [zoomOverlay,zoomOverlayRef] = imfuse(baseUnpaired(zoomRows, zoomCols),regUnpaired(zoomRows, zoomCols),'ColorChannels',[1 2 0]);
                                 imshow(zoomOverlay,zoomOverlayRef);
-                                mixFig.Position = [450 250 900 700]; 
-                                mixFig.Children.Position = mixFigChildPos;
+                                mixFig.Position = mixFigPos; 
+                                %mixFig.Children.Position = mixFigChildPos;
                                 %Plot cell outlines
                                 zoomCentersBase = find(inpolygon(fullReg.centers(unmatchedBaseCells,1),fullReg.centers(unmatchedBaseCells,2),...
                                     [zoomLeft; zoomLeft; zoomRight; zoomRight],[zoomTop; zoomBot; zoomBot; zoomTop]));
@@ -235,18 +274,22 @@ if matchup==1
 
                         didSomething = 0;
                     case 'Yes'
+                        if zoomedIn == 1; zoomCoords = [zoomLeft zoomLeft zoomRight zoomRight zoomLeft; zoomTop zoomBot zoomBot zoomTop zoomTop];end
+                        
                         %Get pair of cells to force like in manual_reg_SL
-                        baseFig = figure('name','Base Session Masks','position',...
-                        [100 100 size(baseUnpaired,2)*1.5 size(baseUnpaired,1)*1.5]);
+                        baseFig = figure('name','Base Session Masks', 'position',...
+                            [100, 100, size(baseUnpaired,2)*1.5, size(baseUnpaired,1)*1.5]);
                         hold off; imagesc(baseUnpaired); title('Base Session Masks')
+                        if zoomedIn==1; hold on; plot(zoomCoords(1,:),zoomCoords(2,:),'r'); hold off; end
 
                         regFig = figure('name','Reg Session Masks','position',...
                             [100+size(baseUnpaired,2)*1.5 100 size(regUnpaired,2)*1.5 size(regUnpaired,1)*1.5]);
                         hold off; imagesc(regUnpaired); title(['Reg Session Masks for ' regtitle])
+                        if zoomedIn==1; hold on; plot(zoomCoords(1,:),zoomCoords(2,:),'r'); hold off; end
 
                         figure(baseFig);
                         [xBase, yBase] = ginput(1);
-                        xBase = xBase + zoomCenterAdjust(1); yBase = yBase + zoomCenterAdjust(2);
+                        %xBase = xBase + zoomCenterAdjust(1); yBase = yBase + zoomCenterAdjust(2);
                         [baseCell, ~] = findclosest2D(fullReg.centers(unmatchedBaseCells,1),...
                             fullReg.centers(unmatchedBaseCells,2), xBase, yBase);
                         matchingBaseCell = unmatchedBaseCells(baseCell);
@@ -255,7 +298,7 @@ if matchup==1
 
                         figure(regFig);
                         [xReg, yReg] = ginput(1);
-                        xReg = xReg + zoomCenterAdjust(1); yReg = yReg + zoomCenterAdjust(2);
+                        %xReg = xReg + zoomCenterAdjust(1); yReg = yReg + zoomCenterAdjust(2);
                         [regCell, ~] = findclosest2D(reg_shift_centers(unpairedRegCells,1),...
                             reg_shift_centers(unpairedRegCells,2), xReg, yReg);
                         matchingRegCell = unpairedRegCells(regCell);
@@ -280,13 +323,13 @@ if matchup==1
                         %basePaired = create_AllICmask(fullRegImage);
                         regPaired = create_AllICmask(regImage_shifted(inRangeIndicesCells));
                         matchedBaseCells = allClosestCells(inRangeIndicesCells);
-                        matchedHere = length(matchedBaseCells);
+                        numMatchedHere = length(matchedBaseCells);
                         [regOverlay,regOverlayRef] = imfuse(basePaired,regPaired,'ColorChannels',[1 2 0]);
                         imshow(regOverlay,regOverlayRef);
                         hold on
                         plot(fullReg.centers(matchedBaseCells,1),fullReg.centers(matchedBaseCells,2),'*m') 
                         plot(fullReg.centers(matchedBaseCells(end),1),fullReg.centers(matchedBaseCells(end),2),'*g')
-                        title(['PAIRED base and reg cells; ' num2str(length(matchedHere))...
+                        title(['PAIRED base and reg cells; ' num2str(length(numMatchedHere))...
                             ' registered cell centers at ' num2str(distanceThreshold) 'um'])
                         
                         %Ask if this was an ok match
@@ -319,12 +362,12 @@ if matchup==1
                         basePaired = create_AllICmask(fullRegImage);
                         regPaired = create_AllICmask(regImage_shifted(inRangeIndicesCells));
                         matchedBaseCells = allClosestCells(inRangeIndicesCells);
-                        matchedHere = length(matchedBaseCells);
+                        numMatchedHere = length(matchedBaseCells);
                         [regOverlay,regOverlayRef] = imfuse(basePaired,regPaired,'ColorChannels',[1 2 0]);
                         imshow(regOverlay,regOverlayRef);
                         hold on
                         plot(fullReg.centers(matchedBaseCells,1),fullReg.centers(matchedBaseCells,2),'*m')
-                        title(['PAIRED base and reg cells; ' num2str(length(matchedHere))...
+                        title(['PAIRED base and reg cells; ' num2str(numMatchedHere)...
                             ' registered cell centers at ' num2str(distanceThreshold) 'um'])
                         
                         %May not even need this code anymore...
@@ -352,6 +395,7 @@ if matchup==1
                 end %didSomething
             
             case 'Paired'
+                matchDidSomething = 0;
                 while matchDidSomething == 0
                 regEdit= questdlg('Edit matched cells?','Edit registration','Remove','Zoom/Unzoom','Back','Back');
                 switch regEdit
@@ -390,13 +434,13 @@ if matchup==1
                         regPaired = create_AllICmask(regImage_shifted(inRangeIndicesCells));
                         if exist('regMixFig','var'); delete(regMixFig); clear('regMixFig'); end
                         matchedBaseCells = allClosestCells(inRangeIndicesCells);
-                        matchedHere = length(matchedBaseCells);
+                        numMatchedHere = length(matchedBaseCells);
                         [regOverlay,regOverlayRef] = imfuse(basePaired,regPaired,'ColorChannels',[1 2 0]);
                         regMixFig = figure; imshow(regOverlay,regOverlayRef);
                         hold on
                         plot(fullReg.centers(matchedBaseCells,1),fullReg.centers(matchedBaseCells,2),'*m')
-                        %regMixFig.Position = regMixFigChildPos;
-                        title(['PAIRED base and reg cells; ' num2str(length(matchedHere))...
+                        regMixFig.Position = regMixFigPos;
+                        title(['PAIRED base and reg cells; ' num2str(numMatchedHere)...
                             ' registered cell centers at ' num2str(distanceThreshold) 'um'])
                         
                         mmanGood = questdlg('Was this good?','Was this good','Yes','No','Yes');
@@ -415,7 +459,7 @@ if matchup==1
                                 skipPrompt=0;
                         end
                         
-                        didSomething = 1; 
+                        matchDidSomething = 1; 
                     case 'Zoom/Unzoom'
                         switch matchZoomedIn
                             case 1 %Set to original
@@ -429,7 +473,7 @@ if matchup==1
 
                                 hold off
                                 imshow(regOverlay,regOverlayRef);
-                                regMixFig.Position = [450 250 900 700]; 
+                                regMixFig.Position = regMixFigPos; 
                             case 0 %Get "zoom" area
                                 [mzx, mzy] = ginput(1); mzx = round(mzx); mzy = round(mzy);
                                 matchzoomRange = 100;
@@ -447,7 +491,8 @@ if matchup==1
                                 [matchzoomOverlay,matchzoomOverlayRef] = imfuse(basePaired(matchzoomRows, matchzoomCols),...
                                     regPaired(matchzoomRows, matchzoomCols),'ColorChannels',[1 2 0]);
                                 imshow(matchzoomOverlay,matchzoomOverlayRef);
-                                %regMixFig.Position = regMixFigChildPos;
+                                regMixFig.Position = regMixFigPos;
+                                
                                 %Plot cell outlines
                                 matchzoomCentersBase = find(inpolygon(fullReg.centers(matchedBaseCells,1),fullReg.centers(matchedBaseCells,2),...
                                     [matchzoomLeft; matchzoomLeft; matchzoomRight; matchzoomRight],...
@@ -469,13 +514,14 @@ if matchup==1
                                 
                                 matchZoomedIn = 1;
                         end
+                        matchDidSomething = 0;
                     case 'Back'
                         matchZoomedIn = 0;
                         matchDidSomething = 1;
                 end
                 end
                 
-            case 'No' %Don't edit registration
+            case 'Done' %Don't edit registration
                 doneManual = 1; 
         end %work with (paired or unpaired)
     end %doneManual
@@ -503,10 +549,15 @@ if matchup==1
 
         fullReg.centers(newInds, 1:2) = reg_shift_centers(unpairedRegCells,:);
 
-        regOrientation = cellfun(@(x) regionprops(x,'Orientation'),...
-            {regImage_shifted{1,unpairedRegCells}},'UniformOutput',false);
-        fullReg.orientation(newInds,1) =...
-            cell2mat(cellfun(@(x) x.Orientation, regOrientation, 'UniformOutput',false))';
+        for ts = 1:length(unpairedRegCells)
+            regOrientation = regionprops(regImage_shifted{1,unpairedRegCells(ts)},'Orientation');
+            fullReg.orientation(newInds(ts),1) = regOrientation.Orientation;
+        end
+        %regOrientation = cellfun(@(x) regionprops(x,'Orientation'),...
+        %    {regImage_shifted{1,unpairedRegCells}},'UniformOutput',false);
+        %fullReg.orientation(newInds,1) =...
+        %    cell2mat(cellfun(@(x) x.Orientation, regOrientation, 'UniformOutput',false))'; %Why doesn't this work anymore?
+        
 
         fullRegImage(1,newInds) = {regImage_shifted{1,unpairedRegCells}};
         fullRegROIavg(1,newInds) = {regAvg_shifted{1,unpairedRegCells}};
@@ -527,7 +578,8 @@ if matchup==1
 end
 end
 
-try; close(mixFig); end %#ok<NOSEM>
+try; close(mixFig); end %#ok<TRYNC,NOSEM>
+try; close(regMixFig); end %#ok<TRYNC,NOSEM>
 
 end
 %{
