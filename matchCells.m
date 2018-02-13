@@ -43,7 +43,8 @@ else
     fullReg.orientation = cell2mat(cellfun(@(x) x.Orientation, baseOrientation, 'UniformOutput',false))';
     
     fullRegImage = baseImage;
-    fullRegROIavg = MakeAvgROI(NeuronImage,NeuronAvg);
+    fullROIavg = MakeAvgROI(fullRegImage,NeuronAvg);
+    fullRegROIavg = AddCellMaskBuffer(fullRegROIavg(fixThese), bufferWidth);
     
     save(fullfile(base_path,'fullReg.mat'),'fullReg','-v7.3')
     save(fullfile(base_path,'fullRegImage.mat'),'fullRegImage','-v7.3')
@@ -96,7 +97,7 @@ if matchup==1
             load(fullfile(reg_path,'RegisteredImageSLbuffered.mat'))
         catch
             disp(['Failed to find buffered image for ' regtitle ', fixing now'])
-            AddRegBuffer(baseImage, reg_path, bufferWidth)
+            AddRegBuffer(fullRegImage, reg_path, bufferWidth)
             load(fullfile(reg_path,'RegisteredImageSLbuffered.mat'))
         end
     end
@@ -210,7 +211,7 @@ if matchup==1
         hold off
         
         %Offer editing
-        workWith = questdlg('Want to edit registration?','Edit registration','Paired','Unpaired','Done','Done');
+        workWith = questdlg('Want to edit registration?','Edit registration','Unpaired','Paired','Done','Done');
         switch workWith
             case 'Unpaired'
                 didSomething = 0;
@@ -234,7 +235,13 @@ if matchup==1
 
                                 hold off
                                 imshow(overlay,overlayRef);
-                                mixFig.Position = [450 250 900 700]; 
+                                mixFig.Position = mixFigPos; 
+                                vertLines = 150:150:size(overlay,2); horizLines = 150:150:size(overlay,1);
+                                hold on
+                                for vl = 1:length(vertLines); plot([vertLines(vl) vertLines(vl)], [0 size(overlay,1)],'w'); end
+                                for hl = 1:length(horizLines); plot([0 size(overlay,2)], [horizLines(hl) horizLines(hl)],'w'); end
+                                hold off
+                                
                             case 0 %Get "zoom" area
                                 [zx, zy] = ginput(1); zx = round(zx); zy = round(zy);
                                 zoomRange = 100;
@@ -277,16 +284,28 @@ if matchup==1
                         if zoomedIn == 1; zoomCoords = [zoomLeft zoomLeft zoomRight zoomRight zoomLeft; zoomTop zoomBot zoomBot zoomTop zoomTop];end
                         
                         %Get pair of cells to force like in manual_reg_SL
-                        baseFig = figure('name','Base Session Masks', 'position',...
-                            [100, 100, size(baseUnpaired,2)*1.5, size(baseUnpaired,1)*1.5]);
+                        baseFig = figure('name','Base Session Masks');
+                        %baseFig.Position = [100, 100, size(baseUnpaired,2)*1.5, size(baseUnpaired,1)*1.5]);
+                        baseFig.Position = mixFigPos;
                         hold off; imagesc(baseUnpaired); title('Base Session Masks')
                         if zoomedIn==1; hold on; plot(zoomCoords(1,:),zoomCoords(2,:),'r'); hold off; end
-
-                        regFig = figure('name','Reg Session Masks','position',...
-                            [100+size(baseUnpaired,2)*1.5 100 size(regUnpaired,2)*1.5 size(regUnpaired,1)*1.5]);
+                        bvertLines = 150:150:size(baseUnpaired,2); bhorizLines = 150:150:size(baseUnpaired,1);
+                        hold on
+                        for bvl = 1:length(bvertLines); plot([bvertLines(bvl) bvertLines(bvl)], [0 size(baseUnpaired,1)],'w'); end
+                        for bhl = 1:length(bhorizLines); plot([0 size(baseUnpaired,2)], [bhorizLines(bhl) bhorizLines(bhl)],'w'); end
+                        hold off
+                        
+                        regFig = figure('name','Reg Session Masks');
+                        %regFig.Position = [100+size(baseUnpaired,2)*1.5 100 size(regUnpaired,2)*1.5 size(regUnpaired,1)*1.5]);
+                        regFig.Position = regMixFigPos;
                         hold off; imagesc(regUnpaired); title(['Reg Session Masks for ' regtitle])
                         if zoomedIn==1; hold on; plot(zoomCoords(1,:),zoomCoords(2,:),'r'); hold off; end
-
+                        cvertLines = 150:150:size(regUnpaired,2); chorizLines = 150:150:size(regUnpaired,1);
+                        hold on
+                        for cvl = 1:length(cvertLines); plot([cvertLines(cvl) cvertLines(cvl)], [0 size(regUnpaired,1)],'w'); end
+                        for chl = 1:length(chorizLines); plot([0 size(regUnpaired,2)], [chorizLines(chl) chorizLines(chl)],'w'); end
+                        hold off
+                        
                         figure(baseFig);
                         [xBase, yBase] = ginput(1);
                         %xBase = xBase + zoomCenterAdjust(1); yBase = yBase + zoomCenterAdjust(2);
