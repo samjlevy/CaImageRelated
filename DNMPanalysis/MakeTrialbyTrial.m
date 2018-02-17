@@ -7,14 +7,25 @@ switch DNMPorAll
     case 'DNMP'
         regUseType = 'sessionType';
         regUseInput = [];
+        [allfiles, position, all_PSAbool, correctBounds, badLaps, sortedSessionInds, lapNumber]...
+    = GetMegaStuff2(base_path, [], regUseType, regUseInput);
     case 'All'
         regUseType = 'vector';
         regUseInput = ones(length(reg_paths),1);
+        load(fullfile(base_path,'fullReg.mat'))
+        if length(reg_paths) < length(fullReg.RegSessions)
+            regUseInput = zeros(length(fullReg.RegSessions),1);
+            for rpI = 1:length(reg_paths)
+                thisFRRS = find(strcmpi(reg_paths{rpI},fullReg.RegSessions));
+                regUseInput(thisFRRS) = 1;
+            end
+        end
+        [allfiles, position, all_PSAbool, correctBounds, badLaps, sortedSessionInds, lapNumber]...
+            = GetMegaStuff2(base_path, reg_paths, regUseType, regUseInput);
 end
 
-
-[allfiles, position, all_PSAbool, correctBounds, badLaps, sortedSessionInds, lapNumber]...
-    = GetMegaStuff2(base_path, [], regUseType, regUseInput);
+%[allfiles, position, all_PSAbool, correctBounds, badLaps, sortedSessionInds, lapNumber]...
+%    = GetMegaStuff2(base_path, [], regUseType, regUseInput);
 
 [fixedLapNumber] = AdjustLapNumbers(lapNumber);
 

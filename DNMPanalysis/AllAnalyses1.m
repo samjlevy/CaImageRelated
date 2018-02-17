@@ -1,7 +1,6 @@
 %% Process all data
-%   Jay style mega document to run all analyses
 
-mainFolder = 'C:\Users\Sam\Desktop\DNMPfinalData'
+mainFolder = 'C:\Users\Sam\Desktop\DNMPfinalData';
 mice = {'Bellatrix', 'Polaris', 'Calisto'}; %'Europa'
 numMice = length(mice);
 
@@ -22,6 +21,12 @@ end
 
 maxDays = max(numDays);
 
+for mouseI = 1:numMice
+    accuracy{mouseI} = sessionAccuracy(cellAllFiles{mouseI});
+    accyracyRange(mouseI, 1:2) = [mean(accuracy{mouseI}),...
+        std(accuracy{mouseI})/sqrt(length(accuracy{mouseI}))];
+end
+
 %% Single Cells Stats
 
 % How many cells per day? 
@@ -31,16 +36,19 @@ maxDays = max(numDays);
 %       - How many conditions do they tend to pass criteria for?
 
 for mouseI = 1:numMice
+    %Number of cells
     numCellsToday{mouseI} = sum(cellSSI{mouseI} > 0,1);
     cellsTodayRange(mouseI,1:2) = [mean(numCellsToday{mouseI}),...
         std(numCellsToday{mouseI})/sqrt(length(numCellsToday{mouseI}))];
     
-    %cellPersistHist{mouseI} = sum(cellSSI{mouseI} > 0,2);
+    %Cell persistance
+    cellPersistHist{mouseI} = sum(cellSSI{mouseI} > 0,2);
+    cellPersistRange(mouseI, 1:2) = [mean(cellPersistHist{mouseI}),...
+        std(cellPersistHist{mouseI})/sqrt(length(cellPersistHist{mouseI}))];
     
-    
-    %[dayUse,threshAndConsec] = GetUseCells(cellTBT{mouseI}, lapPctThresh, consecLapThresh);
-    [trialReli,aboveThresh,~,~] = TrialReliability(trialbytrial, lapPctThresh);
-    [consec, enoughConsec] = ConsecutiveLaps(trialbytrial, consecLapThresh);%maxConsec
+    [dayUse,threshAndConsec] = GetUseCells(cellTBT{mouseI}, lapPctThresh, consecLapThresh);
+    %[trialReli,aboveThresh,~,~] = TrialReliability(trialbytrial, lapPctThresh);
+    %[consec, enoughConsec] = ConsecutiveLaps(trialbytrial, consecLapThresh);%maxConsec
     
 end
 
