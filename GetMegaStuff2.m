@@ -1,10 +1,16 @@
 function [allfiles, position, all_PSAbool, correctBounds, badLaps, sortedSessionInds, lapNumber]...
-    = GetMegaStuff2(base_path, reg_paths, regUseType, regUseInput)
+    = GetMegaStuff2(base_path, reg_paths, regUseType, regUseInput, deleteSilentCells)
 %This script aquires all the information from multiple files in a format thats useful
 %for going through each file in the same way later. Right now it only does the center stem, 
 %but it's possible it would work for any timestamps where there is a study/test l/r.
 %Doesn't yet handle forced/unforced, mostly because GetBehavior for that
 %isn't ready yet. 
+%Here, silent cells are only those that aren't found once sessions are taken out
+
+if nargin < 5 || isempty(deleteSilentCells)
+   disp('No answer on delete silent cells. Leaving them in, be careful')
+   deleteSilentCells = 0;
+end
 
 if ~exist(fullfile(base_path,'fullReg.mat'),'file')
     disp('need to run cell registration first')
@@ -25,7 +31,8 @@ switch regUseType
         %regUse = fullReg.sessionType==regUseInput; %1/2 for DNMP/ForcedUnforced
 end
 
-allfiles = [base_path; reg_paths(:)];
+%allfiles = [base_path; reg_paths(:)];
+allfiles = [base_path; fullReg.RegSessions(:)];
 filepts = cellfun(@(x) strsplit(x,'_'),allfiles,'UniformOutput',false);
 dates = cell2mat(cellfun(@(x) str2double(x{2}(1:6)),filepts,'UniformOutput',false));
 [~,howSort] = sort(dates);
@@ -81,6 +88,13 @@ for thisFile = 1:length(allfiles)
         lapNumber(thisFile).(ss{block}).wrong=...
             lapNum.(ss{block})(correct.(ss{block})==0);
     end
+    
+end
+
+if deleteSilentCells == 1
+    disp('Deleteing silent cells')
+    deleteTheseCells = find(sum(sortedSessionInds,2)==0);
+     
     
 end
 %{
