@@ -22,7 +22,7 @@ for mouseI = 1:numMice
     cellSSI{mouseI} = sortedSessionInds;
     cellAllFiles{mouseI} = allfiles;
     
-    numDays(mouseI) = size(sortedSessionInds,2);
+    numDays(mouseI) = size(cellSSI{mouseI},2);
 end
 
 maxDays = max(numDays);
@@ -145,11 +145,13 @@ for mouseI = 1:numMice
         cellsUse = logical(sum(threshAndConsec{mouseI}(:,:,condPairs(cpI,:)),3) > 0); %Activity thresholded
         numSplitters{mouseI}(cpI,1:numDays(mouseI)) = sum(thisCellSplits{mouseI}{cpI}.*cellsUse,1);
         pctSplitters{mouseI}(cpI,1:numDays(mouseI)) = numSplitters{mouseI}(cpI,:)./sum(cellsUse,1);
+        
+        thisCellSplits{mouseI}{cpI} = logical(thisCellSplits{mouseI}{cpI}.*dayUse{mouseI}); %Activity threshold. Probably fine here?
     end
     
     %These need to be activity thresholded
     splittersLR{mouseI} = thisCellSplits{mouseI}{1} + thisCellSplits{mouseI}{2} > 0;
-    splittersST{mouseI} = thisCellSplits{mouseI}{1} + thisCellSplits{mouseI}{2} > 0;
+    splittersST{mouseI} = thisCellSplits{mouseI}{3} + thisCellSplits{mouseI}{4} > 0;
     splittersLRonly{mouseI} = splittersLR{mouseI}; splittersLRonly{mouseI}(splittersST{mouseI}==1) = 0;
     splittersSTonly{mouseI} = splittersST{mouseI}; splittersSTonly{mouseI}(splittersLR{mouseI}==1) = 0;
     splittersBoth{mouseI} = (splittersLR{mouseI} + splittersST{mouseI}) == 2;
@@ -163,6 +165,8 @@ for mouseI = 1:numMice
                              sum(splittersBoth{mouseI},1)./cellsActiveToday{mouseI}]; %Both only
     
 end
+
+
 
 
 
