@@ -28,6 +28,7 @@ xBin = cell(numCells, numConds);
 TMap_unsmoothed = cell(numCells, numConds);
 TCounts = cell(numCells, numConds);
 TMap_gauss = cell(numCells, numConds);
+TMap_zRates = cell(numCells, numConds);
 
 Xrange = xmax-xmin;
 nXBins = ceil(Xrange/cmperbin); 
@@ -94,14 +95,6 @@ for cellI = 1:numCells
                     'cmperbin',cmperbin,'smooth',true);
             %}
 
-                %{
-                [OccMap,RunOccMap,xBin] = MakeOccMapLin(posX,good,isrunning,xEdges);
-                 [TMap_unsmoothed,TCounts,TMap_gauss] = ...
-                    MakePlacefieldLin(logical(spikeTs),posX,xEdges,RunOccMap,...
-                    'cmperbin',cmperbin,'smooth',true);
-
-                %}
-
             %make tuning curves
             %PlaceTuningCurveLin(trialbytrial, aboveThresh, nPerms, [xmin xmax], xEdges);
 
@@ -119,6 +112,11 @@ for cellI = 1:numCells
         end %use this sess
         end
     end
+    
+    %Get z-scores of firing rates across conditions
+    zRates = zscore(reshape([TMap_unsmoothed{cellI,:,tSess}]',nXBins,numConds)');
+    TMap_zRates(cellI,1:numConds,tSess) = num2cell(zRates,2)';
+    
     if sum(update_points == cellI)==1
         p.progress;
     end
@@ -130,7 +128,7 @@ if saveThis==1
         saveName = 'PFsLin.mat';
     end
     savePath = saveName; 
-    save(savePath,'OccMap','RunOccMap', 'xBin', 'TMap_unsmoothed', 'TCounts') %, 'TMap_gauss'
+    save(savePath,'OccMap','RunOccMap', 'xBin', 'TMap_unsmoothed', 'TCounts', 'TMap_zRates') %, 'TMap_gauss'
 end
     
 end
