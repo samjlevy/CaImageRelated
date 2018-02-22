@@ -4,15 +4,16 @@ function [reliability, aboveThresh, lapSpikes, goodSpikes] = TrialReliability(tr
 %lapSpikes: average number of spikes per lap
 %goodSpikes: average number of spikes per lap for laps with hits
 
+numCells = size(trialbytrial(1).trialPSAbool{1},1);
+numDays = length(unique(trialbytrial(1).sessID));
+numConds = length(trialbytrial);
 
-
-
-reliability = cell(length(trialbytrial),1);
+reliability = zeros(numCells, numDays, numConds);
 aboveThresh = cell(length(trialbytrial),1);
 lapSpikes = cell(length(trialbytrial),1);
 goodSpikes = cell(length(trialbytrial),1);
 
-for condType = 1:length(trialbytrial)
+for condType = 1:numConds
     for sess = 1:max(trialbytrial(condType).sessID)
         hitsThisCond = [];
         spikesThisCond = [];
@@ -26,7 +27,7 @@ for condType = 1:length(trialbytrial)
         %cellfun(@(x) any(x(thisCell,:)), (trialbytrial(condType).trialPSAbool(lapsUse)));
        
         reliab = sum(hitsThisCond,2)/length(thisLaps);
-        reliability{condType}(:,sess) = reliab;
+        reliability(:,sess,condType) = reliab;
         aboveThresh{condType}(:,sess) = reliab >= thresh;
         
         lapSpikes{condType}(:,sess) = sum(spikesThisCond,2)/length(thisLaps);

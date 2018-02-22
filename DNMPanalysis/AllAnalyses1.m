@@ -15,14 +15,18 @@ posThresh = 3;
 numBins = 8;
 cmperbin = (max(xlims)-min(xlims))/numBins;
 
+disp(['Loading stuff'])
 for mouseI = 1:numMice
-    trialbytrial = []; sortedSessionInds = []; allfiles = [];
+    
     load(fullfile(mainFolder,mice{mouseI},'trialbytrial.mat'))
     cellTBT{mouseI} = trialbytrial;
     cellSSI{mouseI} = sortedSessionInds;
     cellAllFiles{mouseI} = allfiles;
     
     numDays(mouseI) = size(cellSSI{mouseI},2);
+    numCells(mouseI) = size(cellSSI{mouseI},1);
+    clear trialbytrial sortedSessionInds allFiles
+    disp(['Mouse ' num2str(mouseI) ' completed'])
 end
 
 maxDays = max(numDays);
@@ -39,17 +43,20 @@ end
 dayUse = cell(1,numMice); threshAndConsec = cell(1,numMice);
 for mouseI = 1:numMice
     [dayUse{mouseI},threshAndConsec{mouseI}] = GetUseCells(cellTBT{mouseI}, lapPctThresh, consecLapThresh);
+    [trialReli{mouseI},~,~,~] = TrialReliability(cellTBT{mouseI}, lapPctThresh);
+    cellsActiveToday{mouseI} = sum(dayUse{mouseI},1);
 end
+
 
 for mouseI = 1:numMice
     saveName = fullfile(mainFolder,mice{mouseI},'PFsLin.mat');
     switch exist(fullfile(mainFolder,mice{mouseI},'PFsLin.mat'),'file')
         case 0
             disp(['no placefields found for ' mice{mouseI} ', making now'])
-            [~, ~, ~, ~, ~, ~] =...
-                PFsLinTrialbyTrial(cellTBT{mouseI},xlims, cmperbin, minspeed, 1, saveName, cellSSI{mouseI});
-        case 1
-            disp(['found placefields for ' mice{mouseI} ', you"re good'])
+            [~, ~, ~, ~, ~] =... %, TMap_gauss
+                PFsLinTrialbyTrial(cellTBT{mouseI},xlims, cmperbin, minspeed, 1, saveName, trialReli{mouseI});
+        case 2
+            disp(['found placefields for ' mice{mouseI} ', you are good'])
     end
 end
 
@@ -89,6 +96,7 @@ for mouseI = 1:numMice
     %When are the cells active
     numCondsActive{mouseI} = sum(threshAndConsec{mouseI},3);
     
+    cellsThatReturnIDs{mouseI} = cellPersistHist{mouseI} > 1;
     for dayI = 1:numDays(mouseI)
         dailyNumCondsActiveCells{mouseI,dayI} = numCondsActive{mouseI}(logical(dayUse{mouseI}(:,dayI)), dayI); 
         dailyNCAmean(mouseI,dayI) = mean(dailyNumCondsActiveCells{mouseI,dayI});
@@ -97,8 +105,13 @@ for mouseI = 1:numMice
         dailyOnlyActiveOneRaw(mouseI, dayI) = sum(dailyNumCondsActiveCells{mouseI, dayI}==1); %Raw number
         dailyOnlyActiveOnePct(mouseI, dayI) = dailyOnlyActiveOneRaw(mouseI, dayI)/length(dailyNumCondsActiveCells{mouseI, dayI}); %Percent
          
-        %[mean(cellfun(@length,dailyNumCondsActiveCells(mouseI,:))
+        dayCellsThatReturn{mouseI}(dayI) = sum((cellSSI{mouseI}(:,dayI) > 0).*cellsThatReturnIDs{mouseI});
+        
     end
+    dayCellsThatReturnPct{mouseI} = dayCellsThatReturn{mouseI}./numCellsToday{mouseI};
+    dayCellsThatReturnRange(mouseI,1:2) = [mean(dayCellsThatReturn{mouseI}) standarderrorSL(dayCellsThatReturn{mouseI})];
+    dayCellsThatReturnPctRange(mouseI,1:2) = [mean(dayCellsThatReturnPct{mouseI}) standarderrorSL(dayCellsThatReturnPct{mouseI})];
+    
     numCondsActiveRange(mouseI, 1:2) = [nanmean(dailyNCAmean(mouseI,:)), standarderrorSL(dailyNCAmean(mouseI,~isnan(dailyNCAmean(mouseI,:))))];
     activeMoreThanOneRange(mouseI, 1:2) = ...
         [mean(dailyOnlyActiveOnePct(mouseI,dailyOnlyActiveOnePct(mouseI,:) > 0))...
@@ -118,8 +131,8 @@ for mouseI = 1:numMice
 end
 
 for mouseI = 1:numMice
-    [trialReli{mouseI},~,~,~] = TrialReliability(trialbytrial, lapPctThresh);
-    [maxConsec{mouseI}, ~] = ConsecutiveLaps(trialbytrial, consecLapThresh);
+    [trialReli{mouseI},~,~,~] = TrialReliability(cellTBT{mouseI}, lapPctThresh);
+    [maxConsec{mouseI}, ~] = ConsecutiveLaps(cellTBT{mouseI}, consecLapThresh);
     
     %Histograms to look at trial reliability and number of maxConsecutive
     %laps
@@ -149,7 +162,6 @@ for mouseI = 1:numMice
         thisCellSplits{mouseI}{cpI} = logical(thisCellSplits{mouseI}{cpI}.*dayUse{mouseI}); %Activity threshold. Probably fine here?
     end
     
-    %These need to be activity thresholded
     splittersLR{mouseI} = thisCellSplits{mouseI}{1} + thisCellSplits{mouseI}{2} > 0;
     splittersST{mouseI} = thisCellSplits{mouseI}{3} + thisCellSplits{mouseI}{4} > 0;
     splittersLRonly{mouseI} = splittersLR{mouseI}; splittersLRonly{mouseI}(splittersST{mouseI}==1) = 0;
@@ -166,14 +178,59 @@ for mouseI = 1:numMice
     
 end
 
+% In theory maybe still should do shuffling, diff results (stricter) than ANOVA
 
-
-
-
-
-% If active, % days a splitter
-% Become splitter vs. not 
-%
+for mouseI = 1:numMice
+    numDaysSplitterLR{mouseI} = nan(numCells(mouseI),1); splitterCOMLR{mouseI} = nan(numCells(mouseI),1);
+    numDaysSplitterST{mouseI} = nan(numCells(mouseI),1); splitterCOMST{mouseI} = nan(numCells(mouseI),1);
+    numDaysSplitterBOTH{mouseI} = nan(numCells(mouseI),1); splitterCOMBOTH{mouseI} = nan(numCells(mouseI),1);
+    for cellI = 1:numCells(mouseI)
+        %If the cell splits LR/ST/Both ever and is active for more than one day
+        numDaysPresent = sum(dayUse{mouseI}(cellI,:),2);
+        if numDaysPresent > 1
+            daysPresent = dayUse{mouseI}(cellI,:);
+            dayV = 1:numDaysPresent; dayAlign = zeros(1,length(daysPresent));
+            dayAlign(daysPresent) = dayV;
+            daysActiveCOM = sum(dayAlign)/numDaysPresent;
+            splitterWeight = dayAlign;
+            splitterWeight(daysPresent) = splitterWeight(daysPresent) - daysActiveCOM;
+            
+            LRsplitterDays = splittersLR{mouseI}(cellI,:);
+            numLRsplitterDays = sum(splittersLR{mouseI}(cellI,:),2);
+            if numLRsplitterDays > 0
+                numDaysSplitterLR{mouseI}(cellI) = numLRsplitterDays;
+                splitterCOMLR{mouseI}(cellI) = sum(splitterWeight(LRsplitterDays))/numDaysPresent; %offset from active days COM
+            end
+            
+            STsplitterDays = splittersST{mouseI}(cellI,:);
+            numSTsplitterDays = sum(STsplitterDays,2);
+            if numSTsplitterDays > 0
+                numDaysSplitterST{mouseI}(cellI) = numSTsplitterDays;
+                splitterCOMST{mouseI}(cellI) = sum(splitterWeight(STsplitterDays))/numDaysPresent; %offset from active days COM
+            end
+            
+            BOTHsplitterDays = splittersBoth{mouseI}(cellI,:);
+            numBothsplitterDays = sum(splittersBoth{mouseI}(cellI,:),2);
+            if numLRsplitterDays > 0
+                numDaysSplitterBOTH{mouseI}(cellI) = numBothsplitterDays;
+                splitterCOMBOTH{mouseI}(cellI) = sum(splitterWeight(BOTHsplitterDays))/numDaysPresent; %offset from active days COM
+            end 
+        end
+    end
+    
+    % Only includes cells that show up more than 1 day and split at least 1 day; won't equal some number of splitters or active cells
+    % early bias, no bias didn't split all days, late bias, split all days
+    splitterLRdayBias(mouseI,[1 3]) = [sum(splitterCOMLR{mouseI}<0) sum(splitterCOMLR{mouseI}>0)];
+        splitterLRdayBias(mouseI, 2) = sum((splitterCOMLR{mouseI}==0).*(numDaysSplitterLR{mouseI}~=daysEachCellActive{mouseI}));
+        splitterLRdayBias(mouseI, 4) = sum((splitterCOMLR{mouseI}==0).*(numDaysSplitterLR{mouseI}==daysEachCellActive{mouseI}));
+    splitterSTdayBias(mouseI,[1 3]) = [sum(splitterCOMST{mouseI}<0) sum(splitterCOMST{mouseI}>0)];
+        splitterSTdayBias(mouseI, 2) = sum((splitterCOMST{mouseI}==0).*(numDaysSplitterST{mouseI}~=daysEachCellActive{mouseI}));
+        splitterSTdayBias(mouseI, 4) = sum((splitterCOMST{mouseI}==0).*(numDaysSplitterST{mouseI}==daysEachCellActive{mouseI}));
+    splitterBOTHdayBias(mouseI,[1 3]) = [sum(splitterCOMBOTH{mouseI}<0) sum(splitterCOMBOTH{mouseI}>0)];
+        splitterBOTHdayBias(mouseI, 2) = sum((splitterCOMBOTH{mouseI}==0).*(numDaysSplitterBOTH{mouseI}~=daysEachCellActive{mouseI}));
+        splitterBOTHdayBias(mouseI, 4) = sum((splitterCOMBOTH{mouseI}==0).*(numDaysSplitterBOTH{mouseI}==daysEachCellActive{mouseI}));
+        
+end
 
 %% Place Cells
 

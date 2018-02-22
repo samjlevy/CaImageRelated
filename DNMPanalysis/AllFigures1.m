@@ -111,7 +111,7 @@ for mouseI = 1:numMice
         histogram('BinEdges', histEdges, 'BinCounts', bars, 'FaceColor', colorsU{cpI})
         hold on
         for binI = 1:size(counts,2)
-            errorB(binI) = standarderrorSL(counts(:,binI));
+            errorB(binI) = standarderrorSL(counts(:,binI)); % This should probably leave out days with 0 in the bin
             plot([histMids(binI) histMids(binI)], [bars(binI)-errorB(binI) bars(binI)+errorB(binI)],...
                 'k', 'LineWidth', 2)
         end

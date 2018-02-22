@@ -1,5 +1,6 @@
-function [OccMap, RunOccMap, xBin, TMap_unsmoothed, TCounts, TMap_gauss] =...
-    PFsLinTrialbyTrial(trialbytrial,xlims, cmperbin, minspeed, saveThis, saveName, sortedSessionInds)
+function [OccMap, RunOccMap, xBin, TMap_unsmoothed, TCounts] =...
+    PFsLinTrialbyTrial(trialbytrial, xlims, cmperbin, minspeed, saveThis, saveName, trialReli)
+%, TMap_gauss
 %aboveThresh, 
 %Thia version does not pool data across sessions.
 sessions = unique(trialbytrial(1).sessID);
@@ -9,8 +10,11 @@ numConds = length(trialbytrial);
 xmin = xlims(1);
 xmax = xlims(2);
 
-if isempty(sortedSessionInds)
-    sortedSessionInds = ones(numCells,numSess);
+if isempty(trialReli)
+    trialReli = ones(numCells,numSess,numConds);
+end
+if size(trialReli,3) < 3
+    trialReli(:,:,2:numConds) = trialReli;
 end
 %sessionUse = false(size(aboveThresh{1,1}));
 %for ss = 1:numConds
@@ -40,7 +44,7 @@ for cellI = 1:numCells
     for condType = 1:4
         for tSess = 1:numSess
         
-        if sortedSessionInds(cellI,tSess) > 0
+        if trialReli(cellI, tSess, condType) > 0
             lapsUse = logical(trialbytrial(condType).sessID == sessions(tSess));
         
             if any(lapsUse)
@@ -78,9 +82,9 @@ for cellI = 1:numCells
 
             [OccMap{cellI,condType,tSess},RunOccMap{cellI,condType,tSess},xBin{cellI,condType,tSess}]...
                 = MakeOccMapLin(posX,good,isrunning,xEdges);
-            [TMap_unsmoothed{cellI,condType,tSess},TCounts{cellI,condType,tSess},TMap_gauss{cellI,condType,tSess}]...
+            [TMap_unsmoothed{cellI,condType,tSess},TCounts{cellI,condType,tSess}]...%TMap_gauss{cellI,condType,tSess}
                 = MakePlacefieldLin(logical(spikeTs),posX,xEdges,RunOccMap{cellI,condType,tSess},...
-                    'cmperbin',cmperbin,'smooth',true);
+                    'cmperbin',cmperbin,'smooth',false); %false
             %{
                 %Test    
                 [OccMap,RunOccMap,xBin]...
@@ -105,13 +109,13 @@ for cellI = 1:numCells
             else
                 TMap_unsmoothed{cellI,condType,tSess} = TMap_blank; 
                 TCounts{cellI,condType,tSess} = 0;
-                TMap_gauss{cellI,condType,tSess} = TMap_blank;
+                %TMap_gauss{cellI,condType,tSess} = TMap_blank;
 
             end %any laps
         else
             TMap_unsmoothed{cellI,condType,tSess} = TMap_blank; 
             TCounts{cellI,condType,tSess} = 0;
-            TMap_gauss{cellI,condType,tSess} = TMap_blank;
+            %TMap_gauss{cellI,condType,tSess} = TMap_blank;
         end %use this sess
         end
     end
@@ -126,7 +130,7 @@ if saveThis==1
         saveName = 'PFsLin.mat';
     end
     savePath = saveName; 
-    save(savePath,'OccMap','RunOccMap', 'xBin', 'TMap_unsmoothed', 'TCounts', 'TMap_gauss') 
+    save(savePath,'OccMap','RunOccMap', 'xBin', 'TMap_unsmoothed', 'TCounts') %, 'TMap_gauss'
 end
     
 end
