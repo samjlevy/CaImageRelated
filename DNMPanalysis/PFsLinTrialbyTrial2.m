@@ -1,14 +1,14 @@
 function [PlaceFieldData] =...
-    PFsLinTrialbyTrial2(trialbytrial, xlims, cmperbin, minspeed, saveThis, saveName, trialReli, sameOccMap, doSmoothing)
+    PFsLinTrialbyTrial2(trialbytrial, xlims, cmperbin, minspeed, varargin)
 %, TMap_gauss
 %aboveThresh, 
     p = inputParser;
     p.addRequired('trialbytrial');
     p.addRequired('xlims');
     p.addRequired('cmperbin');
-    p.addParameter('doSmoothing',true,@(x) islogical(x)); 
-    p.addParameter('trialReli', , ); 
-    p.addParameter('sameOccMap',true,@(x) islogical(x)); 
+    p.addRequired('minspeed');
+    p.addParameter('smooth',true,@(x) islogical(x)); 
+    p.addParameter('trialReli', , );  
     p.addParameter('smooth',);
     p.addParameter('condPairs',1:length(trialbytrial));
 
@@ -119,35 +119,19 @@ for condType = 1:4 %condPairI = 1:size(condPairs,1)
 end    
 p.stop;
 
+%SpatialInformationSL(RunOccMap,TCounts)
+
+%Get z-scores of firing rates across conditions
 for cellI = 1:numCells
     for tSess = 1:numSess
-        %Get z-scores of firing rates across conditions
         allRates = reshape([TMap_unsmoothed{cellI,:,tSess}]',nXBins,numConds)';
         zRates = zscore(allRates);
-        TMap_zRates(cellI,1:numConds,tSess) = num2cell(zRates,2)';
-        
-        
-        %meanRate = mean(allRates(:));
-        %informationContent = sum(allOccMap.*(allRates(:)/meanRate).*log2(allRates(:)/meanRate))
-       
-        %Spatial information (Will's version)
-        allOccMap = [RunOccMap{:,tSess}]';
-        P_x = allOccMap/sum(allOccMap); %P_xi
-         allCounts = [TCounts{cellI,:,tSess}]';
-        P_k1 = sum(allCounts)/sum(allOccMap);
-        P_k0 = 1 - P_k1;
-        
-        P_1x = allRates(:);
-        P_0x = 1 - P_1x;
-        
-        I_k1 = P_1x.*log(P_1x./P_k1);
-        I_k0 = P_0x.*log(P_0x./P_k0);
-        
-        Ipos = I_k1 + I_k0;
-        
-        MI = nansum(P_x.*Ipos);
+        TMap_zRates(cellI,1:numConds,tSess) = num2cell(zRates,2)';       
     end
 end
+        
+       
+        
 
 
 

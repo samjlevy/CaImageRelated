@@ -15,7 +15,7 @@ posThresh = 3;
 numBins = 8;
 cmperbin = (max(xlims)-min(xlims))/numBins;
 
-disp(['Loading stuff'])
+disp('Loading stuff')
 for mouseI = 1:numMice
     
     load(fullfile(mainFolder,mice{mouseI},'trialbytrial.mat'))
@@ -40,6 +40,7 @@ end
 %Big caveat: right now, sortedSessionInds etc. have rows that have nothing
 %in them b/c blank entries for cells got left in when sessions were taken
 %out during MakeTrialByTrial > GetMegaStuff2
+disp('Getting reliability')
 dayUse = cell(1,numMice); threshAndConsec = cell(1,numMice);
 for mouseI = 1:numMice
     [dayUse{mouseI},threshAndConsec{mouseI}] = GetUseCells(cellTBT{mouseI}, lapPctThresh, consecLapThresh);
@@ -55,6 +56,8 @@ for mouseI = 1:numMice
             disp(['no placefields found for ' mice{mouseI} ', making now'])
             [~, ~, ~, ~, ~] =... %, TMap_gauss
                 PFsLinTrialbyTrial(cellTBT{mouseI},xlims, cmperbin, minspeed, 1, saveName, trialReli{mouseI});
+            %PFsLinTrialbyTrial2(cellTBT{mouseI}, xlims, cmperbin, minspeed,...
+            %    'saveThis',true,'saveName',saveName,'trialReli',trialReli{mouseI},'smooth',false);
         case 2
             disp(['found placefields for ' mice{mouseI} ', you are good'])
     end
@@ -233,6 +236,30 @@ for mouseI = 1:numMice
 end
 
 %% Place Cells
+numShuffles = 100;
+% Shuffle within a condition for peak place firing
+shuffleDir = 'PosShuffle';
+
+
+
+for mouseI = 1:numMice
+    
+    TMap_shuffled = cell(numShuffles,1);
+    shuffDirFull = fullfile(mainFolder,mice{mouseI},shuffleDir);
+    if ~exist(shuffDirFull,'dir')
+        mkdir(shuffDirFull)
+    end
+    tic
+    for shuffleI = 101:1000
+        shuffledTBT = shuffleTBTposition(cellTBT{mouseI});
+        saveName = fullfile(shuffDirFull,['shuffPos' num2str(shuffleI) '.mat']);
+        [~, ~, ~, TMap_shuffled{shuffleI}, ~] =... 
+                    PFsLinTrialbyTrial(cellTBT{mouseI},xlims, cmperbin, minspeed, 1, saveName, trialReli{mouseI});
+        disp(['done shuffle ' num2str(shuffleI) ])
+   
+    end
+    toc
+end
 
 %ANOVA by bin
 
