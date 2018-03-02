@@ -37,18 +37,20 @@ for mouseI = 1:numMice
         std(accuracy{mouseI})/sqrt(length(accuracy{mouseI}))];
 end
 
-%Big caveat: right now, sortedSessionInds etc. have rows that have nothing
-%in them b/c blank entries for cells got left in when sessions were taken
-%out during MakeTrialByTrial > GetMegaStuff2
+for mouseI = 1:numMice
+    [xMax(mouseI,:), xMin(mouseI,:)] = GetTBTlims(cellTBT{mouseI});
+end
+
 disp('Getting reliability')
 dayUse = cell(1,numMice); threshAndConsec = cell(1,numMice);
 for mouseI = 1:numMice
     [dayUse{mouseI},threshAndConsec{mouseI}] = GetUseCells(cellTBT{mouseI}, lapPctThresh, consecLapThresh);
     [trialReli{mouseI},~,~,~] = TrialReliability(cellTBT{mouseI}, lapPctThresh);
     cellsActiveToday{mouseI} = sum(dayUse{mouseI},1);
+    disp(['Mouse ' num2str(mouseI) ' completed'])
 end
 
-
+%Place fields
 for mouseI = 1:numMice
     saveName = fullfile(mainFolder,mice{mouseI},'PFsLin.mat');
     switch exist(fullfile(mainFolder,mice{mouseI},'PFsLin.mat'),'file')
@@ -59,11 +61,20 @@ for mouseI = 1:numMice
             %PFsLinTrialbyTrial2(cellTBT{mouseI}, xlims, cmperbin, minspeed,...
             %    'saveThis',true,'saveName',saveName,'trialReli',trialReli{mouseI},'smooth',false);
         case 2
-            disp(['found placefields for ' mice{mouseI} ', you are good'])
+            disp(['found placefields for ' mice{mouseI} ', all good'])
     end
 end
 
 Conds = GetTBTconds(cellTBT{1});
+%% Plot rasters for all good cells
+
+for mouseI = 1:numMice
+    saveDir = fullfile(mainFolder,mice{mouseI});
+    cellsUse = find(sum(dayUse{mouseI},2)>0);
+    PlotRastersPDF(cellTBT{mouseI}, cellSSI{mouseI}, cellAllFiles{mouseI}, cellsUse, saveDir, mice{mouseI});
+end
+
+
 %% Single Cells Stats
 
 % How many cells per day? 
@@ -236,12 +247,12 @@ for mouseI = 1:numMice
 end
 
 %% Place Cells
-numShuffles = 100;
+numShuffles = 1000; %takes about an hour
 % Shuffle within a condition for peak place firing
 shuffleDir = 'PosShuffle';
 
 
-
+%Make position shuffles
 for mouseI = 1:numMice
     
     TMap_shuffled = cell(numShuffles,1);
@@ -249,18 +260,83 @@ for mouseI = 1:numMice
     if ~exist(shuffDirFull,'dir')
         mkdir(shuffDirFull)
     end
-    tic
-    for shuffleI = 101:1000
+    
+    for shuffleI = 1:numShuffles
         shuffledTBT = shuffleTBTposition(cellTBT{mouseI});
         saveName = fullfile(shuffDirFull,['shuffPos' num2str(shuffleI) '.mat']);
         [~, ~, ~, TMap_shuffled{shuffleI}, ~] =... 
-                    PFsLinTrialbyTrial(cellTBT{mouseI},xlims, cmperbin, minspeed, 1, saveName, trialReli{mouseI});
+                    PFsLinTrialbyTrial(shuffledTBT,xlims, cmperbin, minspeed, 1, saveName, trialReli{mouseI});
         disp(['done shuffle ' num2str(shuffleI) ])
    
     end
-    toc
+    save(fullfile(shuffDirFull,allTMap_shuffled.mat),'TMap_shuffled')
 end
 
+%Load shuffles, organize, check placefields
+for mouseI = 1:numMice
+    %Load reorganized shuffles
+    shuffDirFull = fullfile(mainFolder,mice{mouseI},shuffleDir);
+    if exist(fullfile(shuffDirFull,'allShuffledRates.mat'),'file')==2
+        load(fullfile(shuffDirFull,'allShuffledRates.mat'))
+    else
+        disp('Could not find all tmap shuffled, loading shuffled PFs')
+        shuffFiles = dir([shuffDirFull '\shuffPos*.mat']);
+        shuffFiles([shuffFiles.isdir]) = [];
+        
+        tic
+        allTMap_shuffled = cell(length(shuffFiles),1);
+        for fileI = 1:length(shuffFiles) %Takes a few minues with 1000 shuffles
+            TMap_unsmoothed = [];
+            load(fullfile(shuffDirFull,shuffFiles(fileI).name),'TMap_unsmoothed')
+            allTMap_shuffled{fileI} = TMap_unsmoothed;
+        end
+        toc
+        %save((fullfile(shuffDirFull,'allTMap_shuffled.mat')),'allTMap_shuffled')
+        %disp('Saved allTMap_shuffled')
+    
+        %Reorganize to make sorting, etc. easier
+        numBins = length(allTMap_unsmoothed{1}{1,1,1});
+        nShuffles = length(allTMap_shuffled);
+        allShuffledRates = cell(numCells(mouseI),4,numDays(mouseI));
+        tic
+        for cellI = 1:numCells(mouseI) %Takes a few minues with 1000 shuffles
+            for condI = 1:4
+                for dayI = 1:numDays(mouseI)
+                    allShuffledRates{cellI,condI,dayI} = nan(nShuffles, numBins);
+                    for shuffI = 1:nShuffles
+                        allShuffledRates{cellI,condI,dayI}(shuffI,:) = allTMap_shuffled{shuffI}{cellI,condI,dayI};
+                    end
+                end
+            end
+        end
+        toc         
+        
+        save((fullfile(shuffDirFull,'allShuffledRates.mat')),'allShuffledRates','-v7.3')
+        disp('Saved allShuffledRates')
+        allTMap_shuffled = [];
+    end
+    
+    %Sort, etc. 
+    
+    shuffledRatesSorted2 = cell(size(allShuffledRates));
+    shuffledRatesMean = cell(size(allShuffledRates));
+    shuffledRates95 = cell(size(allShuffledRates));
+    pInd = round((1-pThresh)*nShuffles);
+    
+    for cellI = 1:numCells(mouseI) %Takes a few minues with 1000 shuffles
+        for condI = 1:4
+            for dayI = 1:numDays(mouseI)
+                shuffledRatesSorted2{cellI,condI,dayI} = sort(allShuffledRates{cellI,condI,dayI},1);
+                %shuffledRatesMean{cellI,condI,dayI} = nanmean(shuffledRatesSorted{cellI,condI,dayI},1); %Uses nanmean
+                %shuffledRates95{cellI,condI,dayI} = shuffledRatesSorted{cellI,condI,dayI}(pInd,:);
+            end
+        end
+    end
+    toc
+    
+    
+    
+end
 %ANOVA by bin
 
 %% Population Vector Correlations

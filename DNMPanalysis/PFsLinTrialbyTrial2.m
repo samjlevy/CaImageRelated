@@ -3,19 +3,36 @@ function [PlaceFieldData] =...
 %, TMap_gauss
 %aboveThresh, 
     p = inputParser;
+    %{
     p.addRequired('trialbytrial');
     p.addRequired('xlims');
     p.addRequired('cmperbin');
     p.addRequired('minspeed');
+    %}
     p.addParameter('smooth',true,@(x) islogical(x)); 
-    p.addParameter('trialReli', , );  
-    p.addParameter('smooth',);
-    p.addParameter('condPairs',1:length(trialbytrial));
+    p.addParameter('trialReli',[]);  
+    p.addParameter('condPairs',[1:length(trialbytrial)]');
+    %}
+    %addRequired(p,'trialbytrial');
+    %addRequired(p,'xlims');
+    %addRequired(p,'cmperbin');
+    %addRequired(p,'minspeed');
+    %addParameter(p,'smooth',true,@(x) islogical(x)); 
+    %addParameter(p,'trialReli',[]);  
+    %addParameter(p,'condPairs',[1:length(trialbytrial)]');
 
+    p.parse(varargin{:})
+    
+    smooth = p.Results.smooth;
+    condPairs = p.Results.condPairs;
+    trialReli = p.Results.trialReli;
+    
 sessions = unique(trialbytrial(1).sessID);
 numSess = length(sessions);
 numCells = length(trialbytrial(1).trialPSAbool{1,1});
-numConds = length(trialbytrial);
+%numConds = length(trialbytrial);
+numConds = size(condPairs,1);
+condsPerPair = size(condPairs,2);
 xmin = xlims(1);
 xmax = xlims(2);
 
@@ -53,16 +70,26 @@ updateInd = 0;
 %pair. For example, all left trials would be a combination of conds 1 and
 %3, all right of 2 and 4 ([1 3; 2 4]); leaving conds alone would be using the default,
 %where condPairs is just [1; 2; 3; 4]
-for condType = 1:4 %condPairI = 1:size(condPairs,1)
+for condPairI = 1:size(condPairs,1) %condType = 1:4
     for tSess = 1:numSess
-        lapsUse = logical(trialbytrial(condType).sessID == sessions(tSess));
+        condType = []; lapsUse = [];
+        for cpCol = 1:condsPerPair
+            condType{cpCol} = condPairs(condPairI,cpCol);
+            lapsUse{cpCol} = logical(trialbytrial(condType{cpCol}).sessID == sessions(tSess));
+        end
+        goodLaps = cell2mat(cellfun(@any, lapsUse, 'UniformOutput', false));
         
-        if any(lapsUse)
-            posX = [trialbytrial(condType).trialsX{lapsUse,1}];
-            %posY = [trialbytrial(condType).trialsY{lapsUse,1}];
-
-            %This is to correct problems with jumping from one trial to another
-            lapLengths = cell2mat(cellfun(@length, {trialbytrial(condType).trialsX{lapsUse,1}},'UniformOutput',false));
+        posX = []; posY = [];
+        if any(goodLaps) %any(lapsUse)
+        for cpcI = 1:condsPerPair
+            %Get positions
+            posX{cpcI} = [trialbytrial(condType{cpcI}).trialsX{lapsUse{cpcI},1}];
+            posY{cpcI} = [trialbytrial(condType{cpcI}).trialsY{lapsUse{cpcI},1}];
+            
+            %Get speed
+            %This is to correct problems with jumping from one trial to another when calculating velocity
+            %{
+            lapLengths = cell2mat(cellfun(@length, {trialbytrial(condType{cpcI}).trialsX{lapsUse{cpCol},1}},'UniformOutput',false));
             trialEdges = [];
             for ll = 1:length(lapLengths)-1
                 trialEdges(ll) = sum(lapLengths(1:ll));
@@ -74,48 +101,59 @@ for condType = 1:4 %condPairI = 1:size(condPairs,1)
             trialEdges(trialEdges==0) = [];
 
             SR=20;
-            dx = abs(diff(posX));
+            dx = abs(diff(posX{cpcI}));
             dx(trialEdges) = dx(trialEdges-1);
             %dy = diff(posY);
             %speed = hypot(dx,dy)*SR;
 
             %speed = dx*SR;
             %velocity = convtrim(speed,ones(1,2*20))./(2*20);
-
-            good = true(1,length(posX));
+            %}
+            good = true(1,length(posX{cpcI}));
             isrunning = good;                         %Running frames that were not excluded.
             %isrunning(velocity < minspeed) = false;
 
-            [OccMap{condType,tSess},RunOccMap{condType,tSess},xBin{condType,tSess}]...
-                        = MakeOccMapLin(posX,good,isrunning,xEdges);
-        
+         end %cond pair column I
+            
+            allX = [posX{:}];
+            allY = [posY{:}];
+         
+            %Make an occupancy map
+            [OccMap{condPairI,tSess},RunOccMap{condPairI,tSess},xBin{condPairI,tSess}]...
+                        = MakeOccMapLin(posX{cpcI},good,isrunning,xEdges);
+                    
             for cellI = 1:numCells
-                if trialReli(cellI, tSess, condType) > 0
+                spikeTs = [];
+                if trialReli(cellI, tSess, condType{cpcI}) > 0
+                    %Get spike time indices
+                    for cpcJ = 1:condsPerPair
+                        spikeTs{cpcJ} = [trialbytrial(condType{cpcJ}).trialPSAbool{lapsUse{cpcJ},1}];
+                        spikeTs{cpcJ} = spikeTs{cpcJ}(cellI,:);
+                    end
+                    allSpikeTs = logical([spikeTs{:}]);
                     
-                    spikeTs = [trialbytrial(condType).trialPSAbool{lapsUse,1}];
-                    spikeTs = spikeTs(cellI,:);
-                    
-                    [TMap_unsmoothed{cellI,condType,tSess},TCounts{cellI,condType,tSess}]...%TMap_gauss{cellI,condType,tSess}
-                        = MakePlacefieldLin(logical(spikeTs),posX,xEdges,RunOccMap{condType,tSess},...
-                        'cmperbin',cmperbin,'smooth',doSmoothing); %false
+                    [TMap_unsmoothed{cellI,condPairI,tSess},TCounts{cellI,condPairI,tSess}]...%TMap_gauss{cellI,condType,tSess}
+                        = MakePlacefieldLin(allSpikeTs,allX,xEdges,RunOccMap{condPairI,tSess},...
+                        'cmperbin',cmperbin,'smooth',smooth); %false
                
                     %make tuning curves
                     %PlaceTuningCurveLin(trialbytrial, aboveThresh, nPerms, [xmin xmax], xEdges);
 
                     %Spatial information
                 else
-                    TMap_unsmoothed{cellI,condType,tSess} = TMap_blank; 
-                    TCounts{cellI,condType,tSess} = 0;
+                    TMap_unsmoothed{cellI,condPairI,tSess} = TMap_blank; 
+                    TCounts{cellI,condPairI,tSess} = 0;
                     %TMap_gauss{cellI,condType,tSess} = TMap_blank;
 
                 end %any activity
             end %cellI
         end %any laps
+        
+        updateInd = updateInd + 1;
+        if sum(update_points == updateInd)==1
+            p.progress;
+        end
     end %sess
-    updateInd = updateInd + 1;
-    if sum(update_points == updateInd)==1
-        p.progress;
-    end
 end    
 p.stop;
 
@@ -140,7 +178,7 @@ if saveThis==1
         saveName = 'PFsLin.mat';
     end
     savePath = saveName; 
-    save(savePath,'OccMap','RunOccMap', 'xBin', 'TMap_unsmoothed', 'TCounts', 'TMap_zRates') %, 'TMap_gauss'
+    save(savePath,'OccMap','RunOccMap', 'xBin', 'TMap_unsmoothed', 'TCounts', 'TMap_zRates', 'condPairs') %, 'TMap_gauss'
 end
     
 end

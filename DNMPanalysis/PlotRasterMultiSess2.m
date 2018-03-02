@@ -1,4 +1,4 @@
-function PlotRasterMultiSess2(trialbytrial, thisCell, sessionInds,figHand,orientation,dates, plotPos)
+function PlotRasterMultiSess2(trialbytrial, thisCell, sessionInds,figHand,orientation,dates, plotPos, xlims)
 %Works, could be redone to handle session by session
 %Dates could be swapped in with anything, like reliability or selectivity
 %Orientation is 'portrait' or 'landscape'
@@ -10,6 +10,9 @@ plotColors = [1 0 0.65;... %magenta
               1 0 0;... %red
               0 0 1];   %blue
 posColor = [0.8 0.8 0.8];
+
+xRange = ceil(max(xlims) - min(xlims));
+xUL = ceil(max(xlims) + 3);
 
 if isempty('orientation')
     if figHand.OuterPosition(4) >= figHand.OuterPosition(3)
@@ -44,7 +47,7 @@ for condType=1:4
               sessLaps = trialbytrial(condType).sessID == badSess(bS);
               startB = find(sessLaps,1,'first');
               stopB =  find(sessLaps,1,'last');
-              xc = [0 35 35 0];
+              xc = [0 xRange xRange 0]; %xc = [0 35 35 0];
               yc = [startB-1 startB-1 stopB stopB]*bH;
               v = [xc; yc]';
               hold on
@@ -65,7 +68,8 @@ for condType=1:4
             hold on
             for posp = 1:length(theseX)
                 thisX = theseX(posp);
-                plot(60-[thisX thisX], [0 bH]+bH*(plotLine-1),'Color',posColor);
+                %plot(60-[thisX thisX], [0 bH]+bH*(plotLine-1),'Color',posColor);
+                plot(xUL-[thisX thisX], [0 bH]+bH*(plotLine-1),'Color',posColor);
             end
             end
             end
@@ -77,14 +81,16 @@ for condType=1:4
         if any(thesePoints)
         for point = 1:length(thesePoints)
             plotX = trialbytrial(condType).trialsX{thisLap,1}(thesePoints(point));
-            plot(60-[plotX plotX], [0 bH]+bH*(plotLine-1),'Color',plotColors(condType,:),'LineWidth',1)
+            %plot(60-[plotX plotX], [0 bH]+bH*(plotLine-1),'Color',plotColors(condType,:),'LineWidth',1)
+            plot(xUL-[plotX plotX], [0 bH]+bH*(plotLine-1),'Color',plotColors(condType,:),'LineWidth',1)
         end
         end
     end
     
     for ss=1:length(sessBreaks)
         hold on
-        plot([0 35], [sessBreaks(ss) sessBreaks(ss)]*bH,'k')
+        %plot([0 35], [sessBreaks(ss) sessBreaks(ss)]*bH,'k')
+        plot([0 xRange], [sessBreaks(ss) sessBreaks(ss)]*bH,'k')
     end
     
     YTickPre = [];
@@ -104,7 +110,8 @@ for condType=1:4
     ylabel('Lap number')
     xlabel('X position (cm)')
     %xlim([25 60])
-    xlim([0 35])
+    %xlim([0 35])
+    xlim([0 xRange])
     %ylim([0 bH*plotLine])
 
     sesses = [find(diff(trialbytrial(condType).sessID)); length(trialbytrial(condType).sessID)];
@@ -141,7 +148,8 @@ cellnums(spaces(find(diff(spaces)>1)+1))='/';
 cellnums(strfind(cellnums,' '))=[];
 cellnums(strfind(cellnums,' '))=[];
 
-suptitle(['Cell #: ' cellnums])
+%suptitleSL(['Cell #: ' cellnums])
+suptitleSL(['Cell #: ' num2str(thisCell)])
 
 drawnow
 

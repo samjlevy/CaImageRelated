@@ -8,12 +8,12 @@ if nargin < 5 || isempty(deleteSilentCells)
 end
 
 switch DNMPorAll
-    case 'DNMP'
+    case {'DNMP','dnmp'}
         regUseType = 'sessionType';
         regUseInput = [];
         [allfiles, position, all_PSAbool, correctBounds, badLaps, sortedSessionInds, lapNumber]...
     = GetMegaStuff2(base_path, [], regUseType, regUseInput);
-    case 'All'
+    case {'All','all'}
         regUseType = 'vector';
         regUseInput = ones(length(reg_paths),1);
         load(fullfile(base_path,'fullReg.mat'))
@@ -64,6 +64,7 @@ if deleteSilentCells == 1
     end
 end
 
+realDays = [];
 realDaysFile = fullfile(base_path,'realDays.mat');
 try
     if exist(realDaysFile,'file')==2
@@ -72,9 +73,14 @@ try
         [ffile, ffpath] = uigetfile('Find realDays file');
         realDaysFile = fullfile(ffpath, ffile);
     end
-    load(realDaysFile,'realdays')
-    
-    dateAlign = realdays;
+    load(realDaysFile); 
+    if isempty(realDays); realDays = realdays; end
+        
+    dateAlign = realDays;
+    for II = 1:length(realDays)
+        partses = strsplit(realDays{II},'\');
+        dateAlign{II,1} = partses{end};
+    end
     realdays = [];
     
     for fileI = 1:length(allfiles)
@@ -84,7 +90,7 @@ try
     end
 catch
     disp('Some part of real days failed')
-    realDays = [];
+    realdays = [];
 end
 
 %check exists before saving

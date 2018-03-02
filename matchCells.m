@@ -2,6 +2,8 @@ function matchCells(base_path, reg_paths, bufferEdges)
 %bufferEdges should be used when there are cell masks out near the edges of
 %the imaging window. During alignment, they can be pushed out of view,
 %which can cause problems leading to those cells' not being registered. 
+if (size(reg_paths,1) == 1) && ~iscell(reg_paths); reg_paths = {reg_paths}; end
+    
 if ~exist('bufferEdges','var'); bufferEdges = 0; end
 try
     load(fullfile(reg_paths{1},'RegisteredImageSLbuffered.mat'),'bufferWidth')
@@ -18,12 +20,14 @@ regMixFigPos = [ceil(screensize(3)/2) 250 floor(screensize(3)/2) floor(screensiz
 distanceThreshold = 3;
 numSessions = size(reg_paths,1);
 
-if exist(fullfile(base_path,'fullReg.mat'),'file')
+%Initial setup, including verifying buffering
+if exist(fullfile(base_path,'fullReg.mat'),'file') == 2
     load(fullfile(base_path,'fullReg.mat'))
     load(fullfile(base_path,'fullRegImage.mat'))
     load(fullfile(base_path,'fullRegROIavg.mat'))
     
 else
+    disp('no fullReg found, making and saving')
     load(fullfile(base_path,'FinalOutput.mat'),'NeuronImage','NeuronAvg')
     baseImage = NeuronImage;
     
@@ -43,21 +47,20 @@ else
     fullReg.orientation = cell2mat(cellfun(@(x) x.Orientation, baseOrientation, 'UniformOutput',false))';
     
     fullRegImage = baseImage;
-    fullROIavg = MakeAvgROI(fullRegImage,NeuronAvg);
-    fullRegROIavg = AddCellMaskBuffer(fullRegROIavg(fixThese), bufferWidth);
+    fullRegROIavg = MakeAvgROI(fullRegImage,NeuronAvg);
+    %fullRegROIavg = AddCellMaskBuffer(fullRegROIavg(fixThese), bufferWidth);
+    %fullRegROIavg = AddCellMaskBuffer(fullROIavg, bufferWidth);
     
     save(fullfile(base_path,'fullReg.mat'),'fullReg','-v7.3')
     save(fullfile(base_path,'fullRegImage.mat'),'fullRegImage','-v7.3')
     save(fullfile(base_path,'fullRegROIavg.mat'),'fullRegROIavg','-v7.3')
-    disp('no fullReg found, making and saving')
+    disp('Made new fullReg')
 end    
 
+%Check that we've aready registered sessions to each other
 for rs = 1:numSessions
-    if numSessions==1
-        reg_path = reg_paths;
-    else
-        reg_path = reg_paths{rs};
-    end
+    reg_path = reg_paths{rs};
+    
     if ~exist(fullfile(reg_path,'RegisteredImageSL.mat'),'file')
         disp(['did not find image registration data for ' reg_paths])
         [~, ~, ~] = manual_reg_SL(base_path, reg_paths);
@@ -66,30 +69,49 @@ for rs = 1:numSessions
     end
 end
 
+%Should add something here to verify that every entry is buffered appropriately
+regImageSizes = reshape(cell2mat(cellfun(@size,fullRegImage,'UniformOutput',false)),2,length(fullRegImage))';
+if length(unique(regImageSizes(:,1))) ~= 1
+    disp('whoa buddy')
+    keyboard
+end
+if length(unique(regImageSizes(:,2))) ~= 1
+    disp('whoa buddy')
+    keyboard
+end
+ROIavgSizes = reshape(cell2mat(cellfun(@size,fullRegROIavg,'UniformOutput',false)),2,length(fullRegROIavg))';
+if length(unique(ROIavgSizes(:,1))) ~= 1
+    disp('whoa buddy')
+    keyboard
+end
+if length(unique(ROIavgSizes(:,2))) ~= 1
+    disp('whoa buddy')
+    keyboard
+end
+
+
 for regsess = 1:numSessions
-    if numSessions==1
-        reg_path = reg_paths;
-    else
-        reg_path = reg_paths{regsess};
-    end
+    reg_path = reg_paths{regsess};
+    
+    regEntry = size(fullReg.RegSessions,1);
     
     regtitlepts = strsplit(reg_path,'\'); rgtps = strsplit(regtitlepts{end},'_');
     regtitle = [rgtps{1} ' ' rgtps{2}];
     
     matchup = 0; already = 0;
-if ~isempty(fullReg.RegSessions)
-    if any(cell2mat(cellfun(@(x) strcmpi(x,reg_path),fullReg.RegSessions,'UniformOutput',false)))
-        disp(['this session ' reg_path ' is already registered, skipping assignment'])
-        %matchup=str2double(input('Rerun? 0/1','s'));
+    if ~isempty(fullReg.RegSessions)
+        if any(cell2mat(cellfun(@(x) strcmpi(x,reg_path),fullReg.RegSessions,'UniformOutput',false)))
+            disp(['this session ' reg_path ' is already registered, skipping assignment'])
+            %matchup=str2double(input('Rerun? 0/1','s'));
+        else
+            matchup = 1;
+        end
     else
         matchup = 1;
     end
-else
-    matchup = 1;
-end
 
-if matchup==1
-    fullReg.RegSessions{length(fullReg.RegSessions)+1} = reg_path;
+    if matchup==1
+    fullReg.RegSessions{size(fullReg.RegSessions,1)+1,1} = reg_path;
 
     load(fullfile(reg_path,'RegisteredImageSL.mat'))
     if bufferEdges == 1
@@ -594,7 +616,7 @@ if matchup==1
         keyboard
     end
 
-end
+    end
 end
 
 try; close(mixFig); end %#ok<TRYNC,NOSEM>
