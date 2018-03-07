@@ -32,6 +32,7 @@ for compI = 1:numCompares
             for binI = 1:numBins
                 switch ratesHere(binI) > 0 
                     case 1 %rate is positive
+                        %Regular rate above what proportion of shuffled rates
                         binsAboveShuffle.(comparisons{compI}){cellI,sessI}(binI) =...
                             sum(ratesHere(binI) > ShuffledRates(:,binI))/numShuffles;                        
                     case 0 %rate is negative

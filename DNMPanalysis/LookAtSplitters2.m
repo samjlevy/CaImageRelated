@@ -3,6 +3,13 @@ function [rates, normrates, rateDiff, rateDIall, rateDI] = LookAtSplitters2(TMap
 %and normalized across the number of bins where there was activity in at
 %least one of the conditions
 
+%Rates     - sum of rate differences in all bins
+%normrates - rates / number of bins cell is active
+%rateDiff  - rate differences of individual bins
+%rateDIall - DI score each bin (rateDiff / total amount of firing in that bin)
+%rateDI    - mean of DI for each bin
+%add one that is 
+
 numSess = size(TMap_unsmoothed,3);
 numConds = size(TMap_unsmoothed,2);
 numCells = size(TMap_unsmoothed,1);
@@ -24,7 +31,7 @@ for sessI = 1:numSess
         StudyLvR = SRrates-SLrates;
         rateDiff.StudyLvR{cellI,sessI} = StudyLvR;
         splitStudyLvR(cellI,sessI) = sum(StudyLvR);
-        baStudyLvR = SRrates~=0 | SLrates~=0;
+        baStudyLvR = SRrates~=0 | SLrates~=0; %Active in this bin
         normStudyLvR(cellI,sessI) = splitStudyLvR(cellI,sessI)/sum(baStudyLvR);
         normStudyLvRAll{cellI,sessI} = StudyLvR ./ (SLrates + SRrates);
         StudyLvRDImax(cellI, sessI) = max(normStudyLvRAll{cellI,sessI});
@@ -72,11 +79,6 @@ normrates.StudyLvR = normStudyLvR;
 normrates.TestLvR = normTestLvR;
 normrates.LeftSvT = normLeftSvT;
 normrates.RightSvT = normRightSvT;
-
-rateDIall.StudyLvR = normStudyLvRAll;
-rateDIall.TestLvR = normTestLvRAll;
-rateDIall.LeftSvT = normLeftSvTAll;
-rateDIall.RightSvT = normRightSvTAll;
 
 rateDIall.StudyLvR = normStudyLvRAll;
 rateDIall.TestLvR = normTestLvRAll;

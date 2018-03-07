@@ -152,7 +152,7 @@ for mouseI = 1:numMice
     %laps
 end
 
-%% Splitter Cells
+%% Splitter Cells: ANOVA version
 for mouseI = 1:numMice
     TMap_unsmoothed = [];
     load(fullfile(mainFolder,mice{mouseI},'PFsLin.mat'),'TMap_unsmoothed')
@@ -246,6 +246,35 @@ for mouseI = 1:numMice
         
 end
 
+%% Splitter cells: Shuffle versions
+%Left/Right
+numShuffles = 1000;
+shuffThresh = 1 - pThresh;
+binsMin = 2;
+shuffleDirLR = 'shuffleLR';
+shuffleDirST = 'shuffleST';
+%For now this is unpooled (study l vs. study r, as opposed to study l+ test l vs. study r + test r
+    %New pfs with cond pairs would make it easy to do that version
+
+for mouseI = 1:numMice
+    
+    shuffDirFullLR = fullfile(mainFolder,mice{mouseI},shuffleDirLR);
+    load(fullfile(mainFolder,mice{mouseI},'PFsLin.mat'),'TMap_unsmoothed')
+    [binsAboveShuffleLR, thisCellSplitsLR] = SplitterWrapper1(cellTBT{mouseI}, TMap_unsmoothed,...
+    'leftright', numShuffles, shuffDirFullLR, xlims, cmperbin, minspeed, trialReli{mouseI}, shuffThresh, binsMin);
+end
+
+%% Study/Test (have to run separately, runs out of memory
+
+for mouseI = 1:numMice
+    
+    shuffDirFullST = fullfile(mainFolder,mice{mouseI},shuffleDirST);
+    load(fullfile(mainFolder,mice{mouseI},'PFsLin.mat'),'TMap_unsmoothed')
+    [binsAboveShuffleST, thisCellSplitsST] = SplitterWrapper1(cellTBT{mouseI}, TMap_unsmoothed,...
+    'studytest', numShuffles, shuffDirFullST, xlims, cmperbin, minspeed, trialReli{mouseI}, shuffThresh, binsMin);
+end
+
+
 %% Place Cells
 numShuffles = 1000; %takes about an hour
 % Shuffle within a condition for peak place firing
@@ -255,7 +284,7 @@ shuffleDir = 'PosShuffle';
 %Make position shuffles
 for mouseI = 1:numMice
     
-    TMap_shuffled = cell(numShuffles,1);
+    allTMap_shuffled = cell(numShuffles,1);
     shuffDirFull = fullfile(mainFolder,mice{mouseI},shuffleDir);
     if ~exist(shuffDirFull,'dir')
         mkdir(shuffDirFull)
@@ -264,13 +293,14 @@ for mouseI = 1:numMice
     for shuffleI = 1:numShuffles
         shuffledTBT = shuffleTBTposition(cellTBT{mouseI});
         saveName = fullfile(shuffDirFull,['shuffPos' num2str(shuffleI) '.mat']);
-        [~, ~, ~, TMap_shuffled{shuffleI}, ~] =... 
+        [~, ~, ~, allTMap_shuffled{shuffleI}, ~] =... 
                     PFsLinTrialbyTrial(shuffledTBT,xlims, cmperbin, minspeed, 1, saveName, trialReli{mouseI});
         disp(['done shuffle ' num2str(shuffleI) ])
    
     end
-    save(fullfile(shuffDirFull,allTMap_shuffled.mat),'TMap_shuffled')
+    save(fullfile(shuffDirFull,'allTMap_shuffled.mat'),'allTMap_shuffled')
 end
+
 
 %Load shuffles, organize, check placefields
 for mouseI = 1:numMice
@@ -291,11 +321,11 @@ for mouseI = 1:numMice
             allTMap_shuffled{fileI} = TMap_unsmoothed;
         end
         toc
-        %save((fullfile(shuffDirFull,'allTMap_shuffled.mat')),'allTMap_shuffled')
+        %save((fullfile(shuffDirFull,'allTMap_shuffled.mat')),'allTMap_shuffled','-v7.3')
         %disp('Saved allTMap_shuffled')
     
         %Reorganize to make sorting, etc. easier
-        numBins = length(allTMap_unsmoothed{1}{1,1,1});
+        numBins = length(allTMap_shuffled{1}{1,1,1});
         nShuffles = length(allTMap_shuffled);
         allShuffledRates = cell(numCells(mouseI),4,numDays(mouseI));
         tic
@@ -311,14 +341,14 @@ for mouseI = 1:numMice
         end
         toc         
         
-        save((fullfile(shuffDirFull,'allShuffledRates.mat')),'allShuffledRates','-v7.3')
+        save(fullfile(shuffDirFull,'allShuffledRates.mat'),'allShuffledRates','-v7.3')
         disp('Saved allShuffledRates')
         allTMap_shuffled = [];
     end
     
     %Sort, etc. 
-    
-    shuffledRatesSorted2 = cell(size(allShuffledRates));
+    tic
+    shuffledRatesSorted = cell(size(allShuffledRates));
     shuffledRatesMean = cell(size(allShuffledRates));
     shuffledRates95 = cell(size(allShuffledRates));
     pInd = round((1-pThresh)*nShuffles);
@@ -326,15 +356,33 @@ for mouseI = 1:numMice
     for cellI = 1:numCells(mouseI) %Takes a few minues with 1000 shuffles
         for condI = 1:4
             for dayI = 1:numDays(mouseI)
-                shuffledRatesSorted2{cellI,condI,dayI} = sort(allShuffledRates{cellI,condI,dayI},1);
-                %shuffledRatesMean{cellI,condI,dayI} = nanmean(shuffledRatesSorted{cellI,condI,dayI},1); %Uses nanmean
-                %shuffledRates95{cellI,condI,dayI} = shuffledRatesSorted{cellI,condI,dayI}(pInd,:);
+                shuffledRatesSorted{cellI,condI,dayI} = sort(allShuffledRates{cellI,condI,dayI},1);
+                shuffledRatesMean{cellI,condI,dayI} = nanmean(shuffledRatesSorted{cellI,condI,dayI},1); %Uses nanmean
+                shuffledRates95{cellI,condI,dayI} = shuffledRatesSorted{cellI,condI,dayI}(pInd,:);
             end
         end
     end
+    save(fullfile(shuffDirFull,'shuffledRatesSorted.mat'),'shuffledRatesSorted','-v7.3')
+    disp('Saved shuffledRatesSorted')
     toc
     
+    load(fullfile(mainFolder,mice{mouseI},'PFsLin.mat'),'TMap_unsmoothed')
+    binsAbove95 = cell(size(allShuffledRates));
+    for cellI = 1:numCells(mouseI) %Takes a few minues with 1000 shuffles
+        for condI = 1:4
+            for dayI = 1:numDays(mouseI)
+                binsAbove95{cellI,condI,dayI} = ...
+                    TMap_unsmoothed{cellI,condI,dayI} > shuffledRates95{cellI,condI,dayI};
+            end
+        end
+    end
     
+    numAbove95 = cell2mat(cellfun(@sum,binsAbove95,'UniformOutput',false));
+    placeAtAll = numAbove95 > 0;
+    lessThanHalf = numAbove95 < round(numBins/2); %Fires on less than half the stem
+                    %Bins are next to each other
+    placeToday = squeeze(sum(placeAtAll,2) > 0);
+    placeTodayPct = sum(placeToday.*dayUse{mouseI},1)./sum(dayUse{mouseI},1); %numCellsToday{mouseI}
     
 end
 %ANOVA by bin
