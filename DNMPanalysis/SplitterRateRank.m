@@ -12,6 +12,8 @@ numBins = length(rateDiff.(comparisons{1}){1,1});
 numShuffles = length(shuffledRateDiff);
 
 %Reorganize for easier compariszons
+%reorgRates = ReorganizeShuffledTMaps(allTMap_shuffled); %actually may not work this organization with rates/ratediff
+%maybe it will, if give it each piece of the struct separately
 for shuffI = 1:numShuffles
     for compI = 1:numCompares
         for cellI = 1:numCells

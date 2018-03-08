@@ -1,5 +1,5 @@
-function [PlaceFieldData] =...
-    PFsLinTrialbyTrial2(trialbytrial, xlims, cmperbin, minspeed, varargin)
+function [TMap_unsmoothed, TMap_zRates, OccMap, RunOccMap, xBin, TCounts] =...
+    PFsLinTrialbyTrial2(trialbytrial, xlims, cmperbin, minspeed, saveName, varargin)
 %, TMap_gauss
 %aboveThresh, 
     p = inputParser;
@@ -9,9 +9,10 @@ function [PlaceFieldData] =...
     p.addRequired('cmperbin');
     p.addRequired('minspeed');
     %}
-    p.addParameter('smooth',true,@(x) islogical(x)); 
+    p.addParameter('smooth',false,@(x) islogical(x)); 
     p.addParameter('trialReli',[]);  
     p.addParameter('condPairs',[1:length(trialbytrial)]');
+    %p.addParameter('saveName',[],@(x) ischar(x));
     %}
     %addRequired(p,'trialbytrial');
     %addRequired(p,'xlims');
@@ -26,6 +27,7 @@ function [PlaceFieldData] =...
     smooth = p.Results.smooth;
     condPairs = p.Results.condPairs;
     trialReli = p.Results.trialReli;
+    %saveName = p.Results.saveName;
     
 sessions = unique(trialbytrial(1).sessID);
 numSess = length(sessions);
@@ -41,6 +43,10 @@ if isempty(trialReli)
 end
 if size(trialReli,3) < 3
     trialReli(:,:,2:numConds) = trialReli;
+end
+saveThis = 1;
+if isempty(saveName)
+    saveThis = 0;
 end
 %sessionUse = false(size(aboveThresh{1,1}));
 %for ss = 1:numConds
@@ -146,15 +152,15 @@ for condPairI = 1:size(condPairs,1) %condType = 1:4
                     %TMap_gauss{cellI,condType,tSess} = TMap_blank;
 
                 end %any activity
+                
+                updateInd = updateInd + 1;
+                if sum(update_points == updateInd)==1
+                    p.progress;
+                end
             end %cellI
         end %any laps
-        
-        updateInd = updateInd + 1;
-        if sum(update_points == updateInd)==1
-            p.progress;
-        end
     end %sess
-end    
+end %condPair   
 p.stop;
 
 %SpatialInformationSL(RunOccMap,TCounts)
@@ -167,18 +173,13 @@ for cellI = 1:numCells
         TMap_zRates(cellI,1:numConds,tSess) = num2cell(zRates,2)';       
     end
 end
-        
-       
-        
-
-
 
 if saveThis==1
     if ~exist('saveName','var')
         saveName = 'PFsLin.mat';
     end
     savePath = saveName; 
-    save(savePath,'OccMap','RunOccMap', 'xBin', 'TMap_unsmoothed', 'TCounts', 'TMap_zRates', 'condPairs') %, 'TMap_gauss'
+    save(savePath,'OccMap','RunOccMap', 'xBin', 'TMap_unsmoothed', 'TMap_gauss', 'TCounts', 'TMap_zRates', 'condPairs') %, 'TMap_gauss'
 end
     
 end

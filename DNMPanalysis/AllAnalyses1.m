@@ -52,14 +52,15 @@ end
 
 %Place fields
 for mouseI = 1:numMice
-    saveName = fullfile(mainFolder,mice{mouseI},'PFsLin.mat');
+    saveName = fullfile(mainFolder,mice{mouseI},'PFsLin2.mat');
     switch exist(fullfile(mainFolder,mice{mouseI},'PFsLin.mat'),'file')
         case 0
             disp(['no placefields found for ' mice{mouseI} ', making now'])
-            [~, ~, ~, ~, ~] =... %, TMap_gauss
-                PFsLinTrialbyTrial(cellTBT{mouseI},xlims, cmperbin, minspeed, 1, saveName, trialReli{mouseI});
-            %PFsLinTrialbyTrial2(cellTBT{mouseI}, xlims, cmperbin, minspeed,...
-            %    'saveThis',true,'saveName',saveName,'trialReli',trialReli{mouseI},'smooth',false);
+            %[~, ~, ~, ~, ~] =... 
+            %    PFsLinTrialbyTrial(cellTBT{mouseI},xlims, cmperbin, minspeed, 1, saveName, trialReli{mouseI});
+            [~, ~, ~, ~, ~, ~] =...
+            PFsLinTrialbyTrial2(cellTBT{mouseI}, xlims, cmperbin, minspeed,...
+                saveName,'trialReli',trialReli{mouseI},'smooth',false);        
         case 2
             disp(['found placefields for ' mice{mouseI} ', all good'])
     end
@@ -257,23 +258,34 @@ shuffleDirST = 'shuffleST';
     %New pfs with cond pairs would make it easy to do that version
 
 for mouseI = 1:numMice
-    
     shuffDirFullLR = fullfile(mainFolder,mice{mouseI},shuffleDirLR);
     load(fullfile(mainFolder,mice{mouseI},'PFsLin.mat'),'TMap_unsmoothed')
     [binsAboveShuffleLR, thisCellSplitsLR] = SplitterWrapper1(cellTBT{mouseI}, TMap_unsmoothed,...
     'leftright', numShuffles, shuffDirFullLR, xlims, cmperbin, minspeed, trialReli{mouseI}, shuffThresh, binsMin);
 end
 
-%% Study/Test (have to run separately, runs out of memory
+%% Study/Test (have to run separately, runs out of memory; maybe not with newer version
 
 for mouseI = 1:numMice
-    
     shuffDirFullST = fullfile(mainFolder,mice{mouseI},shuffleDirST);
     load(fullfile(mainFolder,mice{mouseI},'PFsLin.mat'),'TMap_unsmoothed')
     [binsAboveShuffleST, thisCellSplitsST] = SplitterWrapper1(cellTBT{mouseI}, TMap_unsmoothed,...
     'studytest', numShuffles, shuffDirFullST, xlims, cmperbin, minspeed, trialReli{mouseI}, shuffThresh, binsMin);
 end
 
+for mouseI = 1:numMice
+    LeftRightSplitters{mouseI} = thisCellSplitsLR.StudyLvR | thisCellSplitsLR.TestLvR;
+    LeftRightSplitters{mouseI} = LeftRightSplitters{mouseI}.*dayUse{mouseI};
+    StudyTestSplitters{mouseI} = thisCellSplitsST.LeftSvT | thisCellSplitsST.RightSvT;
+    StudyTestSplitters{mouseI} = StudyTestSplitters{mouseI}.*dayUse{mouseI};
+end
+
+for mouseI = 1:numMice
+    numDailySplittersLR{mouseI} = sum(LeftRightSplitters{mouseI},1);
+    rangeDaliSplittersLR(mouseI,:) = [mean(numDailySplittersLR{mouseI}) standardErrorSL(numDailySplittersLR{mouseI})];
+    pctDailySplittersLR{mouseI} = 
+    
+end
 
 %% Place Cells
 numShuffles = 1000; %takes about an hour
@@ -295,6 +307,9 @@ for mouseI = 1:numMice
         saveName = fullfile(shuffDirFull,['shuffPos' num2str(shuffleI) '.mat']);
         [~, ~, ~, allTMap_shuffled{shuffleI}, ~] =... 
                     PFsLinTrialbyTrial(shuffledTBT,xlims, cmperbin, minspeed, 1, saveName, trialReli{mouseI});
+        [allTMap_shuffled{shuffleI}, ~, ~, ~, ~, ~] =...
+            PFsLinTrialbyTrial2(shuffledTBT, xlims, cmperbin, minspeed,...
+                saveName,'trialReli',trialReli{mouseI},'smooth',false); 
         disp(['done shuffle ' num2str(shuffleI) ])
    
     end

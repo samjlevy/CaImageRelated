@@ -43,6 +43,15 @@ for mouseI = 1:numMice
     xlabel('Accuracy'); ylabel('Pct cells active ')
 end
 
+%% Percent cells from any other day
+for mouseI = 1:numMice
+    figure;
+    bar(dayCellsThatReturnPct{mouseI},0.95)
+    ylim([0.5 1]); xlim([0.5 length(dayCellsThatReturnPct{mouseI})+0.5])
+    title(['Mouse ' num2str(mouseI) ', pct cells the show up another day'])
+    xlabel('Day Number'); ylabel('Pct cells returning')
+end
+
 %% Cell activity histograms
 
 % One for trial reliability
