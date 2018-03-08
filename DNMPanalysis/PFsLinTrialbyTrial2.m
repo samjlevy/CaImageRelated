@@ -148,7 +148,7 @@ for condPairI = 1:size(condPairs,1) %condType = 1:4
                     %Spatial information
                 else
                     TMap_unsmoothed{cellI,condPairI,tSess} = TMap_blank; 
-                    TCounts{cellI,condPairI,tSess} = 0;
+                    TCounts{cellI,condPairI,tSess} = TMap_blank;
                     %TMap_gauss{cellI,condType,tSess} = TMap_blank;
 
                 end %any activity

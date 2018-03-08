@@ -31,6 +31,7 @@ end
 
 maxDays = max(numDays);
 
+disp('Getting Accuracy')
 for mouseI = 1:numMice
     accuracy{mouseI} = sessionAccuracy(cellAllFiles{mouseI});
     accuracyRange(mouseI, 1:2) = [mean(accuracy{mouseI}),...
@@ -45,9 +46,9 @@ disp('Getting reliability')
 dayUse = cell(1,numMice); threshAndConsec = cell(1,numMice);
 for mouseI = 1:numMice
     [dayUse{mouseI},threshAndConsec{mouseI}] = GetUseCells(cellTBT{mouseI}, lapPctThresh, consecLapThresh);
-    [trialReli{mouseI},~,~,~] = TrialReliability(cellTBT{mouseI}, lapPctThresh);
+    [trialReli{mouseI},aboveThresh{mouseI},~,~] = TrialReliability(cellTBT{mouseI}, lapPctThresh);
     cellsActiveToday{mouseI} = sum(dayUse{mouseI},1);
-    disp(['Mouse ' num2str(mouseI) ' completed'])
+    %disp(['Mouse ' num2str(mouseI) ' completed'])
 end
 
 %Place fields
@@ -67,6 +68,7 @@ for mouseI = 1:numMice
 end
 
 Conds = GetTBTconds(cellTBT{1});
+disp('Done set-up stuff')
 %% Plot rasters for all good cells
 
 for mouseI = 1:numMice
@@ -193,7 +195,52 @@ for mouseI = 1:numMice
     
 end
 
-% In theory maybe still should do shuffling, diff results (stricter) than ANOVA
+%% Splitter cells: Shuffle versions
+%Left/Right
+numShuffles = 1000;
+shuffThresh = 1 - pThresh;
+binsMin = 1;
+shuffleDirLR = 'shuffleLR';
+shuffleDirST = 'shuffleST';
+%For now this is unpooled (study l vs. study r, as opposed to study l+ test l vs. study r + test r
+    %New pfs with cond pairs would make it easy to do that version
+
+for mouseI = 1:numMice
+    shuffDirFullLR = fullfile(mainFolder,mice{mouseI},shuffleDirLR);
+    load(fullfile(mainFolder,mice{mouseI},'PFsLin.mat'),'TMap_unsmoothed')
+    %[binsAboveShuffleLR, thisCellSplitsLR] = SplitterWrapper1(cellTBT{mouseI}, TMap_unsmoothed,...
+    %'leftright', numShuffles, shuffDirFullLR, xlims, cmperbin, minspeed, trialReli{mouseI}, shuffThresh, binsMin);
+    [binsAboveShuffleLR, thisCellSplitsLR] = SplitterWrapper2(cellTBT{mouseI}, TMap_unsmoothed,...
+    'leftright', numShuffles, shuffDirFullLR, xlims, cmperbin, minspeed, trialReli{mouseI}, shuffThresh, binsMin);
+    save(fullfile(shuffDirFullLR,'splittersLR.mat'),'binsAboveShuffleLR','thisCellSplitsLR')
+end
+
+%% Study/Test (have to run separately, runs out of memory; maybe not with newer version
+
+for mouseI = 1:numMice
+    shuffDirFullST = fullfile(mainFolder,mice{mouseI},shuffleDirST);
+    load(fullfile(mainFolder,mice{mouseI},'PFsLin.mat'),'TMap_unsmoothed')
+    %[binsAboveShuffleLR, thisCellSplitsLR] = SplitterWrapper1(cellTBT{mouseI}, TMap_unsmoothed,...
+    %'leftright', numShuffles, shuffDirFullLR, xlims, cmperbin, minspeed, trialReli{mouseI}, shuffThresh, binsMin);
+    [binsAboveShuffleST, thisCellSplitsST] = SplitterWrapper2(cellTBT{mouseI}, TMap_unsmoothed,...
+    'studytest', numShuffles, shuffDirFullST, xlims, cmperbin, minspeed, trialReli{mouseI}, shuffThresh, binsMin);
+    save(fullfile(shuffDirFullST,'splittersST.mat'),'binsAboveShuffleST','thisCellSplitsST')
+end
+
+
+for mouseI = 1:numMice
+    LeftRightSplitters{mouseI} = thisCellSplitsLR.StudyLvR | thisCellSplitsLR.TestLvR;
+    LeftRightSplitters{mouseI} = LeftRightSplitters{mouseI}.*dayUse{mouseI};
+    StudyTestSplitters{mouseI} = thisCellSplitsST.LeftSvT | thisCellSplitsST.RightSvT;
+    StudyTestSplitters{mouseI} = StudyTestSplitters{mouseI}.*dayUse{mouseI};
+end
+
+for mouseI = 1:numMice
+    numDailySplittersLR{mouseI} = sum(LeftRightSplitters{mouseI},1);
+    rangeDaliSplittersLR(mouseI,:) = [mean(numDailySplittersLR{mouseI}) standardErrorSL(numDailySplittersLR{mouseI})];
+    pctDailySplittersLR{mouseI} = stuff;
+    
+end
 
 for mouseI = 1:numMice
     numDaysSplitterLR{mouseI} = nan(numCells(mouseI),1); splitterCOMLR{mouseI} = nan(numCells(mouseI),1);
@@ -247,46 +294,6 @@ for mouseI = 1:numMice
         
 end
 
-%% Splitter cells: Shuffle versions
-%Left/Right
-numShuffles = 1000;
-shuffThresh = 1 - pThresh;
-binsMin = 2;
-shuffleDirLR = 'shuffleLR';
-shuffleDirST = 'shuffleST';
-%For now this is unpooled (study l vs. study r, as opposed to study l+ test l vs. study r + test r
-    %New pfs with cond pairs would make it easy to do that version
-
-for mouseI = 1:numMice
-    shuffDirFullLR = fullfile(mainFolder,mice{mouseI},shuffleDirLR);
-    load(fullfile(mainFolder,mice{mouseI},'PFsLin.mat'),'TMap_unsmoothed')
-    [binsAboveShuffleLR, thisCellSplitsLR] = SplitterWrapper1(cellTBT{mouseI}, TMap_unsmoothed,...
-    'leftright', numShuffles, shuffDirFullLR, xlims, cmperbin, minspeed, trialReli{mouseI}, shuffThresh, binsMin);
-end
-
-%% Study/Test (have to run separately, runs out of memory; maybe not with newer version
-
-for mouseI = 1:numMice
-    shuffDirFullST = fullfile(mainFolder,mice{mouseI},shuffleDirST);
-    load(fullfile(mainFolder,mice{mouseI},'PFsLin.mat'),'TMap_unsmoothed')
-    [binsAboveShuffleST, thisCellSplitsST] = SplitterWrapper1(cellTBT{mouseI}, TMap_unsmoothed,...
-    'studytest', numShuffles, shuffDirFullST, xlims, cmperbin, minspeed, trialReli{mouseI}, shuffThresh, binsMin);
-end
-
-for mouseI = 1:numMice
-    LeftRightSplitters{mouseI} = thisCellSplitsLR.StudyLvR | thisCellSplitsLR.TestLvR;
-    LeftRightSplitters{mouseI} = LeftRightSplitters{mouseI}.*dayUse{mouseI};
-    StudyTestSplitters{mouseI} = thisCellSplitsST.LeftSvT | thisCellSplitsST.RightSvT;
-    StudyTestSplitters{mouseI} = StudyTestSplitters{mouseI}.*dayUse{mouseI};
-end
-
-for mouseI = 1:numMice
-    numDailySplittersLR{mouseI} = sum(LeftRightSplitters{mouseI},1);
-    rangeDaliSplittersLR(mouseI,:) = [mean(numDailySplittersLR{mouseI}) standardErrorSL(numDailySplittersLR{mouseI})];
-    pctDailySplittersLR{mouseI} = 
-    
-end
-
 %% Place Cells
 numShuffles = 1000; %takes about an hour
 % Shuffle within a condition for peak place firing
@@ -305,8 +312,8 @@ for mouseI = 1:numMice
     for shuffleI = 1:numShuffles
         shuffledTBT = shuffleTBTposition(cellTBT{mouseI});
         saveName = fullfile(shuffDirFull,['shuffPos' num2str(shuffleI) '.mat']);
-        [~, ~, ~, allTMap_shuffled{shuffleI}, ~] =... 
-                    PFsLinTrialbyTrial(shuffledTBT,xlims, cmperbin, minspeed, 1, saveName, trialReli{mouseI});
+        %[~, ~, ~, allTMap_shuffled{shuffleI}, ~] =... 
+        %            PFsLinTrialbyTrial(shuffledTBT,xlims, cmperbin, minspeed, 1, saveName, trialReli{mouseI});
         [allTMap_shuffled{shuffleI}, ~, ~, ~, ~, ~] =...
             PFsLinTrialbyTrial2(shuffledTBT, xlims, cmperbin, minspeed,...
                 saveName,'trialReli',trialReli{mouseI},'smooth',false); 
