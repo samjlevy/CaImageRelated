@@ -8,6 +8,9 @@ numSess = size(baseTMap_unsmoothed,3);
 if strcmp(typeShuff,'leftright'); na = 'LR'; elseif strcmp(typeShuff,'studytest'); na = 'ST'; end
 
 %Shuffle things and make new rate maps
+if exist(shuffDirFull,'dir')==0
+    mkdir(shuffDirFull)
+end
 cd(shuffDirFull)
 possibleShuffles = dir(['shuff' na '*.mat']);
 possibleShuffles([possibleShuffles(:).isdir]==1) = [];
@@ -25,7 +28,7 @@ if length(possibleShuffles) ~= numShuffles
         [~, ~, ~, ~, ~, ~] =...
             PFsLinTrialbyTrial2(shuffledTBT, xlims, cmperbin, minspeed,...
             saveName,'trialReli',trialReli,'smooth',false);
-        %disp(['done shuffle ' num2str(shuffleI) ])
+        disp(['done shuffle ' num2str(shuffleI) ])
     end
     disp('Done with shuffling')
 else
@@ -43,6 +46,8 @@ numCondPairs = size(condPairs,1);
 %Load shuffles and get splitter stuff
 rateDiffReorg = cell(numCells,numSess,numCondPairs);
 disp('Looking at how much splitting')
+possibleShuffles = dir(['shuff' na '*.mat']);
+possibleShuffles([possibleShuffles(:).isdir]==1) = [];
 p = ProgressBar(numShuffles);
 for shuffleI = 1:numShuffles
     load(fullfile(shuffDirFull,possibleShuffles(shuffleI).name),'TMap_unsmoothed')

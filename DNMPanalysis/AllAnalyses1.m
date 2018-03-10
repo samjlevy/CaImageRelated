@@ -112,7 +112,6 @@ for mouseI = 1:numMice
     
     %When are the cells active
     numCondsActive{mouseI} = sum(threshAndConsec{mouseI},3);
-    
     cellsThatReturnIDs{mouseI} = cellPersistHist{mouseI} > 1;
     for dayI = 1:numDays(mouseI)
         dailyNumCondsActiveCells{mouseI,dayI} = numCondsActive{mouseI}(logical(dayUse{mouseI}(:,dayI)), dayI); 
@@ -162,8 +161,9 @@ for mouseI = 1:numMice
     cellTMap{mouseI} = TMap_unsmoothed;
 end
 
-condPairs = [1 2; 3 4; 1 3; 2 4];
+condPairs = [1 2; 3 4; 1 3; 2 4]; %Study LvR, Test LvR, Left SvT, Right SvT
 
+%Find out if a cell splits
 for mouseI = 1:numMice
     [discriminationIndex{mouseI}, anov{mouseI}] = LookAtSplitters3(cellTMap{mouseI}, condPairs);
     
@@ -179,125 +179,141 @@ for mouseI = 1:numMice
         thisCellSplits{mouseI}{cpI} = logical(thisCellSplits{mouseI}{cpI}.*dayUse{mouseI}); %Activity threshold. Probably fine here?
     end
     
+end
+ 
+%Get logical splitting kind
+for mouseI = 1:numMice
     splittersLR{mouseI} = thisCellSplits{mouseI}{1} + thisCellSplits{mouseI}{2} > 0;
     splittersST{mouseI} = thisCellSplits{mouseI}{3} + thisCellSplits{mouseI}{4} > 0;
-    splittersLRonly{mouseI} = splittersLR{mouseI}; splittersLRonly{mouseI}(splittersST{mouseI}==1) = 0;
-    splittersSTonly{mouseI} = splittersST{mouseI}; splittersSTonly{mouseI}(splittersLR{mouseI}==1) = 0;
-    splittersBoth{mouseI} = (splittersLR{mouseI} + splittersST{mouseI}) == 2;
-    splittersOne{mouseI} = (splittersLR{mouseI} + splittersST{mouseI}) == 1;
-    splittersNone{mouseI} = dayUse{mouseI}; splittersNone{mouseI}(splittersLR{mouseI} | splittersST{mouseI}) = 0;
+
+    [splittersLRonly{mouseI}, splittersSTonly{mouseI}, splittersBOTH{mouseI},...
+        splittersOne{mouseI}, splittersNone{mouseI}] = ...
+        GetSplittingTypes(splittersLR{mouseI}, splittersST{mouseI});
     
     cellsActiveToday{mouseI} = sum(dayUse{mouseI},1);
     splitterProps{mouseI} = [sum(splittersNone{mouseI},1)./cellsActiveToday{mouseI};... %None
                              sum(splittersLRonly{mouseI},1)./cellsActiveToday{mouseI};... %LR only
                              sum(splittersSTonly{mouseI},1)./cellsActiveToday{mouseI};... %ST only
-                             sum(splittersBoth{mouseI},1)./cellsActiveToday{mouseI}]; %Both only
-    
+                             sum(splittersBOTH{mouseI},1)./cellsActiveToday{mouseI}]; %Both only
+end
+
+
+%Daily splitter ranges
+for mouseI = 1:numMice
+    numDailySplittersLR{mouseI} = sum(splittersLR{mouseI},1);
+    rangeDaliSplittersLR(mouseI,:) = [mean(numDailySplittersLR{mouseI}) standarderrorSL(numDailySplittersLR{mouseI})];
+    pctDailySplittersLR{mouseI} = stuff;
+end
+
+%Evaluate splitting: days bias numbers and center of mass per cell
+for mouseI = 1:numMice
+    [splitterLR{mouseI}, splitterST{mouseI}, splitterBOTH{mouseI}] =...
+        SplitterCenterOfMass(dayUse, splittersLR, splittersST, splittersBOTH);  
 end
 
 %% Splitter cells: Shuffle versions
-%Left/Right
+
 numShuffles = 1000;
 shuffThresh = 1 - pThresh;
 binsMin = 1;
 shuffleDirLR = 'shuffleLR';
 shuffleDirST = 'shuffleST';
-%For now this is unpooled (study l vs. study r, as opposed to study l+ test l vs. study r + test r
-    %New pfs with cond pairs would make it easy to do that version
 
+%Left/Right
 for mouseI = 1:numMice
     shuffDirFullLR = fullfile(mainFolder,mice{mouseI},shuffleDirLR);
     load(fullfile(mainFolder,mice{mouseI},'PFsLin.mat'),'TMap_unsmoothed')
-    %[binsAboveShuffleLR, thisCellSplitsLR] = SplitterWrapper1(cellTBT{mouseI}, TMap_unsmoothed,...
-    %'leftright', numShuffles, shuffDirFullLR, xlims, cmperbin, minspeed, trialReli{mouseI}, shuffThresh, binsMin);
+    [rateDiffLR{mouseI}, rateSplitLR{mouseI}, meanRateDiffLR{mouseI}, DIeachLR{mouseI}, DImeanLR{mouseI}] =...
+        LookAtSplitters4(TMap_unsmoothed,[1 2; 3 4],trialReli{mouseI});
     [binsAboveShuffleLR, thisCellSplitsLR] = SplitterWrapper2(cellTBT{mouseI}, TMap_unsmoothed,...
     'leftright', numShuffles, shuffDirFullLR, xlims, cmperbin, minspeed, trialReli{mouseI}, shuffThresh, binsMin);
     save(fullfile(shuffDirFullLR,'splittersLR.mat'),'binsAboveShuffleLR','thisCellSplitsLR')
 end
 
-%% Study/Test (have to run separately, runs out of memory; maybe not with newer version
-
+% Study/Test
 for mouseI = 1:numMice
     shuffDirFullST = fullfile(mainFolder,mice{mouseI},shuffleDirST);
     load(fullfile(mainFolder,mice{mouseI},'PFsLin.mat'),'TMap_unsmoothed')
-    %[binsAboveShuffleLR, thisCellSplitsLR] = SplitterWrapper1(cellTBT{mouseI}, TMap_unsmoothed,...
-    %'leftright', numShuffles, shuffDirFullLR, xlims, cmperbin, minspeed, trialReli{mouseI}, shuffThresh, binsMin);
+    [rateDiffST{mouseI}, rateSplitST{mouseI}, meanRateDiffST{mouseI}, DIeachST{mouseI}, DImeanST{mouseI}] =...
+        LookAtSplitters4(TMap_unsmoothed,[1 3; 2 4],trialReli{mouseI});
     [binsAboveShuffleST, thisCellSplitsST] = SplitterWrapper2(cellTBT{mouseI}, TMap_unsmoothed,...
     'studytest', numShuffles, shuffDirFullST, xlims, cmperbin, minspeed, trialReli{mouseI}, shuffThresh, binsMin);
     save(fullfile(shuffDirFullST,'splittersST.mat'),'binsAboveShuffleST','thisCellSplitsST')
 end
 
-
+%Get logical splitting kind
 for mouseI = 1:numMice
-    LeftRightSplitters{mouseI} = thisCellSplitsLR.StudyLvR | thisCellSplitsLR.TestLvR;
-    LeftRightSplitters{mouseI} = LeftRightSplitters{mouseI}.*dayUse{mouseI};
-    StudyTestSplitters{mouseI} = thisCellSplitsST.LeftSvT | thisCellSplitsST.RightSvT;
-    StudyTestSplitters{mouseI} = StudyTestSplitters{mouseI}.*dayUse{mouseI};
-end
-
-for mouseI = 1:numMice
-    numDailySplittersLR{mouseI} = sum(LeftRightSplitters{mouseI},1);
-    rangeDaliSplittersLR(mouseI,:) = [mean(numDailySplittersLR{mouseI}) standardErrorSL(numDailySplittersLR{mouseI})];
-    pctDailySplittersLR{mouseI} = stuff;
     
+    splittersLR{mouseI} = (thisCellSplitsLR{mouseI} + dayUse{mouseI}) ==2;
+    splittersST{mouseI} = (thisCellSplitsST{mouseI} + dayUse{mouseI}) ==2;
+    splittersANY{mouseI} = (splittersLR{mouseI} + splittersST{mouseI}) > 0;
+    [splittersLRonly{mouseI}, splittersSTonly{mouseI}, splittersBOTH{mouseI},...
+        splittersOne{mouseI}, splittersNone{mouseI}] = ...
+        GetSplittingTypes(splittersLR{mouseI}, splittersST{mouseI}, dayUse{mouseI});
+    
+    cellsActiveToday{mouseI} = sum(dayUse{mouseI},1);
+    splitterProps{mouseI} = [sum(splittersNone{mouseI},1)./cellsActiveToday{mouseI};... %None
+                             sum(splittersLRonly{mouseI},1)./cellsActiveToday{mouseI};... %LR only
+                             sum(splittersSTonly{mouseI},1)./cellsActiveToday{mouseI};... %ST only
+                             sum(splittersBOTH{mouseI},1)./cellsActiveToday{mouseI}]; %Both only
 end
 
+%Evaluate splitting: days bias numbers and center of mass per cell
 for mouseI = 1:numMice
-    numDaysSplitterLR{mouseI} = nan(numCells(mouseI),1); splitterCOMLR{mouseI} = nan(numCells(mouseI),1);
-    numDaysSplitterST{mouseI} = nan(numCells(mouseI),1); splitterCOMST{mouseI} = nan(numCells(mouseI),1);
-    numDaysSplitterBOTH{mouseI} = nan(numCells(mouseI),1); splitterCOMBOTH{mouseI} = nan(numCells(mouseI),1);
-    for cellI = 1:numCells(mouseI)
-        %If the cell splits LR/ST/Both ever and is active for more than one day
-        numDaysPresent = sum(dayUse{mouseI}(cellI,:),2);
-        if numDaysPresent > 1
-            daysPresent = dayUse{mouseI}(cellI,:);
-            dayV = 1:numDaysPresent; dayAlign = zeros(1,length(daysPresent));
-            dayAlign(daysPresent) = dayV;
-            daysActiveCOM = sum(dayAlign)/numDaysPresent;
-            splitterWeight = dayAlign;
-            splitterWeight(daysPresent) = splitterWeight(daysPresent) - daysActiveCOM;
-            
-            LRsplitterDays = splittersLR{mouseI}(cellI,:);
-            numLRsplitterDays = sum(splittersLR{mouseI}(cellI,:),2);
-            if numLRsplitterDays > 0
-                numDaysSplitterLR{mouseI}(cellI) = numLRsplitterDays;
-                splitterCOMLR{mouseI}(cellI) = sum(splitterWeight(LRsplitterDays))/numDaysPresent; %offset from active days COM
-            end
-            
-            STsplitterDays = splittersST{mouseI}(cellI,:);
-            numSTsplitterDays = sum(STsplitterDays,2);
-            if numSTsplitterDays > 0
-                numDaysSplitterST{mouseI}(cellI) = numSTsplitterDays;
-                splitterCOMST{mouseI}(cellI) = sum(splitterWeight(STsplitterDays))/numDaysPresent; %offset from active days COM
-            end
-            
-            BOTHsplitterDays = splittersBoth{mouseI}(cellI,:);
-            numBothsplitterDays = sum(splittersBoth{mouseI}(cellI,:),2);
-            if numLRsplitterDays > 0
-                numDaysSplitterBOTH{mouseI}(cellI) = numBothsplitterDays;
-                splitterCOMBOTH{mouseI}(cellI) = sum(splitterWeight(BOTHsplitterDays))/numDaysPresent; %offset from active days COM
-            end 
-        end
-    end
-    
-    % Only includes cells that show up more than 1 day and split at least 1 day; won't equal some number of splitters or active cells
-    % early bias, no bias didn't split all days, late bias, split all days
-    splitterLRdayBias(mouseI,[1 3]) = [sum(splitterCOMLR{mouseI}<0) sum(splitterCOMLR{mouseI}>0)];
-        splitterLRdayBias(mouseI, 2) = sum((splitterCOMLR{mouseI}==0).*(numDaysSplitterLR{mouseI}~=daysEachCellActive{mouseI}));
-        splitterLRdayBias(mouseI, 4) = sum((splitterCOMLR{mouseI}==0).*(numDaysSplitterLR{mouseI}==daysEachCellActive{mouseI}));
-    splitterSTdayBias(mouseI,[1 3]) = [sum(splitterCOMST{mouseI}<0) sum(splitterCOMST{mouseI}>0)];
-        splitterSTdayBias(mouseI, 2) = sum((splitterCOMST{mouseI}==0).*(numDaysSplitterST{mouseI}~=daysEachCellActive{mouseI}));
-        splitterSTdayBias(mouseI, 4) = sum((splitterCOMST{mouseI}==0).*(numDaysSplitterST{mouseI}==daysEachCellActive{mouseI}));
-    splitterBOTHdayBias(mouseI,[1 3]) = [sum(splitterCOMBOTH{mouseI}<0) sum(splitterCOMBOTH{mouseI}>0)];
-        splitterBOTHdayBias(mouseI, 2) = sum((splitterCOMBOTH{mouseI}==0).*(numDaysSplitterBOTH{mouseI}~=daysEachCellActive{mouseI}));
-        splitterBOTHdayBias(mouseI, 4) = sum((splitterCOMBOTH{mouseI}==0).*(numDaysSplitterBOTH{mouseI}==daysEachCellActive{mouseI}));
-        
+    [splitterLR{mouseI}, splitterST{mouseI}, splitterBOTH{mouseI}] =...
+        SplitterCenterOfMass(dayUse{mouseI}, splittersLR{mouseI}, splittersST{mouseI}, splittersBOTH{mouseI});
+    [splitterLRonly{mouseI}, splitterSTonly{mouseI}, ~] =...
+        SplitterCenterOfMass(dayUse{mouseI}, splittersLRonly{mouseI}, splittersSTonly{mouseI}, splittersBOTH{mouseI});  
+
 end
+
+%Daily splitter ranges
+for mouseI = 1:numMice
+    everSplitANY{mouseI} = sum(sum(splittersANY{mouseI},2) > 0);
+    
+    %Should generalize this
+    numDailySplittersLR{mouseI} = sum(splittersLR{mouseI},1);
+    daysSplitLR{mouseI} = sum(splittersLR{mouseI},2);
+    rangeDailySplittersLR(mouseI,:) = [mean(numDailySplittersLR{mouseI}) standarderrorSL(numDailySplittersLR{mouseI})];
+    pctDailySplittersLR{mouseI} = numDailySplittersLR{mouseI}./cellsActiveToday{mouseI};
+    rangePctDailySplittersLR(mouseI,:) = [mean(pctDailySplittersLR{mouseI}) standarderrorSL(pctDailySplittersLR{mouseI})];
+    splitAllDaysLR{mouseI} = splitterLR{mouseI}.dayBias/sum(sum(dayUse{mouseI},2) > 1); %ever splitLR/cells active at least 2 days
+    
+    numDailySplittersST{mouseI} = sum(splittersST{mouseI},1);
+    daysSplitST{mouseI} = sum(splittersST{mouseI},2);
+    rangeDailySplittersST(mouseI,:) = [mean(numDailySplittersST{mouseI}) standarderrorSL(numDailySplittersST{mouseI})];
+    pctDailySplittersST{mouseI} = numDailySplittersST{mouseI}./cellsActiveToday{mouseI};
+    rangePctDailySplittersST(mouseI,:) = [mean(pctDailySplittersST{mouseI}) standarderrorSL(pctDailySplittersST{mouseI})];
+    splitAllDaysST{mouseI} = splitterST{mouseI}.dayBias/sum(sum(dayUse{mouseI},2) > 1); %ever splitST/cells active at least 2 days
+    
+    numDailySplittersBOTH{mouseI} = sum(splittersBOTH{mouseI},1);
+    daysSplitBOTH{mouseI} = sum(splittersBOTH{mouseI},2);
+    rangeDailySplittersBOTH(mouseI,:) = [mean(numDailySplittersBOTH{mouseI}) standarderrorSL(numDailySplittersBOTH{mouseI})];
+    pctDailySplittersBOTH{mouseI} = numDailySplittersBOTH{mouseI}./cellsActiveToday{mouseI};
+    rangePctDailySplittersBOTH(mouseI,:) = [mean(pctDailySplittersBOTH{mouseI}) standarderrorSL(pctDailySplittersBOTH{mouseI})];
+    splitAllDaysBOTH{mouseI} = splitterBOTH{mouseI}.dayBias/sum(sum(dayUse{mouseI},2) > 1); %ever splitBOTH/cells active at least 2 days
+    
+    numDailySplittersLRonly{mouseI} = sum(splittersLRonly{mouseI},1);
+    daysSplitLRonly{mouseI} = sum(splittersLRonly{mouseI},2);
+    rangeDailySplittersLRonly(mouseI,:) = [mean(numDailySplittersLRonly{mouseI}) standarderrorSL(numDailySplittersLRonly{mouseI})];
+    pctDailySplittersLRonly{mouseI} = numDailySplittersLRonly{mouseI}./cellsActiveToday{mouseI};
+    rangePctDailySplittersLRonly(mouseI,:) = [mean(pctDailySplittersLRonly{mouseI}) standarderrorSL(pctDailySplittersLRonly{mouseI})];
+    splitAllDaysLRonly{mouseI} = splitterLRonly{mouseI}.dayBias/sum(sum(dayUse{mouseI},2) > 1); %ever splitBOTH/cells active at least 2 days
+
+    numDailySplittersSTonly{mouseI} = sum(splittersSTonly{mouseI},1);
+    daysSplitSTonly{mouseI} = sum(splittersSTonly{mouseI},2);
+    rangeDailySplittersSTonly(mouseI,:) = [mean(numDailySplittersSTonly{mouseI}) standarderrorSL(numDailySplittersSTonly{mouseI})];
+    pctDailySplittersSTonly{mouseI} = numDailySplittersSTonly{mouseI}./cellsActiveToday{mouseI};
+    rangePctDailySplittersSTonly(mouseI,:) = [mean(pctDailySplittersSTonly{mouseI}) standarderrorSL(pctDailySplittersSTonly{mouseI})];
+    splitAllDaysSTonly{mouseI} = splitterSTonly{mouseI}.dayBias/sum(sum(dayUse{mouseI},2) > 1); %ever splitBOTH/cells active at least 2 days
+end
+
+
 
 %% Place Cells
 numShuffles = 1000; %takes about an hour
 % Shuffle within a condition for peak place firing
-shuffleDir = 'PosShuffle';
+shuffleDir = 'ShufflePos';
 
 
 %Make position shuffles
@@ -314,7 +330,7 @@ for mouseI = 1:numMice
         saveName = fullfile(shuffDirFull,['shuffPos' num2str(shuffleI) '.mat']);
         %[~, ~, ~, allTMap_shuffled{shuffleI}, ~] =... 
         %            PFsLinTrialbyTrial(shuffledTBT,xlims, cmperbin, minspeed, 1, saveName, trialReli{mouseI});
-        [allTMap_shuffled{shuffleI}, ~, ~, ~, ~, ~] =...
+        [~, ~, ~, ~, ~, ~] =...
             PFsLinTrialbyTrial2(shuffledTBT, xlims, cmperbin, minspeed,...
                 saveName,'trialReli',trialReli{mouseI},'smooth',false); 
         disp(['done shuffle ' num2str(shuffleI) ])
