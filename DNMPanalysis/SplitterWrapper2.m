@@ -70,7 +70,7 @@ end
 p.stop;
 disp('Done measuring split')
 
-[baseRateDiff, ~, ~, ~, ~] = LookAtSplitters4(baseTMap_unsmoothed,condPairs,trialReli);
+[baseRateDiff, ~, ~, ~, ~, ~] = LookAtSplitters4(baseTMap_unsmoothed,condPairs,trialReli);
 [~, binsAboveShuffle, thisCellSplits] = SplitterRateRank2(baseRateDiff, rateDiffReorg, shuffThresh, binsMin);
     
 thisCellSplits = sum(thisCellSplits,3) > 0;

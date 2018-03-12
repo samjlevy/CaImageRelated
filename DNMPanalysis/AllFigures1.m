@@ -61,6 +61,20 @@ end
 
 %% Splitters
 for mouseI = 1:numMice
+    figure; hold on
+    title(['Mouse ' num2str(mouseI) ', Pct Active cells that split, R = LR, B = ST, G = Both'])
+    plot(pctDailySplittersLR{mouseI},'r','LineWidth',1.5)
+    plot(pctDailySplittersST{mouseI},'b','LineWidth',1.5)
+    plot(pctDailySplittersBOTH{mouseI},'g','LineWidth',1.5)
+    plot(pctDailySplittersLRonly{mouseI},'Color',[0.9294    0.6902    0.1294],'LineWidth',1.5)
+    plot(pctDailySplittersSTonly{mouseI},'c','LineWidth',1.5)
+    xlabel('Day Number')
+    ylabel('% Splitters/Active')
+    ylim([0 1])
+end
+
+
+for mouseI = 1:numMice
     figure; hold on; splitterData = [zeros(size(splitterProps{mouseI},2),1), splitterProps{mouseI}'];
     bar(splitterData(:,2:5),'stacked')
     title(['Mouse ' num2str(mouseI) ', Proportion Active cells that split'])

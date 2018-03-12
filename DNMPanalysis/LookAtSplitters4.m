@@ -1,4 +1,4 @@
-function [rateDiff, rateSplit, meanRateDiff, DIeach, DImean] = LookAtSplitters4(TMap_unsmoothed,condPairs,trialReli)
+function [rateDiff, rateSplit, meanRateDiff, DIeach, DImean, DIall] = LookAtSplitters4(TMap_unsmoothed,condPairs,trialReli)
 %includes a basic splitting which is sum of differences in firing rates,
 %and normalized across the number of bins where there was activity in at
 %least one of the conditions
@@ -12,7 +12,7 @@ function [rateDiff, rateSplit, meanRateDiff, DIeach, DImean] = LookAtSplitters4(
 %DIeach        - DI score each bin (rateDiff / total amount of firing in that bin)
 %DImax         - max of the DIeach
 %DImean        - nanmean of DIeach
-%add one that is ...?
+%DIall?        - DI on all firing?
 
 if isempty(condPairs); condPairs = combnk(1:size(TMap_unsmoothed,2),2); end
 
@@ -33,6 +33,7 @@ meanRateDiff = nan(numCells,numSess,numConds);
 DIeach = cell(numCells,numSess,numConds);
 %DImax = nan(numCells,numSess,numConds);
 DImean = nan(numCells,numSess,numConds);
+DIall = nan(numCells,numSess,numConds);
 
 for cpI = 1:numConds
     for sessI = 1:numSess
@@ -48,6 +49,7 @@ for cpI = 1:numConds
                 DIeach{cellI,sessI,cpI} = rateDiff{cellI,sessI,cpI} ./ (ratesA + ratesB);
                 %DImax(cellI,sessI,cpI) = max(DIeach(cellI,sessI,cpI));
                 DImean(cellI,sessI,cpI) = nanmean(DIeach{cellI,sessI,cpI});
+                DIall(cellI,sessI,cpI) = (mean(ratesB) - mean(ratesA)) / (sum(ratesA) + sum(ratesB));
             end
         end
     end
