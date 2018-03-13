@@ -52,6 +52,14 @@ for mouseI = 1:numMice
     xlabel('Day Number'); ylabel('Pct cells returning')
 end
 
+%% Conds active per day (above threshold)
+for mouseI = 1:numMice
+    figure;
+    errorbar(dailyNCAmean(mouseI,:),dailyNCAsem(mouseI,:))
+    title(['Mean conditions above thresh for active cells, Mouse ' num2str(mouseI)])
+    xlabel('Day Number'); ylabel('Mean/SEM conds active'); ylim([0 4])
+end
+
 %% Cell activity histograms
 
 % One for trial reliability
@@ -59,7 +67,7 @@ end
 %   all w/ errors?
 % Another for consecutive laps
 
-%% Splitters
+%% Splitters: what proportion per day?
 for mouseI = 1:numMice
     figure; hold on
     title(['Mouse ' num2str(mouseI) ', Pct Active cells that split, R = LR, B = ST, G = Both'])
@@ -73,7 +81,22 @@ for mouseI = 1:numMice
     ylim([0 1])
 end
 
-
+%% Proportion of DI score at extremes
+for mouseI = 1:numMice
+    figure; 
+    subplot(1,2,1)
+    plot(pctEdgeLR{mouseI},'b'); hold on;
+    plot(pctEdgeLRsplitters{mouseI},'r');
+    plot(pctEdgeLRboth{mouseI},'g'); ylim([0 1])
+    title(['LR Prop. cells w/ edge DI Mouse ' num2str(mouseI)])
+    subplot(1,2,2)
+    plot(pctEdgeST{mouseI},'b'); hold on;
+    plot(pctEdgeSTsplitters{mouseI},'r');
+    plot(pctEdgeSTboth{mouseI},'g'); ylim([0 1])
+    title(['ST Prop. cells w/ edge DI Mouse ' num2str(mouseI)])
+    legend('Any','Splitters','both','Location','southwest')
+end
+%% old splitters
 for mouseI = 1:numMice
     figure; hold on; splitterData = [zeros(size(splitterProps{mouseI},2),1), splitterProps{mouseI}'];
     bar(splitterData(:,2:5),'stacked')
