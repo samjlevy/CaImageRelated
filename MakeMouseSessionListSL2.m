@@ -982,6 +982,22 @@ elseif strcmp(userstr,'sam')
     MDSL(i).Location = 'C:\Users\Sam\Desktop\CM_Miniscope\ACM1';
 end
 MDSL(i).Notes = [];
+
+Styx(1) = (i+1);
+
+i = i+1;
+MDSL(i).Animal = 'Styx';
+MDSL(i).Date = '03_12_2018';
+MDSL(i).Session = 1;
+MDSL(i).Env = 'Plus1';
+MDSL(i).Room = '719h';
+MDSL(i).RecordStartTime = ' ';
+if strcmp(userstr,'sam')
+    MDSL(i).Location = 'D:\DoublePlus\Styx180312';
+%elseif strcmp(userstr,'sam')
+%    MDSL(i).Location = 'C:\Users\Sam\Desktop\CM_Miniscope\ACM1';
+end
+MDSL(i).Notes = [];
 %% Compile session_ref
 
 session_ref.Polaris_DNMP = Polaris_DNMP;

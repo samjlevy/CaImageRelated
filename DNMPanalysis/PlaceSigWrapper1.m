@@ -3,6 +3,7 @@ function PlaceSigWrapper1(trialbytrial, xlims, cmperbin, minspeed, trialReli, nu
 numConds = length(trialbytrial);
 numCells = size(trialbytrial(1).trialPSAbool{1},1);
 numSess = length(unique(trialbytrial(1).sessID));
+pInd = round((1-pThresh)*numShuffles);
     
 if ~exist(shuffDirFull,'dir')
     mkdir(shuffDirFull)
@@ -25,7 +26,9 @@ end
 
 %Reorganize for sorting etc.
 shuffTMapReorg = cell(numCells,numSess,numConds);
+if exist(fullfile(shuffDirFull,'shuffledRatesSorted.mat'),'file')~=2
 disp('Loading and reorganizing and place maps')
+
 possibleShuffles = dir('shuffPos*.mat');
 possibleShuffles([possibleShuffles(:).isdir]==1) = [];
 p = ProgressBar(numShuffles);
@@ -44,21 +47,18 @@ for shuffleI = 1:numShuffles
     p.progress;
 end
 p.stop;
-disp('Done measuring split')
-
+disp('Done loading reorganizing split')
 
 %Sort, etc. 
-if exist(fullfile(shuffDirFull,'shuffledRatesSorted.mat'),'file')~=2
 shuffledRatesSorted = cell(size(shuffTMapReorg));
-shuffledRatesMean = cell(size(shuffTMapReorg));
-shuffledRates95 = cell(size(shuffTMapReorg));
-pInd = round((1-pThresh)*numShuffles);    
-for cellI = 1:numCells(mouseI) %Takes a few minues with 1000 shuffles
-    for condI = 1:4
-        for dayI = 1:numSess(mouseI)
+%shuffledRatesMean = cell(size(shuffTMapReorg));
+%shuffledRates95 = cell(size(shuffTMapReorg));    
+for cellI = 1:numCells %Takes a few minues with 1000 shuffles
+    for condI = 1:numConds
+        for dayI = 1:numSess
             shuffledRatesSorted{cellI,condI,dayI} = sort(shuffTMapReorg{cellI,dayI,condI},1);
-            shuffledRatesMean{cellI,condI,dayI} = nanmean(shuffledRatesSorted{cellI,condI,dayI},1); %Uses nanmean
-            shuffledRates95{cellI,condI,dayI} = shuffledRatesSorted{cellI,condI,dayI}(pInd,:);
+            %shuffledRatesMean{cellI,condI,dayI} = nanmean(shuffledRatesSorted{cellI,condI,dayI},1); %Uses nanmean
+            %shuffledRates95{cellI,condI,dayI} = shuffledRatesSorted{cellI,condI,dayI}(pInd,:);
         end
     end
 end
@@ -72,12 +72,15 @@ binsAbove95 = cell(size(TMap_unsmoothed));
 for cellI = 1:numCells 
     for condI = 1:numConds
         for dayI = 1:numSess
+            if trialReli(cellI,dayI,condI) == 1
             binsAbove95{cellI,condI,dayI} = ...
-                TMap_unsmoothed{cellI,condI,dayI} > shuffledRates95{cellI,condI,dayI};
+                TMap_unsmoothed{cellI,condI,dayI} > shuffledRatesSorted{cellI,condI,dayI}(pInd,:);
+            end
         end
     end
 end
     
+numBins = size(shuffledRatesSorted{1,1,1},2);
 numAbove95 = cell2mat(cellfun(@sum,binsAbove95,'UniformOutput',false));
 placeAtAll = numAbove95 > 0;
 lessThanHalf = numAbove95 < round(numBins/2); %Fires on less than half the stem
@@ -86,6 +89,6 @@ placeToday = squeeze(sum(placeAtAll,2) > 0);
     
 %Save placefield results
 save(fullfile(shuffDirFull,'PFresults.mat'),'binsAbove95','numAbove95','lessThanHalf','placeAtAll','placeToday','-v7.3')
-disp(['done place stuff mouse ' num2str(mouseI)])
+disp('saved place stuff')
 
 end

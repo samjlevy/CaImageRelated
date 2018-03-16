@@ -96,6 +96,27 @@ for mouseI = 1:numMice
     title(['ST Prop. cells w/ edge DI Mouse ' num2str(mouseI)])
     legend('Any','Splitters','both','Location','southwest')
 end
+
+%% Proportion place cells
+for mouseI = 1:numMice
+    figure; hold on
+    for condI = 1:4
+        plot(placeProps{mouseI}(condI,:))
+    end
+    plot(totalPropPlace{mouseI},'k','LineWidth',2)
+    legend('Study L', 'Study R', 'Test L', 'Test R','Location','northwest')
+    title(['Mouse ' num2str(mouseI) ', Proportion place cells by condition'])
+    xlabel('Day Number'); ylim([0 1])
+end
+
+%% Proportion conds active also place
+for mouseI = 1:numMice
+    figure; hold on
+    errorbar(dailyPropCondsWherePlace{mouseI}(1,:),dailyPropCondsWherePlace{mouseI}(2,:))
+    title(['Mouse ' num2str(mouseI) ', Proportion conds active also place'])
+    xlabel('Day Number'); %ylim([0 1])
+end
+
 %% old splitters
 for mouseI = 1:numMice
     figure; hold on; splitterData = [zeros(size(splitterProps{mouseI},2),1), splitterProps{mouseI}'];

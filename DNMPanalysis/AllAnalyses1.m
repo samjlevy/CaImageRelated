@@ -369,22 +369,72 @@ end
 %Load sig results, start-a-parsing
 for mouseI = 1:numMice
     load(fullfile(mainFolder,mice{mouseI},shuffleDir,'PFresults.mat'))
-    placeByCond{mouseI} = binsAbove95;
-    %numAbove95
+    placeByBin{mouseI} = binsAbove95;
+    numPlaceBins{mouseI} = numAbove95;
     belowHalf{mouseI} = lessThanHalf;
-    anyPlace{mouseI} = placeAtAll;
+    placeByCond{mouseI} = placeAtAll;
     placeThisDay{mouseI} = placeToday;
 end
 
 
-%Splitter-type evaluation of how many are place cells, do the become/lose placeness
-%How many conds to they tend to be place-y out of conds active?
 
+%How many place cells each conditions? How many with more than one condition?
+for mouseI = 1:numMice
+    cellsActiveToday{mouseI} = sum(dayUse{mouseI},1);
+    placeByCondThreshed{mouseI}(:,:,1) = squeeze(placeByCond{mouseI}(:,1,:)).*squeeze(threshAndConsec{mouseI}(:,:,1));
+    placeByCondThreshed{mouseI}(:,:,2) = squeeze(placeByCond{mouseI}(:,2,:)).*squeeze(threshAndConsec{mouseI}(:,:,2));
+    placeByCondThreshed{mouseI}(:,:,3) = squeeze(placeByCond{mouseI}(:,3,:)).*squeeze(threshAndConsec{mouseI}(:,:,3));
+    placeByCondThreshed{mouseI}(:,:,4) = squeeze(placeByCond{mouseI}(:,4,:)).*squeeze(threshAndConsec{mouseI}(:,:,4));
+    %placeNums{mouseI} = [sum(squeeze(placeByCond{mouseI}(:,1,:)).*dayUse{mouseI});... %Study L
+    %                     sum(squeeze(placeByCond{mouseI}(:,2,:)).*dayUse{mouseI});... %Study R
+    %                     sum(squeeze(placeByCond{mouseI}(:,3,:)).*dayUse{mouseI});... %Test L
+    %                     sum(squeeze(placeByCond{mouseI}(:,4,:)).*dayUse{mouseI})];   %Test R
+    placeNums{mouseI} = [sum(placeByCondThreshed{mouseI}(:,:,1),1);... %Study L
+                         sum(placeByCondThreshed{mouseI}(:,:,2),1);... %Study R
+                         sum(placeByCondThreshed{mouseI}(:,:,3),1);... %Test L
+                         sum(placeByCondThreshed{mouseI}(:,:,4),1)];   %Test R
+                         
+    placeProps{mouseI} = [placeNums{mouseI}(1,:)./cellsActiveToday{mouseI};... %Study L
+                          placeNums{mouseI}(2,:)./cellsActiveToday{mouseI};... %Study R
+                          placeNums{mouseI}(3,:)./cellsActiveToday{mouseI};... %Test L
+                          placeNums{mouseI}(4,:)./cellsActiveToday{mouseI}]; %Test R  
+    totalPropPlace{mouseI} = (sum(placeThisDay{mouseI}.*dayUse{mouseI})./cellsActiveToday{mouseI});
+    
+    for condI = 1:size(placeProps{mouseI},1)
+        pctRangePlace{mouseI}(condI,1:2) = [mean(placeProps{mouseI}(condI,:)) standarderrorSL(placeProps{mouseI}(condI,:))];
+    end
+    pctRangePlace{mouseI}(size(pctRangePlace{mouseI},1)+1,1:2) = [mean(totalProp{mouseI}) standarderrorSL(totalProp{mouseI})];
+    
+    %numCondsAPlaceCell{mouseI} = sum(placeByCond{mouseI},2)
+    condsWherePlace{mouseI} = squeeze(sum(placeByCondThreshed{mouseI},3))./squeeze(sum(threshAndConsec{mouseI},3));
+    for dayI = 1:size(dayUse{mouseI},2)
+        dailyPropCondsWherePlace{mouseI}([1:2],dayI) = [mean(condsWherePlace{mouseI}(dayUse{mouseI}(:,dayI),dayI));...
+                          standarderrorSL(condsWherePlace{mouseI}(dayUse{mouseI}(:,dayI),dayI))]; %Indexing only gets it for active cells
+    end
+    pctRangeCondsWherePlace(mouseI,1:2) = [mean(dailyPropCondsWherePlace{mouseI}(1,:)) standarderrorSL(dailyPropCondsWherePlace{mouseI}(1,:))];
+end
+
+
+%Placecells coming or going?
+for mouseI = 1:numMice
+    [placeCOM{mouseI}, placeDayBias{mouseI}] = LogicalTraitCenterofMass(dayUse{mouseI}, placeThisDay{mouseI}); 
+    [placeCOMSL{mouseI}, placeDayBiasSL{mouseI}] = LogicalTraitCenterofMass(dayUse{mouseI}, squeeze(placeByCond{mouseI}(:,1,:)));
+    [placeCOMSR{mouseI}, placeDayBiasSR{mouseI}] = LogicalTraitCenterofMass(dayUse{mouseI}, squeeze(placeByCond{mouseI}(:,2,:)));
+    [placeCOMTL{mouseI}, placeDayBiasTL{mouseI}] = LogicalTraitCenterofMass(dayUse{mouseI}, squeeze(placeByCond{mouseI}(:,3,:)));
+    [placeCOMTR{mouseI}, placeDayBiasTR{mouseI}] = LogicalTraitCenterofMass(dayUse{mouseI}, squeeze(placeByCond{mouseI}(:,4,:)));
+end
+
+    
 %% Place/Splitter cell over lap
 
-
-
-
+for mouseI = 1:numMice
+    placeSplitLR = splittersLR{mouseI}.*(placeThisDay{mouseI}.*dayUse{mouseI});
+    placeSplitST = splittersST{mouseI}.*(placeThisDay{mouseI}.*dayUse{mouseI});
+    placeSplitBOTH = splittersBOTH{mouseI}.*(placeThisDay{mouseI}.*dayUse{mouseI});
+    placeSplitLRonly = splittersLRonly{mouseI}.*(placeThisDay{mouseI}.*dayUse{mouseI});
+    placeSplitSTonly = splittersSTonly{mouseI}.*(placeThisDay{mouseI}.*dayUse{mouseI});
+    %splittersNone{mouseI}.*(placeByCondThreshed{mouseI}(:,:,1) | placeByCondThreshed{mouseI}(:,:,3));
+end
 %% Population Vector Correlations
 
 
