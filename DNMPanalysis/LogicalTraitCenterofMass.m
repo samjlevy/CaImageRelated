@@ -20,7 +20,7 @@ for cellI = 1:numCells
         splitterWeight = dayAlign;
         splitterWeight(daysPresent) = splitterWeight(daysPresent) - daysActiveCOM;
         
-        splitterDays = splittersLogical(cellI,:);
+        splitterDays = logical(splittersLogical(cellI,:));
         numSplitterDays = sum(splittersLogical(cellI,:),2);
         if numSplitterDays > 0
             numDaysSplitter(cellI) = numSplitterDays;

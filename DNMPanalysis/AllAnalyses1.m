@@ -338,6 +338,7 @@ for mouseI = 1:numMice
 end
 
 %Possible better rebuild, probably not necessary
+%{
 binEdges = [-1.1 -0.9:0.1:0.9 1.1];
 for mouseI = 1:numMice
     DImeansLR = DImeanLR{mouseI}; DImeansLR(dayUse{mouseI}==0) = NaN;
@@ -352,7 +353,7 @@ for mouseI = 1:numMice
     
     
 end
-    
+    %}
 %% Place Cells
 numShuffles = 1000; %takes about an hour
 % Shuffle within a condition for peak place firing
@@ -403,7 +404,7 @@ for mouseI = 1:numMice
     for condI = 1:size(placeProps{mouseI},1)
         pctRangePlace{mouseI}(condI,1:2) = [mean(placeProps{mouseI}(condI,:)) standarderrorSL(placeProps{mouseI}(condI,:))];
     end
-    pctRangePlace{mouseI}(size(pctRangePlace{mouseI},1)+1,1:2) = [mean(totalProp{mouseI}) standarderrorSL(totalProp{mouseI})];
+    pctRangePlace{mouseI}(size(pctRangePlace{mouseI},1)+1,1:2) = [mean(totalPropPlace{mouseI}) standarderrorSL(totalPropPlace{mouseI})];
     
     %numCondsAPlaceCell{mouseI} = sum(placeByCond{mouseI},2)
     condsWherePlace{mouseI} = squeeze(sum(placeByCondThreshed{mouseI},3))./squeeze(sum(threshAndConsec{mouseI},3));
@@ -427,14 +428,62 @@ end
     
 %% Place/Splitter cell over lap
 
+% Get logical is it placeXsplitter
 for mouseI = 1:numMice
-    placeSplitLR = splittersLR{mouseI}.*(placeThisDay{mouseI}.*dayUse{mouseI});
-    placeSplitST = splittersST{mouseI}.*(placeThisDay{mouseI}.*dayUse{mouseI});
-    placeSplitBOTH = splittersBOTH{mouseI}.*(placeThisDay{mouseI}.*dayUse{mouseI});
-    placeSplitLRonly = splittersLRonly{mouseI}.*(placeThisDay{mouseI}.*dayUse{mouseI});
-    placeSplitSTonly = splittersSTonly{mouseI}.*(placeThisDay{mouseI}.*dayUse{mouseI});
-    %splittersNone{mouseI}.*(placeByCondThreshed{mouseI}(:,:,1) | placeByCondThreshed{mouseI}(:,:,3));
+    placeSplitLR{mouseI} = logical(splittersLR{mouseI}.*(placeThisDay{mouseI}.*dayUse{mouseI}));
+    placeSplitST{mouseI} = logical(splittersST{mouseI}.*(placeThisDay{mouseI}.*dayUse{mouseI}));
+    placeSplitBOTH{mouseI} = logical(splittersBOTH{mouseI}.*(placeThisDay{mouseI}.*dayUse{mouseI}));
+    placeSplitLRonly{mouseI} = logical(splittersLRonly{mouseI}.*(placeThisDay{mouseI}.*dayUse{mouseI}));
+    placeSplitSTonly{mouseI} = logical(splittersSTonly{mouseI}.*(placeThisDay{mouseI}.*dayUse{mouseI}));
+    placeSplitNone{mouseI} = logical(splittersNone{mouseI}.*(placeByCondThreshed{mouseI}(:,:,1) | placeByCondThreshed{mouseI}(:,:,3)));
 end
+
+% How many, Range etc.
+for mouseI = 1:numMice
+    numPctPXSLR{mouseI}(1,:) = sum(placeSplitLR{mouseI},1);
+    numPctPXSLR{mouseI}(2,:) = numPctPXSLR{mouseI}(1,:)./cellsActiveToday{mouseI};
+    rangePctPXSLR(mouseI,1:2) = [mean(numPctPXSLR{mouseI}(2,:)) standarderrorSL(numPctPXSLR{mouseI}(2,:))];
+    
+    numPctPXSST{mouseI}(1,:) = sum(placeSplitST{mouseI},1);
+    numPctPXSST{mouseI}(2,:) = numPctPXSST{mouseI}(1,:)./cellsActiveToday{mouseI};
+    rangePctPXSST(mouseI,1:2) = [mean(numPctPXSST{mouseI}(2,:)) standarderrorSL(numPctPXSST{mouseI}(2,:))];
+    
+    numPctPXSBOTH{mouseI}(1,:) = sum(placeSplitBOTH{mouseI},1);
+    numPctPXSBOTH{mouseI}(2,:) = numPctPXSBOTH{mouseI}(1,:)./cellsActiveToday{mouseI};
+    rangePctPXSBOTH(mouseI,1:2) = [mean(numPctPXSBOTH{mouseI}(2,:)) standarderrorSL(numPctPXSBOTH{mouseI}(2,:))];
+    
+    numPctPXSLRonly{mouseI}(1,:) = sum(placeSplitLRonly{mouseI},1);
+    numPctPXSLRonly{mouseI}(2,:) = numPctPXSLRonly{mouseI}(1,:)./cellsActiveToday{mouseI};
+    rangePctPXSLRonly(mouseI,1:2) = [mean(numPctPXSLRonly{mouseI}(2,:)) standarderrorSL(numPctPXSLRonly{mouseI}(2,:))];
+    
+    numPctPXSSTonly{mouseI}(1,:) = sum(placeSplitSTonly{mouseI},1);
+    numPctPXSSTonly{mouseI}(2,:) = numPctPXSSTonly{mouseI}(1,:)./cellsActiveToday{mouseI};
+    rangePctPXSSTonly(mouseI,1:2) = [mean(numPctPXSSTonly{mouseI}(2,:)) standarderrorSL(numPctPXSSTonly{mouseI}(2,:))];
+    
+    numPctPXSNone{mouseI}(1,:) = sum(placeSplitNone{mouseI},1);
+    numPctPXSNone{mouseI}(2,:) = numPctPXSNone{mouseI}(1,:)./cellsActiveToday{mouseI};
+    rangePctPXSNone(mouseI,1:2) = [mean(numPctPXSNone{mouseI}(2,:)) standarderrorSL(numPctPXSNone{mouseI}(2,:))];
+end
+% Coming or going?
+for mouseI = 1:numMice
+    [pxsLRCOM{mouseI}, pxsDayBiasLR{mouseI}] = LogicalTraitCenterofMass(dayUse{mouseI}, placeSplitLR{mouseI});
+    [pxsSTCOM{mouseI}, pxsDayBiasST{mouseI}] = LogicalTraitCenterofMass(dayUse{mouseI}, placeSplitST{mouseI});
+    [pxsBOTHCOM{mouseI}, pxsDayBiasBOTH{mouseI}] = LogicalTraitCenterofMass(dayUse{mouseI}, placeSplitBOTH{mouseI});
+    [pxsLRonlyCOM{mouseI}, pxsDayBiasLRonly{mouseI}] = LogicalTraitCenterofMass(dayUse{mouseI}, placeSplitLRonly{mouseI});
+    [pxsSTonlyCOM{mouseI}, pxsDayBiasSTonly{mouseI}] = LogicalTraitCenterofMass(dayUse{mouseI}, placeSplitSTonly{mouseI});
+    [pxsNoneCOM{mouseI}, pxsDayBiasNone{mouseI}] = LogicalTraitCenterofMass(dayUse{mouseI}, placeSplitNone{mouseI});
+end
+    
+%% Cell identity round-up
+
+%Splitter, not place
+
+%Place, not splitter
+
+%Splitter and place
+
+%Not splitter, not place
+
 %% Population Vector Correlations
 
 

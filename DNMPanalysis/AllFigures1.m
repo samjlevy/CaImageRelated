@@ -81,6 +81,10 @@ for mouseI = 1:numMice
     ylim([0 1])
 end
 
+%Splitters by accuracy
+
+%Splitter props. by average num conds active
+
 %% Proportion of DI score at extremes
 for mouseI = 1:numMice
     figure; 
@@ -96,6 +100,8 @@ for mouseI = 1:numMice
     title(['ST Prop. cells w/ edge DI Mouse ' num2str(mouseI)])
     legend('Any','Splitters','both','Location','southwest')
 end
+
+%DI distributions
 
 %% Proportion place cells
 for mouseI = 1:numMice
@@ -117,38 +123,23 @@ for mouseI = 1:numMice
     xlabel('Day Number'); %ylim([0 1])
 end
 
+%% Place-by-Splitter
+for mouseI = 1:numMice
+    figure; hold on
+    plot(numPctPXSLR{mouseI}(2,:))
+    plot(numPctPXSST{mouseI}(2,:))
+    plot(numPctPXSBOTH{mouseI}(2,:))
+    plot(numPctPXSLRonly{mouseI}(2,:))
+    plot(numPctPXSSTonly{mouseI}(2,:))
+    plot(numPctPXSNone{mouseI}(2,:))
+    title(['Mouse ' num2str(mouseI) ', Proportion of active cells Place-X-Splitter'])
+    xlabel('Day Number'); ylim([0 1])
+    legend('LR','ST','BOTH','LRonly','STonly','None','Location','northwest')
+end
+    
 %% old splitters
-for mouseI = 1:numMice
-    figure; hold on; splitterData = [zeros(size(splitterProps{mouseI},2),1), splitterProps{mouseI}'];
-    bar(splitterData(:,2:5),'stacked')
-    title(['Mouse ' num2str(mouseI) ', Proportion Active cells that split'])
-    legend('Study LvR','Test LvR','Left SvT','Right SvT','Location','northeast')
-    xlabel('Day Number')
-end
 
-colorsU = {'b','c','r','m'};
-for mouseI = 1:numMice
-    figure; hold on
-    for cpI = 1:size(pctSplitters{mouseI},1)
-        plot(pctSplitters{mouseI}(cpI,:),colorsU{cpI})
-    end
-    title(['Mouse ' num2str(mouseI) ', pct of active that split by day'])
-    legend('Study LvR','Test LvR','Left SvT','Right SvT')
-    xlabel('Day Number'); ylabel('Pct Splitters')
-    ylim([0 1])
-end
 
-for mouseI = 1:numMice
-    figure; hold on
-    %numDays = size(pctSplitters{mouseI},2);
-    for cpI = 1:size(pctSplitters{mouseI},1)
-        plot(accuracy{mouseI},pctSplitters{mouseI}(cpI,:),['o' colorsU{cpI}],'MarkerFaceColor',colorsU{cpI})
-    end
-    title(['Mouse ' num2str(mouseI) ', pct splitters of active by accuracy'])
-    legend('Study LvR','Test LvR','Left SvT','Right SvT','Location','southwest')
-    xlabel('Accuracy'); ylabel('Pct Splitters')
-    ylim([0 1])
-end
 
 %Maybe all the stuff here should be in analyses?
 labels = {'Study LvR','Test LvR','Left SvT','Right SvT'};
