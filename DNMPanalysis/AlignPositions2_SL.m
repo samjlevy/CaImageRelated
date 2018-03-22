@@ -1,25 +1,29 @@
-function AlignPositionsBatch_SL(base_path, align_paths, RoomStr)
+function AlignPositions2_SL(anchor_path, align_paths, RoomStr)
 %This function is to do a really good alignment of positions, both within
 %and across animals
+if strcmp(class(align_paths),'cell') == 0
+    align_paths = {align_paths};
+end
 
 scaleFactor = 0.6246;
 Pix2Cm = Pix2CMlist (RoomStr);
 SR=20;
 v0Scale = 1.5;
 DNMPscale = (25 + 3/16) / (11 + 3/8); %inches
+DNMPdims = [25+3/16 11+3/8]*2.54;
 
-if exist(fullfile(base_path,'Pos_anchor.mat','file'))~=2
-    load(fullfile(base_path,'Pos.mat'),'v0')
-    [floorCorners,barrierX,barrierY,flipX,flipY] = MakePosAnchor(base_path,v0Scale);
+if exist(fullfile(anchor_path,'Pos_anchor.mat','file'))~=2
+    load(fullfile(anchor_path,'Pos.mat'),'v0')
+    [floorCorners,barrierX,barrierY,flipX,flipY] = MakePosAnchor(anchor_path,v0Scale);
     
-    save(fullfile(base_path,'Pos_anchor.mat'),'floorCorners','barrierX','barrierY','flipX','flipY')
+    save(fullfile(anchor_path,'Pos_anchor.mat'),'floorCorners','barrierX','barrierY','flipX','flipY')
 else
-    load(fullfile(base_path,'Pos_anchor.mat'))
+    load(fullfile(anchor_path,'Pos_anchor.mat'))
 end
 
-if exist(fullfile(base_path,'Pos_anchor_ideal.mat'),'file')~=2
+if exist(fullfile(anchor_path,'Pos_anchor_ideal.mat'),'file')~=2
     disp('Did not find pos_anchor_ideal, making now')
-    [newCorners] = ArrangeBaseAnchors(v0,floorCorners, RoomStr, flipX, flipY, barrierX, barrierY, DNMPscale);
+    [newCorners] = ArrangeBaseAnchors(v0,floorCorners, RoomStr, flipX, flipY, barrierX, barrierY, DNMPdims);
     %Left turn is positive, right turn is negative
     xAnchor = newCorners(:,1);
     yAnchor = newCorners(:,2);
@@ -33,31 +37,22 @@ if exist(fullfile(base_path,'Pos_anchor_ideal.mat'),'file')~=2
     plot(xADJ,yADJ,'.')
     %}
     
-    save(fullfile(base_path,'Pos_anchor_ideal.mat'),'xAnchor','yAnchor')
+    save(fullfile(anchor_path,'Pos_anchor_ideal.mat'),'xAnchor','yAnchor')
 else
-    load(fullfile(base_path),'Pos_anchor_ideal.mat')
+    load(fullfile(anchor_path),'Pos_anchor_ideal.mat')
 end
 
-tform = fitgeotrans(floorCorners,[xAnchor yAnchor],'affine');
-[xADJ, yADJ] = transformPointsForward(tform,xAVI,yAVI);
-allPaths = {base_path, align_paths{:}};
 
-for thisPath = 1:length(allPaths)
-   
-    if ~exist(fullfile(allPaths{thisPath},'Pos_final.mat'),'file')
-    sessPath = allPaths{thisPath};
-    [cx, cy]=GetCorners(sessPath);
+for pathI = 1:length(align_paths)
+    [floorCorners,barrierX,barrierY,flipX,flipY] = MakePosAnchor(align_paths{pathI},v0Scale);
     
-    load(fullfile(sessPath,'Pos_brain.mat'))%x and y come from here
+    load(fullfile(align_paths{pathI},'Pos_brain.mat'))
     
-    tform = fitgeotrans([cx' cy'],[xAnchor yAnchor],'affine');
-    [xt, yt] = transformPointsForward(tform,x*scaleFactor,y*scaleFactor);
+    tform = fitgeotrans(floorCorners,[xAnchor yAnchor],'affine');
+    [x_adj_cm, y_adj_cm] = transformPointsForward(tform,brainX,brainY);
 
-    %Convert to CM
-    Pix2Cm = Pix2CMlist (RoomStr);
-    x_adj_cm = xt*Pix2Cm;
-    y_adj_cm = yt.*Pix2Cm;
-
+    PSAbool = PSAboolAdjusted;
+    
     %Speed for each
     dx = diff(x_adj_cm);
     dy = diff(y_adj_cm);
@@ -67,31 +62,40 @@ for thisPath = 1:length(allPaths)
     xmax = max(x_adj_cm);
     xmin = min(x_adj_cm);
     ymax = max(y_adj_cm);
-    ymin = min(y_adj_cm);    
-
-    PSAbool = PSAboolAdjusted;
-    save('Pos_final.mat','x_adj_cm','y_adj_cm','xmin','xmax','ymin','ymax',...
-                    'speed', 'PSAbool');
-    end
-
+    ymin = min(y_adj_cm);
+    
+    save(fullfile(align_paths{pathI},'Pos_align.mat'),'x_adj_cm','y_adj_cm',...
+        'PSAbool','xmin','xmax','ymin','ymax','speed','PSAbool')
 end
-
+   
 end
 %%%%%%%%%%%%%%%%%%%%
-function [v0,floorCorners,barrierX,barrierY,flipX,flipY] = MakePosAnchor(base_path,v0Scale)
-%Orient positions
-[v0,xAVI,yAVI, flipX, flipY] = OrientBackgroundPos(base_path);
+function [v0,floorCorners,barrierX,barrierY,flipX,flipY] = MakePosAnchor(sess_path,v0Scale)
+isDone=0;
+while isDone == 0
+    %Orient positions
+    [v0,xAVI,yAVI, flipX, flipY] = OrientBackgroundPos(sess_path);
 
-%Get relevant corners
-[floorCorners(1:4,1), floorCorners(1:4,2)] = GetCorners(v0,'floorOuter',[]);
-%[floorCorners(5:8,1), floorCorners(5:8,2)] = GetCorners(base_path,'floorStem',[]);
-[floorCorners(5:8,1), floorCorners(5:8,2)]=GetCorners(v0,'floorMids',floorCorners(1:4,:));
+    %Get relevant corners
+    [floorCorners(1:4,1), floorCorners(1:4,2)] = GetCorners(v0,'floorOuter',[]);
+    %floorCorners(1:4,1:2) = [cx cy];
+    [floorCorners(5:8,1), floorCorners(5:8,2)]=GetCorners(v0,'floorMids',floorCorners(1:4,:));
+    %floorCorners(5:8,1:2) = [cx cy];
+    bkg = figure('Position',[100 50 size(v0,2)*v0Scale size(v0,1)*v0Scale]);
+    imagesc(v0)
+    title('Click middle of BARRIER at FLOOR')
+    [barrierX,barrierY] = ginput(1);
+    hold on
+    title('Reference points right now')
+    plot(floorCorners(:,1),floorCorners(:,2),'*g')
+    plot(barrierX,barrierY,'.r')
 
-bkg = figure('Position',[100 50 size(v0,2)*v0Scale size(v0,1)*v0Scale]);
-imagesc(v0)
-title('Click middle of BARRIER at FLOOR')
-[barrierX,barrierY] = ginput(1);
-close(bkg)
+
+    answer = questdlg('Are these anchors good?','Good anchors','Good','Redo','Good');
+    if strcmp(answer,'Good'); isDone=1; elseif strcmp(answer,'Redo'); isDone=0; end
+    close(bkg)
+end
+
 end
 %%%%%%%%%%%%%%
 function [v0,xAVI,yAVI, flipX, flipY] = OrientBackgroundPos(sessPath)
@@ -119,7 +123,7 @@ end
 
 end
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-function [cx, cy]=GetCorners(v0, type, inputcorners)
+function [cx, cy]=GetCorners(v0, ctype, inputcorners)
 v0Scale = 1.5;
 terminology = {'Base = Start/Delay end';...
                'Choice = Choice end';};
@@ -127,7 +131,7 @@ terminology = {'Base = Start/Delay end';...
 
 bkg = figure('Position',[100 50 size(v0,2)*v0Scale size(v0,1)*v0Scale]);
 imagesc(v0)
-switch type
+switch ctype
     case 'floorOuter'
         titleLabel = 'floor outer corner';
         strs = {'BASE LEFT' 'BASE RIGHT' 'CHOICE RIGHT' 'CHOICE LEFT' };
@@ -141,7 +145,7 @@ switch type
 end
 for corn = 1:4
     title(['Click mase ' titleLabel ' for: ' strs{corn}])
-    if strcmp(type,'floorMid')
+    if strcmp(ctype,'floorMid')
         hold on; plot(inputcorners(1:4,1),inputcorners(1:4,2),'or','MarkerFaceColor','r')
         [Xnew, Ynew] = GetPerpendicular(inputcorners(corn:corn+1,1),inputcorners(corn:corn+1,2));
         hold on; plot(Xnew,Ynew,'-w')
@@ -164,6 +168,8 @@ close(bkg)
 end
 %%%%%%%%%%%%%%%%
 function [Xnew, Ynew] = GetPerpendicular(pointsX, pointsY)
+%pointsX = inputcorners(corn:corn+1,1);
+%pointsY = inputcorners(corn:corn+1,2);
 halfX = mean(pointsX);
 halfY = mean(pointsY);
 Xnew = halfX + (halfY-min(pointsY))*[-1 1];
@@ -174,15 +180,16 @@ Ynew = halfY + (halfX-min(pointsX))*[-1 1];
 %Ynew = halfX - min(pointsX); Ynew = Ynew*[1 -1] + halfY;
 end
 %%%%%%%%%%%%%%%%
-function [newCorners] = ArrangeBaseAnchors(v0,floorCorners, RoomStr, flipX, flipY, barrierX, barrierY, envScale)
+function [newCorners] = ArrangeBaseAnchors(v0,floorCorners, RoomStr, flipX, flipY, barrierX, barrierY, envDims)
 %order 'BASE LEFT' 'BASE RIGHT' 'CHOICE RIGHT' 'CHOICE LEFT' 
 v0Scale = 1.5;
+envScale = envDims(1)/envDims(2);
 if strcmp(RoomStr,'201a - 2015')
     cx = floorCorners(:,1);
     cy = floorCorners(:,2);
 
-    vis = figure('Position',[100 50 size(v0,2)*v0Scale size(v0,1)*v0Scale]);
-    PlotCorners(vis,v0,cx,cy); title('Original Anchors')
+    %vis = figure('Position',[100 50 size(v0,2)*v0Scale size(v0,1)*v0Scale]);
+    %PlotCorners(vis,v0,cx,cy); title('Original Anchors')
 
     %Reorient image and anchor points
     %if cx(3) < cx(2) && cx(4) < cx(1)
@@ -194,7 +201,7 @@ if strcmp(RoomStr,'201a - 2015')
         cxNew = cx;
         v0New = v0;
     end
-    PlotCorners(vis,v0New,cxNew,cy); title('LR adjusted')
+    %PlotCorners(vis,v0New,cxNew,cy); title('LR adjusted')
 
     %if cy(1) > cy(2) && cy(4) > cy(3) %If right is above left
     if flipY == 1
@@ -205,7 +212,7 @@ if strcmp(RoomStr,'201a - 2015')
         cyNew = cy;
         %v0new = v0new;
     end
-    PlotCorners(vis,v0New,cxNew,cyNew);
+    %PlotCorners(vis,v0New,cxNew,cyNew);
 
     %Find closest to real scale
     %imMidX = size(v0,2)/2; imMidY = size(v0,1)/2;
@@ -235,12 +242,20 @@ if strcmp(RoomStr,'201a - 2015')
     
     cyNew = -1*cyNew; %Left turn is positive, right turn is negative
     
-    cxNew = cxNew - cxNew(1); %Shift so left edge is at c = 0
+    cxNew = cxNew - cxNew(1); %Shift so left edge is at x = 0
     
-    currentScale = (cxNew(3) - cxNew(2)) / (cyNew(1) - cyNew(2));
+    %Old scaling to Pix2CM, arena size ratio
+    %currentScale = (cxNew(3) - cxNew(2)) / (cyNew(1) - cyNew(2));
     %Scaling: should be current == envScale
-    cxNew([6 8]) = cxNew([6 8])*(envScale/currentScale); %Scale appropriate to real maze
-    cxNew([3 4 7]) = cxNew([3 4 7])*(envScale/currentScale);
+    %cxNew([6 8]) = cxNew([6 8])*(envScale/currentScale); %Scale appropriate to real maze
+    %cxNew([3 4 7]) = cxNew([3 4 7])*(envScale/currentScale);
+    
+    %New version, scale to env. cm limits (this version cheats, would need
+    %to re-implement some stuff above to make it work better
+    cxNew([6 8]) = envDims(1)/2;
+    cxNew([3 4 7]) = envDims(1);
+    cyNew([1 4 8]) = envDims(2)/2;
+    cyNew([2 3 6]) = -envDims(2)/2;
     
     newCorners = [cxNew cyNew];
     tform = fitgeotrans(floorCorners,newCorners,'affine');

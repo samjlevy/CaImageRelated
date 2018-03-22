@@ -7,16 +7,15 @@ RoomStr = '201a - 2015';
 JustFToffset 
     %Produces FToffsetSam.mat, Sam's verison which adjusts PSAbool 
     %around usable tracking data
-AlignImagingToTracking_SL 
-    %Produces Pos_brain.mat, Xpix and Ypix (from
-    %Pos.mat) interpolated to imaging timestamps,
-    %returns PSAboolAdjusted, x and y all of the same length
-AlignPositions_SL(RoomStr)         
-    %Right now just rotates trajectory to 0, scales
-    %pix2cm, gets speed. Future versions will align all to a base struct
-AlignPositionsBatch_SL
-    %This is to replace AlignPositions: uses geometric transformations to
-    %align points in the original 
+AlignImagingToTracking2_SL
+    %Uses FToffset to produce PSAbool and X and Y all adjusted to the same
+    %time scale.
+AlignPositions2_SL
+    %Load results from AlignImagingToTracking2_SL
+    %Uses user-defined maze corners to align all sessions to an 'idea'
+    %base, which is horizontally straightened, start-choice positive,
+    %scaled to actual cm. Can handle multiple sessions
+    %Right now this is hard-coded for DNMP, cheats a little bit
 ParsedFramesToBrainFrames
     %Translates a sheet (columnwise) of 
     %timestamps from an AVI into brain 
@@ -48,6 +47,20 @@ matchCells
     %projective geotransform/imwarp. Outputs fullReg.mat in base_session
     %folder with all the important reg info. Doesn't yet show how well
     %registration worked
+MakeTrialByTrial
+    %uses registration in indicators about which sessions to include to
+    %build a structure that divides data into levels in the structure so
+    %that x, y and spiking activity for every cell (realigned across
+    %sessions according to registration) can be easily called
+    %together.
+AllAnalyses1
+    %loads trial by trial for each folder indicated, runs all the same
+    %analyses on them. Way overdone relative to what's needed in a paper
+AllFigures1
+    %Dependent on everything from AllAnalyses1 being in the workspace,
+    %plots (again to excess) everything you could ever want to know
+    
+    
 GetMegaStuff2
     %Based on data in fullReg, loads all the position and spiking data from
     %each into big cell arrays for iterating through all of it
@@ -63,6 +76,13 @@ PoolPSA
 
 %Other, smaller scripts. Many are called in other big ones, many have a
 %version 2
+AlignImagingToTracking_SL  %OLD
+    %Produces Pos_brain.mat, Xpix and Ypix (from
+    %Pos.mat) interpolated to imaging timestamps,
+    %returns PSAboolAdjusted, x and y all of the same length
+AlignPositions_SL(RoomStr)         
+    %Right now just rotates trajectory to 0, scales
+    %pix2cm, gets speed. Future versions will align all to a base struct
     
 GetBlockDNMPbehavior
     %Compiles timestamps from a spreadsheet into a
