@@ -8,25 +8,29 @@ end
 scaleFactor = 0.6246;
 Pix2Cm = Pix2CMlist (RoomStr);
 SR=20;
-v0Scale = 1.5;
+v0Scale = 1.75;
 DNMPscale = (25 + 3/16) / (11 + 3/8); %inches
 DNMPdims = [25+3/16 11+3/8]*2.54;
 
-if exist(fullfile(anchor_path,'Pos_anchor.mat','file'))~=2
-    load(fullfile(anchor_path,'Pos.mat'),'v0')
-    [floorCorners,barrierX,barrierY,flipX,flipY] = MakePosAnchor(anchor_path,v0Scale);
-    
-    save(fullfile(anchor_path,'Pos_anchor.mat'),'floorCorners','barrierX','barrierY','flipX','flipY')
-else
-    load(fullfile(anchor_path,'Pos_anchor.mat'))
-end
+
 
 if exist(fullfile(anchor_path,'Pos_anchor_ideal.mat'),'file')~=2
+    if exist(fullfile(anchor_path,'Pos_anchor.mat'),'file')~=2
+        disp('No pos base anchor, making now')
+        load(fullfile(anchor_path,'Pos.mat'),'v0')
+        [floorCorners,barrierX,barrierY,flipX,flipY] = MakePosAnchor(anchor_path,v0Scale);
+        floorCorners = double(floorCorners);
+        
+        save(fullfile(anchor_path,'Pos_anchor.mat'),'floorCorners','barrierX','barrierY','flipX','flipY')
+    else
+        disp('Found pos base anchor')
+        load(fullfile(anchor_path,'Pos_anchor.mat'))
+    end
     disp('Did not find pos_anchor_ideal, making now')
     [newCorners] = ArrangeBaseAnchors(v0,floorCorners, RoomStr, flipX, flipY, barrierX, barrierY, DNMPdims);
     %Left turn is positive, right turn is negative
-    xAnchor = newCorners(:,1);
-    yAnchor = newCorners(:,2);
+    xAnchor = double(newCorners(:,1));
+    yAnchor = double(newCorners(:,2));
     
     %{
     tform = fitgeotrans(floorCorners,[xAnchor yAnchor],'affine');
@@ -39,38 +43,55 @@ if exist(fullfile(anchor_path,'Pos_anchor_ideal.mat'),'file')~=2
     
     save(fullfile(anchor_path,'Pos_anchor_ideal.mat'),'xAnchor','yAnchor')
 else
-    load(fullfile(anchor_path),'Pos_anchor_ideal.mat')
+    load(fullfile(anchor_path,'Pos_anchor_ideal.mat'))
 end
 
 
 for pathI = 1:length(align_paths)
-    [floorCorners,barrierX,barrierY,flipX,flipY] = MakePosAnchor(align_paths{pathI},v0Scale);
-    
-    load(fullfile(align_paths{pathI},'Pos_brain.mat'))
-    
-    tform = fitgeotrans(floorCorners,[xAnchor yAnchor],'affine');
-    [x_adj_cm, y_adj_cm] = transformPointsForward(tform,brainX,brainY);
+    if exist(fullfile(align_paths{pathI},'Pos_align.mat'),'file')~=2
+        disp(['Working on alignment for ' align_paths{pathI}])
+        if exist(fullfile(align_paths{pathI},'Pos_anchor.mat'),'file')~=2
+            [floorCorners,barrierX,barrierY,flipX,flipY,v0Dims] = MakePosAnchor(align_paths{pathI},v0Scale);
+            %floorCorners = double(floorCorners)
+            save(fullfile(align_paths{pathI},'Pos_anchor.mat'),'floorCorners','barrierX',...
+                'barrierY','flipX','flipY','v0Dims')
+        else
+            load(fullfile(align_paths{pathI},'Pos_anchor.mat'))
+        end
+        load(fullfile(align_paths{pathI},'Pos_brain.mat'))
 
-    PSAbool = PSAboolAdjusted;
-    
-    %Speed for each
-    dx = diff(x_adj_cm);
-    dy = diff(y_adj_cm);
-    speed = hypot(dx,dy)*SR;
+        try
+            tform = fitgeotrans(floorCorners,[xAnchor yAnchor],'affine');
+        catch 
+            keyboard
+        end
+        
+        [x_adj_cm, y_adj_cm] = transformPointsForward(tform,xBrain,yBrain);
 
-    %Holdover overhead (probably)
-    xmax = max(x_adj_cm);
-    xmin = min(x_adj_cm);
-    ymax = max(y_adj_cm);
-    ymin = min(y_adj_cm);
-    
-    save(fullfile(align_paths{pathI},'Pos_align.mat'),'x_adj_cm','y_adj_cm',...
-        'PSAbool','xmin','xmax','ymin','ymax','speed','PSAbool')
+        PSAbool = PSAboolAdjusted;
+
+        %Speed for each
+        dx = diff(x_adj_cm);
+        dy = diff(y_adj_cm);
+        speed = hypot(dx,dy)*SR;
+
+        %Holdover overhead (probably)
+        xmax = max(x_adj_cm);
+        xmin = min(x_adj_cm);
+        ymax = max(y_adj_cm);
+        ymin = min(y_adj_cm);
+
+        save(fullfile(align_paths{pathI},'Pos_align.mat'),'x_adj_cm','y_adj_cm',...
+            'PSAbool','xmin','xmax','ymin','ymax','speed','PSAbool')
+        disp('done')
+    else 
+        disp(['file ' align_paths{pathI} ' already registered'])
+    end
 end
    
 end
 %%%%%%%%%%%%%%%%%%%%
-function [v0,floorCorners,barrierX,barrierY,flipX,flipY] = MakePosAnchor(sess_path,v0Scale)
+function [floorCorners,barrierX,barrierY,flipX,flipY,v0Dims] = MakePosAnchor(sess_path,v0Scale)
 isDone=0;
 while isDone == 0
     %Orient positions
@@ -79,7 +100,7 @@ while isDone == 0
     %Get relevant corners
     [floorCorners(1:4,1), floorCorners(1:4,2)] = GetCorners(v0,'floorOuter',[]);
     %floorCorners(1:4,1:2) = [cx cy];
-    [floorCorners(5:8,1), floorCorners(5:8,2)]=GetCorners(v0,'floorMids',floorCorners(1:4,:));
+    [floorCorners(5:8,1), floorCorners(5:8,2)]=GetCorners(v0,'floorMid',floorCorners(1:4,:));
     %floorCorners(5:8,1:2) = [cx cy];
     bkg = figure('Position',[100 50 size(v0,2)*v0Scale size(v0,1)*v0Scale]);
     imagesc(v0)
@@ -89,7 +110,12 @@ while isDone == 0
     title('Reference points right now')
     plot(floorCorners(:,1),floorCorners(:,2),'*g')
     plot(barrierX,barrierY,'.r')
+    floorCorners = double(floorCorners);
 
+    v0Dims = [size(v0,1) size(v0,2)];
+    
+    if flipX == 1; floorCorners(:,1) = v0Dims(2) - floorCorners(:,1); end
+    if flipY == 1; floorCorners(:,2) = v0Dims(1) - floorCorners(:,2); end
 
     answer = questdlg('Are these anchors good?','Good anchors','Good','Redo','Good');
     if strcmp(answer,'Good'); isDone=1; elseif strcmp(answer,'Redo'); isDone=0; end
@@ -99,8 +125,21 @@ end
 end
 %%%%%%%%%%%%%%
 function [v0,xAVI,yAVI, flipX, flipY] = OrientBackgroundPos(sessPath)
-load(fullfile(sessPath,'Pos.mat'),'v0','xAVI','yAVI')
-v0Scale = 1.5;
+v0Scale = 1.75;
+try
+    load(fullfile(sessPath,'Pos.mat'),'v0')%,'xAVI','yAVI')
+end
+if ~exist('v0','var')
+    cd(sessPath)
+    [avi_filepath,~] = uigetfile('*.avi','Choose appropriate video:');
+    obj = VideoReader(avi_filepath); aviSR = obj.FrameRate;
+    h1 = implay(avi_filepath);
+    bkgFrameNum = input('frame number of new v0 --->');
+    close(h1)
+    obj.CurrentTime = (bkgFrameNum-1)/obj.FrameRate;
+    v0 = readFrame(obj);
+end
+load(fullfile(sessPath,'Pos.mat'),'xAVI','yAVI')
 
 flipX = 0; flipY = 0;
 bkg = figure('Position',[100 50 size(v0,2)*v0Scale size(v0,1)*v0Scale]);
@@ -120,11 +159,12 @@ while doneFlip==0
             doneFlip = 1;
     end
 end
+close(bkg)
 
 end
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 function [cx, cy]=GetCorners(v0, ctype, inputcorners)
-v0Scale = 1.5;
+v0Scale = 1.75;
 terminology = {'Base = Start/Delay end';...
                'Choice = Choice end';};
 
@@ -182,7 +222,7 @@ end
 %%%%%%%%%%%%%%%%
 function [newCorners] = ArrangeBaseAnchors(v0,floorCorners, RoomStr, flipX, flipY, barrierX, barrierY, envDims)
 %order 'BASE LEFT' 'BASE RIGHT' 'CHOICE RIGHT' 'CHOICE LEFT' 
-v0Scale = 1.5;
+v0Scale = 1.75;
 envScale = envDims(1)/envDims(2);
 if strcmp(RoomStr,'201a - 2015')
     cx = floorCorners(:,1);
