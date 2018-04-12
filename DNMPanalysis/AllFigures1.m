@@ -91,14 +91,16 @@ for mouseI = 1:numMice
     subplot(1,2,1)
     plot(pctEdgeLR{mouseI},'b'); hold on;
     plot(pctEdgeLRsplitters{mouseI},'r');
+    plot(pctEdgeNOTLRsplitters{mouseI},'m');
     plot(pctEdgeLRboth{mouseI},'g'); ylim([0 1])
     title(['LR Prop. cells w/ edge DI Mouse ' num2str(mouseI)])
     subplot(1,2,2)
     plot(pctEdgeST{mouseI},'b'); hold on;
     plot(pctEdgeSTsplitters{mouseI},'r');
+    plot(pctEdgeNOTSTsplitters{mouseI},'m');
     plot(pctEdgeSTboth{mouseI},'g'); ylim([0 1])
     title(['ST Prop. cells w/ edge DI Mouse ' num2str(mouseI)])
-    legend('Any','Splitters','both','Location','southwest')
+    legend('Any','Splitters','non-splitters','both','Location','southwest')
 end
 
 %DI distributions
@@ -137,6 +139,15 @@ for mouseI = 1:numMice
     legend('LR','ST','BOTH','LRonly','STonly','None','Location','northwest')
 end
     
+%% Reactivation probability
+
+reactivatesLR{mouseI}
+    reactivatesST{mouseI} 
+    reactivatesLRonly{mouseI} 
+    reactivatesSTonly{mouseI}
+    reactivatesBOTH{mouseI} 
+    reactivatesNone{mouseI} 
+    reactivatesANY{mouseI}
 %% old splitters
 
 

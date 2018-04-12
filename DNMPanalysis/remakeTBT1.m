@@ -8,7 +8,7 @@ mainFolder = 'C:\Users\Sam\Desktop\DNMPfinalData';
 mice = {'Bellatrix', 'Polaris', 'Calisto'};
 
 for mouseI = 1:length(mice)
-    load('trialbytrialOLD.mat','base_path','allfiles')
+    load(fullfile(mainFolder,mice{mouseI},'trialbytrialOLD.mat'),'base_path','allfiles')
     reg_paths = allfiles;
     reg_paths(strcmp(reg_paths,base_path)) = [];
 

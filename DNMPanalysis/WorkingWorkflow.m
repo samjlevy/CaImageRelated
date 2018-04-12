@@ -61,6 +61,9 @@ AllFigures1
     %plots (again to excess) everything you could ever want to know
     
     
+newxlims1 
+    %for making sure that timestamps being used are outside of xlims so
+    %that right amount of data is being used
 GetMegaStuff2
     %Based on data in fullReg, loads all the position and spiking data from
     %each into big cell arrays for iterating through all of it
@@ -83,7 +86,6 @@ AlignImagingToTracking_SL  %OLD
 AlignPositions_SL(RoomStr)         
     %Right now just rotates trajectory to 0, scales
     %pix2cm, gets speed. Future versions will align all to a base struct
-    
 GetBlockDNMPbehavior
     %Compiles timestamps from a spreadsheet into a
     %struct with pairs of starts and stops, a struct

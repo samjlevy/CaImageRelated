@@ -12,7 +12,7 @@ plotColors = [1 0 0.65;... %magenta
 posColor = [0.8 0.8 0.8];
 
 xRange = ceil(max(xlims) - min(xlims));
-xUL = ceil(max(xlims) + 3);
+%xUL = ceil(max(xlims) + 3);
 
 if isempty('orientation')
     if figHand.OuterPosition(4) >= figHand.OuterPosition(3)
@@ -69,7 +69,8 @@ for condType=1:4
             for posp = 1:length(theseX)
                 thisX = theseX(posp);
                 %plot(60-[thisX thisX], [0 bH]+bH*(plotLine-1),'Color',posColor);
-                plot(xUL-[thisX thisX], [0 bH]+bH*(plotLine-1),'Color',posColor);
+                %plot(xUL-[thisX thisX], [0 bH]+bH*(plotLine-1),'Color',posColor);
+                plot([thisX thisX], [0 bH]+bH*(plotLine-1),'Color',posColor);
             end
             end
             end
@@ -82,7 +83,8 @@ for condType=1:4
         for point = 1:length(thesePoints)
             plotX = trialbytrial(condType).trialsX{thisLap,1}(thesePoints(point));
             %plot(60-[plotX plotX], [0 bH]+bH*(plotLine-1),'Color',plotColors(condType,:),'LineWidth',1)
-            plot(xUL-[plotX plotX], [0 bH]+bH*(plotLine-1),'Color',plotColors(condType,:),'LineWidth',1)
+            %plot(xUL-[plotX plotX], [0 bH]+bH*(plotLine-1),'Color',plotColors(condType,:),'LineWidth',1)
+            plot([plotX plotX], [0 bH]+bH*(plotLine-1),'Color',plotColors(condType,:),'LineWidth',1)
         end
         end
     end

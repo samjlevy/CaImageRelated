@@ -5,6 +5,10 @@ numCells = size(trialbytrial(1).trialPSAbool{1},1);
 numSess = length(unique(trialbytrial(1).sessID));
 pInd = round((1-pThresh)*numShuffles);
     
+%for cc = 1:numConds
+%    trialReli{:,:,cc} = dayUse;
+%end
+
 if ~exist(shuffDirFull,'dir')
     mkdir(shuffDirFull)
 end
@@ -14,18 +18,18 @@ possibleShuffles([possibleShuffles(:).isdir]==1) = [];
 if length(possibleShuffles) ~= numShuffles
     disp('did not find (enough) individual shuffle files, working now')
     for shuffleI = 1:numShuffles
-        shuffledTBT = shuffleTBTposition(trialbytrial);
+        shuffledTBT = shuffleTBTposition(trialbytrial,xlims);
         saveName = fullfile(shuffDirFull,['shuffPos' num2str(shuffleI) '.mat']);
         [~, ~, ~, ~, ~, ~] =...
             PFsLinTrialbyTrial2(shuffledTBT, xlims, cmperbin, minspeed,...
                 saveName,'trialReli',trialReli,'smooth',false); 
         disp(['done shuffle ' num2str(shuffleI) ])
     end
-    save(fullfile(shuffDirFull,'allTMap_shuffled.mat'),'allTMap_shuffled')
+    %save(fullfile(shuffDirFull,'allTMap_shuffled.mat'),'allTMap_shuffled')
 end
 
 %Reorganize for sorting etc.
-shuffTMapReorg = cell(numCells,numSess,numConds);
+shuffTMapReorg = cell(numCells,numConds,numSess);
 if exist(fullfile(shuffDirFull,'shuffledRatesSorted.mat'),'file')~=2
 disp('Loading and reorganizing and place maps')
 
@@ -37,9 +41,9 @@ for shuffleI = 1:numShuffles
     for condI = 1:numConds
         for cellI = 1:numCells
             for sessI = 1:numSess
-                if any(TMap_unsmoothed{cellI,condI,sessI})
-                    shuffTMapReorg{cellI,sessI,condI}(shuffleI,:) = TMap_unsmoothed{cellI,condI,sessI};
-                end
+                %if any(TMap_unsmoothed{cellI,condI,sessI})
+                    shuffTMapReorg{cellI,condI,sessI}(shuffleI,:) = TMap_unsmoothed{cellI,condI,sessI};
+                %end
             end
         end
     end
@@ -56,7 +60,7 @@ shuffledRatesSorted = cell(size(shuffTMapReorg));
 for cellI = 1:numCells %Takes a few minues with 1000 shuffles
     for condI = 1:numConds
         for dayI = 1:numSess
-            shuffledRatesSorted{cellI,condI,dayI} = sort(shuffTMapReorg{cellI,dayI,condI},1);
+            shuffledRatesSorted{cellI,condI,dayI} = sort(shuffTMapReorg{cellI,condI,dayI},1);
             %shuffledRatesMean{cellI,condI,dayI} = nanmean(shuffledRatesSorted{cellI,condI,dayI},1); %Uses nanmean
             %shuffledRates95{cellI,condI,dayI} = shuffledRatesSorted{cellI,condI,dayI}(pInd,:);
         end
@@ -72,7 +76,7 @@ binsAbove95 = cell(size(TMap_unsmoothed));
 for cellI = 1:numCells 
     for condI = 1:numConds
         for dayI = 1:numSess
-            if trialReli(cellI,dayI,condI) == 1
+            if any(trialReli(cellI,dayI,:) > 0)
             binsAbove95{cellI,condI,dayI} = ...
                 TMap_unsmoothed{cellI,condI,dayI} > shuffledRatesSorted{cellI,condI,dayI}(pInd,:);
             end

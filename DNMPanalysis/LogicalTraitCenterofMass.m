@@ -8,10 +8,14 @@ numCells = size(dayUse,1);
 daysEachCellActive = sum(dayUse,2);
 
 numDaysSplitter = nan(numCells,1); splitterCOM = nan(numCells,1);
+neverSplit = zeros(numCells,1);
 
 for cellI = 1:numCells
     %If the cell splits LR/ST/Both ever and is active for more than one day
     numDaysPresent = sum(dayUse(cellI,:),2);
+    
+    splitterDays = logical(splittersLogical(cellI,:));
+    numSplitterDays = sum(splittersLogical(cellI,:),2);
     if numDaysPresent > 1
         daysPresent = dayUse(cellI,:);
         dayV = 1:numDaysPresent; dayAlign = zeros(1,length(daysPresent));
@@ -20,12 +24,16 @@ for cellI = 1:numCells
         splitterWeight = dayAlign;
         splitterWeight(daysPresent) = splitterWeight(daysPresent) - daysActiveCOM;
         
-        splitterDays = logical(splittersLogical(cellI,:));
-        numSplitterDays = sum(splittersLogical(cellI,:),2);
+        
         if numSplitterDays > 0
             numDaysSplitter(cellI) = numSplitterDays;
             splitterCOM(cellI) = sum(splitterWeight(splitterDays))/numDaysPresent; %offset from active days COM
         end
+        
+    end
+    
+    if numDaysPresent > 0
+        neverSplit(cellI) = numSplitterDays==0;
     end
 end
 
@@ -34,5 +42,5 @@ end
 splitterDayBias(1,[1 3]) = [sum(splitterCOM<0) sum(splitterCOM>0)];
 splitterDayBias(1, 2) = sum((splitterCOM==0).*(numDaysSplitter~=daysEachCellActive));
 splitterDayBias(1, 4) = sum((splitterCOM==0).*(numDaysSplitter==daysEachCellActive));
-
+splitterDayBias(1, 5) = sum(neverSplit);
 end

@@ -27,7 +27,7 @@ for cellJ = 1:length(useCells)
     resolution_use = '-r600'; %'-r600' = 600 dpi - might not be necessary
     rastPlot.Renderer = 'painters';
     
-    zzs = num2str(zeros(1,3-length(num2str(thisCell))));
+    zzs = num2str(zeros(1,4-length(num2str(thisCell))));
     save_file = fullfile(figDir, ['cell_' zzs num2str(thisCell) '_heatDot']);
     print(rastPlot, save_file,'-dpdf','-fillpage',resolution_use);
     close(rastPlot)
