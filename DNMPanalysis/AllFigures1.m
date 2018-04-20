@@ -140,14 +140,64 @@ for mouseI = 1:numMice
 end
     
 %% Reactivation probability
+for mouseI = 1:numMice
+    grps = repmat(1:7,numDays(mouseI)-1,1); grps = grps(:);
+    dataHere = [reactivatesLR{mouseI}(2,:), reactivatesST{mouseI}(2,:),... 
+                reactivatesLRonly{mouseI}(2,:), reactivatesSTonly{mouseI}(2,:),...
+                reactivatesBOTH{mouseI}(2,:), reactivatesANY{mouseI}(2,:),...
+                reactivatesNotSplitter{mouseI}(2,:)];
+    xLabels = {'LR splitters','ST splitters','LR split-ex','ST split-ex','BOTH split','Any split','Non-splitters'};
+    scatterBoxSL(dataHere,grps,'xLabel',xLabels,'plotBox',true)
+    title(['Reactivation Probability by Splitter type mouse ' num2str(mouseI) ])
+    ylim([0 1])
+end
 
-reactivatesLR{mouseI}
-    reactivatesST{mouseI} 
-    reactivatesLRonly{mouseI} 
-    reactivatesSTonly{mouseI}
-    reactivatesBOTH{mouseI} 
-    reactivatesNone{mouseI} 
-    reactivatesANY{mouseI}
+for mouseI = 1:numMice
+    grps = repmat(1:6,numDays(mouseI)-1,1); grps = grps(:);
+    dataHere = [reactivatesPlaceSL{mouseI}(2,:), reactivatesPlaceSR{mouseI}(2,:),... 
+                reactivatesPlaceTL{mouseI}(2,:), reactivatesPlaceTR{mouseI}(2,:),...
+               reactivatesPlaceAny{mouseI}(2,:), reactivatesNotPlace{mouseI}(2,:)];
+    xLabels = {'Place SL','Place SR','Place TL','Place TR','Place at all','Not place'};
+    scatterBoxSL(dataHere,grps,'xLabel',xLabels,'plotBox',true)
+    title(['Reactivation Probability by Splitter type mouse ' num2str(mouseI) ])
+    ylim([0 1])
+end
+
+for mouseI = 1:numMice
+    grps = repmat(1:8,numDays(mouseI)-1,1); grps = grps(:);
+    dataHere = [reactivatespxsLR{mouseI}(2,:), reactivatespxsST{mouseI}(2,:),...
+                reactivatespxsLRonly{mouseI}(2,:), reactivatespxsSTonly{mouseI}(2,:),...
+                reactivatespxsBoth{mouseI}(2,:), reactivatespxsNone{mouseI}(2,:),...
+                reactivatesSplitterNotPlace{mouseI}(2,:), reactivatesPlaceNotSplitter{mouseI}(2,:)];
+    xLabels = {'Place-LR','Place-ST','Place-LRex','Place-STex','Place-BOTH','Place-NonSplitter',...
+               'Splitter-NotPlace','Place-NotSplitter'};
+    scatterBoxSL(dataHere,grps,'xLabel',xLabels,'plotBox',true)
+    title(['Reactivation Probability by Splitter type mouse ' num2str(mouseI) ])
+    ylim([0 1])
+end
+
+%% Decoder LR splitters
+condTitles = {'Study LvR', 'Test LvR', 'Left SvT', 'Right SvT'};
+
+for mouseI = 1:numMice
+    for condsPlot = 1:2
+        shuffPerf = decodeLRperf{mouseI}(2:end,condsPlot);
+        shuffPerf = cellfun(@(x) x',shuffPerf,'UniformOutput',false);
+        shuffPerfR = cell2mat(shuffPerf); shuffPerfR = shuffPerfR(:);
+        grps = repmat(daysApart{mouseI}',size(shuffPerf,1),1); grps = grps(:);
+        xlabels  = cellfun(@num2str,num2cell(unique(daysApart{mouseI})),'UniformOutput',false);
+        scatterBoxSL(shuffPerfR(:),grps,'xLabel',xlabels,'plotBox',false)
+        hold on
+        plotInds = sigDecoding{mouseI}{condsPlot};
+        plot(daysApart{mouseI}(plotInds),decodeLRperf{mouseI}{1,condsPlot}(plotInds),'ob')
+        plot(daysApart{mouseI}(~plotInds),decodeLRperf{mouseI}{1,condsPlot}(~plotInds),'or')
+        title(['Mouse ' num2str(mouseI) ', ' condTitles{condsPlot} ' decoding performance; blue above shuffle, red not'])
+        xlabel('Days between model and test data'); ylabel('Prop. decoded correctly')
+        ylim([0 1])
+    end
+end
+        
+      
 %% old splitters
 
 

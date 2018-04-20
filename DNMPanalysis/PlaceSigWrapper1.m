@@ -69,30 +69,32 @@ end
 save(fullfile(shuffDirFull,'shuffledRatesSorted.mat'),'shuffledRatesSorted','-v7.3')
 disp('Saved shuffledRatesSorted')
 end
-    
-load(fullfile(shuffDirFull,'shuffledRatesSorted.mat'))
-load(fullfile(mouseDir,'PFsLin.mat'),'TMap_unsmoothed')
-binsAbove95 = cell(size(TMap_unsmoothed));
-for cellI = 1:numCells 
-    for condI = 1:numConds
-        for dayI = 1:numSess
-            if any(trialReli(cellI,dayI,:) > 0)
-            binsAbove95{cellI,condI,dayI} = ...
-                TMap_unsmoothed{cellI,condI,dayI} > shuffledRatesSorted{cellI,condI,dayI}(pInd,:);
+
+if exist(fullfile(mouseDir,'PFsLin.mat'),'file')~=2
+    load(fullfile(shuffDirFull,'shuffledRatesSorted.mat'))
+    load(fullfile(mouseDir,'PFsLin.mat'),'TMap_unsmoothed')
+    binsAbove95 = cell(size(TMap_unsmoothed));
+    for cellI = 1:numCells 
+        for condI = 1:numConds
+            for dayI = 1:numSess
+                if any(trialReli(cellI,dayI,:) > 0)
+                binsAbove95{cellI,condI,dayI} = ...
+                    TMap_unsmoothed{cellI,condI,dayI} > shuffledRatesSorted{cellI,condI,dayI}(pInd,:);
+                end
             end
         end
     end
+
+    numBins = size(shuffledRatesSorted{1,1,1},2);
+    numAbove95 = cell2mat(cellfun(@sum,binsAbove95,'UniformOutput',false));
+    placeAtAll = numAbove95 > 0;
+    lessThanHalf = numAbove95 < round(numBins/2); %Fires on less than half the stem
+                        %Bins are next to each other
+    placeToday = squeeze(sum(placeAtAll,2) > 0);
+
+    %Save placefield results
+    save(fullfile(shuffDirFull,'PFresults.mat'),'binsAbove95','numAbove95','lessThanHalf','placeAtAll','placeToday','-v7.3')
+    disp('saved place stuff')
 end
-    
-numBins = size(shuffledRatesSorted{1,1,1},2);
-numAbove95 = cell2mat(cellfun(@sum,binsAbove95,'UniformOutput',false));
-placeAtAll = numAbove95 > 0;
-lessThanHalf = numAbove95 < round(numBins/2); %Fires on less than half the stem
-                    %Bins are next to each other
-placeToday = squeeze(sum(placeAtAll,2) > 0);
-    
-%Save placefield results
-save(fullfile(shuffDirFull,'PFresults.mat'),'binsAbove95','numAbove95','lessThanHalf','placeAtAll','placeToday','-v7.3')
-disp('saved place stuff')
 
 end

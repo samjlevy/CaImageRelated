@@ -23,6 +23,7 @@ for mouseI = 1:numMice
     cellTBT{mouseI} = trialbytrial;
     cellSSI{mouseI} = sortedSessionInds;
     cellAllFiles{mouseI} = allfiles;
+    cellRealDays{mouseI} = realdays;
     
     numDays(mouseI) = size(cellSSI{mouseI},2);
     numCells(mouseI) = size(cellSSI{mouseI},1);
@@ -146,6 +147,7 @@ for mouseI = 1:numMice
     allCellCondsActiveRange(mouseI, 1:2) =...
         [nanmean(cellCondsActiveRange{mouseI}(cellsUse,1)) nanstandarderrorSL(cellCondsActiveRange{mouseI}(cellsUse,1))];
     %This number may not be meaningful given that majority of numberCondsActive is 1; 
+    disp(['done single cells mouse ' num2str(mouseI)])
 end
 
 for mouseI = 1:numMice
@@ -505,6 +507,7 @@ for mouseI = 1:numMice
     [pxsLRonlyCOM{mouseI}, pxsDayBiasLRonly{mouseI}] = LogicalTraitCenterofMass(dayUse{mouseI}, placeSplitLRonly{mouseI});
     [pxsSTonlyCOM{mouseI}, pxsDayBiasSTonly{mouseI}] = LogicalTraitCenterofMass(dayUse{mouseI}, placeSplitSTonly{mouseI});
     [pxsNoneCOM{mouseI}, pxsDayBiasNone{mouseI}] = LogicalTraitCenterofMass(dayUse{mouseI}, placeSplitNone{mouseI});
+    disp(['done place by splitter mouse ' num2str(mouseI)])
 end
     
 %% Cell identity round-up
@@ -536,7 +539,7 @@ for mouseI = 1:numMice
     reactivatesPlaceSR{mouseI} = TraitReactivation(dayUse{mouseI},squeeze(placeByCond{mouseI}(:,2,:)));
     reactivatesPlaceTL{mouseI} = TraitReactivation(dayUse{mouseI},squeeze(placeByCond{mouseI}(:,3,:)));
     reactivatesPlaceTR{mouseI} = TraitReactivation(dayUse{mouseI},squeeze(placeByCond{mouseI}(:,4,:)));
-    reactivatesNotPlace{mouseI} = TraitReactivation(dayUse{mouseI},notPlace{mouseI};
+    reactivatesNotPlace{mouseI} = TraitReactivation(dayUse{mouseI},notPlace{mouseI});
 end
 %Place x split
 for mouseI = 1:numMice
@@ -548,6 +551,7 @@ for mouseI = 1:numMice
     reactivatespxsNone{mouseI} = TraitReactivation(dayUse{mouseI},placeSplitNone{mouseI});
     reactivatesSplitterNotPlace{mouseI} = TraitReactivation(dayUse{mouseI},logical(splittersANY{mouseI}.*notPlace{mouseI}));
     reactivatesPlaceNotSplitter{mouseI} = TraitReactivation(dayUse{mouseI},logical(splittersNone{mouseI}.*placeThisDay{mouseI}));
+    disp(['done reactivation by type mouse ' num2str(mouseI)])
 end
 %% Lap following L/R
 
@@ -557,6 +561,66 @@ end
 
 
 %% Decoder analysis
+%numShuffles = 100;
+numShuffles = 20;
+activityType = [];
 
+%Splitters
+
+%All Cells
+for mouseI = 1:numMice
+    decodeAll = fullfile(mainFolder,mice{mouseI},'\decoding','decoderAllsplit.mat');
+    if exist(decodeAll,'file')~=2
+        disp(['did not find decoder all/split performance for mouse ' num2str(mouseI) ', running now'])
+        [performance, miscoded, typePredict, sessPairs, condsInclude] =...
+        DecoderWrapper1(cellTBT{mouseI},dayUse{mouseI},cellRealDays{mouseI},numShuffles,activityType);
+        save(decodeAll,'performance','miscoded','typePredict','sessPairs','condsInclude')
+    end
+    load(decodeAll)
+    cellSessPairs{mouseI} = sessPairs;
+    decodeAllperf{mouseI} = performance;
+    daysApart{mouseI} = diff(cellRealDays{mouseI}(cellSessPairs{mouseI}), 1, 2);
+    sigDecodingAll{mouseI} = decoderSignificance(decodeAllperf{mouseI},cellSessPairs{mouseI},pThresh);
+end
+
+
+%Left/Right splitters (decoding only in cell cols 1 & 2)
+for mouseI = 1:numMice
+    decodeLR = fullfile(mainFolder,mice{mouseI},'\decoding','decoderLRsplit.mat');
+    if exist(decodeLR,'file')~=2
+        disp(['did not find decoder lr/split performance for mouse ' num2str(mouseI) ', running now'])
+        [performance, miscoded, typePredict, sessPairs, condsInclude] =...
+        DecoderWrapper1(cellTBT{mouseI},LRthisCellSplits{mouseI},cellRealDays{mouseI},numShuffles,activityType);
+        save(decodeLR,'performance','miscoded','typePredict','sessPairs','condsInclude')
+    end
+    load(decodeLR)
+    cellSessPairs{mouseI} = sessPairs;
+    decodeLRperf{mouseI} = performance;
+    daysApart{mouseI} = diff(cellRealDays{mouseI}(cellSessPairs{mouseI}), 1, 2);
+    sigDecodingLR{mouseI} = decoderSignificance(decodeLRperf{mouseI},cellSessPairs{mouseI},pThresh);
+end
+
+%Study/Test splitters(decoding only in cell cols 3 & 4)
+for mouseI = 1:numMice
+    decodeST = fullfile(mainFolder,mice{mouseI},'\decoding','decoderSTsplit.mat');
+    if exist(decodeST,'file')~=2
+        disp(['did not find decoder st/split performance for mouse ' num2str(mouseI) ', running now'])
+        [performance, miscoded, typePredict, sessPairs, condsInclude] =...
+        DecoderWrapper1(cellTBT{mouseI},STthisCellSplits{mouseI},cellRealDays{mouseI},numShuffles,activityType);
+        save(decodeST,'performance','miscoded','typePredict','sessPairs','condsInclude')
+    end
+    load(decodeST)
+    cellSessPairs{mouseI} = sessPairs;
+    decodeSTperf{mouseI} = performance;
+    daysApart{mouseI} = diff(cellRealDays{mouseI}(cellSessPairs{mouseI}), 1, 2);
+    sigDecodingST{mouseI} = decoderSignificance(decodeSTperf{mouseI},cellSessPairs{mouseI},pThresh);
+end
+
+nonLRsplitters{mouseI}
+splittersNone
+%Place vs. non-place
+placeThisDay{mouseI}
+notPlace{mouseI}
+%Randomly chosen from active (match number to place/splitters)
 
 %% RSA maybe

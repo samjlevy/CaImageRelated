@@ -1,5 +1,6 @@
 function [performance, miscoded] = decoderResults2(decoded, actual, sessPairs, realDays)
-
+%Looks only at column 1, which is every trial; column 2 had extra randomly
+%picked trials. 
 numPairs = size(sessPairs,1);
 daysApart = diff(realDays(sessPairs),1, 2);
 

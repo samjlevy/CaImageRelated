@@ -1,7 +1,7 @@
 function [training, testing, decoded, postProbs] = decodeAcrossConditions2(trialbytrial, condsInclude, typePredict, trainSess,...
     testSess, trainingCells, testingCells, trainingLaps, testingLaps, lblActivity, randomize)
 % Version 2 of the program that does the decoding. Now has specification
-% for which session to be used to training and testing.
+% for which session to be used for training and testing.
 % Use randomize (0 or 1) to auto randomization for significance
 % lblActivity is something like transientDur
 % uses each lap from each condition in order, gets a random lap from each
@@ -96,7 +96,7 @@ for testCondJ = 1:length(condsInclude)
         %Change it so everything has binary category of answers
         switch typePredict
             case 'all'
-                %do nothing?
+                %do nothing? Does this work?
             case 'leftright'
                 trainAnswers(logical(sum(trainAnswers == Conds.Left,2))) = 9;
                 trainAnswers(logical(sum(trainAnswers == Conds.Right,2))) = 10;
@@ -140,7 +140,7 @@ for testCondJ = 1:length(condsInclude)
 end
 
 %Next Step is actually go gather that data and run the classifier
-decoded = [];
+decoded = []; %column 1 is the lap indicated by systematic leave-one-out, column 2 is randomly chosen other lap
 for tcI = 1:length(testing)
     trainX = [];
     testY = [];
