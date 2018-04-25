@@ -1,4 +1,5 @@
-function [StudyCorrs, TestCorrs, LeftCorrs, RightCorrs, numCells] = PVcorrAllCond(TMap_gauss, RunOccMap, posThresh, threshAndConsec, Conds)
+function [StudyCorrs, TestCorrs, LeftCorrs, RightCorrs, numCells] =...
+    PVcorrAllCond(TMap_gauss, RunOccMap, posThresh, threshAndConsec, Conds)
 %In Corrs it is (day, binNum)
 %posThresh = 3;
 hasStuff = ~cellfun(@isempty,{TMap_gauss{:,1,1}});

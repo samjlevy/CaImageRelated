@@ -176,9 +176,10 @@ for mouseI = 1:numMice
     ylim([0 1])
 end
 
-%% Decoder LR splitters
+%% Decoder stuff
 condTitles = {'Study LvR', 'Test LvR', 'Left SvT', 'Right SvT'};
 
+%Made from LR splitters
 for mouseI = 1:numMice
     for condsPlot = 1:2
         shuffPerf = decodeLRperf{mouseI}(2:end,condsPlot);
@@ -186,18 +187,113 @@ for mouseI = 1:numMice
         shuffPerfR = cell2mat(shuffPerf); shuffPerfR = shuffPerfR(:);
         grps = repmat(daysApart{mouseI}',size(shuffPerf,1),1); grps = grps(:);
         xlabels  = cellfun(@num2str,num2cell(unique(daysApart{mouseI})),'UniformOutput',false);
-        scatterBoxSL(shuffPerfR(:),grps,'xLabel',xlabels,'plotBox',false)
+        scatterBoxSL(shuffPerfR,grps,'xLabel',xlabels,'plotBox',false)
         hold on
-        plotInds = sigDecoding{mouseI}{condsPlot};
+        plotInds = sigDecodingLR{mouseI}{condsPlot};
         plot(daysApart{mouseI}(plotInds),decodeLRperf{mouseI}{1,condsPlot}(plotInds),'ob')
         plot(daysApart{mouseI}(~plotInds),decodeLRperf{mouseI}{1,condsPlot}(~plotInds),'or')
-        title(['Mouse ' num2str(mouseI) ', ' condTitles{condsPlot} ' decoding performance; blue above shuffle, red not'])
+        title(['Mouse ' num2str(mouseI) ', ' condTitles{condsPlot}...
+            ' decoding performance with LR splitters; blue above shuffle, red not'])
         xlabel('Days between model and test data'); ylabel('Prop. decoded correctly')
         ylim([0 1])
     end
 end
         
-      
+%Made from ST splitters
+for mouseI = 1:numMice
+    for condsPlot = 3:4
+        shuffPerf = decodeSTperf{mouseI}(2:end,condsPlot);
+        shuffPerf = cellfun(@(x) x',shuffPerf,'UniformOutput',false);
+        shuffPerfR = cell2mat(shuffPerf); shuffPerfR = shuffPerfR(:);
+        grps = repmat(daysApart{mouseI}',size(shuffPerf,1),1); grps = grps(:);
+        xlabels  = cellfun(@num2str,num2cell(unique(daysApart{mouseI})),'UniformOutput',false);
+        scatterBoxSL(shuffPerfR,grps,'xLabel',xlabels,'plotBox',false)
+        hold on
+        plotInds = sigDecodingST{mouseI}{condsPlot};
+        plot(daysApart{mouseI}(plotInds),decodeSTperf{mouseI}{1,condsPlot}(plotInds),'ob')
+        plot(daysApart{mouseI}(~plotInds),decodeSTperf{mouseI}{1,condsPlot}(~plotInds),'or')
+        title(['Mouse ' num2str(mouseI) ', ' condTitles{condsPlot}...
+            ' decoding performance with ST splitters; blue above shuffle, red not'])
+        xlabel('Days between model and test data'); ylabel('Prop. decoded correctly')
+        ylim([0 1])
+    end
+end      
+
+%Made from All splitters
+for mouseI = 1:numMice
+    for condsPlot = 1:4
+        shuffPerf = decodeSTperf{mouseI}(2:end,condsPlot);
+        shuffPerf = cellfun(@(x) x',shuffPerf,'UniformOutput',false);
+        shuffPerfR = cell2mat(shuffPerf); shuffPerfR = shuffPerfR(:);
+        grps = repmat(daysApart{mouseI}',size(shuffPerf,1),1); grps = grps(:);
+        xlabels  = cellfun(@num2str,num2cell(unique(daysApart{mouseI})),'UniformOutput',false);
+        scatterBoxSL(shuffPerfR,grps,'xLabel',xlabels,'plotBox',false)
+        hold on
+        plotInds = sigDecodingST{mouseI}{condsPlot};
+        plot(daysApart{mouseI}(plotInds),decodeSTperf{mouseI}{1,condsPlot}(plotInds),'ob')
+        plot(daysApart{mouseI}(~plotInds),decodeSTperf{mouseI}{1,condsPlot}(~plotInds),'or')
+        title(['Mouse ' num2str(mouseI) ', ' condTitles{condsPlot}...
+            ' decoding performance with all splitters; blue above shuffle, red not'])
+        xlabel('Days between model and test data'); ylabel('Prop. decoded correctly')
+        ylim([0 1])
+    end
+end    
+
+%% Pop vector corrs
+
+ss = fieldnames(Conds);
+for mouseI = 1:numMice
+    figure; jetTrips = colormap(jet); close
+    jetUse = round(linspace(1,64,numDays(mouseI)));
+    plotColors = jetTrips(jetUse,:);
+    figure;
+    for condI = 1:4
+        subplot(2,2,condI)
+        for dayI = 1:numDays(mouseI)
+            hold on
+            plot(squeeze(Corrs{mouseI}(dayI,condI,:)),'-o','Color',plotColors(dayI,:))
+        end
+        ylim([-1 1]); xlim([1 size(Corrs{mouseI},3)])
+        title([ss{condI} ' PV corrs']) 
+    end
+    suptitleSL(['Mouse ' num2str(mouseI) ', Cells active either cond.'])
+end
+
+%condSet{1} = find(diff(condPairs{mouseI},1,2)==0); %vs. self
+%condSet{1} = find(abs(diff(condPairs{mouseI},1,2))==1);
+condSet{1} = 1:4;          % vs Self
+condSet{2} = [5 10 11 16]; % L v R
+condSet{3} = [6 9 12 15];  % S v T
+plotColors = {'b', 'r', 'g'};
+for mouseI = 1:numMice
+    clear h
+    dayDiffs = unique(daysApart{mouseI});
+    figure;
+    hold on
+    meanLine = []; SEMline = [];
+    for csI = 1:length(condSet)
+        for ddI = 1:length(dayDiffs)
+            dataHere = []; meanCorrs = [];
+            dayPairsUse = find(daysApart{mouseI}==dayDiffs(ddI));
+            condPairsUse = condSet{csI};
+            dataHere = Corrs{mouseI}(dayPairsUse,condPairsUse,:);
+            meanCorrs = mean(dataHere,3); meanCorrs = meanCorrs(:); meanCorrs(isnan(meanCorrs))=[];
+            meanLine(csI,ddI) = mean(meanCorrs); SEMline(csI,ddI) = standarderrorSL(meanCorrs);
+            hi = plot(ones(length(meanCorrs(:)),1)*dayDiffs(ddI),meanCorrs(:),'.','Color',plotColors{csI});
+            h(csI) = hi(1);
+        end
+    end
+    for csJ = 1:length(condSet)
+        errorbar(dayDiffs,meanLine(csJ,:),SEMline(csJ,:),'-o','Color',plotColors{csJ})
+    end
+    ylim([-1 1])
+    title(['Mouse ' num2str(mouseI) ', Mean Correlation by Days Apart'])
+    legend(h,'Within Condition','Left vs. Right','Study vs. Test','Location','northeast')
+    xlabel('Days Apart')
+    ylabel('Mean Corr')
+end
+            
+        
 %% old splitters
 
 

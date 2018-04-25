@@ -5,8 +5,6 @@ function [FToffset, LastUsable, whichEndsFirst ] = JustFToffset(varargin)
 %This is all based on the assumption that time from the DVT (column 2) is 
 %accurate and assumed-equal timing in the imaging file.
 
-%disp('NEEDS TESTING')
-
 useXml = 0;
 overwrite_existing = 0;
 imaging_start_frame = 1;

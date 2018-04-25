@@ -69,6 +69,12 @@ for mouseI = 1:numMice
     end
 end
 
+for mouseI = 1:numMice
+    load(fullfile(mainFolder,mice{mouseI},'PFsLin.mat'),'TMap_unsmoothed','TMap_zRates')
+    cellTMap_unsmoothed{mouseI} = TMap_unsmoothed;
+    cellTMap_zScored{mouseI} = TMap_zRates;
+end
+
 Conds = GetTBTconds(cellTBT{1});
 disp('Done set-up stuff')
 %% Plot rasters for all good cells
@@ -131,7 +137,8 @@ for mouseI = 1:numMice
     dayCellsThatReturnRange(mouseI,1:2) = [mean(dayCellsThatReturn{mouseI}) standarderrorSL(dayCellsThatReturn{mouseI})];
     dayCellsThatReturnPctRange(mouseI,1:2) = [mean(dayCellsThatReturnPct{mouseI}) standarderrorSL(dayCellsThatReturnPct{mouseI})];
     
-    numCondsActiveRange(mouseI, 1:2) = [nanmean(dailyNCAmean(mouseI,:)), standarderrorSL(dailyNCAmean(mouseI,~isnan(dailyNCAmean(mouseI,:))))];
+    numCondsActiveRange(mouseI, 1:2) = [nanmean(dailyNCAmean(mouseI,:)),...
+        standarderrorSL(dailyNCAmean(mouseI,~isnan(dailyNCAmean(mouseI,:))))];
     activeMoreThanOneRange(mouseI, 1:2) = ...
         [mean(dailyOnlyActiveOnePct(mouseI,dailyOnlyActiveOnePct(mouseI,:) > 0))...
          standarderrorSL(dailyOnlyActiveOnePct(mouseI,dailyOnlyActiveOnePct(mouseI,:) > 0))];
@@ -165,11 +172,6 @@ shuffThresh = 1 - pThresh;
 binsMin = 1;
 shuffleDirLR = 'shuffleLR';
 shuffleDirST = 'shuffleST';
-
-for mouseI = 1:numMice
-    load(fullfile(mainFolder,mice{mouseI},'PFsLin.mat'),'TMap_unsmoothed')
-    cellTMap_unsmoothed{mouseI} = TMap_unsmoothed;
-end
 
 % Left/Right
 for mouseI = 1:numMice
@@ -447,7 +449,8 @@ for mouseI = 1:numMice
         dailyPropCondsWherePlace{mouseI}([1:2],dayI) = [mean(condsWherePlace{mouseI}(dayUse{mouseI}(:,dayI),dayI));...
                           standarderrorSL(condsWherePlace{mouseI}(dayUse{mouseI}(:,dayI),dayI))]; %Indexing only gets it for active cells
     end
-    pctRangeCondsWherePlace(mouseI,1:2) = [mean(dailyPropCondsWherePlace{mouseI}(1,:)) standarderrorSL(dailyPropCondsWherePlace{mouseI}(1,:))];
+    pctRangeCondsWherePlace(mouseI,1:2) = [mean(dailyPropCondsWherePlace{mouseI}(1,:)),...
+        standarderrorSL(dailyPropCondsWherePlace{mouseI}(1,:))];
 end
 
 
@@ -470,7 +473,8 @@ for mouseI = 1:numMice
     placeSplitBOTH{mouseI} = logical(splittersBOTH{mouseI}.*(placeThisDay{mouseI}.*dayUse{mouseI}));
     placeSplitLRonly{mouseI} = logical(splittersLRonly{mouseI}.*(placeThisDay{mouseI}.*dayUse{mouseI}));
     placeSplitSTonly{mouseI} = logical(splittersSTonly{mouseI}.*(placeThisDay{mouseI}.*dayUse{mouseI}));
-    placeSplitNone{mouseI} = logical(splittersNone{mouseI}.*(placeThisDay{mouseI}.*dayUse{mouseI})); %placeByCondThreshed{mouseI}(:,:,1) | placeByCondThreshed{mouseI}(:,:,3)));%???
+    placeSplitNone{mouseI} = logical(splittersNone{mouseI}.*(placeThisDay{mouseI}.*dayUse{mouseI})); 
+        %placeByCondThreshed{mouseI}(:,:,1) | placeByCondThreshed{mouseI}(:,:,3)));%???
 end
 
 % How many, Range etc.
@@ -555,14 +559,45 @@ for mouseI = 1:numMice
 end
 %% Lap following L/R
 
+Can I decode the next trial based on current? 
 
+Does population correlation look better or worse for X after X than splitting by top-down difference
 %% Population Vector Correlations
 
+dayPairs = []; condPairs = [];
+for mouseI = 1:numMice
+    cellsUse = 'activeEither'; %'activeBoth' 'includeSilent'
+    traitLogical = threshAndConsec{mouseI}>0;
+    [Corrs{mouseI}, numCellsUsed{mouseI}, dayPairs{mouseI}, condPairs{mouseI}] =...
+        PopVectorCorrs1(cellTMap_unsmoothed{mouseI},traitLogical, 'activeEither', 'Spearman', [], []);
+end
+
+%Sort by days apart
+for mouseI = 1:numMice
+    daysApart{mouseI} = diff(dayPairs{mouseI},1,2);
+    sameDays = find(daysApart{mouseI} == 0);
+    cc = cell2mat(struct2cell(Conds));
+    for condI = 1:size(cc,1)
+        cpUse(condI) = find(condPairs{mouseI}(:,1)==cc(condI,1) & condPairs{mouseI}(:,2)==cc(condI,2)); 
+    end
+    WithinDayCorrs{mouseI} = Corrs{mouseI}(sameDays,cpUse,:);
+    
+end
+    
+
+
+how to think about shuffles? Maybe pre-select condpairs and load appropriate shuffles?
+    should work for same cells by giving it the same traitLogical as normal
+
+    
+    
+%organization for comparison to shuffled?
+%organization for plotting?
 
 
 %% Decoder analysis
-%numShuffles = 100;
-numShuffles = 20;
+numShuffles = 100;
+%numShuffles = 20;
 activityType = [];
 
 %Splitters
