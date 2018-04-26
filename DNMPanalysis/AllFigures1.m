@@ -270,45 +270,100 @@ for mouseI = 1:numMice
 end
         
 %Made from ST splitters
+cuse = 3:4;
 for mouseI = 1:numMice
-    for condsPlot = 3:4
-        shuffPerf = decodeSTperf{mouseI}(2:end,condsPlot);
+    figure;
+    for condsPlot = 1:length(cuse)
+        hh = subplot(1,2,condsPlot);
+        shuffPerf = decodeSTperf{mouseI}(2:end,cuse(condsPlot));
         shuffPerf = cellfun(@(x) x',shuffPerf,'UniformOutput',false);
         shuffPerfR = cell2mat(shuffPerf); shuffPerfR = shuffPerfR(:);
         grps = repmat(daysApart{mouseI}',size(shuffPerf,1),1); grps = grps(:);
         xlabels  = cellfun(@num2str,num2cell(unique(daysApart{mouseI})),'UniformOutput',false);
-        scatterBoxSL(shuffPerfR,grps,'xLabel',xlabels,'plotBox',false)
+        scatterBoxSL(shuffPerfR,grps,'xLabel',xlabels,'plotBox',false,'plotHere',hh)
         hold on
-        plotInds = sigDecodingST{mouseI}{condsPlot};
-        plot(daysApart{mouseI}(plotInds),decodeSTperf{mouseI}{1,condsPlot}(plotInds),'ob')
-        plot(daysApart{mouseI}(~plotInds),decodeSTperf{mouseI}{1,condsPlot}(~plotInds),'or')
-        title(['Mouse ' num2str(mouseI) ', ' condTitles{condsPlot}...
-            ' decoding performance with ST splitters; blue above shuffle, red not'])
+        plotInds = sigDecodingST{mouseI}{cuse(condsPlot)};
+        plot(daysApart{mouseI}(plotInds),decodeSTperf{mouseI}{1,cuse(condsPlot)}(plotInds),'ob','MarkerFaceColor','b')
+        plot(daysApart{mouseI}(~plotInds),decodeSTperf{mouseI}{1,cuse(condsPlot)}(~plotInds),'or','MarkerFaceColor','r')
+        %title(['Mouse ' num2str(mouseI) ', ' condTitles{condsPlot}...
+        %   ' decoding performance with ST splitters; blue above shuffle, red not'])
+        title([ condTitles{cuse(condsPlot)} ' decoding performance'])
         xlabel('Days between model and test data'); ylabel('Prop. decoded correctly')
         ylim([0 1])
     end
+    suptitleSL(['Mouse ' num2str(mouseI)])
 end      
 
-%Made from All splitters
+%Made from All cells
+dayDiffsUse = daysApart;
+%dayDiffsUse = actualDaysApart;
 for mouseI = 1:numMice
+    figure;
     for condsPlot = 1:4
-        shuffPerf = decodeSTperf{mouseI}(2:end,condsPlot);
+        hh = subplot(2,2,condsPlot);
+        shuffPerf = decodeAllperf{mouseI}(2:end,condsPlot);
         shuffPerf = cellfun(@(x) x',shuffPerf,'UniformOutput',false);
         shuffPerfR = cell2mat(shuffPerf); shuffPerfR = shuffPerfR(:);
-        grps = repmat(daysApart{mouseI}',size(shuffPerf,1),1); grps = grps(:);
-        xlabels  = cellfun(@num2str,num2cell(unique(daysApart{mouseI})),'UniformOutput',false);
-        scatterBoxSL(shuffPerfR,grps,'xLabel',xlabels,'plotBox',false)
+        grps = repmat(dayDiffsUse{mouseI}',size(shuffPerf,1),1); grps = grps(:);
+        xlabels  = cellfun(@num2str,num2cell(unique(dayDiffsUse{mouseI})),'UniformOutput',false);
+        scatterBoxSL(shuffPerfR,grps,'xLabel',xlabels,'plotBox',false,'plotHere',hh)%
+        hh = gcf;
         hold on
-        plotInds = sigDecodingST{mouseI}{condsPlot};
-        plot(daysApart{mouseI}(plotInds),decodeSTperf{mouseI}{1,condsPlot}(plotInds),'ob')
-        plot(daysApart{mouseI}(~plotInds),decodeSTperf{mouseI}{1,condsPlot}(~plotInds),'or')
-        title(['Mouse ' num2str(mouseI) ', ' condTitles{condsPlot}...
-            ' decoding performance with all splitters; blue above shuffle, red not'])
+        plotInds = sigDecodingAll{mouseI}{condsPlot};
+        plot(dayDiffsUse{mouseI}(plotInds),decodeAllperf{mouseI}{1,condsPlot}(plotInds),'ob','MarkerFaceColor','b')
+        plot(dayDiffsUse{mouseI}(~plotInds),decodeAllperf{mouseI}{1,condsPlot}(~plotInds),'or','MarkerFaceColor','r')
+        %title(['Mouse ' num2str(mouseI) ', ' condTitles{condsPlot}...
+        %    ' decoding performance with all splitters; blue above shuffle, red not'])
+        title([ condTitles{condsPlot} ' decoding performance'])
         xlabel('Days between model and test data'); ylabel('Prop. decoded correctly')
         ylim([0 1])
     end
+    suptitleSL(['Mouse ' num2str(mouseI) ', all cells'])
 end    
 
+figure;
+    for condsPlot = 1:4
+        hh = subplot(2,2,condsPlot);
+        shuffPerf = decodeSTperf{mouseI}(2:end,condsPlot);
+        shuffPerf = cellfun(@(x) x',shuffPerf,'UniformOutput',false);
+        shuffPerfR = cell2mat(shuffPerf); shuffPerfR = shuffPerfR(:);
+        grps = repmat(dayDiffsUse{mouseI}',size(shuffPerf,1),1); grps = grps(:);
+        xlabels  = cellfun(@num2str,num2cell(unique(dayDiffsUse{mouseI})),'UniformOutput',false);
+        scatterBoxSL(shuffPerfR,grps,'xLabel',xlabels,'plotBox',false,'plotHere',hh)%
+        hh = gcf;
+        hold on
+        plotInds = sigDecodingST{mouseI}{condsPlot};
+        plot(dayDiffsUse{mouseI}(plotInds),decodeSTperf{mouseI}{1,condsPlot}(plotInds),'ob','MarkerFaceColor','b')
+        plot(dayDiffsUse{mouseI}(~plotInds),decodeSTperf{mouseI}{1,condsPlot}(~plotInds),'or','MarkerFaceColor','r')
+        %title(['Mouse ' num2str(mouseI) ', ' condTitles{condsPlot}...
+        %    ' decoding performance with all splitters; blue above shuffle, red not'])
+        title([ condTitles{condsPlot} ' decoding performance'])
+        xlabel('Days between model and test data'); ylabel('Prop. decoded correctly')
+        ylim([0 1])
+    end
+    suptitleSL(['Mouse ' num2str(mouseI) ', ST splitters'])
+    
+    figure;
+    for condsPlot = 1:4
+        hh = subplot(2,2,condsPlot);
+        shuffPerf = decodeLRperf{mouseI}(2:end,condsPlot);
+        shuffPerf = cellfun(@(x) x',shuffPerf,'UniformOutput',false);
+        shuffPerfR = cell2mat(shuffPerf); shuffPerfR = shuffPerfR(:);
+        grps = repmat(dayDiffsUse{mouseI}',size(shuffPerf,1),1); grps = grps(:);
+        xlabels  = cellfun(@num2str,num2cell(unique(dayDiffsUse{mouseI})),'UniformOutput',false);
+        scatterBoxSL(shuffPerfR,grps,'xLabel',xlabels,'plotBox',false,'plotHere',hh)%
+        hh = gcf;
+        hold on
+        plotInds = sigDecodingLR{mouseI}{condsPlot};
+        plot(dayDiffsUse{mouseI}(plotInds),decodeLRperf{mouseI}{1,condsPlot}(plotInds),'ob','MarkerFaceColor','b')
+        plot(dayDiffsUse{mouseI}(~plotInds),decodeLRperf{mouseI}{1,condsPlot}(~plotInds),'or','MarkerFaceColor','r')
+        %title(['Mouse ' num2str(mouseI) ', ' condTitles{condsPlot}...
+        %    ' decoding performance with all splitters; blue above shuffle, red not'])
+        title([ condTitles{condsPlot} ' decoding performance'])
+        xlabel('Days between model and test data'); ylabel('Prop. decoded correctly')
+        ylim([0 1])
+    end
+    suptitleSL(['Mouse ' num2str(mouseI) ', LR splitters'])
 %% Pop vector corrs
 
 ss = fieldnames(Conds);
@@ -326,6 +381,7 @@ for mouseI = 1:numMice
             plot(squeeze(Corrs{mouseI}(dayI,rowUse,:)),'-o','Color',plotColors(dayI,:))
         end
         ylim([-1 1]); xlim([1 size(Corrs{mouseI},3)])
+        xlabel('Start             Choice')
         title([ss{condI} ' PV corrs']) 
     end
     suptitleSL(['Mouse ' num2str(mouseI) ', Cells active either cond.'])
@@ -337,26 +393,29 @@ condSet{1} = 1:4;          % vs Self
 condSet{2} = [5 10 11 16]; % L v R
 condSet{3} = [6 9 12 15];  % S v T
 plotColors = {'b', 'r', 'g'};
+
+%dayDiffsUse = daysApart;
+dayDiffsUse = actualDaysApart;
 for mouseI = 1:numMice
     clear h
-    dayDiffs = unique(daysApart{mouseI});
+    dayDiffs = unique(dayDiffsUse{mouseI});
     figure;
     hold on
     meanLine = []; SEMline = [];
     for csI = 1:length(condSet)
         for ddI = 1:length(dayDiffs)
             dataHere = []; meanCorrs = [];
-            dayPairsUse = find(daysApart{mouseI}==dayDiffs(ddI));
+            dayPairsUse = find(dayDiffsUse{mouseI}==dayDiffs(ddI));
             condPairsUse = condSet{csI};
             dataHere = Corrs{mouseI}(dayPairsUse,condPairsUse,:);
             meanCorrs = mean(dataHere,3); meanCorrs = meanCorrs(:); meanCorrs(isnan(meanCorrs))=[];
             meanLine(csI,ddI) = mean(meanCorrs); SEMline(csI,ddI) = standarderrorSL(meanCorrs);
-            hi = plot(ones(length(meanCorrs(:)),1)*dayDiffs(ddI),meanCorrs(:),'.','Color',plotColors{csI});
+            hi = plot(ones(length(meanCorrs(:)),1)*dayDiffs(ddI),meanCorrs(:),'.','MarkerSize',10,'Color',plotColors{csI});
             h(csI) = hi(1);
         end
     end
     for csJ = 1:length(condSet)
-        errorbar(dayDiffs,meanLine(csJ,:),SEMline(csJ,:),'-o','Color',plotColors{csJ})
+        errorbar(dayDiffs,meanLine(csJ,:),SEMline(csJ,:),'-o','Color',plotColors{csJ},'LineWidth',1.5)
     end
     ylim([-1 1])
     title(['Mouse ' num2str(mouseI) ', Mean Correlation by Days Apart'])
@@ -365,49 +424,25 @@ for mouseI = 1:numMice
     ylabel('Mean Corr')
 end
             
-        
-%% old splitters
-
-
-
-%Maybe all the stuff here should be in analyses?
-labels = {'Study LvR','Test LvR','Left SvT','Right SvT'};
-for mouseI = 1:numMice
+xaxCorrs{mouseI}
+xaxConds = GetTBTconds(xaxTBT{mouseI});
+ figure; jetTrips = colormap(jet); close
+    jetUse = round(linspace(1,64,numDays(mouseI)));
+    plotColors = jetTrips(jetUse,:);
     figure;
-    histEdges = [-1.05:0.1:1.05];
-    histMids = histEdges(1:end-1)+0.05;
-    for cpI = 1:size(discriminationIndex{mouseI},3)
-        subplot(4,4,(1:2)+(cpI-1)*2)
-        dataPlot = discriminationIndex{mouseI}(:,1,cpI); 
-        dataPlot = dataPlot(thisCellSplits{mouseI}{cpI}(:,1));
-        histogram(dataPlot, histEdges, 'FaceColor', colorsU{cpI})
-        title([ labels{cpI} ' Day 1'])
-        %xlabel, ylabel
-    end
-    %suptitle(['Mouse ' num2str(mouseI) ' DI distribution'])
-    
-    for cpI = 1:size(discriminationIndex{mouseI},3)
-        subplot(4,4,(1:2)+(cpI-1)*2+8)
-        dataPlot = discriminationIndex{mouseI}(:,:,cpI); 
-        dataPlot(thisCellSplits{mouseI}{cpI}==0) = NaN;
-        counts = [];
-        for dayI = 1:size(dataPlot,2)
-            counts(dayI,:) = histcounts(dataPlot(:,dayI), histEdges);
+    for condI = 1:4
+        subplot(2,2,condI)
+        for dayI = 1:numDays(mouseI)
+            hold on
+            rowUse = find(((xaxcondPairs{mouseI}(:,1)==xaxConds.(ss{condI})(1))+...
+                     (xaxcondPairs{mouseI}(:,2)==xaxConds.(ss{condI})(2)))==2);  
+            plot(squeeze(xaxCorrs{mouseI}(dayI,rowUse,:)),'-o','Color',plotColors(dayI,:))
         end
-        bars = mean(counts,1);
-        histogram('BinEdges', histEdges, 'BinCounts', bars, 'FaceColor', colorsU{cpI})
-        hold on
-        for binI = 1:size(counts,2)
-            errorB(binI) = standarderrorSL(counts(:,binI)); % This should probably leave out days with 0 in the bin
-            plot([histMids(binI) histMids(binI)], [bars(binI)-errorB(binI) bars(binI)+errorB(binI)],...
-                'k', 'LineWidth', 2)
-        end
-        title([ labels{cpI} ' Mean of all days'])
-        %xlabel, ylabel
+        ylim([-1 1]); xlim([1 size(xaxCorrs{mouseI},3)])
+        xlabel('Start             Choice')
+        title([ss{condI} ' PV corrs']) 
     end
-end
-    
-
+    suptitleSL(['Mouse ' num2str(mouseI) ', Cells active either cond.'])
 %% Example splitter cells
 
 % ---> Check sfnFigs1 for examples on how to plot this

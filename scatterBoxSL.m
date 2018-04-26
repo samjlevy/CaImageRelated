@@ -37,6 +37,7 @@ function scatterBoxSL(x,grps,varargin)
 %
 %           plotBox: whether or not to make boxplot.
 %
+%           plotHere: parent axis to plot inside
 
 %% Set up. 
     p = inputParser; 
@@ -51,6 +52,7 @@ function scatterBoxSL(x,grps,varargin)
     p.addParameter('sf',.05,@(x) isscalar(x));
     p.addParameter('position',[520 350 300 450]); 
     p.addParameter('plotBox',true,@(x) islogical(x));
+    p.addParameter('plotHere',@(x) strcmpi(class(x),'matlab.graphics.axis.Axes'))
     
     p.parse(x,grps,varargin{:});
     xLabels = p.Results.xLabels; 
@@ -62,6 +64,7 @@ function scatterBoxSL(x,grps,varargin)
     sf = p.Results.sf; 
     position = p.Results.position;
     plotBox = p.Results.plotBox;
+    plotHere = p.Results.plotHere;
     
     %Turn into column.
     if size(x,1) < size(x,2) 
@@ -93,11 +96,16 @@ function scatterBoxSL(x,grps,varargin)
     end
     
     %Figure here. 
-    if isnumeric(position)
-        figure('Position',position); 
-    end
+    %if isnumeric(position) && isempty(plotHere)
+    %    figure('Position',position); 
+    %end
     hold on;
-    scat = scatter(jitters,x,circleSize,circleColors,'filled');
+    switch isempty(plotHere)
+        case 0
+            scat = scatter(jitters,x,circleSize,circleColors,'filled');
+        case 1
+            scat = scatter(plotHere,jitters,x,circleSize,circleColors,'filled');
+    end
     alpha(scat,transparency);
     if plotBox
         boxplot(x,grps,'color',boxColor,'symbol','k','labels',xLabels,...

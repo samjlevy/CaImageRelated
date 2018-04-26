@@ -561,16 +561,16 @@ for mouseI = 1:numMice
 end
 %% Lap following L/R
 for mouseI = 1:numMice
-    [xaxTBT{mouseI}, lapsIncLog{mouseI}] = XafterXtbt(cellTBT{mouseI};
-    [dayUse{mouseI},threshAndConsec{mouseI}] = GetUseCells(cellTBT{mouseI}, lapPctThresh, consecLapThresh);
-    [trialReli{mouseI},aboveThresh{mouseI},~,~] = TrialReliability(cellTBT{mouseI}, lapPctThresh);
-    [xaxTMap_unsmoothed, TMap_zRates, ~,~, ~, ~]=...
-    PFsLinTrialbyTrial2(cellTBT{mouseI}, xlims, cmperbin, minspeed,...
-                [],'trialReli',trialReli{mouseI},'smooth',false);
+    [xaxTBT{mouseI}, lapsIncLog{mouseI}] = XafterXtbt(cellTBT{mouseI});
+    [xaxdayUse{mouseI},xaxthreshAndConsec{mouseI}] = GetUseCells(xaxTBT{mouseI}, lapPctThresh, consecLapThresh);
+    [xaxtrialReli{mouseI},xaxaboveThresh{mouseI},~,~] = TrialReliability(xaxTBT{mouseI}, lapPctThresh);
+    [xaxTMap_unsmoothed{mouseI}, xaxTMap_zRates{mouseI}, ~,~, ~, ~]=...
+    PFsLinTrialbyTrial2(xaxTBT{mouseI}, xlims, cmperbin, minspeed,...
+                [],'trialReli',xaxtrialReli{mouseI},'smooth',false);
     cellsUse = 'activeEither'; %'activeBoth' 'includeSilent'
-    traitLogical = threshAndConsec{mouseI}>0;
+    traitLogical = xaxthreshAndConsec{mouseI}>0;
     [xaxCorrs{mouseI}, xaxnumCellsUsed{mouseI}, xaxdayPairs{mouseI}, xaxcondPairs{mouseI}] =...
-        PopVectorCorrs1(cellTMap_unsmoothed{mouseI},traitLogical, 'activeEither', 'Spearman', [], []);
+        PopVectorCorrs1(xaxTMap_unsmoothed{mouseI},traitLogical, 'activeEither', 'Spearman', [], []);
 end
 are there splitters based on this?
 
@@ -599,6 +599,11 @@ for mouseI = 1:numMice
     
 end
     
+%Real days apart
+for mouseI = 1:numMice
+    actualDayPairs{mouseI} = cellRealDays{mouseI}(dayPairs{mouseI});
+    actualDaysApart{mouseI} = diff(actualDayPairs{mouseI},1,2);
+end
 
 
 how to think about shuffles? Maybe pre-select condpairs and load appropriate shuffles?
@@ -615,7 +620,20 @@ numShuffles = 100;
 %numShuffles = 20;
 activityType = [];
 
-%Splitters
+numShuffles = 10;
+    mouseI = 1
+    decodeAll = fullfile(mainFolder,mice{mouseI},'\decodingXAX','decoderAllXAXsplit.mat');
+    if exist(decodeAll,'file')~=2
+        disp(['did not find decoder all/split performance for mouse ' num2str(mouseI) ', running now'])
+        [performance, miscoded, typePredict, sessPairs, condsInclude] =...
+        DecoderWrapper1(xaxTBT{mouseI},xaxdayUse{mouseI},cellRealDays{mouseI},numShuffles,activityType);
+        save(decodeAll,'performance','miscoded','typePredict','sessPairs','condsInclude')
+    end
+    load(decodeAll)
+    cellSessPairs{mouseI} = sessPairs;
+    decodeAllperf{mouseI} = performance;
+    daysApart{mouseI} = diff(cellRealDays{mouseI}(cellSessPairs{mouseI}), 1, 2);
+    sigDecodingAll{mouseI} = decoderSignificance(decodeAllperf{mouseI},cellSessPairs{mouseI},pThresh);
 
 %All Cells
 for mouseI = 1:numMice
