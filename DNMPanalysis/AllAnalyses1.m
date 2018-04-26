@@ -143,8 +143,7 @@ for mouseI = 1:numMice
         [mean(dailyOnlyActiveOnePct(mouseI,dailyOnlyActiveOnePct(mouseI,:) > 0))...
          standarderrorSL(dailyOnlyActiveOnePct(mouseI,dailyOnlyActiveOnePct(mouseI,:) > 0))];
     
-    %likelihood of a cell being active in the same number of conditions
-    %each day found
+    %likelihood of a cell being active in the same number of conditions each day found
     for cellI = 1:size(dayUse{mouseI},1)
         notZeroHere = dayUse{mouseI}(cellI,:);
         cellCondsActiveRange{mouseI}(cellI,1:2) =...
@@ -153,16 +152,12 @@ for mouseI = 1:numMice
     cellsUse = daysEachCellActive{mouseI}>1;
     allCellCondsActiveRange(mouseI, 1:2) =...
         [nanmean(cellCondsActiveRange{mouseI}(cellsUse,1)) nanstandarderrorSL(cellCondsActiveRange{mouseI}(cellsUse,1))];
-    %This number may not be meaningful given that majority of numberCondsActive is 1; 
     disp(['done single cells mouse ' num2str(mouseI)])
 end
 
 for mouseI = 1:numMice
     [trialReli{mouseI},~,~,~] = TrialReliability(cellTBT{mouseI}, lapPctThresh);
     [maxConsec{mouseI}, ~] = ConsecutiveLaps(cellTBT{mouseI}, consecLapThresh);
-    
-    %Histograms to look at trial reliability and number of maxConsecutive
-    %laps
 end
 
 %% Splitter cells: Shuffle versions
@@ -370,6 +365,13 @@ for mouseI = 1:numMice
         ddSTboth = dayDistSTboth{mouseI}(:,binI);
         dayDistMeansSTboth(mouseI,binI) = mean(ddSTboth(ddSTboth~=0));
         dayDistSEMsSTboth(mouseI,binI) = standarderrorSL(ddSTboth(ddSTboth~=0));
+        
+        ppLR = pctDayDistLR{mouseI}(:,binI);
+        pctsDistMeanLR(mouseI,binI) = mean(ppLR(ppLR~=0));
+        pctsDistSEMsLR(mouseI,binI) = standarderrorSL(ppLR(ppLR~=0));
+        ppST = pctDayDistST{mouseI}(:,binI);
+        pctsDistMeanST(mouseI,binI) = mean(ppST(ppST~=0));
+        pctsDistSEMsST(mouseI,binI) = standarderrorSL(ppST(ppST~=0));
     end
 end
 
@@ -558,6 +560,19 @@ for mouseI = 1:numMice
     disp(['done reactivation by type mouse ' num2str(mouseI)])
 end
 %% Lap following L/R
+for mouseI = 1:numMice
+    [xaxTBT{mouseI}, lapsIncLog{mouseI}] = XafterXtbt(cellTBT{mouseI};
+    [dayUse{mouseI},threshAndConsec{mouseI}] = GetUseCells(cellTBT{mouseI}, lapPctThresh, consecLapThresh);
+    [trialReli{mouseI},aboveThresh{mouseI},~,~] = TrialReliability(cellTBT{mouseI}, lapPctThresh);
+    [xaxTMap_unsmoothed, TMap_zRates, ~,~, ~, ~]=...
+    PFsLinTrialbyTrial2(cellTBT{mouseI}, xlims, cmperbin, minspeed,...
+                [],'trialReli',trialReli{mouseI},'smooth',false);
+    cellsUse = 'activeEither'; %'activeBoth' 'includeSilent'
+    traitLogical = threshAndConsec{mouseI}>0;
+    [xaxCorrs{mouseI}, xaxnumCellsUsed{mouseI}, xaxdayPairs{mouseI}, xaxcondPairs{mouseI}] =...
+        PopVectorCorrs1(cellTMap_unsmoothed{mouseI},traitLogical, 'activeEither', 'Spearman', [], []);
+end
+are there splitters based on this?
 
 Can I decode the next trial based on current? 
 

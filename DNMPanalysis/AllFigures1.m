@@ -12,15 +12,37 @@ end
 for mouseI = 1:numMice
     figure;
     plot(accuracy{mouseI}, numCellsToday{mouseI}, 'or')
-    title(['Mouse ' num2str(mouseI) ', numCells found by accuracy'])
+    title(['Mouse ' num2str(mouseI) ', numCells found by Performance'])
     %least squares regression
-    xlabel('Accuracy'); ylabel('Number of cells')
+    xlabel('Performance'); ylabel('Number of cells')
 end
 
-%% Cell persistance histogram
+%Pooled
+figure;
 for mouseI = 1:numMice
-    figure; 
-    histogram(cellPersistHist{mouseI},[0.5:1:max(cellPersistHist{mouseI})+0.5])
+    hold on
+    plot(accuracy{mouseI},numCellsToday{mouseI}, '.','MarkerSize',15)
+end
+xlabel('Performance'); ylabel('Number of cells')
+title('Performance by Number of Cells')
+
+%% Accuracy per day
+figure;
+for mouseI = 1:numMice
+    subplot(3,1,mouseI)
+    plot(accuracy{mouseI},'-o','LineWidth',1.5)
+    ylabel('Performance')
+    ylim([0.5 1])
+    title(mice{mouseI})
+end
+xlabel('Day Number')
+%% Cell persistance histogram
+figure;
+for mouseI = 1:numMice
+    subplot(numMice,1,mouseI) 
+    hh = histogram(cellPersistHist{mouseI},[0.5:1:max(cellPersistHist{mouseI})+0.5]);
+    hold on
+    plot([cellPersistRange(mouseI,1) cellPersistRange(mouseI,1)],[0 hh.Values(1)],'r')
     title(['Mouse ' num2str(mouseI) ', Number of days a cell lasts, mean '...
         num2str(cellPersistRange(mouseI, 1)) ', +/- ' num2str(cellPersistRange(mouseI, 2))])
     xlabel('Number of days found'); ylabel('Number of cells')
@@ -44,12 +66,32 @@ for mouseI = 1:numMice
 end
 
 %% Percent cells from any other day
+figure;
 for mouseI = 1:numMice
-    figure;
-    bar(dayCellsThatReturnPct{mouseI},0.95)
+    subplot(numMice,1,mouseI)
+    bar(dayCellsThatReturnPct{mouseI},0.98,'FaceColor',[0,0.5,0.8])
     ylim([0.5 1]); xlim([0.5 length(dayCellsThatReturnPct{mouseI})+0.5])
     title(['Mouse ' num2str(mouseI) ', pct cells the show up another day'])
     xlabel('Day Number'); ylabel('Pct cells returning')
+end
+
+%% Percent cells above activity thresholds by day
+figure;
+for mouseI = 1:numMice
+    subplot(numMice,1,mouseI)
+    plot(cellsActivePct{mouseI},'LineWidth',1.5)
+    ylim([0 1])
+    title(['Mouse ' num2str(mouseI) ', pct cells above activity thresholds'])
+    xlabel('Day Number')
+end
+
+figure;
+for mouseI = 1:numMice
+    hold on
+    plot(accuracy{mouseI},cellsActivePct{mouseI},'.','MarkerSize',15)
+    xlim([0.65 1]); ylim([0 0.25])
+    title(['Proportion cells above activity thresholds by performance'])
+    xlabel('Performance'); ylabel('Proportion Active')
 end
 
 %% Conds active per day (above threshold)
@@ -104,6 +146,34 @@ for mouseI = 1:numMice
 end
 
 %DI distributions
+allbarColorLR = [0.7020    0.1804    0.4000];
+allbarColorST = [0    0.4510    0.7412];
+figure;
+for mouseI = 1:numMice
+    subplot(numMice,2,mouseI*2-1)
+    b = bar(pctsDistMeanLR(mouseI,:),0.98,'FaceColor',allbarColorLR);
+    b.Parent.XTick = [1 (length(binEdges)/2) length(binEdges)-1];
+    b.Parent.XTickLabel = {'-1' '0' '1'};
+    hold on
+    for binI = 1:length(pctsDistMeanLR(mouseI,:))
+        yval = pctsDistMeanLR(mouseI,binI);
+        plot([binI binI],[yval+ pctsDistSEMsLR(mouseI,binI) yval- pctsDistSEMsLR(mouseI,binI)],'k','LineWidth',2)
+    end
+    xlabel('Selectivity Score')
+    title(['Mouse ' num2str(mouseI) ', distribution of Left/Right DI scores all days'])
+    
+    subplot(numMice,2,mouseI*2)
+    b = bar(pctsDistMeanST(mouseI,:),0.98,'FaceColor',allbarColorST);
+    b.Parent.XTick = [1 (length(binEdges)/2) length(binEdges)-1];
+    b.Parent.XTickLabel = {'-1' '0' '1'};
+    hold on
+    for binI = 1:length(pctsDistMeanST(mouseI,:))
+        yval = pctsDistMeanST(mouseI,binI);
+        plot([binI binI],[yval+pctsDistSEMsST(mouseI,binI) yval-pctsDistSEMsST(mouseI,binI)],'k','LineWidth',2)
+    end
+    xlabel('Selectivity Score')
+    title(['Mouse ' num2str(mouseI) ', distribution of Study/Test DI scores all days'])
+end
 
 %% Proportion place cells
 for mouseI = 1:numMice
@@ -251,7 +321,9 @@ for mouseI = 1:numMice
         subplot(2,2,condI)
         for dayI = 1:numDays(mouseI)
             hold on
-            plot(squeeze(Corrs{mouseI}(dayI,condI,:)),'-o','Color',plotColors(dayI,:))
+            rowUse = find(((condPairs{mouseI}(:,1)==Conds.(ss{condI})(1))+...
+                     (condPairs{mouseI}(:,2)==Conds.(ss{condI})(2)))==2);  
+            plot(squeeze(Corrs{mouseI}(dayI,rowUse,:)),'-o','Color',plotColors(dayI,:))
         end
         ylim([-1 1]); xlim([1 size(Corrs{mouseI},3)])
         title([ss{condI} ' PV corrs']) 
