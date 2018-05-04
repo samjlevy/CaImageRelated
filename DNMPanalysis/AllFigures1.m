@@ -65,6 +65,7 @@ for mouseI = 1:numMice
     xlabel('Accuracy'); ylabel('Pct cells active ')
 end
 
+
 %% Percent cells from any other day
 figure;
 for mouseI = 1:numMice
@@ -80,7 +81,7 @@ figure;
 for mouseI = 1:numMice
     subplot(numMice,1,mouseI)
     plot(cellsActivePct{mouseI},'LineWidth',1.5)
-    ylim([0 1])
+    ylim([0 0.2])
     title(['Mouse ' num2str(mouseI) ', pct cells above activity thresholds'])
     xlabel('Day Number')
 end
@@ -208,7 +209,47 @@ for mouseI = 1:numMice
     xlabel('Day Number'); ylim([0 1])
     legend('LR','ST','BOTH','LRonly','STonly','None','Location','northwest')
 end
-    
+
+%% Portion change splitter/place by days apart
+
+for mouseI = 1:numMice
+    figure;
+    subplot(3,1,1); hold on
+    for ddI = 1:length(PSpctChangeReorg{mouseI})
+        plot(ddI*ones(length(PSpctChangeReorg{mouseI}{ddI})),PSpctChangeReorg{mouseI}{ddI},'.','MarkerSize',8)
+    end
+    plot(meanPSpctChange{mouseI})
+    title('Pct Change Place and Splitter')
+    subplot(3,1,2); hold on
+    for ddI = 1:length(PSxpctChangeReorg{mouseI})
+        plot(ddI*ones(length(PSxpctChangeReorg{mouseI}{ddI})),PSxpctChangeReorg{mouseI}{ddI},'.','MarkerSize',8)
+    end
+    plot(meanPSxpctChange{mouseI})
+    title('Pct Change Place, Not-Splitter')
+    subplot(3,1,3); hold on
+    for ddI = 1:length(PxSpctChangeReorg{mouseI})
+        plot(ddI*ones(length(PxSpctChangeReorg{mouseI}{ddI})),PxSpctChangeReorg{mouseI}{ddI},'.','MarkerSize',8)
+    end
+    plot(meanPxSpctChange{mouseI})
+    title('Pct Change Not-Place, Splitter')
+    xlabel('Days Apart')
+    suptitleSL(['Mouse ' num2str(mouseI) ', Change in pct cell trait'])
+end
+
+%by 1-day pair
+for mouseI = 1:numMice
+    figure;
+    hold on
+    hi = plot(PSpctChangeReorg{mouseI}{1});
+    h(1) = hi(1);
+    hi = plot(PSxpctChangeReorg{mouseI}{1});
+    h(2) = hi(1);
+    hi = plot(PxSpctChangeReorg{mouseI}{1});
+    h(3) = hi(1);
+    xlabel('1 Day pair change')
+    title(['Mouse ', num2str(mouseI) ', day to day change in cell trait'])
+    legend(h,'Place and Splitter','Place, Not-Splitter','Not-place, splitter')
+end
 %% Reactivation probability
 for mouseI = 1:numMice
     grps = repmat(1:7,numDays(mouseI)-1,1); grps = grps(:);

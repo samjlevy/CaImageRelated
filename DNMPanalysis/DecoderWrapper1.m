@@ -1,4 +1,4 @@
-function [performance, miscoded, typePredict, sessPairs, condsInclude] = DecoderWrapper1(trialbytrial,traitLogical,realdays,numShuffles,activityType)
+function [performance, miscoded, typePredict, sessPairs, condsInclude, cellsUsed] = DecoderWrapper1(trialbytrial,traitLogical,realdays,numShuffles,activityType)
 %This function is built as a wrapper for looking at decoding results by
 %splitting. Pretty much the only thing that needs to be given is basic
 %data and parameters, testing for significance, etc., is handled here
@@ -43,6 +43,7 @@ for iterationI = 1:1+numShuffles %Original and any shuffles
         testing = [];
         actual = [];
 
+        cellsUsedSessPair = [];
         for sessPairI = 1:size(sessPairs,1)
             %Assign sessions
             trainSess = sessPairs(sessPairI,1);
@@ -60,11 +61,14 @@ for iterationI = 1:1+numShuffles %Original and any shuffles
                 trainingCells, testingCells, trainingLaps, testingLaps, lblActivity, randomizeNow(iterationI,setupI));
             
             actual{sessPairI} = [testing(:).answers]';
+            cellsUsedSessPair{sessPairI} = find(cellsUse);
 
         end
 
         %Log performance: columns are by titles, rows are each pass (1 regular, all others shuffled)
         [performance{iterationI, setupI}, miscoded{iterationI, setupI}] = decoderResults2(decoded, actual, sessPairs, realdays);
+        
+        cellsUsed{setupI} = cellsUsedSessPair
     end
     %disp(['Finished combination ' num2str(iterationI)])
     p.progress;

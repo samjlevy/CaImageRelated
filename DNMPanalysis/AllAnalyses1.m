@@ -466,21 +466,26 @@ for mouseI = 1:numMice
 end
 
     
-%% Place/Splitter cell over lap
+%% Place/Splitter cell overlap
 
 % Get logical is it placeXsplitter
 for mouseI = 1:numMice
-    placeSplitLR{mouseI} = logical(splittersLR{mouseI}.*(placeThisDay{mouseI}.*dayUse{mouseI}));
-    placeSplitST{mouseI} = logical(splittersST{mouseI}.*(placeThisDay{mouseI}.*dayUse{mouseI}));
-    placeSplitBOTH{mouseI} = logical(splittersBOTH{mouseI}.*(placeThisDay{mouseI}.*dayUse{mouseI}));
-    placeSplitLRonly{mouseI} = logical(splittersLRonly{mouseI}.*(placeThisDay{mouseI}.*dayUse{mouseI}));
-    placeSplitSTonly{mouseI} = logical(splittersSTonly{mouseI}.*(placeThisDay{mouseI}.*dayUse{mouseI}));
-    placeSplitNone{mouseI} = logical(splittersNone{mouseI}.*(placeThisDay{mouseI}.*dayUse{mouseI})); 
+    placeSplitLR{mouseI} = logical(splittersLR{mouseI}.*(placeThisDay{mouseI}.*dayUse{mouseI}));           %Place split LR
+    placeSplitST{mouseI} = logical(splittersST{mouseI}.*(placeThisDay{mouseI}.*dayUse{mouseI}));           %Place split ST
+    placeSplitBOTH{mouseI} = logical(splittersBOTH{mouseI}.*(placeThisDay{mouseI}.*dayUse{mouseI}));       %Place split both
+    placeSplitLRonly{mouseI} = logical(splittersLRonly{mouseI}.*(placeThisDay{mouseI}.*dayUse{mouseI}));   %Place split LRex
+    placeSplitSTonly{mouseI} = logical(splittersSTonly{mouseI}.*(placeThisDay{mouseI}.*dayUse{mouseI}));   %Place split STex
+    placeSplitNone{mouseI} = logical(splittersNone{mouseI}.*(placeThisDay{mouseI}.*dayUse{mouseI}));       %Place not splitter
         %placeByCondThreshed{mouseI}(:,:,1) | placeByCondThreshed{mouseI}(:,:,3)));%???
+        
+    placeAndSplitter{mouseI} = logical(splittersANY{mouseI}.*(placeThisDay{mouseI}.*dayUse{mouseI}));
+    placeNotSplitter{mouseI} = logical(splittersNone{mouseI}.*(placeThisDay{mouseI}.*dayUse{mouseI}));
+    splitterNotPlace{mouseI} = logical(splittersANY{mouseI}.*(notPlace{mouseI}.*dayUse{mouseI}));
 end
 
 % How many, Range etc.
 for mouseI = 1:numMice
+    
     numPctPXSLR{mouseI}(1,:) = sum(placeSplitLR{mouseI},1);
     numPctPXSLR{mouseI}(2,:) = numPctPXSLR{mouseI}(1,:)./cellsActiveToday{mouseI};
     rangePctPXSLR(mouseI,1:2) = [mean(numPctPXSLR{mouseI}(2,:)) standarderrorSL(numPctPXSLR{mouseI}(2,:))];
@@ -526,9 +531,37 @@ end
 
 %Not splitter, not place
 
+%Trait logical prop change
+for mouseI = 1:numMice
+    [PSnumChange{mouseI}, PSpctChange{mouseI}, dayPairs{mouseI}] = NNplusOneChange(placeAndSplitter{mouseI}, dayUse{mouseI});
+    [PSxnumChange{mouseI}, PSxpctChange{mouseI}, dayPairs{mouseI}] = NNplusOneChange(placeNotSplitter{mouseI}, dayUse{mouseI});
+    [PxSnumChange{mouseI}, PxSpctChange{mouseI}, dayPairs{mouseI}] = NNplusOneChange(splitterNotPlace{mouseI}, dayUse{mouseI});
+    
+    %Sort by days apart
+    dayDiffs{mouseI} = diff(dayPairs{mouseI},1,2);
+    possibleDiffs = unique(dayDiffs{mouseI});
+    for pdI = 1:length(possibleDiffs)
+        PSnumChangeReorg{mouseI}{pdI} = PSnumChange{mouseI}(dayDiffs{mouseI}==possibleDiffs(pdI));
+        PSpctChangeReorg{mouseI}{pdI} = PSpctChange{mouseI}(dayDiffs{mouseI}==possibleDiffs(pdI));
+        PSxnumChangeReorg{mouseI}{pdI} = PSxnumChange{mouseI}(dayDiffs{mouseI}==possibleDiffs(pdI));
+        PSxpctChangeReorg{mouseI}{pdI} = PSxpctChange{mouseI}(dayDiffs{mouseI}==possibleDiffs(pdI)); 
+        PxSnumChangeReorg{mouseI}{pdI} = PxSnumChange{mouseI}(dayDiffs{mouseI}==possibleDiffs(pdI));
+        PxSpctChangeReorg{mouseI}{pdI} = PxSpctChange{mouseI}(dayDiffs{mouseI}==possibleDiffs(pdI));
+    end
+    meanPSpctChange{mouseI} = cell2mat(cellfun(@mean,PSpctChangeReorg{mouseI},'UniformOutput',false));
+    meanPSxpctChange{mouseI} = cell2mat(cellfun(@mean,PSxpctChangeReorg{mouseI},'UniformOutput',false));
+    meanPxSpctChange{mouseI} = cell2mat(cellfun(@mean,PxSpctChangeReorg{mouseI},'UniformOutput',false));
+end
+%Same, pooled
+for mouseI = 1:numMice
+     
+end
+
+
 %Reactivation probability by type: if split/place/not on day n, how likely
 %shows up again on day n+1
-%Splitters
+    %NEED TO normalize by number of cells active each day
+%Splitters 
 for mouseI = 1:numMice
     reactivatesLR{mouseI} = TraitReactivation(dayUse{mouseI},splittersLR{mouseI});
     reactivatesST{mouseI} = TraitReactivation(dayUse{mouseI},splittersST{mouseI});

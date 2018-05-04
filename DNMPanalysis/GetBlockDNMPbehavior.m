@@ -21,11 +21,21 @@ switch block_type
         [ forced_stops ] = CondExcelParseout( frames, txt, 'ForcedChoiceEnter', 0 );
         [ free_starts ] = CondExcelParseout( frames, txt, 'Lift barrier (start of free choice)', 0);
         [ free_stops ] = CondExcelParseout( frames, txt, 'FreeChoiceEnter', 0 );
-    case 'whole_arm'
+    case 'side_arm'
         [ forced_starts ] = CondExcelParseout( frames, txt, 'Forced Choice', 0 );
         [ forced_stops ] = CondExcelParseout( frames, txt, 'Forced Reward', 0 );
         [ free_starts ] = CondExcelParseout( frames, txt, 'Free Choice', 0);
         [ free_stops ] = CondExcelParseout( frames, txt, 'Free Reward', 0 );
+    case 'choice_bit'
+        [ forced_starts ] = CondExcelParseout( frames, txt, 'ForcedChoiceEnter', 0 );
+        [ forced_stops ] = CondExcelParseout( frames, txt, 'Forced Choice', 0 );
+        [ free_starts ] = CondExcelParseout( frames, txt, 'FreeChoiceEnter', 0);
+        [ free_stops ] = CondExcelParseout( frames, txt, 'Free Choice', 0 );
+    case 'lap_end'
+        [ forced_starts ] = CondExcelParseout( frames, txt, 'Forced Reward', 0 );
+        [ forced_stops ] = CondExcelParseout( frames, txt, 'Enter Delay', 0 );
+        [ free_starts ] = CondExcelParseout( frames, txt, 'Free Reward', 0);
+        [ free_stops ] = CondExcelParseout( frames, txt, 'Leave Maze', 0 );
     case 'delay'
         [ starts ] = CondExcelParseout( frames, txt, 'Enter Delay', 0);
         [ stops ] = CondExcelParseout( frames, txt, 'Lift barrier (start of free choice)', 0);
