@@ -14,14 +14,14 @@ numCells = size(TMap, 1);
 numDays = size(TMap, 3);
 numConds = size(TMap, 2);
 
-if isempty('dayPairs') || any(dayPairs)==0
+if isempty('dayPairs') || sum(any(dayPairs))==0
     dayTemp = combnk(1:numDays,2);
     %dayPairs = [repmat([1:numDays]',1,2); dayTemp; fliplr(dayTemp)];
     dayPairs = [repmat([1:numDays]',1,2); dayTemp];
     disp('Running all day pairs')
 end
 
-if isempty('condPairs') || any(condPairs)==0
+if isempty('condPairs') || sum(any(condPairs))==0
     %condPairs = flipud(combnk(1:numConds,2));
     cpTemp = flipud(combnk(1:numConds,2));
     %condPairs = [repmat([1:numConds]',1,2); cpTemp];
@@ -78,7 +78,7 @@ for dpI = 1:numDayPairs
     %disp(['finished day pair ' num2str(dpI) ])
 end
 
-disp([num2str(numNans) ' nans happened'])
+%disp([num2str(numNans) ' nans happened'])
 end
             
             

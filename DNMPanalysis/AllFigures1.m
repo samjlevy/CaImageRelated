@@ -210,6 +210,29 @@ for mouseI = 1:numMice
     legend('LR','ST','BOTH','LRonly','STonly','None','Location','northwest')
 end
 
+%% Place or splitter prop by day
+
+for mouseI = 1:numMice
+    figure; hold on
+    subplot(2,1,1)
+    hold on
+    plot(pctDailySplittersANY{mouseI},'r','LineWidth',1.5)
+    plot(pctDailySplittersEXany{mouseI},'m','LineWidth',1.5)
+    plot(totalPropPlace{mouseI},'b','LineWidth',1.5)
+    ylim([0 1])
+    title(['Mouse ' num2str(mouseI) ', Proportion of splitter and place cells'])
+    legend('Splitter', 'SplittersEX', 'Place')
+    subplot(2,1,2)
+    hold on
+    plot(pctDailyPlaceAndSplitter{mouseI},'g','LineWidth',1.5)
+    plot(pctDailyPlaceNotSplitter{mouseI},'c','LineWidth',1.5)
+    plot(pctDailySplitterNotPlace{mouseI},'m','LineWidth',1.5)
+    plot(pctDailynotSplitterNotPlace{mouseI},'k','LineWidth',1.5)
+    ylim([0 1])
+    title('Place and splitter relationship')
+    legend('Place and Splitter','Place but not Splitter','Splitter but not Place','Not place not splitter')
+end
+
 %% Portion change splitter/place by days apart
 
 for mouseI = 1:numMice
@@ -405,7 +428,54 @@ figure;
         ylim([0 1])
     end
     suptitleSL(['Mouse ' num2str(mouseI) ', LR splitters'])
-%% Pop vector corrs
+    
+    
+   
+%dayDiffsUse = actualDaysApart;
+for mouseI = 1:numMice
+    dayDiffsUse{mouseI} = daysApart{mouseI};
+    figure;
+    for condsPlot = 1:2
+        hh = subplot(2,1,condsPlot);
+        shuffPerf = decodeAllperf{mouseI}(2:end,condsPlot);
+        shuffPerf = cellfun(@(x) x',shuffPerf,'UniformOutput',false);
+        shuffPerfR = cell2mat(shuffPerf); shuffPerfR = shuffPerfR(:);
+        grps = repmat(dayDiffsUse{mouseI}',size(shuffPerf,1),1); grps = grps(:);
+        xlabels  = cellfun(@num2str,num2cell(unique(dayDiffsUse{mouseI})),'UniformOutput',false);
+        scatterBoxSL(shuffPerfR,grps,'xLabel',xlabels,'plotBox',false,'plotHere',hh)%
+        hh = gcf;
+        hold on
+        plotInds = sigDecodingAll{mouseI}{condsPlot};
+        plot(dayDiffsUse{mouseI}(plotInds),decodeAllperf{mouseI}{1,condsPlot}(plotInds),'ob','MarkerFaceColor','b')
+        plot(dayDiffsUse{mouseI}(~plotInds),decodeAllperf{mouseI}{1,condsPlot}(~plotInds),'or','MarkerFaceColor','r')
+        %title(['Mouse ' num2str(mouseI) ', ' condTitles{condsPlot}...
+        %    ' decoding performance with all splitters; blue above shuffle, red not'])
+        %title([ condTitles{condsPlot} ' decoding performance'])
+        xlabel('Days between model and test data'); ylabel('Prop. decoded correctly')
+        ylim([0 1])
+    end
+    suptitleSL(['Mouse ' num2str(mouseI) ', all cells'])
+end    
+
+%% Pop.vector corr single day averages
+
+ss = fieldnames(Conds);
+for mouseI = 1:numMice
+    figure;
+    meanThings = mean(singleDayCorrs{mouseI},3); %mean across bins
+    for condI = 1:4
+        subplot(2,2,condI)
+        %hold on
+        plot(meanThings(:,condI),'-o','LineWidth',1.5)
+        title([ss{condI} ' mean PV corr'])
+        xlabel('Day'); ylabel('Mean Corr')
+        ylim([-1 1]); xlim([1 size(singleDayCorrs{mouseI},1)])
+    end
+     suptitleSL(['Mouse ' num2str(mouseI) ', Cells active either cond.'])
+end
+     
+    
+%% Pop vector corrs all days
 
 ss = fieldnames(Conds);
 for mouseI = 1:numMice

@@ -363,7 +363,7 @@ fix_missed_fields;
     
 
 save(fullfile(miscVar.PathName,'ParsedFramesTest.mat'), 'ParsedFrames',...
-    'videoFig', 'video', 'miscVar')
+    'miscVar')%'videoFig', 'video',
 
 end
 function fcnLapNumberPlus(~,~)
@@ -695,7 +695,7 @@ for laps=1:(size(ParsedFrames.LapStart,1)-1)
 end  
 
 save(fullfile(miscVar.PathName, 'ParsedFramesTest.mat'), 'ParsedFrames', ...
-    'video', 'videoFig', 'miscVar') %#ok<*NOPRT>
+    'miscVar') %#ok<*NOPRT>%'video', 'videoFig', 
 
 % Fix any fields that might have been missed
 fix_missed_fields;

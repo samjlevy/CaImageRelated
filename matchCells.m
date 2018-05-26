@@ -2,11 +2,17 @@ function matchCells(base_path, reg_paths, bufferEdges)
 %bufferEdges should be used when there are cell masks out near the edges of
 %the imaging window. During alignment, they can be pushed out of view,
 %which can cause problems leading to those cells' not being registered. 
+
+%regImageUse = 'RegisteredImageSL.mat';
+regImageUse = 'RegisteredImageSL2.mat';
+%regImageBufferUse = 'RegisteredImageSLbuffered.mat';
+regImageBufferUse = 'RegisteredImageSLbuffered2.mat';
+
 if (size(reg_paths,1) == 1) && ~iscell(reg_paths); reg_paths = {reg_paths}; end
     
 if ~exist('bufferEdges','var'); bufferEdges = 0; end
 try
-    load(fullfile(reg_paths{1},'RegisteredImageSLbuffered.mat'),'bufferWidth')
+    load(fullfile(reg_paths{1},regImageBufferUse),'bufferWidth')
 catch
     bufferWidth = 100; %could also load this 
     disp(['No bufferWidth found, using default ' num2str(bufferWidth) ])
@@ -61,9 +67,9 @@ end
 for rs = 1:numSessions
     reg_path = reg_paths{rs};
     
-    if ~exist(fullfile(reg_path,'RegisteredImageSL.mat'),'file')
-        disp(['did not find image registration data for ' reg_paths])
-        [~, ~, ~] = manual_reg_SL(base_path, reg_paths);
+    if ~exist(fullfile(reg_path,regImageUse),'file')
+        disp(['did not find image registration data for ' reg_path])
+        [~, ~, ~] = manual_reg_SL(base_path, reg_path);
     else 
         disp(['found registration for ' reg_path])
     end
@@ -113,14 +119,14 @@ for regsess = 1:numSessions
     if matchup==1
     fullReg.RegSessions{size(fullReg.RegSessions,1)+1,1} = reg_path;
 
-    load(fullfile(reg_path,'RegisteredImageSL.mat'))
+    load(fullfile(reg_path,regImageUse))
     if bufferEdges == 1
         try
-            load(fullfile(reg_path,'RegisteredImageSLbuffered.mat'))
+            load(fullfile(reg_path,regImageBufferUse))
         catch
             disp(['Failed to find buffered image for ' regtitle ', fixing now'])
             AddRegBuffer(fullRegImage, reg_path, bufferWidth)
-            load(fullfile(reg_path,'RegisteredImageSLbuffered.mat'))
+            load(fullfile(reg_path,regImageBufferUse))
         end
     end
     

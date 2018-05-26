@@ -16,9 +16,14 @@ function [performance, miscoded, typePredict, sessPairs, condsInclude, cellsUsed
 %    - alternatively, could pull this out of conds include?
 
 Conds = GetTBTconds(trialbytrial);
-condsInclude = [Conds.Study; Conds.Test; Conds.Left; Conds.Right]; 
+condsInclude = [Conds.Study; Conds.Test; Conds.Left; Conds.Right];
 titles = {'StudyLvR', 'TestLvR', 'LeftSvT', 'RightSvT'}; 
 typePredict = {'leftright', 'leftright', 'studytest', 'studytest'}; 
+
+condsInclude = [1 2 3 4; 1 2 3 4];
+titles = {'Left vs. Right'; 'Study vs. Test'};
+typePredict = {'leftright', 'studyTest'};
+
 randomizeNow = [zeros(1, length(titles)); ones(numShuffles,length(titles))];
 
 trainingSessions = 1:length(realdays);
@@ -68,7 +73,7 @@ for iterationI = 1:1+numShuffles %Original and any shuffles
         %Log performance: columns are by titles, rows are each pass (1 regular, all others shuffled)
         [performance{iterationI, setupI}, miscoded{iterationI, setupI}] = decoderResults2(decoded, actual, sessPairs, realdays);
         
-        cellsUsed{setupI} = cellsUsedSessPair
+        cellsUsed{setupI} = cellsUsedSessPair;
     end
     %disp(['Finished combination ' num2str(iterationI)])
     p.progress;

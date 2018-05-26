@@ -160,6 +160,7 @@ for mouseI = 1:numMice
     [maxConsec{mouseI}, ~] = ConsecutiveLaps(cellTBT{mouseI}, consecLapThresh);
 end
 
+disp('Done with all single cells analysis')
 %% Splitter cells: Shuffle versions
 
 numShuffles = 1000;
@@ -227,6 +228,8 @@ for mouseI = 1:numMice
                              sum(splittersLRonly{mouseI},1)./cellsActiveToday{mouseI};... %LR only
                              sum(splittersSTonly{mouseI},1)./cellsActiveToday{mouseI};... %ST only
                              sum(splittersBOTH{mouseI},1)./cellsActiveToday{mouseI}]; %Both only
+                         
+    splittersEXany{mouseI} = (splittersLRonly{mouseI} + splittersSTonly{mouseI}) > 0;
 end
 
 %Evaluate splitting: days bias numbers and center of mass per cell
@@ -238,6 +241,7 @@ for mouseI = 1:numMice
     [splitterCOMLRonly{mouseI}, splitterDayBiasLRonly{mouseI}] = LogicalTraitCenterofMass(dayUse{mouseI}, splittersLRonly{mouseI});
     [splitterCOMSTonly{mouseI}, splitterDayBiasSTonly{mouseI}] = LogicalTraitCenterofMass(dayUse{mouseI}, splittersSTonly{mouseI});
     [splitterCOMANY{mouseI}, splitterDayBiasANY{mouseI}] = LogicalTraitCenterofMass(dayUse{mouseI}, splittersANY{mouseI});
+    [splitterCOMEXany{mouseI}, splitterDayBiasEXany{mouseI}] = LogicalTraitCenterofMass(dayUse{mouseI}, splittersEXany{mouseI});
 end
 
 %Daily splitter ranges
@@ -245,6 +249,13 @@ for mouseI = 1:numMice
     everSplitANY{mouseI} = sum(sum(splittersANY{mouseI},2) > 0);
     
     %Should generalize this (splittersLogical, splitterDayBias, dayUse, cellsActiveToday (sum(dayUse,1))
+    numDailySplittersANY{mouseI} = sum(splittersANY{mouseI},1);
+    daysSplitANY{mouseI} = sum(splittersANY{mouseI},2);
+    rangeDailySplittersANY(mouseI,:) = [mean(numDailySplittersANY{mouseI}) standarderrorSL(numDailySplittersANY{mouseI})];
+    pctDailySplittersANY{mouseI} = numDailySplittersANY{mouseI}./cellsActiveToday{mouseI};
+    rangePctDailySplittersANY(mouseI,:) = [mean(pctDailySplittersANY{mouseI}) standarderrorSL(pctDailySplittersANY{mouseI})];%Pct
+    splitAllDaysANY{mouseI} = splitterDayBiasANY{mouseI}/sum(sum(dayUse{mouseI},2) > 1); %ever splitLR/cells active at least 2 days
+    
     numDailySplittersLR{mouseI} = sum(splittersLR{mouseI},1);
     daysSplitLR{mouseI} = sum(splittersLR{mouseI},2);
     rangeDailySplittersLR(mouseI,:) = [mean(numDailySplittersLR{mouseI}) standarderrorSL(numDailySplittersLR{mouseI})];
@@ -279,6 +290,14 @@ for mouseI = 1:numMice
     pctDailySplittersSTonly{mouseI} = numDailySplittersSTonly{mouseI}./cellsActiveToday{mouseI};
     rangePctDailySplittersSTonly(mouseI,:) = [mean(pctDailySplittersSTonly{mouseI}) standarderrorSL(pctDailySplittersSTonly{mouseI})]; %Pct
     splitAllDaysSTonly{mouseI} = splitterDayBiasSTonly{mouseI}/sum(sum(dayUse{mouseI},2) > 1); %ever splitBOTH/cells active at least 2 days
+    
+    numDailySplittersEXany{mouseI} = sum(splittersEXany{mouseI},1);
+    daysSplitEXany{mouseI} = sum(splittersEXany{mouseI},2);
+    rangeDailySplittersEXany(mouseI,:) = [mean(numDailySplittersEXany{mouseI}) standarderrorSL(numDailySplittersEXany{mouseI})];%Raw number
+    pctDailySplittersEXany{mouseI} = numDailySplittersEXany{mouseI}./cellsActiveToday{mouseI};
+    rangePctDailySplittersEXany(mouseI,:) = [mean(pctDailySplittersEXany{mouseI}) standarderrorSL(pctDailySplittersEXany{mouseI})]; %Pct
+    splitAllDaysEXany{mouseI} = splitterDayBiasEXany{mouseI}/sum(sum(dayUse{mouseI},2) > 1); %ever splitBOTH/cells active at least 2 days
+
 end
 
 % DI distributions
@@ -376,6 +395,7 @@ for mouseI = 1:numMice
 end
 
 
+disp('Done with all splitter cells analysis')
 
 %Possible better rebuild, probably not necessary
 %{
@@ -481,10 +501,16 @@ for mouseI = 1:numMice
     placeAndSplitter{mouseI} = logical(splittersANY{mouseI}.*(placeThisDay{mouseI}.*dayUse{mouseI}));
     placeNotSplitter{mouseI} = logical(splittersNone{mouseI}.*(placeThisDay{mouseI}.*dayUse{mouseI}));
     splitterNotPlace{mouseI} = logical(splittersANY{mouseI}.*(notPlace{mouseI}.*dayUse{mouseI}));
+    notSplitterNotPlace{mouseI} = logical(splittersNone{mouseI}.*(notPlace{mouseI}.*dayUse{mouseI}));
 end
 
 % How many, Range etc.
 for mouseI = 1:numMice
+    
+    pctDailyPlaceAndSplitter{mouseI} = sum(placeAndSplitter{mouseI},1)./cellsActiveToday{mouseI};
+    pctDailyPlaceNotSplitter{mouseI} = sum(placeNotSplitter{mouseI},1)./cellsActiveToday{mouseI};
+    pctDailySplitterNotPlace{mouseI} = sum(splitterNotPlace{mouseI},1)./cellsActiveToday{mouseI};
+    pctDailynotSplitterNotPlace{mouseI} = sum(notSplitterNotPlace{mouseI},1)./cellsActiveToday{mouseI};
     
     numPctPXSLR{mouseI}(1,:) = sum(placeSplitLR{mouseI},1);
     numPctPXSLR{mouseI}(2,:) = numPctPXSLR{mouseI}(1,:)./cellsActiveToday{mouseI};
@@ -612,6 +638,19 @@ Can I decode the next trial based on current?
 Does population correlation look better or worse for X after X than splitting by top-down difference
 %% Population Vector Correlations
 
+%Average PV day by day
+condPairsAll = [1 2; 3 4; 1 3; 2 4];
+dayPairs = []; condPairs = [];
+for mouseI = 1:numMice
+    singleDayPairs = repmat(1:numDays(mouseI),2,1)';
+    cellsUse = 'activeEither';
+    traitLogical = threshAndConsec{mouseI}>0;
+    [singleDayCorrs{mouseI}, numCellsUsed{mouseI}, dayPairs{mouseI}, condPairs{mouseI}] =...
+        PopVectorCorrs1(cellTMap_unsmoothed{mouseI},traitLogical, 'activeEither', 'Spearman', condPairsAll, singleDayPairs);
+end
+
+
+
 dayPairs = []; condPairs = [];
 for mouseI = 1:numMice
     cellsUse = 'activeEither'; %'activeBoth' 'includeSilent'
@@ -620,23 +659,7 @@ for mouseI = 1:numMice
         PopVectorCorrs1(cellTMap_unsmoothed{mouseI},traitLogical, 'activeEither', 'Spearman', [], []);
 end
 
-%Sort by days apart
-for mouseI = 1:numMice
-    daysApart{mouseI} = diff(dayPairs{mouseI},1,2);
-    sameDays = find(daysApart{mouseI} == 0);
-    cc = cell2mat(struct2cell(Conds));
-    for condI = 1:size(cc,1)
-        cpUse(condI) = find(condPairs{mouseI}(:,1)==cc(condI,1) & condPairs{mouseI}(:,2)==cc(condI,2)); 
-    end
-    WithinDayCorrs{mouseI} = Corrs{mouseI}(sameDays,cpUse,:);
-    
-end
-    
-%Real days apart
-for mouseI = 1:numMice
-    actualDayPairs{mouseI} = cellRealDays{mouseI}(dayPairs{mouseI});
-    actualDaysApart{mouseI} = diff(actualDayPairs{mouseI},1,2);
-end
+
 
 
 how to think about shuffles? Maybe pre-select condpairs and load appropriate shuffles?
@@ -670,7 +693,7 @@ numShuffles = 10;
 
 %All Cells
 for mouseI = 1:numMice
-    decodeAll = fullfile(mainFolder,mice{mouseI},'\decoding','decoderAllsplit.mat');
+    decodeAll = fullfile(mainFolder,mice{mouseI},'\decoding','decoderAllsplit3.mat');
     if exist(decodeAll,'file')~=2
         disp(['did not find decoder all/split performance for mouse ' num2str(mouseI) ', running now'])
         [performance, miscoded, typePredict, sessPairs, condsInclude] =...

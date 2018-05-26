@@ -225,7 +225,7 @@ end
 [regAvg_shifted,~] = ...
     cellfun(@(x) imwarp(x,tform,'OutputView',RA,'InterpolationMethod','nearest'),ROIavg,'UniformOutput',false);
 
-save(fullfile(reg_path,'RegisteredImageSL.mat'),'regImage_shifted','reg_shift_centers','regAvg_shifted','pairedInds')
+save(fullfile(reg_path,'RegisteredImageSL2.mat'),'regImage_shifted','reg_shift_centers','regAvg_shifted','pairedInds')
 
 close(baseFig)
 close(regFig)
