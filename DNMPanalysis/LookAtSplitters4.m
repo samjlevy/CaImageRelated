@@ -16,6 +16,11 @@ function [rateDiff, rateSplit, meanRateDiff, DIeach, DImean, DIall] = LookAtSpli
 
 if isempty(condPairs); condPairs = combnk(1:size(TMap_unsmoothed,2),2); end
 
+if rem(size(condPairs,2),2)~=0
+    disp('error: size of cond pairs is not even')
+    keyboard
+end
+
 numSess = size(TMap_unsmoothed,3);
 numConds = size(condPairs,1);
 numCells = size(TMap_unsmoothed,1);
@@ -39,9 +44,15 @@ for cpI = 1:numConds
     for sessI = 1:numSess
         for cellI = 1:numCells
             if trialReli(cellI,sessI)==1
-                ratesA = TMap_unsmoothed{cellI,condPairs(cpI,1),sessI};
-                ratesB = TMap_unsmoothed{cellI,condPairs(cpI,2),sessI};
+                %Get the each half of the conditions in condPairs row cpI
+                condsA = condPairs(cpI, 1:(size(condPairs,2)/2) );
+                condsB = condPairs(cpI, (size(condPairs,2)/2+1):size(condPairs,2) );
                 
+                %Get the rates
+                ratesA = [TMap_unsmoothed{cellI,condsA,sessI}];
+                ratesB = [TMap_unsmoothed{cellI,condsB,sessI}];
+                
+                %Make some discrimination indices
                 rateDiff{cellI,sessI,cpI} = ratesB - ratesA;
                 rateSplit(cellI,sessI,cpI) = sum(rateDiff{cellI,sessI,cpI});
                 binsActive = ratesA ~=0 | ratesB~=0;

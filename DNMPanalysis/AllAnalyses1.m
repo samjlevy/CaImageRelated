@@ -1,7 +1,7 @@
 %% Process all data
 
 mainFolder = 'C:\Users\Sam\Desktop\DNMPfinalData';
-mice = {'Bellatrix', 'Polaris', 'Calisto'}; %'Europa'
+mice = {'Bellatrix', 'Polaris', 'Calisto'};%Nix %'Europa'
 numMice = length(mice);
 
 %Thresholds
@@ -35,7 +35,13 @@ maxDays = max(numDays);
 
 disp('Getting Accuracy')
 for mouseI = 1:numMice
-    accuracy{mouseI} = sessionAccuracy(cellAllFiles{mouseI});
+    if exist(fullfile(mainFolder,mice{mouseI},'accuracy.mat'),'file') == 0
+        disp(['Getting accuracy for ' num2str(mouseI) ])
+        performance = sessionAccuracy(cellAllFiles{mouseI});
+        save(fullfile(mainFolder,mice{mouseI},'accuracy.mat'),'performance');
+    end
+    load(fullfile(mainFolder,mice{mouseI},'accuracy.mat'))
+    accuracy{mouseI} = performance;
     accuracyRange(mouseI, 1:2) = [mean(accuracy{mouseI}),...
         std(accuracy{mouseI})/sqrt(length(accuracy{mouseI}))];
 end
@@ -164,6 +170,7 @@ disp('Done with all single cells analysis')
 %% Splitter cells: Shuffle versions
 
 numShuffles = 1000;
+%numShuffles = 100;
 shuffThresh = 1 - pThresh;
 binsMin = 1;
 shuffleDirLR = 'shuffleLR';
@@ -173,6 +180,7 @@ shuffleDirST = 'shuffleST';
 for mouseI = 1:numMice
     %condPairsLR = [1 2; 3 4];
     condPairsLR = [Conds.Study; Conds.Test];
+    %condPairsLR = [1 3 2 4];
     shuffDirFullLR = fullfile(mainFolder,mice{mouseI},shuffleDirLR);
     [rateDiffLR{mouseI}, rateSplitLR{mouseI}, meanRateDiffLR{mouseI}, DIeachLR{mouseI}, DImeanLR{mouseI}, DIallLR{mouseI}] =...
         LookAtSplitters4(cellTMap_unsmoothed{mouseI}, condPairsLR, trialReli{mouseI});
@@ -182,7 +190,7 @@ for mouseI = 1:numMice
     else
         disp(['did not find LR splitting for ' num2str(mouseI) ', making now'])
         [binsAboveShuffleLR, thisCellSplitsLR] = SplitterWrapper2(cellTBT{mouseI}, cellTMap_unsmoothed{mouseI},...
-            'leftright', numShuffles, shuffDirFullLR, xlims, cmperbin, minspeed, trialReli{mouseI}, shuffThresh, binsMin);
+            'leftright', 'pooled', numShuffles, shuffDirFullLR, xlims, cmperbin, minspeed, trialReli{mouseI}, shuffThresh, binsMin);
         save(splitterFileLR,'binsAboveShuffleLR','thisCellSplitsLR')
     end
     LRbinsAboveShuffle{mouseI} = binsAboveShuffleLR; 
@@ -203,7 +211,7 @@ for mouseI = 1:numMice
     else
         disp(['did not find ST splitting for ' num2str(mouseI) ', making now'])
         [binsAboveShuffleST, thisCellSplitsST] = SplitterWrapper2(cellTBT{mouseI}, cellTMap_unsmoothed{mouseI},...
-            'studytest', numShuffles, shuffDirFullST, xlims, cmperbin, minspeed, trialReli{mouseI}, shuffThresh, binsMin);
+            'studytest', 'unpooled', numShuffles, shuffDirFullST, xlims, cmperbin, minspeed, trialReli{mouseI}, shuffThresh, binsMin);
         save(splitterFileST,'binsAboveShuffleST','thisCellSplitsST')
     end
     STbinsAboveShuffle{mouseI} = binsAboveShuffleST; 
@@ -242,6 +250,7 @@ for mouseI = 1:numMice
     [splitterCOMSTonly{mouseI}, splitterDayBiasSTonly{mouseI}] = LogicalTraitCenterofMass(dayUse{mouseI}, splittersSTonly{mouseI});
     [splitterCOMANY{mouseI}, splitterDayBiasANY{mouseI}] = LogicalTraitCenterofMass(dayUse{mouseI}, splittersANY{mouseI});
     [splitterCOMEXany{mouseI}, splitterDayBiasEXany{mouseI}] = LogicalTraitCenterofMass(dayUse{mouseI}, splittersEXany{mouseI});
+    [splitterCOMNone{mouseI}, splitterDayBiasNone{mouseI}] = LogicalTraitCenterofMass(dayUse{mouseI}, splittersNone{mouseI});
 end
 
 %Daily splitter ranges
@@ -296,8 +305,14 @@ for mouseI = 1:numMice
     rangeDailySplittersEXany(mouseI,:) = [mean(numDailySplittersEXany{mouseI}) standarderrorSL(numDailySplittersEXany{mouseI})];%Raw number
     pctDailySplittersEXany{mouseI} = numDailySplittersEXany{mouseI}./cellsActiveToday{mouseI};
     rangePctDailySplittersEXany(mouseI,:) = [mean(pctDailySplittersEXany{mouseI}) standarderrorSL(pctDailySplittersEXany{mouseI})]; %Pct
-    splitAllDaysEXany{mouseI} = splitterDayBiasEXany{mouseI}/sum(sum(dayUse{mouseI},2) > 1); %ever splitBOTH/cells active at least 2 days
+    splitAllDaysEXany{mouseI} = splitterDayBiasEXany{mouseI}/sum(sum(dayUse{mouseI},2) > 1); 
 
+    numDailySplittersNone{mouseI} = sum(splittersNone{mouseI},1);
+    daysSplitNone{mouseI} = sum(splittersNone{mouseI},2);
+    rangeDailySplittersNone(mouseI,:) = [mean(numDailySplittersNone{mouseI}) standarderrorSL(numDailySplittersNone{mouseI})];%Raw number
+    pctDailySplittersNone{mouseI} = numDailySplittersNone{mouseI}./cellsActiveToday{mouseI};
+    rangePctDailySplittersNone(mouseI,:) = [mean(pctDailySplittersNone{mouseI}) standarderrorSL(pctDailySplittersNone{mouseI})]; 
+    splitAllDaysNone{mouseI} = splitterDayBiasNone{mouseI}/sum(sum(dayUse{mouseI},2) > 1); 
 end
 
 % DI distributions
@@ -504,14 +519,19 @@ for mouseI = 1:numMice
     notSplitterNotPlace{mouseI} = logical(splittersNone{mouseI}.*(notPlace{mouseI}.*dayUse{mouseI}));
 end
 
+ sanityCheck = [pctDailyPlaceAndSplitter{mouseI}; pctDailyPlaceNotSplitter{mouseI};...
+                pctDailySplitterNotPlace{mouseI}; pctDailynotSplitterNotPlace{mouseI}]; 
+    
 % How many, Range etc.
 for mouseI = 1:numMice
-    
     pctDailyPlaceAndSplitter{mouseI} = sum(placeAndSplitter{mouseI},1)./cellsActiveToday{mouseI};
     pctDailyPlaceNotSplitter{mouseI} = sum(placeNotSplitter{mouseI},1)./cellsActiveToday{mouseI};
     pctDailySplitterNotPlace{mouseI} = sum(splitterNotPlace{mouseI},1)./cellsActiveToday{mouseI};
     pctDailynotSplitterNotPlace{mouseI} = sum(notSplitterNotPlace{mouseI},1)./cellsActiveToday{mouseI};
     
+     sanityCheck = [pctDailyPlaceAndSplitter{mouseI}; pctDailyPlaceNotSplitter{mouseI};...
+                pctDailySplitterNotPlace{mouseI}; pctDailynotSplitterNotPlace{mouseI}];
+            
     numPctPXSLR{mouseI}(1,:) = sum(placeSplitLR{mouseI},1);
     numPctPXSLR{mouseI}(2,:) = numPctPXSLR{mouseI}(1,:)./cellsActiveToday{mouseI};
     rangePctPXSLR(mouseI,1:2) = [mean(numPctPXSLR{mouseI}(2,:)) standarderrorSL(numPctPXSLR{mouseI}(2,:))];
@@ -548,20 +568,21 @@ for mouseI = 1:numMice
 end
     
 %% Cell identity round-up
-
-%Splitter, not place
-
-%Place, not splitter
-
-%Splitter and place
-
-%Not splitter, not place
+pooledPctDailySplittersAny = [pctDailySplittersANY{:}];
+pooledPctDailySplittersEXany = [pctDailySplittersEXany{:}];
+pooledPctDailySplittersBOTH = [pctDailySplittersBOTH{:}];
+pooledTotalPropPlace = [totalPropPlace{:}];
+    
+pooledPlaceAndSplitter = [pctDailyPlaceAndSplitter{:}];
+pooledPlaceNotSplitter = [pctDailyPlaceNotSplitter{:}];
+pooledSplitterNotPlace = [pctDailySplitterNotPlace{:}];
+pooledNotSplitterNotPlace = [pctDailynotSplitterNotPlace{:}];
 
 %Trait logical prop change
 for mouseI = 1:numMice
-    [PSnumChange{mouseI}, PSpctChange{mouseI}, dayPairs{mouseI}] = NNplusOneChange(placeAndSplitter{mouseI}, dayUse{mouseI});
-    [PSxnumChange{mouseI}, PSxpctChange{mouseI}, dayPairs{mouseI}] = NNplusOneChange(placeNotSplitter{mouseI}, dayUse{mouseI});
-    [PxSnumChange{mouseI}, PxSpctChange{mouseI}, dayPairs{mouseI}] = NNplusOneChange(splitterNotPlace{mouseI}, dayUse{mouseI});
+    [PSnumChange{mouseI}, PSpctChange{mouseI}, dayPairs{mouseI}] = NNplusKChange(placeAndSplitter{mouseI}, dayUse{mouseI});
+    [PSxnumChange{mouseI}, PSxpctChange{mouseI}, dayPairs{mouseI}] = NNplusKChange(placeNotSplitter{mouseI}, dayUse{mouseI});
+    [PxSnumChange{mouseI}, PxSpctChange{mouseI}, dayPairs{mouseI}] = NNplusKChange(splitterNotPlace{mouseI}, dayUse{mouseI});
     
     %Sort by days apart
     dayDiffs{mouseI} = diff(dayPairs{mouseI},1,2);
@@ -578,16 +599,58 @@ for mouseI = 1:numMice
     meanPSxpctChange{mouseI} = cell2mat(cellfun(@mean,PSxpctChangeReorg{mouseI},'UniformOutput',false));
     meanPxSpctChange{mouseI} = cell2mat(cellfun(@mean,PxSpctChangeReorg{mouseI},'UniformOutput',false));
 end
-%Same, pooled
-for mouseI = 1:numMice
-     
-end
-
 
 %Reactivation probability by type: if split/place/not on day n, how likely
 %shows up again on day n+1
     %NEED TO normalize by number of cells active each day
-%Splitters 
+%Baseline reactivation
+for mouseI = 1:numMice
+    reactivatesBaseline(mouseI) = TraitReactivation(dayUse{mouseI},dayUse{mouseI});
+end
+
+%Trait overall
+for mouseI = 1:numMice
+    reactivatesPlace(mouseI) = TraitReactivation(dayUse{mouseI}, placeThisDay{mouseI});
+    reactivatesSplitter(mouseI) = TraitReactivation(dayUse{mouseI}, splittersANY{mouseI});
+    reactivatesSplitterEX(mouseI) = TraitReactivation(dayUse{mouseI}, splittersEXany{mouseI});
+    reactivatesSplitterBOTH(mouseI) = TraitReactivation(dayUse{mouseI}, splittersBOTH{mouseI});
+    reactivatesPlaceAndSplitter(mouseI) = TraitReactivation(dayUse{mouseI}, placeAndSplitter{mouseI});
+    reactivatesPlaceNotSplitter(mouseI) = TraitReactivation(dayUse{mouseI}, placeNotSplitter{mouseI}); 
+    reactivatesSplitterNotPlace(mouseI) = TraitReactivation(dayUse{mouseI}, splitterNotPlace{mouseI});
+    reactivatesNotSplitterNotPlace(mouseI) = TraitReactivation(dayUse{mouseI}, notSplitterNotPlace{mouseI}); 
+end
+%Pool
+pooledReacBaseline = [reactivatesBaseline(:).prop];
+pooledReacPlace = [reactivatesPlace(:).prop];
+pooledReacSplitter = [reactivatesSplitter(:).prop];
+pooledReacSplitterEx = [reactivatesSplitterEX(:).prop];
+pooledReacSplitterBOTH = [reactivatesSplitterBOTH(:).prop];
+pooledReacPlaceAndSplit = [reactivatesPlaceAndSplitter(:).prop];
+pooledReacPlaceNotSplit = [reactivatesPlaceNotSplitter(:).prop];
+pooledReacSplitNotPlace = [reactivatesSplitterNotPlace(:).prop];
+pooledReacNotPlaceNotSplit = [reactivatesNotSplitterNotPlace(:).prop];
+
+%N-N+1 change
+for mouseI = 1:numMice
+    [placeNumChange{mouseI}, placePctChange{mouseI}] = NNplusOneChange(placeThisDay{mouseI}, dayUse{mouseI});
+    [splittersANYNumChange{mouseI}, splittersANYPctChange{mouseI}] = NNplusOneChange(splittersANY{mouseI}, dayUse{mouseI});
+    [splittersEXanyNumChange{mouseI}, splittersEXanyPctChange{mouseI}] = NNplusOneChange(splittersEXany{mouseI}, dayUse{mouseI});
+    [splittersBOTHNumChange{mouseI}, splittersBOTHPctChange{mouseI}] = NNplusOneChange(splittersBOTH{mouseI}, dayUse{mouseI});
+    [placeAndSplitterNumChange{mouseI}, placeAndSplitterPctChange{mouseI}] = NNplusOneChange(placeAndSplitter{mouseI}, dayUse{mouseI});
+    [placeNotSplitterNumChange{mouseI}, placeNotSplitterPctChange{mouseI}] = NNplusOneChange(placeNotSplitter{mouseI}, dayUse{mouseI});
+    [splitterNotPlaceNumChange{mouseI}, splitterNotPlacePctChange{mouseI}] = NNplusOneChange(splitterNotPlace{mouseI}, dayUse{mouseI});
+    [notSplitterNotPlaceNumChange{mouseI}, notSplitterNotPlacePctChange{mouseI}] = NNplusOneChange(notSplitterNotPlace{mouseI}, dayUse{mouseI});
+end
+pooledPlaceChange = [placePctChange{:}];
+pooledSplittersANYchange = [splittersANYPctChange{:}];
+pooledSplittersEXanyChange = [splittersEXanyPctChange{:}];
+pooledSplittersBOTHChange = [splittersBOTHPctChange{:}];
+pooledPlaceAndSplitterChange = [placeAndSplitterPctChange{:}];
+pooledPlaceNotSplitterChange = [placeNotSplitterPctChange{:}];
+pooledSplitterNotPlaceChange = [splitterNotPlacePctChange{:}];
+pooledNotSplitterNotPlaceChange = [notSplitterNotPlacePctChange{:}];
+
+%Splitters detail
 for mouseI = 1:numMice
     reactivatesLR{mouseI} = TraitReactivation(dayUse{mouseI},splittersLR{mouseI});
     reactivatesST{mouseI} = TraitReactivation(dayUse{mouseI},splittersST{mouseI});
@@ -597,7 +660,7 @@ for mouseI = 1:numMice
     reactivatesANY{mouseI} = TraitReactivation(dayUse{mouseI},splittersANY{mouseI});
     reactivatesNotSplitter{mouseI} = TraitReactivation(dayUse{mouseI},splittersNone{mouseI});
 end
-%Place
+%Place detail
 for mouseI = 1:numMice
     reactivatesPlaceAny{mouseI} = TraitReactivation(dayUse{mouseI},placeThisDay{mouseI});
     reactivatesPlaceSL{mouseI} = TraitReactivation(dayUse{mouseI},squeeze(placeByCond{mouseI}(:,1,:)));
@@ -608,16 +671,23 @@ for mouseI = 1:numMice
 end
 %Place x split
 for mouseI = 1:numMice
-    reactivatespxsLR{mouseI} = TraitReactivation(dayUse{mouseI},placeSplitLR{mouseI});
-    reactivatespxsST{mouseI} = TraitReactivation(dayUse{mouseI},placeSplitST{mouseI});
-    reactivatespxsLRonly{mouseI} = TraitReactivation(dayUse{mouseI},placeSplitLRonly{mouseI});
-    reactivatespxsSTonly{mouseI} = TraitReactivation(dayUse{mouseI},placeSplitSTonly{mouseI});
-    reactivatespxsBoth{mouseI} = TraitReactivation(dayUse{mouseI},placeSplitBOTH{mouseI});
-    reactivatespxsNone{mouseI} = TraitReactivation(dayUse{mouseI},placeSplitNone{mouseI});
-    reactivatesSplitterNotPlace{mouseI} = TraitReactivation(dayUse{mouseI},logical(splittersANY{mouseI}.*notPlace{mouseI}));
-    reactivatesPlaceNotSplitter{mouseI} = TraitReactivation(dayUse{mouseI},logical(splittersNone{mouseI}.*placeThisDay{mouseI}));
+    reactivatespxsLR{mouseI} = TraitReactivation(dayUse{mouseI}, placeSplitLR{mouseI});
+    reactivatespxsST{mouseI} = TraitReactivation(dayUse{mouseI}, placeSplitST{mouseI});
+    reactivatespxsLRonly{mouseI} = TraitReactivation(dayUse{mouseI}, placeSplitLRonly{mouseI});
+    reactivatespxsSTonly{mouseI} = TraitReactivation(dayUse{mouseI}, placeSplitSTonly{mouseI});
+    reactivatespxsBoth{mouseI} = TraitReactivation(dayUse{mouseI}, placeSplitBOTH{mouseI});
+    reactivatespxsNone{mouseI} = TraitReactivation(dayUse{mouseI}, placeSplitNone{mouseI});
+    reactivatesSplitterNotPlace{mouseI} = TraitReactivation(dayUse{mouseI}, logical(splittersANY{mouseI}.*notPlace{mouseI}));
+    reactivatesPlaceNotSplitter{mouseI} = TraitReactivation(dayUse{mouseI}, logical(splittersNone{mouseI}.*placeThisDay{mouseI}));
     disp(['done reactivation by type mouse ' num2str(mouseI)])
 end
+
+
+    
+    
+
+
+
 %% Lap following L/R
 for mouseI = 1:numMice
     [xaxTBT{mouseI}, lapsIncLog{mouseI}] = XafterXtbt(cellTBT{mouseI});

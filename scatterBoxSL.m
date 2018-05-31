@@ -47,12 +47,12 @@ function scatterBoxSL(x,grps,varargin)
     p.addParameter('yLabel','Metric',@(x) ischar(x)); 
     p.addParameter('boxColor','k',@(x) ischar(x) || isnumeric(x));
     p.addParameter('circleSize',20,@(x) isnumeric(x)); 
-    p.addParameter('circleColors',[.7 .7 .7],@(x) ischar(x) || isnumeric(x));
+    p.addParameter('circleColors',[.7 .7 .7],@(x) ischar(x) || isnumeric(x)); %ischar(x) || 
     p.addParameter('transparency',.3,@(x) isscalar(x)); 
     p.addParameter('sf',.05,@(x) isscalar(x));
     p.addParameter('position',[520 350 300 450]); 
     p.addParameter('plotBox',true,@(x) islogical(x));
-    p.addParameter('plotHere',@(x) strcmpi(class(x),'matlab.graphics.axis.Axes'))
+    p.addParameter('plotHandle',@(x) strcmpi(class(x),'matlab.graphics.axis.Axes'))
     
     p.parse(x,grps,varargin{:});
     xLabels = p.Results.xLabels; 
@@ -64,7 +64,7 @@ function scatterBoxSL(x,grps,varargin)
     sf = p.Results.sf; 
     position = p.Results.position;
     plotBox = p.Results.plotBox;
-    plotHere = p.Results.plotHere;
+    plotHandle = p.Results.plotHandle;
     
     %Turn into column.
     if size(x,1) < size(x,2) 
@@ -100,11 +100,11 @@ function scatterBoxSL(x,grps,varargin)
     %    figure('Position',position); 
     %end
     hold on;
-    switch isempty(plotHere)
+    switch isempty(plotHandle)
         case 0
             scat = scatter(jitters,x,circleSize,circleColors,'filled');
         case 1
-            scat = scatter(plotHere,jitters,x,circleSize,circleColors,'filled');
+            scat = scatter(plotHandle,jitters,x,circleSize,circleColors,'filled');
     end
     alpha(scat,transparency);
     if plotBox

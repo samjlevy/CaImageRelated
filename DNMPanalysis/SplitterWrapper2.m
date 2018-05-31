@@ -1,6 +1,10 @@
 function [binsAboveShuffle, thisCellSplits] = SplitterWrapper2(trialbytrial, baseTMap_unsmoothed,...
-    typeShuff, numShuffles, shuffDirFull, xlims, cmperbin, minspeed, trialReli, shuffThresh, binsMin)
-%typeShuff = 'leftright' or 'studytest'      
+    typeShuff, pooledunpooled, numShuffles, shuffDirFull, xlims, cmperbin, minspeed, trialReli, shuffThresh, binsMin)
+%typeShuff = 'leftright' or 'studytest'  
+%pooledunpooled = 'pooled' or 'unpooled' - e.g. puts study l and r together
+%against test l and r
+%this pools across dim 3 assuming there are multiple combinations to test
+%splitting across (e.g., left right could test 1v2 and 3v4)
 
 numCells = size(baseTMap_unsmoothed,1);
 numSess = size(baseTMap_unsmoothed,3);
@@ -14,7 +18,7 @@ end
 cd(shuffDirFull)
 possibleShuffles = dir(['shuff' na '*.mat']);
 possibleShuffles([possibleShuffles(:).isdir]==1) = [];
-if length(possibleShuffles) ~= numShuffles
+if length(possibleShuffles) < numShuffles
     disp('did not find (enough) individual shuffle files, working now')
     for shuffleI = 1:numShuffles
         switch typeShuff
@@ -34,12 +38,21 @@ if length(possibleShuffles) ~= numShuffles
 else
     disp('Found shuffles, using them')
 end
-
-switch typeShuff
-    case 'leftright'
-        condPairs = [1 2; 3 4];
-    case 'studytest'
-        condPairs = [1 3; 2 4];
+switch pooledunpooled
+    case 'unpooled'
+        switch typeShuff
+            case 'leftright'
+                condPairs = [1 2; 3 4];
+            case 'studytest'
+                condPairs = [1 3; 2 4];
+        end
+    case 'pooled'
+        switch typeShuff
+            case 'leftright'
+                condPairs = [1 3 2 4];
+            case 'studytest'
+                condPairs = [1 2 3 4];
+        end
 end
 numCondPairs = size(condPairs,1);
 

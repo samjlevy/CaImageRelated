@@ -117,14 +117,13 @@ for mouseI = 1:numMice
     plot(pctDailySplittersLR{mouseI},'r','LineWidth',1.5)
     plot(pctDailySplittersST{mouseI},'b','LineWidth',1.5)
     plot(pctDailySplittersBOTH{mouseI},'g','LineWidth',1.5)
-    plot(pctDailySplittersLRonly{mouseI},'Color',[0.9294    0.6902    0.1294],'LineWidth',1.5)
+    plot(pctDailySplittersLRonly{mouseI},'m','LineWidth',1.5)
     plot(pctDailySplittersSTonly{mouseI},'c','LineWidth',1.5)
+    plot(pctDailySplittersNone{mouseI},'k','LineWidth',1.5)
     xlabel('Day Number')
     ylabel('% Splitters/Active')
     ylim([0 1])
 end
-
-%Splitters by accuracy
 
 %Splitter props. by average num conds active
 
@@ -160,6 +159,7 @@ for mouseI = 1:numMice
         yval = pctsDistMeanLR(mouseI,binI);
         plot([binI binI],[yval+ pctsDistSEMsLR(mouseI,binI) yval- pctsDistSEMsLR(mouseI,binI)],'k','LineWidth',2)
     end
+    ylim([0 0.7])
     xlabel('Selectivity Score')
     title(['Mouse ' num2str(mouseI) ', distribution of Left/Right DI scores all days'])
     
@@ -172,6 +172,7 @@ for mouseI = 1:numMice
         yval = pctsDistMeanST(mouseI,binI);
         plot([binI binI],[yval+pctsDistSEMsST(mouseI,binI) yval-pctsDistSEMsST(mouseI,binI)],'k','LineWidth',2)
     end
+    ylim([0 0.7])
     xlabel('Selectivity Score')
     title(['Mouse ' num2str(mouseI) ', distribution of Study/Test DI scores all days'])
 end
@@ -233,6 +234,48 @@ for mouseI = 1:numMice
     legend('Place and Splitter','Place but not Splitter','Splitter but not Place','Not place not splitter')
 end
 
+%% Splitters / Place by accuracy
+figure;
+mousecolors = {'r','b','g'}; %Could add diff shades by splitters/place etc.
+for mouseI = 1:numMice
+    subplot(1,3,1)
+    hold on
+    plot(accuracy{mouseI},totalPropPlace{mouseI},'o','MarkerSize',8,'MarkerFaceColor',mousecolors{mouseI})
+    ylim([0 1]); xlim([0.5 1]); xlabel('Proportion place cells')
+    title('All mice, place by accuracy')
+    subplot(1,3,2)
+    hold on
+    plot(accuracy{mouseI},pctDailySplittersANY{mouseI},'o','MarkerSize',8,'MarkerFaceColor',mousecolors{mouseI})
+    ylim([0 1]); xlim([0.5 1]); xlabel('Proportion Splitters')
+    title('All mice, splitters by accuracy')
+    subplot(1,3,3)
+    hold on
+    plot(accuracy{mouseI},pctDailySplittersEXany{mouseI},'o','MarkerSize',8,'MarkerFaceColor',mousecolors{mouseI})
+    ylim([0 1]); xlim([0.5 1]); xlabel('Proportion Exclusive Splitters')
+    title('All mice, exclusive splitters by accuracy')
+end
+
+figure;
+mousecolors = {'r','b','g'}; %Could add diff shades by splitters/place etc.
+for mouseI = 1:numMice
+    subplot(2,2,1)
+    hold on
+    plot(accuracy{mouseI},pctDailyPlaceAndSplitter{mouseI},'o','MarkerSize',8,'MarkerFaceColor',mousecolors{mouseI})
+    ylim([0 1]); xlim([0.5 1]); xlabel('Prop. Place and Splitter')
+    subplot(2,2,2)
+    hold on
+    plot(accuracy{mouseI},pctDailyPlaceNotSplitter{mouseI},'o','MarkerSize',8,'MarkerFaceColor',mousecolors{mouseI})
+    ylim([0 1]); xlim([0.5 1]); xlabel('Prop. Place, NOT Splitter')
+    subplot(2,2,3)
+    hold on
+    plot(accuracy{mouseI},pctDailySplitterNotPlace{mouseI},'o','MarkerSize',8,'MarkerFaceColor',mousecolors{mouseI})
+    ylim([0 1]); xlim([0.5 1]); xlabel('Prop. Splitter, NOT Place')
+    subplot(2,2,4)
+    hold on
+    plot(accuracy{mouseI},pctDailynotSplitterNotPlace{mouseI},'o','MarkerSize',8,'MarkerFaceColor',mousecolors{mouseI})
+    ylim([0 1]); xlim([0.5 1]); xlabel('Prop. NOT Place, NOT Splitter')
+end
+
 %% Portion change splitter/place by days apart
 
 for mouseI = 1:numMice
@@ -273,7 +316,66 @@ for mouseI = 1:numMice
     title(['Mouse ', num2str(mouseI) ', day to day change in cell trait'])
     legend(h,'Place and Splitter','Place, Not-Splitter','Not-place, splitter')
 end
+
+%% All animals cell round-up
+mouseIDvec = [];
+for mouseI = 1:numMice
+    mouseIDvec = [mouseIDvec; ones(numDays(mouseI),1)*mouseI];
+end
+
+numDataPts = length(pooledPctDailySplittersAny);
+grps = repmat(1:8,numDataPts,1); grps = grps(:);
+dataHere = [pooledPctDailySplittersAny(:); pooledPctDailySplittersEXany(:);...
+            pooledPctDailySplittersBOTH(:); pooledTotalPropPlace(:);...
+            pooledPlaceAndSplitter(:); pooledPlaceNotSplitter(:);...
+            pooledSplitterNotPlace(:); pooledNotSplitterNotPlace(:);];
+mousecolors = {'r','b','g'};
+mousecolors2 = [1 0 0; 0 1 0; 0 0 1];
+colorsHere = mousecolors2(mouseIDvec,:);
+colorsHere = repmat(colorsHere,8,1);
+%colorNums = repmat(mouseIDvec,7,1);
+%scatColors = mousecolors(colorNums); scatColors =[scatColors{:}];
+xLabels = {'Splitters', 'EX-Split', 'Split-BOTH', 'Place', 'Place and Split', 'Place NOT Split', 'Split NOT Place', 'NOT Split NOT place'};
+scatterBoxSL(dataHere, grps, 'xLabel', xLabels, 'plotBox', true, 'circleColors', colorsHere, 'transparency', 0.5)
+title('All mice, all days, Proportion of each Trait Type of Active Cells')
+ylim([0 1]); ylabel('Proportion Reactivated')
+
 %% Reactivation probability
+%Pooled
+hh = figure; axes;
+mouseIDvec = []; for mouseI = 1:numMice; mouseIDvec = [mouseIDvec; ones(numDays(mouseI)-1,1)*mouseI]; end
+numDataPts = length(pooledReacBaseline);
+grps = repmat(1:9,numDataPts,1); grps = grps(:);
+dataHere = [pooledReacBaseline(:); pooledReacPlace(:); pooledReacSplitter(:);...
+            pooledReacSplitterEx(:);  pooledReacSplitterBOTH(:); pooledReacPlaceAndSplit(:);...
+            pooledReacPlaceNotSplit(:); pooledReacSplitNotPlace(:); pooledReacNotPlaceNotSplit(:);];
+mousecolors2 = [1 0 0; 0 1 0; 0 0 1];
+colorsHere = mousecolors2(mouseIDvec,:);
+colorsHere = repmat(colorsHere,9,1);
+xLabels = {'Baseline', 'Place', 'Splitter', 'EX-Split', 'Split-BOTH', 'Place and Split', 'Place NOT Split', 'Split NOT Place', 'NOT Split NOT place'};
+scatterBoxSL(dataHere, grps, 'xLabel', xLabels, 'plotBox', true, 'circleColors', colorsHere, 'transparency', 0.5, 'plotHandle',hh.Children)
+title('All mice, all days, Reactivation Probability by Trait Type')
+ylim([0 1]); ylabel('Proportion Reactivated')
+hold on
+plot(hh.Children.XLim,[0 0],'-r')
+
+%% Pct. Day N-to-N+1 count trait change
+%Pooled
+mouseIDvec = []; for mouseI = 1:numMice; mouseIDvec = [mouseIDvec; ones(numDays(mouseI)-1,1)*mouseI]; end
+numDataPts = length(pooledPlaceChange);
+grps = repmat(1:8,numDataPts,1); grps = grps(:);
+dataHere = [pooledPlaceChange(:); pooledSplittersANYchange(:); pooledSplittersEXanyChange(:);...
+            pooledSplittersBOTHChange(:); pooledPlaceAndSplitterChange(:); pooledPlaceNotSplitterChange(:);...
+            pooledSplitterNotPlaceChange(:); pooledNotSplitterNotPlaceChange(:);];
+mousecolors2 = [1 0 0; 0 1 0; 0 0 1];
+colorsHere = mousecolors2(mouseIDvec,:);
+colorsHere = repmat(colorsHere,8,1);        
+xLabels = {'Place', 'Splitter', 'EX-Split', 'Split-BOTH', 'Place and Split', 'Place NOT Split', 'Split NOT Place', 'NOT Split NOT place'};
+scatterBoxSL(dataHere, grps, 'xLabel', xLabels, 'plotBox', true, 'circleColors', colorsHere, 'transparency', 0.5)
+title('All mice, all  Day N-to-N+1 pairs, Diff in pct. cells each trait type')
+ylim([-0.5 0.5]); ylabel('Proportion Reactivated')
+
+%% Reactivation prob old, indiv. mice
 for mouseI = 1:numMice
     grps = repmat(1:7,numDays(mouseI)-1,1); grps = grps(:);
     dataHere = [reactivatesLR{mouseI}(2,:), reactivatesST{mouseI}(2,:),... 
