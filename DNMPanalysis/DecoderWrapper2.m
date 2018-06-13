@@ -1,4 +1,5 @@
-function [performance, miscoded, typePredict, sessPairs, condsInclude, cellsUsed] = DecoderWrapper1(trialbytrial,traitLogical,realdays,numShuffles,activityType)
+function [performance, miscoded, typePredict, sessPairs, condsInclude, cellsUsed] =...
+    DecoderWrapper2(trialbytrial,traitLogical,realdays,numShuffles,activityType,pooledUnpooled,cellNumLimit,cnlExceedShuffs)
 %This function is built as a wrapper for looking at decoding results by
 %splitting. Pretty much the only thing that needs to be given is basic
 %data and parameters, testing for significance, etc., is handled here
@@ -15,14 +16,22 @@ function [performance, miscoded, typePredict, sessPairs, condsInclude, cellsUsed
 %decode everything and do it later
 %    - alternatively, could pull this out of conds include?
 
-Conds = GetTBTconds(trialbytrial);
-condsInclude = [Conds.Study; Conds.Test; Conds.Left; Conds.Right];
-titles = {'StudyLvR', 'TestLvR', 'LeftSvT', 'RightSvT'}; 
-typePredict = {'leftright', 'leftright', 'studytest', 'studytest'}; 
+%CellNumLimit tells max number of cells to use in decoding. If the number
+%of available cells (pass traitLogical) exceeds that, cnlExceedShuffs
+%determines how many shuffles to do of those cells available
 
-condsInclude = [1 2 3 4; 1 2 3 4];
-titles = {'Left vs. Right'; 'Study vs. Test'};
-typePredict = {'leftright', 'studyTest'};
+Conds = GetTBTconds(trialbytrial);
+switch pooledUnpooled
+    case 'unpooled'
+        condsInclude = [Conds.Study; Conds.Test; Conds.Left; Conds.Right];
+        titles = {'StudyLvR', 'TestLvR', 'LeftSvT', 'RightSvT'}; 
+        typePredict = {'leftright', 'leftright', 'studytest', 'studytest'}; 
+    case 'pooled'
+        condsInclude = [1 2 3 4; 1 2 3 4];
+        %condsInclude = [Conds.Left Conds.Right; Conds.Study Conds.Test];
+        titles = {'Left vs. Right'; 'Study vs. Test'};
+        typePredict = {'leftright', 'studyTest'};
+end
 
 randomizeNow = [zeros(1, length(titles)); ones(numShuffles,length(titles))];
 
@@ -56,7 +65,6 @@ for iterationI = 1:1+numShuffles %Original and any shuffles
 
             %Select cells
             cellsUse = traitLogical(:,trainSess);
-            %cellsUse = dayUse(:,trainSess).*(thisCellSplitsST.(titles{setupI})(:,trainSess)==usesplitters(setupI));
             trainingCells = cellsUse;
             testingCells = cellsUse;
 
@@ -71,7 +79,10 @@ for iterationI = 1:1+numShuffles %Original and any shuffles
         end
 
         %Log performance: columns are by titles, rows are each pass (1 regular, all others shuffled)
-        [performance{iterationI, setupI}, miscoded{iterationI, setupI}] = decoderResults2(decoded, actual, sessPairs, realdays);
+        [perf, misc] = decoderResults2(decoded, actual, sessPairs, realdays);
+        
+        performance{iterationI, setupI} = perf;
+        miscoded{iterationI, setupI} = misc;
         
         cellsUsed{iterationI,setupI} = cellsUsedSessPair;
     end
