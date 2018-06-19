@@ -15,7 +15,7 @@ pctEachDay = numEachDay ./ numActiveEachDay;
 numChange = nan(numDayPairs,1);
 pctChange = nan(numDayPairs,1);
 for dpI = 1:numDayPairs
-    numChange(dpI) = numActiveEachDay(dayPairs(dpI,2)) - numActiveEachDay(dayPairs(dpI,1));
+    numChange(dpI) = numEachDay(dayPairs(dpI,2)) - numEachDay(dayPairs(dpI,1));
     pctChange(dpI) = pctEachDay(dayPairs(dpI,2)) - pctEachDay(dayPairs(dpI,1));
 end
 

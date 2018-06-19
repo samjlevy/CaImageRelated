@@ -30,7 +30,7 @@ switch pooledUnpooled
         condsInclude = [1 2 3 4; 1 2 3 4];
         %condsInclude = [Conds.Left Conds.Right; Conds.Study Conds.Test];
         titles = {'Left vs. Right'; 'Study vs. Test'};
-        typePredict = {'leftright', 'studyTest'};
+        typePredict = {'leftright', 'studytest'};
 end
 
 randomizeNow = [zeros(1, length(titles)); ones(numShuffles,length(titles))];

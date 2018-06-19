@@ -361,6 +361,48 @@ for mouseI = 1:numMice
     %}
 end
 
+
+%last day - first day
+hh = figure; hold on
+mousecolors = {'r','b','g'};
+traitsPlot = {placeFLpctCh, splitANYFLpctCh, splitEXanyFLpctCh,splitBOTHFLpctCh, placeAndSplitFLpctCh,...
+              placeNotSplitFLpctCh, splitNotPlaceFLpctCh, notSplitNotPlaceFLpctCh};
+xlabels = {'Place', 'Splitters', 'SplitersBOTH', 'place and split', 'place NOT split', 'split NOT place', 'NOT split NOT place'};
+for labI = 1:length(xlabels)
+    for mouseI = 1:numMice
+        plot(labI,traitsPlot{labI}(mouseI),'o','MarkerSize',8,'MarkerFaceColor',mousecolors{mouseI})
+    end
+end
+title('All mice, change last day from first pct each trait type')
+hold on
+xticks = hh.Children.XTick;
+xlim([0 hh.Children.XLim(2)+1])
+plot(hh.Children.XLim,[0 0],'r')
+hh.Children.XTick = xticks;
+hh.Children.XTickLabel = xlabels;
+hh.Children.XTickLabelRotation = 45;
+
+
+% last 2 days  - first 2 days
+hh = figure; hold on
+mousecolors = {'r','b','g'};
+traitsPlot = {placeFLpctCh2, splitANYFLpctCh2, splitEXanyFLpctCh2, splitBOTHFLpctCh2, placeAndSplitFLpctCh2,...
+              placeNotSplitFLpctCh2, splitNotPlaceFLpctCh2, notSplitNotPlaceFLpctCh2};
+xlabels = {'Place', 'Splitters', 'SplitersBOTH', 'place and split', 'place NOT split', 'split NOT place', 'NOT split NOT place'};
+for labI = 1:length(xlabels)
+    for mouseI = 1:numMice
+        plot(labI,traitsPlot{labI}(mouseI),'o','MarkerSize',8,'MarkerFaceColor',mousecolors{mouseI})
+    end
+end
+title('All mice, change last 2 days from first 2 days pct each trait type')
+hold on
+xticks = hh.Children.XTick;
+xlim([0 hh.Children.XLim(2)+1])
+plot(hh.Children.XLim,[0 0],'r')
+hh.Children.XTick = xticks;
+hh.Children.XTickLabel = xlabels;
+hh.Children.XTickLabelRotation = 45;
+
 %% Splitters / Place by accuracy
 figure;
 mousecolors = {'r','b','g'}; %Could add diff shades by splitters/place etc.
@@ -559,6 +601,44 @@ scatterBoxSL(dataHere, grps, 'xLabel', xLabels, 'plotBox', true, 'circleColors',
 title('All mice, all  Day N-to-N+1 pairs, Diff in pct. cells each trait type')
 ylim([-0.5 0.5]); ylabel('Proportion Reactivated')
 
+%% Firing COM
+
+%Individual mice
+for mouseI = 1:numMice
+    figure;
+    subplot(3,2,1)
+    histogram(COMsplittersLR{mouseI},0.5:1:numBins+0.5)
+    title('LR splitters')
+    subplot(3,2,2)
+    histogram(COMsplittersST{mouseI},0.5:1:numBins+0.5)
+    title('ST splitters')
+    subplot(3,2,3)
+    histogram(COMsplittersLRonly{mouseI},0.5:1:numBins+0.5)
+    title('LR splitters only')
+    subplot(3,2,4)
+    histogram(COMsplittersSTonly{mouseI},0.5:1:numBins+0.5)
+    title('ST splitters only')
+    subplot(3,2,5)
+    histogram(COMsplittersEXonly{mouseI},0.5:1:numBins+0.5)
+    title('EX splitters only'); xlabel('Bin #')
+    subplot(3,2,6)
+    histogram(COMsplittersBOTH{mouseI},0.5:1:numBins+0.5)
+    title('BOTH splitters only'); xlabel('Bin #')
+    suptitleSL(['Mouse ' num2str(mouseI) ' Firing COM all cells all days'])
+    
+    figure;
+    
+    dataThings = {COMallCells{mouseI}(~isnan(COMallCells{mouseI})),...
+                  COMplace{mouseI}(~isnan(COMplace{mouseI})),...
+                  COMsplittersANY{mouseI}(~isnan(COMsplittersANY{mouseI})),...
+                  COMplaceAndSplitter{mouseI}(~isnan(COMplaceAndSplitter{mouseI})),...
+                  COMplaceNotSplitter{mouseI}(~isnan(COMplaceNotSplitter{mouseI})),...
+                  COMsplitterNotPlace{mouseI}(~isnan(COMsplitterNotPlace{mouseI})),...
+                  COMnotSplitterNotPlace{mouseI}(~isnan(COMnotSplitterNotPlace{mouseI}))};
+    grps = cell2mat(cellfun(@length,dataThings,'UniformOutput',false));
+              
+              
+              
 %% Reactivation prob old, indiv. mice
 for mouseI = 1:numMice
     grps = repmat(1:7,numDays(mouseI)-1,1); grps = grps(:);
@@ -598,6 +678,138 @@ end
 
 
 %% Decoder stuff
+
+
+%Newer, using all mice all types
+makePlot = 1;
+typePredict = {'leftright', 'studytest'};
+pooledShuffPerfR = cell(length(cellSigDecoding),2);
+pooledGrps = cell(length(cellSigDecoding),2);
+pooledGoodPerf = cell(length(cellSigDecoding),2);
+pooledBadPerf = cell(length(cellSigDecoding),2);
+pooledGoodDDs = cell(length(cellSigDecoding),2);
+pooledBadDDs = cell(length(cellSigDecoding),2);
+for dcI = 1:length(cellSigDecoding)
+    for mouseI = 1:numMice
+        if makePlot==1
+        figure;
+        end
+        dayDiffsUse{mouseI} = cellDaysApart{dcI}{mouseI};
+        for condsPlot = 1:2
+            shuffPerf = cellDecodePerformance{dcI}{mouseI}(2:end,condsPlot);
+            shuffPerf = cellfun(@(x) x',shuffPerf,'UniformOutput',false); %Make it straight
+            shuffPerfR = cell2mat(shuffPerf); shuffPerfR = shuffPerfR(:);
+            grps = repmat(dayDiffsUse{mouseI}',size(shuffPerf,1),1); grps = grps(:);
+            xlabels = cellfun(@num2str,num2cell(unique(dayDiffsUse{mouseI})),'UniformOutput',false);
+            plotInds = cellSigDecoding{dcI}{mouseI}{condsPlot};
+            correctPts = cellDecodePerformance{dcI}{mouseI}{1,condsPlot}(plotInds); correctDDs = dayDiffsUse{mouseI}(plotInds);
+            incorrectPts = cellDecodePerformance{dcI}{mouseI}{1,condsPlot}(~plotInds); incorrectDDs = dayDiffsUse{mouseI}(~plotInds);
+            if makePlot==1
+            hh = subplot(2,1,condsPlot);
+            scatterBoxSL(shuffPerfR,grps,'xLabel',xlabels,'plotBox',false,'plotHandle',hh)%
+            hh = gcf;
+            hold on
+            plot(correctDDs,correctPts,'ob','MarkerFaceColor','b')
+            plot(incorrectDDs,incorrectPts,'or','MarkerFaceColor','r')
+            xlabel('Days between model and test data'); ylabel('Prop. decoded correctly')
+            ylim([0 1])
+            title(typePredict{condsPlot})
+            end
+            
+            pooledShuffPerfR{dcI,condsPlot} = [pooledShuffPerfR{dcI,condsPlot}; shuffPerfR];
+            pooledGrps{dcI,condsPlot} = [pooledGrps{dcI,condsPlot}; grps];
+            pooledGoodPerf{dcI,condsPlot} = [pooledGoodPerf{dcI,condsPlot}; correctPts];
+            pooledBadPerf{dcI,condsPlot} = [pooledBadPerf{dcI,condsPlot}; incorrectPts];
+            pooledGoodDDs{dcI,condsPlot} = [pooledGoodDDs{dcI,condsPlot}; correctDDs];
+            pooledBadDDs{dcI,condsPlot} = [pooledBadDDs{dcI,condsPlot}; incorrectDDs];
+        end
+        if makePlot==1
+        suptitleSL(['Mouse ' num2str(mouseI) ' ' decodeFileName{dcI}])
+        end
+    end 
+end
+
+%Pooled figure
+for dcI = 1:length(cellSigDecoding)
+    figure;
+    for condsPlot = 1:2
+        hh = subplot(2,1,condsPlot);
+        scatterBoxSL(pooledShuffPerfR{dcI,condsPlot},pooledGrps{dcI,condsPlot},'plotBox',false,'plotHandle',hh)
+        hold on
+        plot(pooledBadDDs{dcI,condsPlot},pooledBadPerf{dcI,condsPlot},'or','MarkerFaceColor','r')
+        plot(pooledGoodDDs{dcI,condsPlot},pooledGoodPerf{dcI,condsPlot},'ob','MarkerFaceColor','b')
+        xlabel('Days between model and test data'); ylabel('Prop. decoded correctly')
+        ylim([0 1])
+        title(typePredict{condsPlot})
+    end
+    suptitleSL(['All mice ' decodeFileName{dcI}])
+end
+
+% Plot performance against number of cells, and overlap 
+
+for dcI = 1:length(cellSigDecoding)
+    figure;
+    for condsPlot = 1:2
+        hh = subplot(2,1,condsPlot); hold on
+        goodPlot = cellSigDecoding{dcI}{mouseI}{condsPlot}==1;
+        badPlot = cellSigDecoding{dcI}{mouseI}{condsPlot}==0;
+        plot(numCellsUsedDecode{dcI}{mouseI}(badPlot,1), cellDecodePerformance{dcI}{mouseI}{1,condsPlot}(badPlot),'or','MarkerFaceColor','r')
+        plot(numCellsUsedDecode{dcI}{mouseI}(goodPlot,1), cellDecodePerformance{dcI}{mouseI}{1,condsPlot}(goodPlot), 'ob','MarkerFaceColor','b')
+        ylim([0 1]); ylabel('Performance')
+        xlabel('Num cells used in model')
+        title(typePredict{condsPlot})
+    end
+    suptitleSL(['Mouse ' num2str(mouseI) ', ' decodeFileName{dcI} ', Decoder performance by pct cells used in model'])
+end
+       
+        
+for dcI = 1:length(cellSigDecoding)
+figure;
+    for condsPlot = 1:2
+        hh = subplot(2,1,condsPlot); hold on
+        goodPlot = cellSigDecoding{dcI}{mouseI}{condsPlot}==1;
+        badPlot = cellSigDecoding{dcI}{mouseI}{condsPlot}==0;
+        plot(activeCellsOverlap{dcI}{mouseI}(badPlot,1), cellDecodePerformance{dcI}{mouseI}{1,condsPlot}(badPlot),'or','MarkerFaceColor','r')
+        plot(activeCellsOverlap{dcI}{mouseI}(goodPlot,1), cellDecodePerformance{dcI}{mouseI}{1,condsPlot}(goodPlot), 'ob','MarkerFaceColor','b')
+        ylim([0 1]); ylabel('Performance')
+        xlabel('Num cells used in model')
+        title(typePredict{condsPlot})
+    end
+    suptitleSL(['All mice ' decodeFileName{dcI} ', Decoder performance by num cells overlap model and test'])
+end
+        
+for dcI = 1:length(cellSigDecoding)
+figure;
+    for condsPlot = 1:2
+        hh = subplot(2,1,condsPlot); hold on
+        goodPlot = cellSigDecoding{dcI}{mouseI}{condsPlot}==1;
+        badPlot = cellSigDecoding{dcI}{mouseI}{condsPlot}==0;
+        plot(overlapWithModel{dcI}{mouseI}(badPlot,1), cellDecodePerformance{dcI}{mouseI}{1,condsPlot}(badPlot),'or','MarkerFaceColor','r')
+        plot(overlapWithModel{dcI}{mouseI}(goodPlot,1), cellDecodePerformance{dcI}{mouseI}{1,condsPlot}(goodPlot), 'ob','MarkerFaceColor','b')
+        ylim([0 1]); ylabel('Performance')
+        xlabel('Num cells used in model')
+        title(typePredict{condsPlot})
+    end
+    suptitleSL(['All mice ' decodeFileName{dcI} ', Decoder performance by num cells overlap model and test / num model'])
+end
+
+for dcI = 1:length(cellSigDecoding)
+figure;
+    for condsPlot = 1:2
+        hh = subplot(2,1,condsPlot); hold on
+        goodPlot = cellSigDecoding{dcI}{mouseI}{condsPlot}==1;
+        badPlot = cellSigDecoding{dcI}{mouseI}{condsPlot}==0;
+        plot(overlapWithTest{dcI}{mouseI}(badPlot,1), cellDecodePerformance{dcI}{mouseI}{1,condsPlot}(badPlot),'or','MarkerFaceColor','r')
+        plot(overlapWithTest{dcI}{mouseI}(goodPlot,1), cellDecodePerformance{dcI}{mouseI}{1,condsPlot}(goodPlot), 'ob','MarkerFaceColor','b')
+        ylim([0 1]); ylabel('Performance')
+        xlabel('Num cells used in model')
+        title(typePredict{condsPlot})
+    end
+    suptitleSL(['All mice ' decodeFileName{dcI} ', Decoder performance by num cells overlap model and test / num test'])
+end
+            
+            
+
 condTitles = {'Study LvR', 'Test LvR', 'Left SvT', 'Right SvT'};
 
 %Made from LR splitters
@@ -729,7 +941,7 @@ for mouseI = 1:numMice
         shuffPerfR = cell2mat(shuffPerf); shuffPerfR = shuffPerfR(:);
         grps = repmat(dayDiffsUse{mouseI}',size(shuffPerf,1),1); grps = grps(:);
         xlabels  = cellfun(@num2str,num2cell(unique(dayDiffsUse{mouseI})),'UniformOutput',false);
-        scatterBoxSL(shuffPerfR,grps,'xLabel',xlabels,'plotBox',false,'plotHere',hh)%
+        scatterBoxSL(shuffPerfR,grps,'xLabel',xlabels,'plotBox',false,'plotHandle',hh)%
         hh = gcf;
         hold on
         plotInds = sigDecodingAll{mouseI}{condsPlot};

@@ -111,6 +111,9 @@ for testCondJ = 1:length(condsInclude)
                 testAnswers(logical(sum(testAnswers == Conds.Study,2))) = 9;
                 testAnswers(logical(sum(testAnswers == Conds.Test,2))) = 10;
                 testAnswers = testAnswers - 8;
+            otherwise
+                disp('not a typePredict option!')
+                keyboard
         end
         
         training(length(training)+1).laps = trainLaps;
