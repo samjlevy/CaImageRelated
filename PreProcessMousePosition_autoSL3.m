@@ -384,7 +384,7 @@ switch MorePoints
     case 'z'
         ZeroBounds;
     case 'b'
-        BehaviorFrames
+        BehaviorFrames;
     case 'y'
         disp('attempt auto')
         [sFrame,eFrame] = SelectFrameNumbers;
@@ -1093,6 +1093,7 @@ else
     else 
         disp('missed something somewhere...')
         huh=[huh; auto_frames(corrFrame)];
+        %skipped = [skipped; auto_frames(corrFrame)];
         skipThisStep=1;
     end
 end
@@ -2212,7 +2213,8 @@ end
 function BehaviorFrames(~,~)
 global chooseStrs; global starts; global stops;
 global bstr; global auto_frames; global numPasses;
-global corrDefGoodFlag; global choices;
+global corrDefGoodFlag; global choices; global xAVI; global yAVI; global elVector;
+global mazeEl;
 
 chooseStrs = bstr;
 ChooseStartsStops;
@@ -2233,7 +2235,7 @@ for nStarts = 1:length(starts)
     auto_frames = starts(nStarts):stops(nStarts); 
     
     fixem = questdlg([num2str(length(auto_frames)) ' frames ' num2str(auto_frames(1))...
-        ' to ' num2str(auto_frames(end)) '. Do it?'], 'Behavior Pass',...
+        ' to ' num2str(auto_frames(end)) ', stretch #' num2str(nStarts) '. Do it?'], 'Behavior Pass',...
         'FixEm', 'Skip', 'FixEm');
     switch fixem
         case 'FixEm'
@@ -2241,6 +2243,23 @@ for nStarts = 1:length(starts)
         case 'Skip'
             skipB = [skipB; starts(nStarts) stops(nStarts)]; %#ok<AGROW>
             doIt=0;
+    end
+    
+    ooOnly = questdlg('Out of bounds frames only?','OOB only',...
+        'OOB only', 'All frames', 'OOB only');
+    switch ooOnly
+        case 'OOB only'
+            in_bounds = zeros(1,length(auto_frames));
+            for afI=1:length(auto_frames)
+                [inHere, onHere] = inpolygon(xAVI(auto_frames(afI)), yAVI(auto_frames(afI)),...
+                    mazeEl(elVector(auto_frames(afI))).maskx, mazeEl(elVector(auto_frames(afI))).masky);    
+                in_bounds(afI) = inHere | onHere;
+                
+            end
+            out_of_bounds = ~in_bounds;
+            auto_frames = auto_frames(out_of_bounds);
+        case 'All frames'
+            %do nothing
     end
     
     if doIt==1

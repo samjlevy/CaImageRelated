@@ -1,13 +1,14 @@
-function PlotSplitterFig(TMap, pairsPlot, xLimit, LRpairs, STpairs, figHand)
+function PlotSplitterFig(TMap, pairsPlot, LRpairs, STpairs, xLimit, figHand)
 %pairs plot is the pairs to plot against each other. It will split in half
 %along the column dim and mean the included things if theres more than one
 %per pair. E.g., [1 2 3 4] will plot mean(1 2) against mean(3 4)
 %Indicate which rows of pairs are LR and ST
+% EG. pairsPlot = [1 2 3 4; 1 3 2 4]; LRpairs = 1; ST pairs = 2;
 %Use xThresh to say how wide to make the x axis, or leave it empty for auto
 %determined
 posLims = [0.5 1];
 
-plotColors = {'g' 'r' 'c' 'm'};
+plotColors = {'g'  'r'   'c'  'm'};
             %Left Right Study Test
 
 if isempty(figHand)
@@ -21,8 +22,8 @@ if isempty(xLimit)
 end
 
 numPlots = size(pairsPlot,1);
-numRows = 1; 
-numCols = 2;
+numRows = 2; 
+numCols = 1;
 
 numBins = length(TMap{1});
 
@@ -57,6 +58,8 @@ for plotI = 1:numPlots
     xlabel(axLab); ylabel('Bin #')
     hh.YTick = 1.5:1:numBins+0.5;
     hh.YTickLabel = cellstr(num2str([1:numBins]'))';
+    ylim([1 numBins+1])
+    title('Transient Likelihood')
 end
 
 end

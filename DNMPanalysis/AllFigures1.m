@@ -128,6 +128,73 @@ end
 
 %Splitter props. by average num conds active
 
+%% Splitter example fig
+mouseI = 1;
+%cellsUse = [14 36 37 44 18 55];
+cellsUse = [14 37];
+posUse =  [584   324   305   427];
+saveHere = 'C:\Users\Sam\Desktop\Figures\Figs180703';
+for cellI = 1:length(cellsUse)
+    daysPlot = find(dayUse{mouseI}(cellsUse(cellI),:));
+    for daysPlotI = 1:length(daysPlot)
+        PlotSplitterFig({cellPooledTMap_unsmoothed{mouseI}{cellsUse(cellI),daysPlot(daysPlotI),:}},...
+            [1 2; 3 4], 1, 2, [], [])
+            %[1 2 3 4; 1 3 2 4], 1, 2, [], [])
+        suptitleSL(['Cell ' num2str(cellsUse(cellI)) ' splitting, day ' num2str(daysPlot(daysPlotI))])
+        hh = gcf;
+        hh.Position = posUse;
+        saveas(hh,fullfile(saveHere,['Cell' num2str(cellsUse(cellI)) 'day' num2str(daysPlot(daysPlotI)) '.png']));
+    end
+end
+
+%% Dot plot fig
+
+%Ideally would load pos align
+mouseI = 1; dayI = 1;
+load(fullfile(mainFolder,mice{mouseI},'trialbytrial.mat'))
+load(fullfile(mainFolder,mice{mouseI},'demoPos','Pos_align.mat'))
+%[frames, txt] = xlsread(ls(fullfile(mainFolder,mice{mouseI},'demoPos','*Finalized.xlsx')));
+%[start_stop_struct, include_struct, exclude_struct, pooled, correct, lapNumber]...
+xfile = ls(fullfile(mainFolder,mice{mouseI},'demoPos','*Finalized.xlsx'));
+xfile = fullfile(mainFolder,mice{mouseI},'demoPos',xfile);
+[~, include_struct, ~, ~, correct, ~]...
+    = GetBlockDNMPbehavior(xfile, 'stem_extended', size(PSAbool,2));
+xlims = [8 38]; numBins = 8; cmperbin = (max(xlims)-min(xlims))/numBins;
+dotPlotXlim = [-10 10];
+dotPlotYlim = [0 50];
+dotPlotDemoX = [-4 4];
+
+cellsUse = [14 37];
+for cellI = 1:length(cellsUse)
+    
+    cellRow = sortedSessionInds(cellsUse(cellI),dayI);
+    
+    ptsHere{1} = correct.include.study_l | correct.include.test_l;
+    ptsHere{2} = correct.include.study_r | correct.include.test_r;
+    ptsHere{3} = correct.include.study_l | correct.include.study_r;
+    ptsHere{4} = correct.include.test_l | correct.include.test_r;
+    titlesD = {'Left Turn Activity', 'Right Turn Activity', 'Study Trial Activity', 'Test Trial Activity'};
+   
+    figure;
+    for pp = 1:4
+        hh(pp) = subplot(2,2,pp);
+        plot(y_adj_cm(ptsHere{pp})*(-1),x_adj_cm(ptsHere{pp}),'.k'); hold on
+        plot(y_adj_cm(logical(PSAbool(cellRow,:).*ptsHere{pp}))*(-1),x_adj_cm(logical(PSAbool(cellRow,:).*ptsHere{pp})),'.r')
+        title(titlesD{pp})
+        
+        for binI = 1:numBins+1
+            plot(dotPlotDemoX,[xlims(1)+cmperbin*binI-1 xlims(1)+cmperbin*binI-1],'k')
+        end
+        
+        xlim(dotPlotXlim)
+        ylim(dotPlotYlim)
+    end
+    
+    suptitleSL(['Cell ' num2str(cellsUse(cellI)) ' Activity by Position, Day ' num2str(dayI)])
+end
+    
+
+
 %% Proportion of DI score at extremes
 
 %DI distributions: currently thows out 0s in bins
@@ -679,6 +746,57 @@ end
 
 %% Decoder stuff
 
+%Within day results
+
+typePredict = {'leftright', 'studytest'};
+grps = [];
+correctPts = [];
+incorrectPts = [];
+correctGrps = [];
+incorrectGrps = [];
+shuffGrps = [];
+pooledShuffPerfR = [];
+for mouseI = 1:numMice
+    sameDays = cellDaysApart{1}{mouseI}==0;
+    dcI = 1;
+    for tpI = 1:length(typePredict)
+        plotInds = cellSigDecoding{dcI}{mouseI}{tpI};
+        
+        correctHere = cellDecodePerformance{dcI}{mouseI}{1,tpI}(plotInds' & sameDays);
+        incorrectHere = cellDecodePerformance{dcI}{mouseI}{1,tpI}(~plotInds' & sameDays);
+        
+        correctPts = [correctPts; correctHere];
+        incorrectPts = [incorrectPts; incorrectHere];
+        
+        correctGrps = [correctGrps; tpI*ones(length(correctHere),1)];
+        incorrectGrps = [incorrectGrps; tpI*ones(length(incorrectHere),1)];
+        
+        shuffPerf = cellDecodePerformance{dcI}{mouseI}(2:end,tpI);
+        shuffPerf = cellfun(@(x) x(sameDays), shuffPerf, 'UniformOutput',false);
+        shuffPerf = cellfun(@(x) x',shuffPerf,'UniformOutput',false); %Make it straight
+        shuffPerfR = cell2mat(shuffPerf); shuffPerfR = shuffPerfR(:);
+        
+        pooledShuffPerfR = [pooledShuffPerfR; shuffPerfR];
+        shuffGrps = [shuffGrps; tpI*ones(length(shuffPerfR),1)];
+    end
+end
+            
+figure; axes;
+hh = gca;
+scatterBoxSL(pooledShuffPerfR,shuffGrps,'plotBox',false,'plotHandle',hh)
+hold on
+inColors = repmat([1 0 0],length(incorrectPts),1);
+scatterBoxSL(incorrectPts,incorrectGrps,'plotBox',false,'circleColors',inColors,'transparency',1,'plotHandle',hh)
+coColors = repmat([0 0 1],length(correctPts),1);
+scatterBoxSL(correctPts,correctGrps,'plotBox',false,'circleColors',coColors,'transparency',1,'plotHandle',hh)
+hh.XTick = [1 2];
+hh.XTickLabel = {'Left/Right', 'Study/Test'};
+ylabel('Decoding Performance');
+title('Within Day Decoding Performance')
+ylim([0.2 1.1])
+plot([1.25 1.75],[1 1],'k','LineWidth',2)
+[p,h]=ranksum(correctPts(correctGrps==1),correctPts(correctGrps==2));
+text(1.5, 1+0.025, 'n.s.', 'HorizontalAlignment', 'center')
 
 %Newer, using all mice all types
 makePlot = 1;

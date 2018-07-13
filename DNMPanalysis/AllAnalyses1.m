@@ -65,13 +65,22 @@ for mouseI = 1:numMice
     switch exist(fullfile(mainFolder,mice{mouseI},'PFsLin.mat'),'file')
         case 0
             disp(['no placefields found for ' mice{mouseI} ', making now'])
-            %[~, ~, ~, ~, ~] =... 
-            %    PFsLinTrialbyTrial(cellTBT{mouseI},xlims, cmperbin, minspeed, 1, saveName, trialReli{mouseI});
             [~, ~, ~, ~, ~, ~] =...
             PFsLinTrialbyTrial2(cellTBT{mouseI}, xlims, cmperbin, minspeed,...
                 saveName,'trialReli',trialReli{mouseI},'smooth',false);        
         case 2
             disp(['found placefields for ' mice{mouseI} ', all good'])
+    end
+    
+    saveName = fullfile(mainFolder,mice{mouseI},'PFsLinPooled.mat');
+    switch exist(fullfile(mainFolder,mice{mouseI},'PFsLinPooled.mat'),'file')
+        case 0
+             disp(['no pooled placefields found for ' mice{mouseI} ', making now'])
+            [~, ~, ~, ~, ~, ~] =...
+            PFsLinTrialbyTrial2(cellTBT{mouseI}, xlims, cmperbin, minspeed,...
+                saveName,'trialReli',trialReli{mouseI},'smooth',false,'condPairs',[1 3; 2 4; 1 2; 3 4]);  
+        case 2
+            disp(['found pooled placefields for ' mice{mouseI} ', all good'])
     end
 end
 
@@ -79,6 +88,9 @@ for mouseI = 1:numMice
     load(fullfile(mainFolder,mice{mouseI},'PFsLin.mat'),'TMap_unsmoothed','TMap_zRates')
     cellTMap_unsmoothed{mouseI} = TMap_unsmoothed;
     cellTMap_zScored{mouseI} = TMap_zRates;
+    load(fullfile(mainFolder,mice{mouseI},'PFsLinPooled.mat'),'TMap_unsmoothed','TMap_zRates')
+    cellPooledTMap_unsmoothed{mouseI} = TMap_unsmoothed;
+    cellPooledTMap_zRates{mouseI} = TMap_unsmoothed; 
 end
 
 Conds = GetTBTconds(cellTBT{1});
@@ -173,13 +185,62 @@ numShuffles = 1000;
 %numShuffles = 100;
 shuffThresh = 1 - pThresh;
 binsMin = 1;
-shuffleDirLR = 'shuffleLR';
-shuffleDirST = 'shuffleST';
+shuffleDirLR = 'shuffleLR2';
+shuffleDirST = 'shuffleST2';
 
+%New version with pooling of original data into tmap
+for mouseI = 1:numMice
+    poolingPairs =[1 3; 2 4; 1 2; 3 4];
+    [pooledTMap{mouseI}, ~, ~, ~, ~, ~] = PFsLinTrialbyTrial2(cellTBT{mouseI}, xlims, cmperbin, minspeed,...
+                [],'trialReli',trialReli{mouseI},'smooth',false,'condPairs',poolingPairs); 
+end
+
+for mouseI = 1:numMice
+    condPairsLR = [1 2];
+    shuffDirFullLR = fullfile(mainFolder,mice{mouseI},shuffleDirLR);
+    [rateDiffLR{mouseI}, rateSplitLR{mouseI}, meanRateDiffLR{mouseI}, DIeachLR{mouseI}, DImeanLR{mouseI}, DIallLR{mouseI}] =...
+        LookAtSplitters4(cellPooledTMap_unsmoothed{mouseI}, condPairsLR, []);
+    splitterFileLR = fullfile(shuffDirFullLR,'splittersLR.mat');
+    if exist(splitterFileLR,'file')==2
+        load(splitterFileLR)
+    else
+        disp(['did not find LR splitting for ' num2str(mouseI) ', making now'])
+        [binsAboveShuffleLR, thisCellSplitsLR] = SplitterWrapper3(cellTBT{mouseI},'leftright',...
+             'pooled', numShuffles, shuffDirFullLR, xlims, cmperbin, minspeed, [], shuffThresh, binsMin);
+        save(splitterFileLR,'binsAboveShuffleLR','thisCellSplitsLR')
+    end
+    LRbinsAboveShuffle{mouseI} = binsAboveShuffleLR; 
+    LRthisCellSplits{mouseI} = thisCellSplitsLR;
+    disp(['done Left/Right splitters mouse ' num2str(mouseI)])
+end
+
+for mouseI = 1:numMice
+    condPairsST = [3 4];
+    shuffDirFullST = fullfile(mainFolder,mice{mouseI},shuffleDirST);
+    [rateDiffST{mouseI}, rateSplitST{mouseI}, meanRateDiffST{mouseI}, DIeachST{mouseI}, DImeanST{mouseI}, DIallST{mouseI}] =...
+        LookAtSplitters4(cellPooledTMap_unsmoothed{mouseI}, condPairsST, []);
+    splitterFileST = fullfile(shuffDirFullST,'splittersST.mat');
+    if exist(splitterFileST,'file')==2
+        load(splitterFileST)
+    else
+        disp(['did not find ST splitting for ' num2str(mouseI) ', making now'])
+        [binsAboveShuffleST, thisCellSplitsST] = SplitterWrapper3(cellTBT{mouseI},'studytest',...
+             'pooled', numShuffles, shuffDirFullST, xlims, cmperbin, minspeed, [], shuffThresh, binsMin);
+        save(splitterFileST,'binsAboveShuffleST','thisCellSplitsST')
+    end
+    STbinsAboveShuffle{mouseI} = binsAboveShuffleST; 
+    STthisCellSplits{mouseI} = thisCellSplitsST;
+    disp(['done Study/Test splitters mouse ' num2str(mouseI)])
+end
+
+
+
+
+% Older version: will pool by averaging across tmap conds
 % Left/Right
 for mouseI = 1:numMice
     %condPairsLR = [1 2; 3 4];
-    condPairsLR = [Conds.Study; Conds.Test];
+    condPairsLR = [Conds.Study; Conds.Test]; %Compare study L v study r, then test l v test r
     %condPairsLR = [1 3 2 4];
     shuffDirFullLR = fullfile(mainFolder,mice{mouseI},shuffleDirLR);
     [rateDiffLR{mouseI}, rateSplitLR{mouseI}, meanRateDiffLR{mouseI}, DIeachLR{mouseI}, DImeanLR{mouseI}, DIallLR{mouseI}] =...
@@ -201,7 +262,7 @@ end
 % Study/Test
 for mouseI = 1:numMice
     %condPairsST = [1 3; 2 4];
-    condPairsST = [Conds.Left; Conds.Right];
+    condPairsST = [Conds.Left; Conds.Right]; %Compare study L v test l, then study r v test r
     shuffDirFullST = fullfile(mainFolder,mice{mouseI},shuffleDirST);
     [rateDiffST{mouseI}, rateSplitST{mouseI}, meanRateDiffST{mouseI}, DIeachST{mouseI}, DImeanST{mouseI}, DIallST{mouseI}] =...
         LookAtSplitters4(cellTMap_unsmoothed{mouseI}, condPairsST, trialReli{mouseI});
@@ -386,14 +447,14 @@ end
 %How many place cells each conditions? How many with more than one condition?
 for mouseI = 1:numMice
     cellsActiveToday{mouseI} = sum(dayUse{mouseI},1);
-    placeByCondThreshed{mouseI}(:,:,1) = squeeze(placeByCond{mouseI}(:,1,:)).*squeeze(threshAndConsec{mouseI}(:,:,1));
-    placeByCondThreshed{mouseI}(:,:,2) = squeeze(placeByCond{mouseI}(:,2,:)).*squeeze(threshAndConsec{mouseI}(:,:,2));
-    placeByCondThreshed{mouseI}(:,:,3) = squeeze(placeByCond{mouseI}(:,3,:)).*squeeze(threshAndConsec{mouseI}(:,:,3));
-    placeByCondThreshed{mouseI}(:,:,4) = squeeze(placeByCond{mouseI}(:,4,:)).*squeeze(threshAndConsec{mouseI}(:,:,4));
-    %placeNums{mouseI} = [sum(squeeze(placeByCond{mouseI}(:,1,:)).*dayUse{mouseI});... %Study L
-    %                     sum(squeeze(placeByCond{mouseI}(:,2,:)).*dayUse{mouseI});... %Study R
-    %                     sum(squeeze(placeByCond{mouseI}(:,3,:)).*dayUse{mouseI});... %Test L
-    %                     sum(squeeze(placeByCond{mouseI}(:,4,:)).*dayUse{mouseI})];   %Test R
+    placeByCondThreshed{mouseI}(:,:,1) = squeeze(placeByCond{mouseI}(:,:,1)).*squeeze(threshAndConsec{mouseI}(:,:,1));
+    placeByCondThreshed{mouseI}(:,:,2) = squeeze(placeByCond{mouseI}(:,:,2)).*squeeze(threshAndConsec{mouseI}(:,:,2));
+    placeByCondThreshed{mouseI}(:,:,3) = squeeze(placeByCond{mouseI}(:,:,3)).*squeeze(threshAndConsec{mouseI}(:,:,3));
+    placeByCondThreshed{mouseI}(:,:,4) = squeeze(placeByCond{mouseI}(:,:,4)).*squeeze(threshAndConsec{mouseI}(:,:,4));
+    %placeNums{mouseI} = [sum(squeeze(placeByCond{mouseI}(:,:,1)).*dayUse{mouseI});... %Study L
+    %                     sum(squeeze(placeByCond{mouseI}(:,:,2)).*dayUse{mouseI});... %Study R
+    %                     sum(squeeze(placeByCond{mouseI}(:,:,3)).*dayUse{mouseI});... %Test L
+    %                     sum(squeeze(placeByCond{mouseI}(:,:,4)).*dayUse{mouseI})];   %Test R
     placeNums{mouseI} = [sum(placeByCondThreshed{mouseI}(:,:,1),1);... %Study L
                          sum(placeByCondThreshed{mouseI}(:,:,2),1);... %Study R
                          sum(placeByCondThreshed{mouseI}(:,:,3),1);... %Test L
@@ -423,19 +484,19 @@ end
 %Placecells coming or going?
 for mouseI = 1:numMice
     [placeCOM{mouseI}, placeDayBias{mouseI}] = LogicalTraitCenterofMass(dayUse{mouseI}, placeThisDay{mouseI}); 
-    [placeCOMSL{mouseI}, placeDayBiasSL{mouseI}] = LogicalTraitCenterofMass(dayUse{mouseI}, squeeze(placeByCond{mouseI}(:,1,:)));
-    [placeCOMSR{mouseI}, placeDayBiasSR{mouseI}] = LogicalTraitCenterofMass(dayUse{mouseI}, squeeze(placeByCond{mouseI}(:,2,:)));
-    [placeCOMTL{mouseI}, placeDayBiasTL{mouseI}] = LogicalTraitCenterofMass(dayUse{mouseI}, squeeze(placeByCond{mouseI}(:,3,:)));
-    [placeCOMTR{mouseI}, placeDayBiasTR{mouseI}] = LogicalTraitCenterofMass(dayUse{mouseI}, squeeze(placeByCond{mouseI}(:,4,:)));
+    [placeCOMSL{mouseI}, placeDayBiasSL{mouseI}] = LogicalTraitCenterofMass(dayUse{mouseI}, squeeze(placeByCond{mouseI}(:,:,1)));
+    [placeCOMSR{mouseI}, placeDayBiasSR{mouseI}] = LogicalTraitCenterofMass(dayUse{mouseI}, squeeze(placeByCond{mouseI}(:,:,2)));
+    [placeCOMTL{mouseI}, placeDayBiasTL{mouseI}] = LogicalTraitCenterofMass(dayUse{mouseI}, squeeze(placeByCond{mouseI}(:,:,3)));
+    [placeCOMTR{mouseI}, placeDayBiasTR{mouseI}] = LogicalTraitCenterofMass(dayUse{mouseI}, squeeze(placeByCond{mouseI}(:,:,4)));
 end
 
 %Place detail
 for mouseI = 1:numMice
     reactivatesPlaceAny{mouseI} = TraitReactivation(dayUse{mouseI},placeThisDay{mouseI});
-    reactivatesPlaceSL{mouseI} = TraitReactivation(dayUse{mouseI},squeeze(placeByCond{mouseI}(:,1,:)));
-    reactivatesPlaceSR{mouseI} = TraitReactivation(dayUse{mouseI},squeeze(placeByCond{mouseI}(:,2,:)));
-    reactivatesPlaceTL{mouseI} = TraitReactivation(dayUse{mouseI},squeeze(placeByCond{mouseI}(:,3,:)));
-    reactivatesPlaceTR{mouseI} = TraitReactivation(dayUse{mouseI},squeeze(placeByCond{mouseI}(:,4,:)));
+    reactivatesPlaceSL{mouseI} = TraitReactivation(dayUse{mouseI},squeeze(placeByCond{mouseI}(:,:,1)));
+    reactivatesPlaceSR{mouseI} = TraitReactivation(dayUse{mouseI},squeeze(placeByCond{mouseI}(:,:,2)));
+    reactivatesPlaceTL{mouseI} = TraitReactivation(dayUse{mouseI},squeeze(placeByCond{mouseI}(:,:,3)));
+    reactivatesPlaceTR{mouseI} = TraitReactivation(dayUse{mouseI},squeeze(placeByCond{mouseI}(:,:,4)));
     reactivatesNotPlace{mouseI} = TraitReactivation(dayUse{mouseI},notPlace{mouseI});
 end
 
@@ -719,7 +780,7 @@ end
 %shuffle 
 for mouseI = 1:numMice3
     
-    dayPairsUse = shuffle some how;
+    %dayPairsUse = shuffle some how;
     for shuffI = 1:stuff
     [placeFLnumCh2(shuffI, mouseI), placeFLpctCh2(mouseI), ~] = FirstToLastChange(placeThisDay{mouseI}, dayUse{mouseI}, dayPairsUse);
     [splitANYFLnumCh2(mouseI), splitANYFLpctCh2(mouseI), ~] = FirstToLastChange(splittersANY{mouseI}, dayUse{mouseI}, dayPairsUse);
@@ -842,8 +903,8 @@ end
 
 
 
-how to think about shuffles? Maybe pre-select condpairs and load appropriate shuffles?
-    should work for same cells by giving it the same traitLogical as normal
+%how to think about shuffles? Maybe pre-select condpairs and load appropriate shuffles?
+%    should work for same cells by giving it the same traitLogical as normal
 
     
     
@@ -865,31 +926,39 @@ traitLogicalUse = {dayUse,                  splittersLR,                splitter
               
 %here to set up cell number restrictions
 
-for dcI = 1:length(traitLogicalUse)
-    for mouseI = 1:numMice
-    %tic
-    decodeFile = fullfile(mainFolder,mice{mouseI},folderName,[decodeFileName{dcI} '.mat']);
-    if exist(decodeFile,'file')~=2
-        disp(['did not find decoder --' decodeFileName{dcI} '--  performance for mouse ' num2str(mouseI) ', running now'])
-        [performance, miscoded, typePredict, sessPairs, condsInclude] =...
-        DecoderWrapper2(cellTBT{mouseI},traitLogicalUse{dcI}{mouseI},cellRealDays{mouseI},numShuffles,activityType,...
-                        'pooled',[],[]);
-        save(decodeFile,'performance','miscoded','typePredict','sessPairs','condsInclude')
+allPerformanceFile = fullfile(mainFolder,mice{numMice},folderName,'decodingPerformanceAllMice.mat');
+if exist(allPerformanceFile,'file') ~= 2
+    for dcI = 1:length(traitLogicalUse)
+        for mouseI = 1:numMice
+        %tic
+        decodeFile = fullfile(mainFolder,mice{mouseI},folderName,[decodeFileName{dcI} '.mat']);
+        if exist(decodeFile,'file')~=2
+            disp(['did not find decoder --' decodeFileName{dcI} '--  performance for mouse ' num2str(mouseI) ', running now'])
+            [performance, miscoded, typePredict, sessPairs, condsInclude] =...
+            DecoderWrapper2(cellTBT{mouseI},traitLogicalUse{dcI}{mouseI},cellRealDays{mouseI},numShuffles,activityType,...
+                            'pooled',[],[]);
+            save(decodeFile,'performance','miscoded','typePredict','sessPairs','condsInclude')
+        end
+        load(decodeFile)
+        cellSessPairs{mouseI} = sessPairs;
+        decodeAllperf{mouseI} = performance;
+        cellDecodePerformance{dcI}{mouseI} = performance;
+        daysApart = diff(cellRealDays{mouseI}(cellSessPairs{mouseI}), 1, 2);
+        cellDaysApart{dcI}{mouseI} = daysApart;
+        sigDecoding = decoderSignificance(decodeAllperf{mouseI},cellSessPairs{mouseI},pThresh);
+        cellSigDecoding{dcI}{mouseI} = sigDecoding;
+        save([decodeFile(1:end-4) 'Sig.mat'], 'sigDecoding','daysApart');
+        %toc
+        end
+        disp(['Finished decoder setup ' num2str(dcI) ' / ' num2str(length(traitLogicalUse))])
     end
-    load(decodeFile)
-    cellSessPairs{mouseI} = sessPairs;
-    decodeAllperf{mouseI} = performance;
-    cellDecodePerformance{dcI}{mouseI} = performance;
-    daysApart = diff(cellRealDays{mouseI}(cellSessPairs{mouseI}), 1, 2);
-    cellDaysApart{dcI}{mouseI} = daysApart;
-    sigDecoding = decoderSignificance(decodeAllperf{mouseI},cellSessPairs{mouseI},pThresh);
-    cellSigDecoding{dcI}{mouseI} = sigDecoding;
-    save([decodeFile(1:end-4) 'Sig.mat'], 'sigDecoding','daysApart');
-    %toc
-    end
-    disp(['Finished decoder setup ' num2str(dcI) ' / ' num2str(length(traitLogicalUse))])
+    save(allPerformanceFile,'cellDaysApart','cellSigDecoding','cellDecodePerformance','decodeFileName','cellSessPairs')
+else
+    load(allPerformanceFile)
 end
-save(fullfile(mainFolder,mice{mouseI},folderName,'decodingPerformanceAllMice.mat'),'cellDaysApart','cellSigDecoding','cellDecodePerformance','decodeFileName','cellSessPairs')
+
+
+[activeCellsOverlap, overlapWithModel, overlapWithTest] = GetCellsOverlap(traitLogicalOne, traitLogicalTwo, dayPairs)
 
 %Eval number of cells used
 for mouseI = 1:numMice

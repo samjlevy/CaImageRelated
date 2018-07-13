@@ -29,7 +29,7 @@ if length(possibleShuffles) ~= numShuffles
 end
 
 %Reorganize for sorting etc.
-shuffTMapReorg = cell(numCells,numConds,numSess);
+shuffTMapReorg = cell(numCells,numSess,numConds);
 if exist(fullfile(shuffDirFull,'shuffledRatesSorted.mat'),'file')~=2
 disp('Loading and reorganizing and place maps')
 
@@ -42,7 +42,7 @@ for shuffleI = 1:numShuffles
         for cellI = 1:numCells
             for sessI = 1:numSess
                 %if any(TMap_unsmoothed{cellI,condI,sessI})
-                    shuffTMapReorg{cellI,condI,sessI}(shuffleI,:) = TMap_unsmoothed{cellI,condI,sessI};
+                    shuffTMapReorg{cellI,sessI,condI}(shuffleI,:) = TMap_unsmoothed{cellI,sessI,condI};
                 %end
             end
         end
@@ -60,9 +60,9 @@ shuffledRatesSorted = cell(size(shuffTMapReorg));
 for cellI = 1:numCells %Takes a few minues with 1000 shuffles
     for condI = 1:numConds
         for dayI = 1:numSess
-            shuffledRatesSorted{cellI,condI,dayI} = sort(shuffTMapReorg{cellI,condI,dayI},1);
-            %shuffledRatesMean{cellI,condI,dayI} = nanmean(shuffledRatesSorted{cellI,condI,dayI},1); %Uses nanmean
-            %shuffledRates95{cellI,condI,dayI} = shuffledRatesSorted{cellI,condI,dayI}(pInd,:);
+            shuffledRatesSorted{cellI,dayI,condI} = sort(shuffTMapReorg{cellI,dayI,condI},1);
+            %shuffledRatesMean{cellI,dayI,condI} = nanmean(shuffledRatesSorted{cellI,dayI,condI},1); %Uses nanmean
+            %shuffledRates95{cellI,dayI,condI} = shuffledRatesSorted{cellI,dayI,condI}(pInd,:);
         end
     end
 end
@@ -78,8 +78,8 @@ if exist(fullfile(mouseDir,'PFsLin.mat'),'file')~=2
         for condI = 1:numConds
             for dayI = 1:numSess
                 if any(trialReli(cellI,dayI,:) > 0)
-                binsAbove95{cellI,condI,dayI} = ...
-                    TMap_unsmoothed{cellI,condI,dayI} > shuffledRatesSorted{cellI,condI,dayI}(pInd,:);
+                binsAbove95{cellI,dayI,condI} = ...
+                    TMap_unsmoothed{cellI,dayI,condI} > shuffledRatesSorted{cellI,dayI,condI}(pInd,:);
                 end
             end
         end
@@ -90,7 +90,7 @@ if exist(fullfile(mouseDir,'PFsLin.mat'),'file')~=2
     placeAtAll = numAbove95 > 0;
     lessThanHalf = numAbove95 < round(numBins/2); %Fires on less than half the stem
                         %Bins are next to each other
-    placeToday = squeeze(sum(placeAtAll,2) > 0);
+    placeToday = squeeze(sum(placeAtAll,3) > 0);
 
     %Save placefield results
     save(fullfile(shuffDirFull,'PFresults.mat'),'binsAbove95','numAbove95','lessThanHalf','placeAtAll','placeToday','-v7.3')

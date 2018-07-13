@@ -39,9 +39,12 @@ xmin = xlims(1);
 xmax = xlims(2);
 
 if isempty(trialReli)
-    trialReli = ones(numCells,numSess,numConds);
+    trialReli = ones(numCells,numSess,length(trialbytrial));
 end
-if size(trialReli,3) < 3
+if isempty(condPairs)
+    condPairs = [1:length(trialbytrial)]';
+end
+if size(trialReli,3) < length(trialbytrial)
     trialReli(:,:,2:numConds) = trialReli;
 end
 saveThis = 1;
@@ -57,10 +60,10 @@ end
 OccMap = cell(numConds, numSess);
 RunOccMap = cell(numConds, numSess);
 xBin = cell(numConds, numSess);
-TMap_unsmoothed = cell(numCells, numConds, numSess);
-TCounts = cell(numCells, numConds, numSess);
-TMap_gauss = cell(numCells, numConds, numSess);
-TMap_zRates = cell(numCells, numConds, numSess);
+TMap_unsmoothed = cell(numCells, numSess, numConds);
+TCounts = cell(numCells, numSess, numConds);
+TMap_gauss = cell(numCells, numSess, numConds);
+TMap_zRates = cell(numCells, numSess, numConds);
 
 Xrange = xmax-xmin;
 nXBins = ceil(Xrange/cmperbin); 
@@ -115,22 +118,29 @@ for condPairI = 1:size(condPairs,1) %condType = 1:4
             %speed = dx*SR;
             %velocity = convtrim(speed,ones(1,2*20))./(2*20);
             %}
-            good = true(1,length(posX{cpcI}));
-            isrunning = good;                         %Running frames that were not excluded.
+            good{cpcI} = true(1,length(posX{cpcI}));
+            isrunning{cpcI} = good{cpcI};                         %Running frames that were not excluded.
             %isrunning(velocity < minspeed) = false;
 
          end %cond pair column I
             
             allX = [posX{:}];
             allY = [posY{:}];
+            allGood = [good{:}];
+            allIsrunning = [isrunning{:}];
          
             %Make an occupancy map
             [OccMap{condPairI,tSess},RunOccMap{condPairI,tSess},xBin{condPairI,tSess}]...
-                        = MakeOccMapLin(posX{cpcI},good,isrunning,xEdges);
+                        = MakeOccMapLin(allX,allGood,allIsrunning,xEdges);
                     
             for cellI = 1:numCells
+                
+                %if cellI == 37
+                %    keyboard
+                %end
+                
                 spikeTs = [];
-                if trialReli(cellI, tSess, condType{cpcI}) > 0
+                if sum(trialReli(cellI, tSess, [condType{:}])) > 0
                     %Get spike time indices
                     for cpcJ = 1:condsPerPair
                         spikeTs{cpcJ} = [trialbytrial(condType{cpcJ}).trialPSAbool{lapsUse{cpcJ},1}];
@@ -138,18 +148,22 @@ for condPairI = 1:size(condPairs,1) %condType = 1:4
                     end
                     allSpikeTs = logical([spikeTs{:}]);
                     
-                    [TMap_unsmoothed{cellI,condPairI,tSess},TCounts{cellI,condPairI,tSess}]...%TMap_gauss{cellI,condType,tSess}
+                    [TMap_unsmoothed{cellI,tSess,condPairI},TCounts{cellI,tSess,condPairI}]...%TMap_gauss{cellI,condType,tSess}
                         = MakePlacefieldLin(allSpikeTs,allX,xEdges,RunOccMap{condPairI,tSess},...
                         'cmperbin',cmperbin,'smooth',smooth); %false
+                    
+                    if any(TMap_unsmoothed{cellI,tSess,condPairI} > 1)
+                        keyboard
+                    end
                
                     %make tuning curves
                     %PlaceTuningCurveLin(trialbytrial, aboveThresh, nPerms, [xmin xmax], xEdges);
 
                     %Spatial information
                 else
-                    TMap_unsmoothed{cellI,condPairI,tSess} = TMap_blank; 
-                    TCounts{cellI,condPairI,tSess} = TMap_blank;
-                    %TMap_gauss{cellI,condType,tSess} = TMap_blank;
+                    TMap_unsmoothed{cellI,tSess,condPairI} = TMap_blank; 
+                    TCounts{cellI,tSess,condPairI} = TMap_blank;
+                    %TMap_gauss{cellI,tSess,condType} = TMap_blank;
 
                 end %any activity
                 
@@ -168,9 +182,9 @@ p.stop;
 %Get z-scores of firing rates across conditions
 for cellI = 1:numCells
     for tSess = 1:numSess
-        allRates = reshape([TMap_unsmoothed{cellI,:,tSess}]',nXBins,numConds)';
+        allRates = reshape([TMap_unsmoothed{cellI,tSess,:}]',nXBins,numConds)';
         zRates = zscore(allRates);
-        TMap_zRates(cellI,1:numConds,tSess) = num2cell(zRates,2)';       
+        TMap_zRates(cellI,tSess,1:numConds) = num2cell(zRates,2)';       
     end
 end
 

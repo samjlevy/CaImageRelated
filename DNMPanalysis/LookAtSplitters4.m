@@ -3,7 +3,7 @@ function [rateDiff, rateSplit, meanRateDiff, DIeach, DImean, DIall] = LookAtSpli
 %and normalized across the number of bins where there was activity in at
 %least one of the conditions
 %condpairs is like in PFsLin2, but here describes comparisons being made.
-%So LvR is [1 2; 3 4]; SvT is [1 3; 2 4];
+%So LvR is [1 2; 3 4]; SvT is [1 3; 2 4]; (for unpooled); pool is just [1 2]
 %Differences measured as (second column - first column)
 
 %rateDiff      - rate differences of individual bins
@@ -14,14 +14,14 @@ function [rateDiff, rateSplit, meanRateDiff, DIeach, DImean, DIall] = LookAtSpli
 %DImean        - nanmean of DIeach
 %DIall?        - DI on all firing?
 
-if isempty(condPairs); condPairs = combnk(1:size(TMap_unsmoothed,2),2); end
+if isempty(condPairs); condPairs = combnk(1:size(TMap_unsmoothed,3),2); end
 
 if rem(size(condPairs,2),2)~=0
     disp('error: size of cond pairs is not even')
     keyboard
 end
 
-numSess = size(TMap_unsmoothed,3);
+numSess = size(TMap_unsmoothed,2);
 numConds = size(condPairs,1);
 numCells = size(TMap_unsmoothed,1);
 %numBins = length(TMap_unsmoothed{1,1,1});
@@ -49,8 +49,8 @@ for cpI = 1:numConds
                 condsB = condPairs(cpI, (size(condPairs,2)/2+1):size(condPairs,2) );
                 
                 %Get the rates
-                ratesA = [TMap_unsmoothed{cellI,condsA,sessI}];
-                ratesB = [TMap_unsmoothed{cellI,condsB,sessI}];
+                ratesA = [TMap_unsmoothed{cellI,sessI,condsA}];
+                ratesB = [TMap_unsmoothed{cellI,sessI,condsB}];
                 
                 %Make some discrimination indices
                 rateDiff{cellI,sessI,cpI} = ratesB - ratesA;

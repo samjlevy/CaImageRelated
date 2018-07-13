@@ -1,15 +1,10 @@
-function [binsAboveShuffle, thisCellSplits] = SplitterWrapper2(trialbytrial, typeShuff...
+function [rateDiff, binsAboveShuffle, thisCellSplits] = SplitterWrapper3(trialbytrial, typeShuff,...
     pooledunpooled, numShuffles, shuffDirFull, xlims, cmperbin, minspeed, trialReli, shuffThresh, binsMin)
 %typeShuff = 'leftright' or 'studytest'  
 %pooledunpooled = 'pooled' or 'unpooled' - e.g. puts study l and r together
 %against test l and r
 %this pools across dim 3 assuming there are multiple combinations to test
 %splitting across (e.g., left right could test 1v2 and 3v4)
-
- make baseTMap_unsmoothed
- 
-numCells = size(baseTMap_unsmoothed,1);
-numSess = size(baseTMap_unsmoothed,2);
 
 if strcmp(typeShuff,'leftright'); na = 'LR'; elseif strcmp(typeShuff,'studytest'); na = 'ST'; end
 
@@ -26,6 +21,12 @@ switch pooledunpooled
         shuffPFcondpairs = [1;2;3;4];
 end
 
+[baseTMap_unsmoothed, ~, ~, ~, ~, ~] =...
+    PFsLinTrialbyTrial2(trialbytrial, xlims, cmperbin, minspeed,...
+    [],'trialReli',trialReli,'smooth',false,'condPairs',shuffPFcondpairs);
+
+numCells = size(baseTMap_unsmoothed,1);
+numSess = size(baseTMap_unsmoothed,2);
 
 %Shuffle things and make new rate maps
 if exist(shuffDirFull,'dir')==0
