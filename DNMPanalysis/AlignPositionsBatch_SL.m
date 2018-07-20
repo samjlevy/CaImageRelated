@@ -8,7 +8,8 @@ SR=20;
 v0Scale = 1.5;
 DNMPscale = (25 + 3/16) / (11 + 3/8); %inches
 
-if exist(fullfile(base_path,'Pos_anchor.mat','file'))~=2
+%Check that the base session has an anchor pos
+if exist(fullfile(base_path,'Pos_anchor.mat'),'file')~=2
     load(fullfile(base_path,'Pos.mat'),'v0')
     [floorCorners,barrierX,barrierY,flipX,flipY] = MakePosAnchor(base_path,v0Scale);
     
@@ -17,6 +18,7 @@ else
     load(fullfile(base_path,'Pos_anchor.mat'))
 end
 
+%Check that the base session also has pos anchor ideal for fitting
 if exist(fullfile(base_path,'Pos_anchor_ideal.mat'),'file')~=2
     disp('Did not find pos_anchor_ideal, making now')
     [newCorners] = ArrangeBaseAnchors(v0,floorCorners, RoomStr, flipX, flipY, barrierX, barrierY, DNMPscale);
@@ -35,15 +37,16 @@ if exist(fullfile(base_path,'Pos_anchor_ideal.mat'),'file')~=2
     
     save(fullfile(base_path,'Pos_anchor_ideal.mat'),'xAnchor','yAnchor')
 else
-    load(fullfile(base_path),'Pos_anchor_ideal.mat')
+    load(fullfile(base_path,'Pos_anchor_ideal.mat'))
 end
 
-tform = fitgeotrans(floorCorners,[xAnchor yAnchor],'affine');
-[xADJ, yADJ] = transformPointsForward(tform,xAVI,yAVI);
+%tform = fitgeotrans(floorCorners,[xAnchor yAnchor],'affine');
+%[xADJ, yADJ] = transformPointsForward(tform,xAVI,yAVI);
+
 allPaths = {base_path, align_paths{:}};
 
+%Align each of them
 for thisPath = 1:length(allPaths)
-   
     if ~exist(fullfile(allPaths{thisPath},'Pos_final.mat'),'file')
     sessPath = allPaths{thisPath};
     [cx, cy]=GetCorners(sessPath);

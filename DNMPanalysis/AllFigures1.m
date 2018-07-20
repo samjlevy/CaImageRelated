@@ -147,7 +147,7 @@ for cellI = 1:length(cellsUse)
     end
 end
 
-%% Dot plot fig
+%% Splitting Dot plot fig
 
 %Ideally would load pos align
 mouseI = 1; dayI = 1;
@@ -703,7 +703,7 @@ for mouseI = 1:numMice
                   COMsplitterNotPlace{mouseI}(~isnan(COMsplitterNotPlace{mouseI})),...
                   COMnotSplitterNotPlace{mouseI}(~isnan(COMnotSplitterNotPlace{mouseI}))};
     grps = cell2mat(cellfun(@length,dataThings,'UniformOutput',false));
-              
+end
               
               
 %% Reactivation prob old, indiv. mice
@@ -1115,13 +1115,14 @@ for mouseI = 1:numMice
     suptitleSL(['Mouse ' num2str(mouseI) ', Cells active either cond.'])
 end
 
+
+%% Pop vector corrs by days apart
 %condSet{1} = find(diff(condPairs{mouseI},1,2)==0); %vs. self
 %condSet{1} = find(abs(diff(condPairs{mouseI},1,2))==1);
 condSet{1} = 1:4;          % vs Self
 condSet{2} = [5 10 11 16]; % L v R
 condSet{3} = [6 9 12 15];  % S v T
 plotColors = {'b', 'r', 'g'};
-
 %dayDiffsUse = daysApart;
 dayDiffsUse = actualDaysApart;
 for mouseI = 1:numMice
@@ -1152,6 +1153,49 @@ for mouseI = 1:numMice
     ylabel('Mean Corr')
 end
             
+%% Pooled pop vector corrs by days apart
+condSet{1} = 1:4;   % VS. Self
+condSet{2} = [5 6]; % L v R
+condSet{3} = [7 8]; % L v R
+plotColors = {'b', 'r', 'g'};
+allPooledMeans = [];
+allPooledDayDiffs = [];
+for mouseI = 1:numMice
+    dayDiffsUse{mouseI} = pooledDayDiffs{mouseI};
+    %dayDiffsUse{mouseI} = pooledRealDayDiffs{mouseI};
+    dayDiffsHere = unique(dayDiffsUse{mouseI});
+    dayDiffsHere = dayDiffsHere(dayDiffsHere > 0); %Eliminate compare to self
+    
+    clear h; figure; hold on
+    meanLine = [];
+    SEMline = [];
+    for csI = 1:length(condSet)
+        for ddI = 1:length(dayDiffsHere)
+            dataHere = []; meanCorrs = [];
+            dayPairsUse = find(dayDiffsUse{mouseI}==dayDiffsHere(ddI));
+            condPairsUse = condSet{csI};
+            dataHere = pooledCorrs{mouseI}(dayPairsUse,condPairsUse,:);
+            meanCorrs = mean(dataHere,3); meanCorrs = meanCorrs(:); meanCorrs(isnan(meanCorrs))=[];
+            meanLine(csI,ddI) = mean(meanCorrs); SEMline(csI,ddI) = standarderrorSL(meanCorrs);
+            ddExpanded = ones(length(meanCorrs(:)),1)*dayDiffsHere(ddI);
+            hi = plot(ddExpanded,meanCorrs(:),'.','MarkerSize',10,'Color',plotColors{csI});
+            h(csI) = hi(1);
+            
+            allPooledMeans = [allPooledMeans; meanCorrs];
+            allPooledDayDiffs = [allPooledDayDiffs; ddExpanded];
+        end
+    end
+    for csJ = 1:length(condSet)
+        errorbar(dayDiffsHere,meanLine(csJ,:),SEMline(csJ,:),'-o','Color',plotColors{csJ},'LineWidth',1.5)
+    end
+    ylim([-1 1])
+    title(['Mouse ' num2str(mouseI) ', Mean Correlation by Days Apart (Pooled)'])
+    legend(h,'Within Condition','Left vs. Right','Study vs. Test','Location','northeast')
+    xlabel('Days Apart')
+    ylabel('Mean Corr')    
+end
+%% L after R corrs
+
 xaxCorrs{mouseI}
 xaxConds = GetTBTconds(xaxTBT{mouseI});
  figure; jetTrips = colormap(jet); close

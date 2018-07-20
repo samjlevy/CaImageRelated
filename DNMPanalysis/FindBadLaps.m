@@ -75,7 +75,7 @@ for thisE = 1:length(epochs)
             plot(x_adj_cm(badLap(plotHere)), y_adj_cm(badLap(plotHere)), '.r', 'MarkerSize', 10)
             plot(x_adj_cm(badLap(plotHere)), y_adj_cm(badLap(plotHere)), 'or', 'MarkerSize', 10)
 
-            ss = input('Next point or previous? (a/d, j jump, m for done) > ','s');
+            ss = input('Next point or previous? (a/d, j jump, m for done, r for frames) > ','s');
             switch ss
                 case 'a'
                     if plotHere > 1; plotHere = plotHere - 1; end
@@ -94,6 +94,8 @@ for thisE = 1:length(epochs)
                     [nbx, nby] = ginput(1);
                     [ bidx ] = findclosest2D (x_adj_cm(badLap), y_adj_cm(badLap), nbx, nby);
                     plotHere = bidx;
+                case 'r'
+                    disp(['This lap is from ' num2str(epochs(thisE).starts(badLapNum)) ' to ' num2str(epochs(thisE).stops(badLapNum))])
             end
         end
         

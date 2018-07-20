@@ -75,11 +75,12 @@ for ff = 1:height(useDataTable)
     [lapbylap.frames{ff,1}, lapbylap.txt{ff,1}] = xlsread(fullfile(allfiles{ff},xls_file), 1);
     
     if getFluoresence == 1
-        load(fullfile(finalDataRoot,useDataTable.FolderName(ff),'Pos_brain.mat'))
-        load(fullfile(finalDataRoot,useDataTable.FolderName(ff),'FinalOutput.mat'),'
-        load(fullfile(finalDataRoot,useDataTable.FolderName(ff),'FToffsetSam.mat'
+        %Get the aligned frame numbers to use
+        load(fullfile(finalDataRoot,useDataTable.FolderName(ff),'Pos_brain.mat'),'PSAboolUseIndices')
+        %Load the fluoresence activity
+        load(fullfile(finalDataRoot,useDataTable.FolderName(ff),'FinalOutput.mat'),'NeuronTraces')
         
-        
+        all_Fluoresence{ff,1} = NeuronTraces. (:,PSAboolUseIndices);       
     end
 end
 

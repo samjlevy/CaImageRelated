@@ -11,8 +11,8 @@ if isempty('corrType')
     disp('Using Spearman corr')
 end
 numCells = size(TMap, 1);
-numDays = size(TMap, 3);
-numConds = size(TMap, 2);
+numDays = size(TMap, 2);
+numConds = size(TMap, 3);
 
 if isempty('dayPairs') || sum(any(dayPairs))==0
     dayTemp = combnk(1:numDays,2);
@@ -64,8 +64,8 @@ for dpI = 1:numDayPairs
         
         %Get all the firing rates of these cells, this cond and day combination
         if sum(cellsUse) > 1
-        TRatesA = cell2mat(TMap(cellsUse,condPairs(cpI,1),dayPairs(dpI,1)));
-        TRatesB = cell2mat(TMap(cellsUse,condPairs(cpI,2),dayPairs(dpI,2)));
+        TRatesA = cell2mat(TMap(cellsUse,dayPairs(dpI,1),condPairs(cpI,1)));
+        TRatesB = cell2mat(TMap(cellsUse,dayPairs(dpI,2),condPairs(cpI,2)));
         for binI = 1:numBins
             Corrs(dpI,cpI,binI) = corr(TRatesA(:,binI),TRatesB(:,binI),'type',corrType);%Corrs{cpI}(dpI, binI)
             if any(isnan(Corrs(dpI,cpI,binI)))%any(isnan(Corrs{cpI}(dpI, binI)))

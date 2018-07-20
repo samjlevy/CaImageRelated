@@ -900,6 +900,59 @@ for mouseI = 1:numMice
         PopVectorCorrs1(cellTMap_unsmoothed{mouseI},traitLogical, 'activeEither', 'Spearman', [], []);
 end
 
+%Pooled pop vector corrs
+pooledCondPairs = [1 1; 2 2; 3 3; 4 4; 1 2; 2 1; 3 4; 4 3];
+dayPairs = [];
+for mouseI = 1:numMice
+    pooledTraitLogical = [];
+    pooledTraitLogical(:,:,1) = sum(threshAndConsec{mouseI}(:,:,[1 3]),3) > 0;
+    pooledTraitLogical(:,:,2) = sum(threshAndConsec{mouseI}(:,:,[2 4]),3) > 0;
+    pooledTraitLogical(:,:,3) = sum(threshAndConsec{mouseI}(:,:,[1 2]),3) > 0;
+    pooledTraitLogical(:,:,4) = sum(threshAndConsec{mouseI}(:,:,[3 4]),3) > 0;
+    [pooledCorrs{mouseI}, pooldNumCellsUsed{mouseI}, pooledDayPairs{mouseI}, pooledCondPairsOut{mouseI}] = ...
+        PopVectorCorrs1(cellPooledTMap_unsmoothed{mouseI},pooledTraitLogical, 'activeEither', 'Spearman', pooledCondPairs, []);
+    pooledDayDiffs{mouseI} = abs(diff(pooledDayPairs{mouseI},1,2));
+    pooledRealDayPairs{mouseI} = cellRealDays{mouseI}(pooledDayPairs{mouseI});
+    pooledRealDayDiffs{mouseI} = abs(diff(pooledRealDayPairs{mouseI},1,2));
+end
+
+condSet{1} = 1:4;   % VS. Self
+condSet{2} = [5 6]; % L v R
+condSet{3} = [7 8]; % L v R
+allPooledMeans = [];
+allPooledDayDiffs = [];
+for mouseI = 1:numMice
+    dayDiffsUse{mouseI} = pooledDayDiffs{mouseI};
+    %dayDiffsUse{mouseI} = pooledRealDayDiffs{mouseI};
+    dayDiffsHere = unique(dayDiffsUse{mouseI});
+    dayDiffsHere = dayDiffsHere(dayDiffsHere > 0); %Eliminate compare to self
+    
+    clear h; figure; hold on
+    meanLine = [];
+    SEMline = [];
+    for csI = 1:length(condSet)
+        for ddI = 1:length(dayDiffsHere)
+            dataHere = []; meanCorrs = [];
+            dayPairsUse = find(dayDiffsUse{mouseI}==dayDiffsHere(ddI));
+            condPairsUse = condSet{csI};
+            dataHere = pooledCorrs{mouseI}(dayPairsUse,condPairsUse,:);
+            meanCorrs = mean(dataHere,3); meanCorrs = meanCorrs(:); meanCorrs(isnan(meanCorrs))=[];
+            meanLine(csI,ddI) = mean(meanCorrs); SEMline(csI,ddI) = standarderrorSL(meanCorrs);
+            ddExpanded = ones(length(meanCorrs(:)),1)*dayDiffsHere(ddI);
+            
+            allPooledMeans = [allPooledMeans; meanCorrs];
+            allPooledDayDiffs = [allPooledDayDiffs; ddExpanded];
+        end
+    end
+end
+
+
+
+[Corrs, sigMat] = PopVectorCorrsWrapper1(TMap_unsmoothed, shuffleFolder,...
+    traitLogical, cellsUse, corrType, condPairs, dayPairs, pThresh, sigTails)
+    
+
+
 
 
 

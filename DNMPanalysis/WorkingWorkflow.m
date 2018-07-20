@@ -12,7 +12,7 @@ AlignImagingToTracking2_SL
     %time scale.
 AlignPositions2_SL
     %Load results from AlignImagingToTracking2_SL
-    %Uses user-defined maze corners to align all sessions to an 'idea'
+    %Uses user-defined maze corners to align all sessions to an 'ideal'
     %base, which is horizontally straightened, start-choice positive,
     %scaled to actual cm. Can handle multiple sessions
     %Right now this is hard-coded for DNMP, cheats a little bit
@@ -53,6 +53,8 @@ MakeTrialByTrial
     %that x, y and spiking activity for every cell (realigned across
     %sessions according to registration) can be easily called
     %together.
+    MakeDayByDay
+    
 AllAnalyses1
     %loads trial by trial for each folder indicated, runs all the same
     %analyses on them. Way overdone relative to what's needed in a paper
@@ -123,4 +125,24 @@ FindPlaceFiles
     %return a list of place and stats files that fit that profile.
     %Alternative is to generate list of files needed when running
     %DNMPplaceFields
+    
+    
+    
+i = 0;
+i = i+1;
+cd(align_paths{i})
+
+reportedBad = DNMPtimestampsValidator( 'Pos.mat', ls('*_DNMPsheet.xlsx'), 1 )
+
+ParsedFramesToBrainFrames(ls('*_DNMPsheet.xlsx'))
+
+reportedBad = DNMPtimestampsValidator( 'Pos_align.mat', ls('*_DNMPsheet_BrainTime.xlsx'), 1 )
+
+AdjustBehaviorTimes('Pos_align.mat', ls('*_DNMPsheet_BrainTime.xlsx'))
+
+FindBadLapsWrapper('Pos_align.mat',ls('*_DNMPsheet_BrainTime_Adjusted.xlsx'),'stem_only',1)
+ 
+DNMPexcelCombiner(cd)
+    
+ExcelFinalizer(cd)
     

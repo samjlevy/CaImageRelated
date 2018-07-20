@@ -49,12 +49,33 @@ end
 
 for pathI = 1:length(align_paths)
     if exist(fullfile(align_paths{pathI},'Pos_align.mat'),'file')~=2
+        if exist(fullfile(align_paths{pathI},'Pos_brain.mat'),'file')~=2
+            sss = input('error: could not find Pos_brain.mat; run AlignImagingToTracking2_SL now? (y)','s')
+            switch sss
+                case {'y','Y'}
+                    disp('doing it')
+                    AlignImagingToTracking2_SL('folderUse',align_paths{pathI});
+                otherwise
+                    return
+            end
+        end
+        
         disp(['Working on alignment for ' align_paths{pathI}])
         if exist(fullfile(align_paths{pathI},'Pos_anchor.mat'),'file')~=2
+            isGood = 0;
+            while isGood == 0
             [floorCorners,barrierX,barrierY,flipX,flipY,v0Dims] = MakePosAnchor(align_paths{pathI},v0Scale);
             %floorCorners = double(floorCorners)
             save(fullfile(align_paths{pathI},'Pos_anchor.mat'),'floorCorners','barrierX',...
                 'barrierY','flipX','flipY','v0Dims')
+            aaa = input('Was this good? Or Redo? (g/r)','s')
+                switch aaa
+                    case {'g','G'}
+                        isGood = 1;
+                    case {'r','R'}
+                        isGood = 0;
+                end
+            end
         else
             load(fullfile(align_paths{pathI},'Pos_anchor.mat'))
         end

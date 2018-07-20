@@ -80,6 +80,9 @@ FToffset = ceil(time(1)*fps_brainimage);%seconds * (frames / second) = frames
     FTlength = oldLength - (imaging_start_frame-1);  
     FToffset = FToffset-1 + imaging_start_frame;
 %end
+if FToffset == 0
+    FToffset = 1;
+end
 
 brainTime = (1:FTlength)*(1/fps_brainimage);
 

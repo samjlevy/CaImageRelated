@@ -29,9 +29,9 @@ for cpI = 1:numCondPairs
 end
 
 switch sigTails 
-    case 'two'
+    case {'two','twoTails'}
         sigMat = exceedsP;
-    case 'one'
+    case {'one','oneTail'}
         sigMat = belowP;
     case 'useAll'
         sigMat = cell(size(exceedsP));

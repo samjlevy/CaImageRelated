@@ -4,6 +4,17 @@ function AlignImagingToTracking2_SL(varargin)
 % usable frame. This is all based on time from the DVT and assumed-equal
 % timing in the imaging file
 
+if ~isempty(varargin)
+for aa = 1:length(varargin)/2
+    switch varargin{2*aa-1}
+        case 'folderUse'
+            folderUse = varargin{2*aa};
+            cd(folderUse)
+    end
+end
+end
+
+
 load Pos.mat DVTtime xAVI yAVI%xAVI_filt yAVI_filt
 if ~exist('DVTtime','var')
     [DVTfile, DVTpath] = uigetfile('*.DVT', 'Select DVT file');
