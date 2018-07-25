@@ -17,20 +17,46 @@ for label=1:size(frames,2)
         || any(strfind(txt{1,label},'Trial Type')); %#ok<AGROW>
 end    
 
-try
-    load(pos_file); xAVI = x; yAVI = y;
-catch
+%try
+%    load(pos_file);
+%catch
     %['xAVI','yAVI'] = Reloader(pos_file,'Select x/y positions') 
     load(pos_file);
-    inThisFile = whos('-file',pos_file);
-    for ff=1:length(inThisFile); bitNames{ff} = inThisFile(ff).name; end;
-    [s,~] = listdlg('PromptString','Select x/y positions:',...
-                'ListString',bitNames);
-    [whichX, ~] = listdlg('PromptString','Which is the X vector?',...
-                'ListString',{bitNames{s(1)}; bitNames{s(2)}}); 
-    eval([ 'xAVI = ' bitNames{s(whichX)} ';' ]);
-    eval([ 'yAVI = ' bitNames{s(s~=s(whichX))} ';' ]);
-end
+    chooseXY = 0;
+    try
+    switch pos_file
+        case 'Pos.mat'
+            %xAVI; %yAVI
+            if exist('xAVI','var') && exist('yAVI','var')
+                disp('Found and using xAVI and yAVI')
+                chooseXY = 0;
+            end
+        case 'Pos_align.mat'
+            xAVI = x_adj_cm;
+            yAVI = y_adj_cm;
+            if any(xAVI) && any(yAVI)
+                disp('Found and using x adj cm and y adj cm')
+                chooseXY = 0;
+            end
+        otherwise
+            chooseXY = 1;
+    end
+    catch
+        chooseXY = 1;
+    end
+    
+    if chooseXY == 1
+        inThisFile = whos('-file',pos_file);
+        for ff=1:length(inThisFile); bitNames{ff} = inThisFile(ff).name; end;
+        [s,~] = listdlg('PromptString','Select x/y positions:',...
+                    'ListString',bitNames);
+        [whichX, ~] = listdlg('PromptString','Which is the X vector?',...
+                    'ListString',{bitNames{s(1)}; bitNames{s(2)}}); 
+        eval([ 'xAVI = ' bitNames{s(whichX)} ';' ]);
+        eval([ 'yAVI = ' bitNames{s(s~=s(whichX))} ';' ]);
+    end
+    
+%end
 
 if ~exist('FToffset','var')
     FToffset = 0;

@@ -47,6 +47,12 @@ matchCells
     %projective geotransform/imwarp. Outputs fullReg.mat in base_session
     %folder with all the important reg info. Doesn't yet show how well
     %registration worked
+    %fullReg.sesssionInds is the alignment of cell numbers to other
+    %sessions. So (4,1) tells what number cell in FinalOutput in session 1 aligns
+    %to (4,5) what number cell in FinalOutput in session 5, both for the
+    %4th cell registered. Sessions are NOT chronological order be default,
+    %but in order registration was performed (fullReg.BaseSession followed
+    %by fullReg.RegSessions
 MakeTrialByTrial
     %uses registration in indicators about which sessions to include to
     %build a structure that divides data into levels in the structure so
@@ -127,7 +133,8 @@ FindPlaceFiles
     %DNMPplaceFields
     
     
-    
+AlignPositions2_SL(anchor_path, cd, RoomStr)
+
 i = 0;
 i = i+1;
 cd(align_paths{i})

@@ -1,7 +1,7 @@
 function AddRegBuffer(baseImage, reg_path, bufferWidth)
 %This program adds buffer space so registration runs safely
 
-load(fullfile(reg_path,'RegisteredImageSL.mat'),'pairedInds')
+load(fullfile(reg_path,'RegisteredImageSL2.mat'),'pairedInds')
 load(fullfile(reg_path,'FinalOutput.mat'),'NeuronImage','NeuronAvg')
 
 bufferedRegImage = AddCellMaskBuffer(NeuronImage, bufferWidth);
@@ -30,7 +30,7 @@ save(fullfile(reg_path,'RegisteredImageSLbuffered2.mat'),'pairedInds',...
                                                         'reg_shift_centers',...
                                                         'regImage_shifted',...
                                                         'bufferWidth',...
-                                                        'regAvg_shifted')
+                                                        'regAvg_shifted','-v7.3')
 
                                                     
 end

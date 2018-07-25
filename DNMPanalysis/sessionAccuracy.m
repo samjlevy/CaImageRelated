@@ -1,9 +1,17 @@
-function [accuracy] = sessionAccuracy(allfiles)
+function [accuracy] = sessionAccuracy(allfiles,sheetLabel)
+
+if isempty(sheetLabel)
+   sheetLabel = '*Finalized.xlsx';
+end
+
+if size(allfiles,1)==1
+    allfiles = {allfiles};
+end
 
 accuracy = zeros(length(allfiles),1);
 for fileN = 1:length(allfiles)
     thisDir = allfiles{fileN};
-    fileList = ls(fullfile(thisDir,'*Finalized.xlsx'));
+    fileList = ls(fullfile(thisDir,sheetLabel));
     if size(fileList,1)
         [frames, txt] = xlsread(fullfile(thisDir,fileList), 1);
     elseif size(fileList,1) > 1

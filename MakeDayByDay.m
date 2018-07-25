@@ -1,91 +1,128 @@
-function MakeDayByDay(fileTablePath,fullRegPath)
+function [daybyday, sortedSessionInds, useDataTable] = MakeDayByDay(basePath,accuracyThresh, getFluoresence, deleteSilentCells)
 
-%finalDataRoot = 'G:\SLIDE\Processed Data'; %MyPassport white drive
-finalDataRoot = 'G:\SLIDE\Processed Data\Callisto';
+fdPts = strsplit(basePath,'\');
+finalDataRoot = fullfile(fdPts{1:end-1});
 
-DNMPdataTable = table(realdays{:,1},realdays{:,2},cell(21,1),'VariableNames',{'FolderName','RealDay','SessType'})
-%'VariableNames',{'FolderName','RealDay','SessType'}
-
-%Get some full reg stuff
-load(fullfile(fullRegPath,'fullReg.mat'))
-
-if size(fullReg.RegSessions,2) > size(fullReg.RegSessions,1)
-    fullReg.RegSession = fullReg.RegSessions';
-end
-
-fullRegFiles = [fullReg.BaseSession; fullReg.RegSessions(:)];
+load(fullfile(basePath,'DNMPdataTable.mat'))
+load(fullfile(basePath,'fullReg.mat'))
 
 
-%Put things in the right order
-[~,sortOrder] = sort(cell2mat(DNMPdataTable.RealDay),'ascend');
-if sum(diff(sortOrder,[],1) < 1)==0
-    disp('Files are in order in real days')
-else
-    disp('Resorting data table by real days order')
-    DNMPdataTable = DNMPdataTable(sortOrder);
-end
-
-%Fill in Accuracy
-missingAcc = find(isnan(DNMPdataTable.Accuracy) | isempty(DNMPdataTable.Accuracy));
-if any(missingAcc)
-    %Some accuracy is missing, filling it in
-    for maI = 1:length(missingAcc)
-        switch DNMPdataTable.SessType{missingAcc(maI)}
-            case 'ForcedUnforced'
-                %DNMPdataTable.Accuracy(missingAcc(maI)) = sessionAccuractForcedUnforced( );
-                DNMPdataTable.Accuracy(missingAcc(maI)) = 1;
-            case 'DNMP'
-                DNMPdataTable.Accuracy(missingAcc(maI)) =...
-                    sessionAccuracy(fullfile(finalDataRoot,DNMPdataTable.FolderName(missingAcc(maI))));
+%Choose which files being included: these should have user input options
+whichFilesUse = cell2mat(cellfun(@(x) strcmpi(x,'DNMP'),[DNMPdataTable.SessType],'UniformOutput',false))...
+                & DNMPdataTable.Accuracy >= accuracyThresh...
+                & DNMPdataTable.HasPos == 1 ...
+                & DNMPdataTable.HasFinalBeh;
                 
-        end
+
+figHa = figure;
+ut = uitable(figHa);
+DNMPdataTable.KeepSession = whichFilesUse;
+tt = table2cell(DNMPdataTable);
+
+ut.Data = tt;
+ut.ColumnName = DNMPdataTable.Properties.VariableNames;
+ut.Parent.Position = [300 300 700 450];
+ut.Position = [20 20 640 400];
+ut.ColumnEditable = logical([0 0 0 0 0 0 1]);
+ut.ColumnWidth = {110 50 90 70 70 100 100};
+
+donePick = 0;
+while donePick == 0
+    de = input('Done picking editable columns? (y/n) > ','s');
+    if strcmpi(de,'y')
+        donePick = 1;
     end
 end
+try
+close(figHa);
+end
 
-%Choose which files being included
-
-whichFilesUse = cell2mat(cellfun(@(x) strcmpi(x,'DNMP'),[DNMPdataTable.SessType],'UniformOutput',false))...
-    .* DNMPdataTable.Accuracy>=0.7;
-%Check that these files are all in fullReg.sessionInds
-
-useDataTable = table([DNMPdataTable.FolderName(whichFilesUse)],...
-                     DNMPdataTable.RealDay(whichFilesUse),...
-                     [DNMPdataTable.SessType(whichFilesUse)],...
-                     DNMPdataTable.Accuracy(whichFilesUse),...
-                     'VariableNames',{'FolderName','RealDay','SessType','Accuracy'});
+useDataTable = DNMPdataTable(whichFilesUse,1:6);
 
 %Get the sort order for fullReg.sessionInds that corresponds to DNMPdataTable
+fullRegFiles = [fullReg.BaseSession; fullReg.RegSessions(:)];
 fullRegFilesPts = cellfun(@(x) strsplit(x,'\'),fullRegFiles,'UniformOutput',false);
 fullRegFilesEnds = cellfun(@(x) x{end},fullRegFilesPts,'UniformOutput',false);
 
+useDataDelete = false(height(useDataTable),1);
 for ssI = 1:height(useDataTable)
-    useDataTable.fullRegInd(ssI) = find(strcmpi(fullRegFilesEnds,useDataTable.FolderName(ssI)));
+    ssIind = find(strcmpi(fullRegFilesEnds,useDataTable.FolderName(ssI)));
+    if isempty(ssIind)
+        useDataDelete(ssI) = true;
+        disp(['File ' useDataTable.FolderName(ssI) ' is not registered, deleting'])
+    else
+        useDataTable.fullRegInd(ssI) = ssIind;
+    end
 end
+useDataTable(useDataDelete,:) = [];
 
 %Load all the data
 for ff = 1:height(useDataTable)
-    load(fullfile(finalDataRoot,useDataTable.FolderName(ff),'Pos_align.mat'))
+    thisDir = fullfile(finalDataRoot,useDataTable.FolderName{ff});
+    disp(['Working on file ' thisDir])
+    %Make cell registration alignment matrix
+    sortedSessionInds(:,ff) = fullReg.sessionInds(:,useDataTable.fullRegInd(ff));
+
+    %Load Imaging data
+    load(fullfile(thisDir,'Pos_align.mat'))
     
-    lapbylap.all_x_adj_cm{ff,1} = x_adj_cm;
-    lapbylap.all_y_adj_cm{ff,1} = y_adj_cm;
-    all_PSAbool{ff,1} = PSAbool;
+    daybyday.all_x_adj_cm{ff,1} = x_adj_cm;
+    daybyday.all_y_adj_cm{ff,1} = y_adj_cm;
     
+    %Get behavior indices
     xlsfile = ls(fullfile(thisDir,'*Finalized.xlsx'));
     
-    [lapbylap.frames{ff,1}, lapbylap.txt{ff,1}] = xlsread(fullfile(allfiles{ff},xls_file), 1);
+    [daybyday.frames{ff,1}, daybyday.txt{ff,1}] = xlsread(fullfile(thisDir,xlsfile), 1);
     
+    %Load fluoresence, align to PSAbool(adjusted)
     if getFluoresence == 1
         %Get the aligned frame numbers to use
-        load(fullfile(finalDataRoot,useDataTable.FolderName(ff),'Pos_brain.mat'),'PSAboolUseIndices')
+        load(fullfile(thisDir,'Pos_brain.mat'),'PSAboolUseIndices')
         %Load the fluoresence activity
-        load(fullfile(finalDataRoot,useDataTable.FolderName(ff),'FinalOutput.mat'),'NeuronTraces')
+        load(fullfile(thisDir,'FinalOutput.mat'),'NeuronTraces')
         
-        all_Fluoresence{ff,1} = NeuronTraces. (:,PSAboolUseIndices);       
+        all_Fluoresence{ff,1} = NeuronTraces.RawTrace(:,PSAboolUseIndices);       
     end
+    
+    %Check for imaging exclude, delete bad frames
+    if exist(fullfile(thisDir,'excludeFromImaging.mat'),'file')==2
+        ssaa = input(['Found imaging exclude frames for ' useDataTable.FolderName{ff} ', include them? (y/n) '],'s')
+        if strcmpi(ssaa,'y')
+            %Assumes this refers to the original FinalOutput PSAbool
+            load(fullfile(thisDir,'excludeFromImaging.mat'))
+
+            load(fullfile(thisDir,'Pos_brain.mat'),'PSAboolUseIndices')
+
+            daybyday.imagingFramesDelete{ff} = logical(sum(PSAboolUseIndices == excludeFromImaging',1));
+
+            %PSAbool(:,imagingFramesDelete) = [];
+            %all_Fluoresence{ff,1}(:,imagingFramesDelete) = [];
+            %daybyday.all_x_adj_cm{ff,1}(imagingFramesDelete) = [];
+            %daybyday.all_y_adj_cm{ff,1}(imagingFramesDelete) = [];
+            
+            %Still need to do something for frames/txt
+        end
+    else
+        daybyday.imagingFramesDelete{ff} = [];
+    end
+    
+    all_PSAbool{ff,1} = logical(PSAbool);
+    
+    disp('Done')
 end
 
+if deleteSilentCells == 1
+    disp('Deleteing silent cells')
+    deleteTheseCells = find(sum(sortedSessionInds,2)==0);
+     
+    sortedSessionInds(deleteTheseCells, :) = [];
+    disp(['deleted ' num2str(length(deleteTheseCells)) ' cells'])
+end
 
+%Reshuffle PSAbool into the right registration order
+daybyday.PSAbool = PoolPSA2(all_PSAbool, sortedSessionInds);
 
+%save daybyday.mat daybyday sortedSessionInds useDataTable -v7.3
 
 end
     

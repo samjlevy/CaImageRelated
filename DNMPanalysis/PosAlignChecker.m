@@ -12,3 +12,20 @@ for apI = 1:length(allpaths)
     longY = [longY; y_adj_cm(:)];
     marker = [marker; apI*ones(length(x_adj_cm),1)];
 end
+
+figure;
+for apJ = 1:length(allpaths)
+    hold on
+    plot(cellX{apJ},cellY{apJ},'.')
+end
+
+ss = input('need indiv plots? (y/n) > ','s')
+if strcmpi(ss,'y')
+    for apK = 1:length(allpaths)
+        figure;
+        plot(cellX{apK},cellY{apK},'.')
+        aaa = strsplit(allpaths{apK},'\');
+        title(['File ' aaa{end} ])
+    end
+end
+    

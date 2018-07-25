@@ -101,8 +101,10 @@ for regsess = 1:numSessions
     
     regEntry = size(fullReg.RegSessions,1);
     
-    regtitlepts = strsplit(reg_path,'\'); rgtps = strsplit(regtitlepts{end},'_');
-    regtitle = [rgtps{1} ' ' rgtps{2}];
+    regtitlepts = strsplit(reg_path,'\'); 
+    rgtps = strsplit(regtitlepts{end},'_');
+    %regtitle = [rgtps{1} ' ' rgtps{2}];
+    regtitle = [regtitlepts{end}(1:3) ' ' regtitlepts{end}(4:end)]; %Nix version
     
     matchup = 0; already = 0;
     if ~isempty(fullReg.RegSessions)
