@@ -12,6 +12,9 @@ accuracyThresh = 0.7;
 getFluoresence = 1;
 deleteSilentCells = 1;
               
+taskSegment = 'stem_only';
+correctOnly = true;
+
 %First assess all the data that exists
 for mouseI = 1:numMice
     if exist(fullFile(MouseRefFolder{mouseI},'DNMPdataTable.mat'),'file')~=2
@@ -22,14 +25,29 @@ end
 
 %Now make a struct of all data from a day with the data we want
 for mouseI = 1:numMice
-    if exist(fullfile(MouseRefFolder{mouseI},'daybyday.mat'),'file')~=2
+    %if exist(fullfile(MouseRefFolder{mouseI},'daybyday.mat'),'file')~=2
         [daybyday, sortedSessionInds, useDataTable] = MakeDayByDay(MouseRefFolder{mouseI},...
             accuracyThresh, getFluoresence, deleteSilentCells);
-        save(fullfile(MouseRefFolder{mouseI},'daybyday.mat'),'daybyday','sortedSessionInds','useDataTable','-v7.3')
-    end   
+        save(fullfile(MouseRefFolder{mouseI},'daybyday.mat'),'daybyday','sortedSessionInds','useDataTable','excludeFrames','-v7.3')
+    %end   
 end
     
 %Now refine that struct into a trialbytrial
-for mouseI = 1:numMice
+for mouseI = 1:numMice 
+    makeTBT = 1;
+    if exist(fullfile(MouseRefFolder{mouseI},'trialbytrial.mat'),'file')==2
+        makeTBT = 0;
+        ssa = input('Found existing trialbytrial, replace? (y/n) > ','s')
+        if strcmpi(ssa,'y')
+            makeTBT = 1;
+        end
+    end
+        
+    if makeTBT==1
+        [trialbytrial, allfiles, sortedSessionInds, realdays] = MakeTrialByTrial2(MouseRefFolder{mouseI},taskSegment,correctOnly);
+        savedir = uigetdir(cd,'Choose directory to save trialbytrial');
+        %cd(savedir)
+        save('trialbytrial.mat','trialbytrial','allfiles','sortedSessionInds','realdays')
+    end
     
-    MakeTrialByTrial2(basePath,taskSegment,correctOnly)
+end

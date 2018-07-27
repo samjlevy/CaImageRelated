@@ -46,7 +46,7 @@ end
 correctBounds = StructCorrect(bounds, correct);
 
 trialbytrial = PoolTrialsAcrossSessions(correctBounds,position.all_x_adj_cm,...
-    position.all_y_adj_cm,all_PSAbool,sortedSessionInds,fixedLapNumber);
+    position.all_y_adj_cm,all_PSAbool,[],sortedSessionInds,fixedLapNumber);
 
 %Reorganization will get rid of cells that only appeared on days that
 %weren't included, can leave lots of blank entries. Delete those so that

@@ -122,6 +122,12 @@ end
 %Reshuffle PSAbool into the right registration order
 daybyday.PSAbool = PoolPSA2(all_PSAbool, sortedSessionInds);
 
+if getFluoresence == 1
+    daybyday.RawTrace = PoolPSA2(all_Fluoresence, sortedSessionInds);
+end
+    
+
+
 %save daybyday.mat daybyday sortedSessionInds useDataTable -v7.3
 
 end

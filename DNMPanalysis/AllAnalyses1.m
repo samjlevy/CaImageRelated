@@ -1,7 +1,7 @@
 %% Process all data
 
 mainFolder = 'C:\Users\Sam\Desktop\DNMPfinalData';
-mice = {'Bellatrix', 'Polaris', 'Calisto'};%Nix %'Europa'
+mice = {'Bellatrix', 'Polaris', 'Calisto', 'Nix'}; %'Europa'
 numMice = length(mice);
 
 %Thresholds
