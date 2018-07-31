@@ -109,7 +109,55 @@ end
 % One for trial reliability
 %   - maybe just error bars on a histogram across all days? or day one then
 %   all w/ errors?
-% Another for consecutive laps
+% Another for consecutive laps.
+
+%% One condition heatmap over days (Ziv-style)
+refDay = 1;
+plotDays = 5;
+condPlot = 1;
+topBuffer = 0.05;
+boxSpaceV = 0.005;
+boxSpaceH = 0.025;
+bottomBuffer = 0.05;
+for mouseI = 1:numMice
+    hh = figure('Position',[100 100 1600 900]);
+    cellsUse = find(aboveThresh{mouseI}{condPlot}(:,refDay));
+    cellsUse = find(sum(aboveThresh{mouseI}{condPlot}(:,refDay:plotDays),2));
+    %cellsUse = find(dayUse{mouseI}(:,dayI));
+    
+    %Also want one sorted by COM
+    
+    nCells = length(cellsUse);
+    boxHeight = (1-topBuffer - bottomBuffer - boxSpaceV*(nCells+1)) / nCells;
+    boxWidth = (1-boxSpaceH*(plotDays+1)) / plotDays;
+    
+    for dayI = 1:plotDays
+        for cellI = 1:nCells
+            thisPos = [boxSpaceH*dayI+boxWidth*(dayI-1),... %left
+                       1-topBuffer-boxSpaceV*(cellI-1)-boxHeight*cellI,...%bottom
+                       boxWidth,... %width
+                       boxHeight]; %Height
+            axes('Position',thisPos)
+            imagesc(cellTMap_unsmoothed{mouseI}{cellsUse(cellI),dayI,condPlot})
+            caxis([0 1])
+            %axis off
+            
+            set(gca,'YTick',[],'XTick',[])
+            if cellI == 1
+                title(['Day ' num2str(dayI)])
+            end
+            if dayI == 1
+                set(gca,'YTick',1,'YTickLabel',num2str(cellsUse(cellI)));
+            end
+        end
+        
+        xlabel('Position (Bin)')
+        nBins = length(cellTMap_unsmoothed{mouseI}{1,1,1});
+        set(gca,'XTick',1:nBins,'XTickLabel',{num2str([1:nBins]')});
+    end   
+end
+    
+
 
 %% Splitters: what proportion per day?
 for mouseI = 1:numMice
@@ -1076,23 +1124,26 @@ end
 
 %% Pop.vector corr single day averages
 
-ss = fieldnames(Conds);
+plotColors = {'b', 'r', 'g'};
 for mouseI = 1:numMice
-    figure;
-    meanThings = mean(singleDayCorrs{mouseI},3); %mean across bins
-    for condI = 1:4
-        subplot(2,2,condI)
-        %hold on
-        plot(meanThings(:,condI),'-o','LineWidth',1.5)
-        title([ss{condI} ' mean PV corr'])
-        xlabel('Day'); ylabel('Mean Corr')
-        ylim([-1 1]); xlim([1 size(singleDayCorrs{mouseI},1)])
+    figure; hold on
+    for csI = 1:length(condSet)
+        plot(dayCorrsMeanCS{mouseI}(:,csI),'-o','Color',plotColors{csI})
     end
-     suptitleSL(['Mouse ' num2str(mouseI) ', Cells active either cond.'])
+    title(['mouse ' num2str(mouseI) ', all trials; B self, R LvR, G SvT'])
 end
-     
+
+
+plotColors = {'b', 'r', 'g'};
+for mouseI = 1:numMice
+    figure; hold on
+    for csI = 1:length(condSet)
+        plot(splitDayCorrsMeanCS{mouseI}(:,csI),'-o','Color',plotColors{csI})
+    end
+    title(['mouse ' num2str(mouseI) ', split sessions; B self, R LvR, G SvT'])
+end
     
-%% Pop vector corrs all days
+%% Pop vector corrs all days, 1 day per color
 
 ss = fieldnames(Conds);
 for mouseI = 1:numMice
@@ -1104,16 +1155,68 @@ for mouseI = 1:numMice
         subplot(2,2,condI)
         for dayI = 1:numDays(mouseI)
             hold on
-            rowUse = find(((condPairs{mouseI}(:,1)==Conds.(ss{condI})(1))+...
-                     (condPairs{mouseI}(:,2)==Conds.(ss{condI})(2)))==2);  
-            plot(squeeze(Corrs{mouseI}(dayI,rowUse,:)),'-o','Color',plotColors(dayI,:))
+            %Row for the compairson of this type
+            %rowUse = find(((singleDayCondPairs{mouseI}(:,1)==Conds.(ss{condI})(1))+...
+            %         (singleDayCondPairs{mouseI}(:,2)==Conds.(ss{condI})(2)))==2);  
+            
+            plot(squeeze([singleDayCorrs{mouseI}(dayI,condI,:)]),'-o','Color',plotColors(dayI,:))
         end
-        ylim([-1 1]); xlim([1 size(Corrs{mouseI},3)])
+        ylim([-1 1]); xlim([1 size(singleDayCorrs{mouseI},3)])
         xlabel('Start             Choice')
         title([ss{condI} ' PV corrs']) 
     end
     suptitleSL(['Mouse ' num2str(mouseI) ', Cells active either cond.'])
 end
+
+%% Pooled pop vector corrs by days apart
+
+condSet{1} = 1:4;   % VS. Self
+condSet{2} = [5 6]; % L v R
+condSet{3} = [7 8]; % S v T
+plotColors = {'b' 'r' 'g'};
+dispNames = {'Within Condition' 'Left vs. Right' 'Study vs Test'};
+eachDayDiffs = unique(allDayDiffs); eachDayDiffs = eachDayDiffs(eachDayDiffs > 0);
+eachRealDayDiffs = unique(allRealDayDiffs); eachRealDayDiffs = eachRealDayDiffs(eachRealDayDiffs > 0);
+
+figure; hold on
+clear h
+for csI = 1:length(condSet)
+    for cpI = 1:length(condSet{csI})
+        for ddI = 1:length(eachDayDiffs)
+            dataHere = allCorrsMean{condSet{csI}(cpI)}(allDayDiffs==eachDayDiffs(ddI));
+            hi = plot(eachDayDiffs(ddI)*ones(length(dataHere),1),dataHere,'.','Color',plotColors{csI});
+            h(csI) = hi(1);
+        end
+    end
+end
+for csI = 1:length(condSet)
+    errorbar(eachDayDiffs,ddMeanLineCS(csI,:),ddSEMlineCS(csI,:),'-o','Color',plotColors{csI},'LineWidth',1.5)
+end
+ylim([-1 1])
+xlabel('Number of Sessions Apart')
+ylabel('Mean Correlation')
+title('All Mice, Population Vector Corrs by Days Apart')
+legend(h,dispNames) 
+
+figure; hold on
+clear h
+for csI = 1:length(condSet)
+    for cpI = 1:length(condSet{csI})
+        for ddI = 1:length(eachRealDayDiffs)
+            dataHere = allCorrsMean{condSet{csI}(cpI)}(allRealDayDiffs==eachRealDayDiffs(ddI));
+            hi = plot(eachRealDayDiffs(ddI)*ones(length(dataHere),1),dataHere,'.','Color',plotColors{csI});
+            h(csI) = hi(1);
+        end
+    end
+end
+for csI = 1:length(condSet)
+    errorbar(eachRealDayDiffs,ddRealMeanLineCS(csI,:),ddRealSEMlineCS(csI,:),'-o','Color',plotColors{csI},'LineWidth',1.5)
+end
+ylim([-1 1])
+xlabel('Number of Calendar Days Apart')
+ylabel('Mean Correlation')
+title('All Mice, Population Vector Corrs by Days Apart')
+legend(h,dispNames) 
 
 
 %% Pop vector corrs by days apart
@@ -1153,10 +1256,12 @@ for mouseI = 1:numMice
     ylabel('Mean Corr')
 end
             
-%% Pooled pop vector corrs by days apart
+
+
+%% Older pooled pv corrs 
 condSet{1} = 1:4;   % VS. Self
 condSet{2} = [5 6]; % L v R
-condSet{3} = [7 8]; % L v R
+condSet{3} = [7 8]; % S v T
 plotColors = {'b', 'r', 'g'};
 allPooledMeans = [];
 allPooledDayDiffs = [];

@@ -31,6 +31,11 @@ while donePick == 0
     de = input('Done picking editable columns? (y/n) > ','s');
     if strcmpi(de,'y')
         donePick = 1;
+       
+        numHad = sum(whichFilesUse);
+        whichFilesUse = cell2mat(ut.Data(:,7));
+        numNow = sum(whichFilesUse);
+        disp(['Keeping ' num2str(numNow) ' out of ' num2str(numHad) ' files'])
     end
 end
 try

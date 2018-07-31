@@ -1,7 +1,7 @@
 mainFolder = 'C:\Users\Sam\Desktop\DNMPfinalData';
-mice = {'Bellatrix', 'Polaris', 'Calisto'};
-mouseI = 3;
-load(fullfile(mainFolder,mice{mouseI},'trialbytrialOLD.mat'),'allfiles')
+mice = {'Bellatrix', 'Polaris', 'Calisto', 'Nix'};
+mouseI = 4;
+load(fullfile(mainFolder,mice{mouseI},'trialbytrial.mat'),'allfiles')
 
 stdMult = 3;
 
@@ -90,9 +90,9 @@ end
 %% Check xpos of current sheet stuff
 
 mainFolder = 'C:\Users\Sam\Desktop\DNMPfinalData';
-mice = {'Bellatrix', 'Polaris', 'Calisto'};
-mouseI = 1;
-load(fullfile(mainFolder,mice{mouseI},'trialbytrialOLD.mat'),'allfiles')
+mice = {'Bellatrix', 'Polaris', 'Calisto', 'Nix'};
+mouseI = 4;
+load(fullfile(mainFolder,mice{mouseI},'trialbytrial.mat'),'allfiles')
 
 means = []; stds = [];
 for ff = 1:length(allfiles)
@@ -116,8 +116,9 @@ end
 mainFolder = 'C:\Users\Sam\Desktop\DNMPfinalData';
 mice = {'Bellatrix', 'Polaris', 'Calisto'};
 mouseI = 1;
-load(fullfile(mainFolder,mice{mouseI},'trialbytrialOLD.mat'),'allfiles')
+load(fullfile(mainFolder,mice{mouseI},'trialbytrial.mat'),'allfiles')
 
+xlims = [8 38];
 
 for ff = 1:length(allfiles)
     cd(allfiles{ff})

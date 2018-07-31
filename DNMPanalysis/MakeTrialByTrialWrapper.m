@@ -28,7 +28,7 @@ for mouseI = 1:numMice
     %if exist(fullfile(MouseRefFolder{mouseI},'daybyday.mat'),'file')~=2
         [daybyday, sortedSessionInds, useDataTable] = MakeDayByDay(MouseRefFolder{mouseI},...
             accuracyThresh, getFluoresence, deleteSilentCells);
-        save(fullfile(MouseRefFolder{mouseI},'daybyday.mat'),'daybyday','sortedSessionInds','useDataTable','excludeFrames','-v7.3')
+        save(fullfile(MouseRefFolder{mouseI},'daybyday.mat'),'daybyday','sortedSessionInds','useDataTable','-v7.3')
     %end   
 end
     

@@ -53,6 +53,9 @@ matchCells
     %4th cell registered. Sessions are NOT chronological order be default,
     %but in order registration was performed (fullReg.BaseSession followed
     %by fullReg.RegSessions
+newxlims1
+    %Not well written right now, but necessary for ensuring good alignment
+    %of positions across all sessions
 MakeTrialByTrialWrapper
     %New version that guides you through making a full data table,
     %condensed version of all data sessions (daybyday), trialbytrial out of that
