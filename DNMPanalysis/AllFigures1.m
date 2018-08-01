@@ -1218,6 +1218,69 @@ ylabel('Mean Correlation')
 title('All Mice, Population Vector Corrs by Days Apart')
 legend(h,dispNames) 
 
+%% Pop vector corrs, split sessions, bu days apart
+
+condSet{1} = 1:4;   % VS. Self
+condSet{2} = [5 6]; % L v R
+condSet{3} = [7 8]; % S v T
+plotColors = {'b' 'r' 'g'};
+dispNames = {'Within Condition' 'Left vs. Right' 'Study vs Test'};
+sessDayDiffs = unique(allMiceSplitDayDayDiffsCS{1});
+calDayDiffs = unique(allMiceSplitRealDayDayDiffsCS{1});
+
+figure; hold on; clear h
+for csI = 1:length(condSet)
+    for cpI = 1:length(condSet{csI})
+        hi = plot(allMiceSplitDayDayDiffs{condSet{csI}(cpI)},allMiceSplitDayCorrsMean{condSet{csI}(cpI)},'.','Color',plotColors{csI});
+        h(csI) = hi(1);
+    end
+end
+for csJ = 1:length(condSet)
+    errorbar(sessDayDiffs,ddAllMiceSplitMeanCS(:,csJ),ddAllMiceSplitMeanSEM(:,csJ),'-o','Color',plotColors{csJ},'LineWidth',1.5)
+end
+xlabel('Number of sessions apart')
+title('PV scorrs from day-split data')
+legend(h,dispNames)
+
+
+figure; hold on; clear h
+for csI = 1:length(condSet)
+    for cpI = 1:length(condSet{csI})
+        hi = plot(allMiceSplitRealDayDayDiffs{condSet{csI}(cpI)},allMiceSplitDayCorrsMean{condSet{csI}(cpI)},'.','Color',plotColors{csI});
+        h(csI) = hi(1);
+    end
+end        
+for csJ = 1:length(condSet)
+    errorbar(calDayDiffs,ddRealAllMiceSplitMeanCS(:,csJ),ddRealAllMiceSplitMeanSEM(:,csJ),'-o','Color',plotColors{csJ},'LineWidth',1.5)
+end
+%for csJ = 1:length(condSet)
+%    plot(rallPooledSplitFitLine{csJ}(:,1),rallPooledSplitFitLine{csJ}(:,2),'--','Color',plotColors{csJ},'LineWidth',1)
+%end
+xlabel('Number of calendar days apart')
+ylabel('Correlation')
+title('PV scorrs from day-split data with mean line')
+legend(h,dispNames)
+ylim([-1 1])
+
+hh = figure; hold on; clear h
+for csI = 1:length(condSet)
+    for cpI = 1:length(condSet{csI})
+        hi = plot(allMiceSplitRealDayDayDiffs{condSet{csI}(cpI)},allMiceSplitDayCorrsMean{condSet{csI}(cpI)},'.','Color',plotColors{csI});
+        h(csI) = hi(1);
+    end
+end        
+for csJ = 1:length(condSet)
+    plot(rallPooledSplitFitLine{csJ}(:,1),rallPooledSplitFitLine{csJ}(:,2),'-o','Color',plotColors{csJ},'LineWidth',1.5)
+end
+hh.Position = [680 380 1004 598];
+xlabel('Number of calendar days apart')
+ylabel('Correlation')
+title('PV scorrs from day-split data with lin-regress line')
+legend(h,dispNames)
+ylim([-1 1])
+annotation('textbox',[0.5 0.7 0.25 0.2],'String',annotationToPlot,'FitBoxToText','on')
+
+
 
 %% Pop vector corrs by days apart
 %condSet{1} = find(diff(condPairs{mouseI},1,2)==0); %vs. self

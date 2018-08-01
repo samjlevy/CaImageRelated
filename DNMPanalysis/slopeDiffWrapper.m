@@ -10,7 +10,7 @@ end
 comps = combnk(1:numD,2);
 
 for permI = 1:numPerms
-    dataPerm = dataMat(randperm(numDays(mouseI)),:);
+    dataPerm = dataMat(randperm(length(realDays)),:);
     for csI = 1:numD
         data = dataPerm(:,csI);
         [shuffSlope(permI,csI), ~, ~, rr] = fitLinRegSL(data,realDays);
@@ -18,12 +18,12 @@ for permI = 1:numPerms
     end
     
     for cI = 1:size(comps,1)
-        shuffSlopeDiff(permI,cI) = shuffSlope(permI,comps(cI,2)) - shuffSlope{mouseI}(permI,comps(cI,1));
+        shuffSlopeDiff(permI,cI) = shuffSlope(permI,comps(cI,2)) - shuffSlope(permI,comps(cI,1));
     end
 end
     
-for csI = 1:length(condSet)
-    data = splitDayCorrsMeanCS{mouseI}(:,csI);
+for csI = 1:numD
+    data = splitDayCorrsMeanCS(:,csI);
     [slope(1,csI), ~, ~, rr] = fitLinRegSL(dataMat,realDays);
     Rsquared(1,csI) = rr.Ordinary;
     
@@ -32,7 +32,7 @@ end
 
 for cJ = 1:size(comps,1)
     slopeDiff(1,cJ) = slope(1,comps(cJ,2)) - slope(1,comps(cJ,1));
-    slopeDiffRank(1,cJ) = sum(abs(slopeDiff) > abs(shuffSlopeDiff)); %Abs to give magnitude of difference
+    slopeDiffRank(1,cJ) = sum(abs(slopeDiff(1,cJ)) > abs(shuffSlopeDiff(:,cJ))); %Abs to give magnitude of difference
 end
 
 end
