@@ -207,8 +207,8 @@ for mouseI = 1:numMice
     if exist(splitterFileLR,'file')==2
         load(splitterFileLR)
     else
-        disp(['did not find LR splitting for ' num2str(mouseI) ', making now'])
-        [binsAboveShuffleLR, thisCellSplitsLR] = SplitterWrapper3(cellTBT{mouseI},'leftright',...
+        disp(['did not find LR splitting for mouse ' num2str(mouseI) ', making now'])
+        [~, binsAboveShuffleLR, thisCellSplitsLR] = SplitterWrapper3(cellTBT{mouseI},'leftright',...
              'pooled', numShuffles, shuffDirFullLR, xlims, cmperbin, minspeed, [], shuffThresh, binsMin);
         save(splitterFileLR,'binsAboveShuffleLR','thisCellSplitsLR')
     end
@@ -223,14 +223,14 @@ for mouseI = 1:numMice
     [rateDiffST{mouseI}, rateSplitST{mouseI}, meanRateDiffST{mouseI}, DIeachST{mouseI}, DImeanST{mouseI}, DIallST{mouseI}] =...
         LookAtSplitters4(cellPooledTMap_unsmoothed{mouseI}, condPairsST, []);
     splitterFileST = fullfile(shuffDirFullST,'splittersST.mat');
-    if exist(splitterFileST,'file')==2
-        load(splitterFileST)
-    else
+    %if exist(splitterFileST,'file')==2
+    %    load(splitterFileST)
+    %else
         disp(['did not find ST splitting for ' num2str(mouseI) ', making now'])
-        [binsAboveShuffleST, thisCellSplitsST] = SplitterWrapper3(cellTBT{mouseI},'studytest',...
+        [~, binsAboveShuffleST, thisCellSplitsST] = SplitterWrapper3(cellTBT{mouseI},'studytest',...
              'pooled', numShuffles, shuffDirFullST, xlims, cmperbin, minspeed, [], shuffThresh, binsMin);
         save(splitterFileST,'binsAboveShuffleST','thisCellSplitsST')
-    end
+    %end
     STbinsAboveShuffle{mouseI} = binsAboveShuffleST; 
     STthisCellSplits{mouseI} = thisCellSplitsST;
     disp(['done Study/Test splitters mouse ' num2str(mouseI)])
@@ -304,6 +304,40 @@ for mouseI = 1:numMice
                          
     splittersEXany{mouseI} = (splittersLRonly{mouseI} + splittersSTonly{mouseI}) > 0;
 end
+
+%Splitters doing the other thing; slope also
+numPerms = 1000;
+for mouseI = 1:numMice
+    %splittersLRalsoSplitST{mouseI} = (splittersLR{mouseI} + splittersBOTH{mouseI})==2;
+    splitLRalsoSplitSTprop{mouseI} = sum(splittersBOTH{mouseI},1)./sum(splittersLR{mouseI},1);
+    splitSTalsoSplitLRprop{mouseI} = sum(splittersBOTH{mouseI},1)./sum(splittersST{mouseI},1);
+    
+    [slopeRankLRalsoST(mouseI), RsquaredRankLRalsoST(mouseI)] = slopeRankWrapper(splitLRalsoSplitSTprop{mouseI}, cellRealDays{mouseI}, numPerms);
+    [slopeLRalsoST(mouseI), intercept, fitLine, rrLRalsoST(mouseI)] = fitLinRegSL(splitLRalsoSplitSTprop{mouseI}, cellRealDays{mouseI});
+    [slopeRankSTalsoLR(mouseI), RsquaredRankSTalsoLR(mouseI)] = slopeRankWrapper(splitSTalsoSplitLRprop{mouseI}, cellRealDays{mouseI}, numPerms);
+    [slopeSTalsoLR(mouseI), intercept, fitLine, rrSTalsoLR(mouseI)] = fitLinRegSL(splitSTalsoSplitLRprop{mouseI}, cellRealDays{mouseI});
+end
+
+numPerms = 1000;
+for mouseI = 2:numMice
+    %splittersLRalsoSplitST{mouseI} = (splittersLR{mouseI} + splittersBOTH{mouseI})==2;
+    propLRsplitters{mouseI} = sum(splittersLR{mouseI},1)./sum(dayUse{mouseI},1);
+    propSTsplitters{mouseI} = sum(splittersST{mouseI},1)./sum(dayUse{mouseI},1);
+    
+    oneDimSplitters{mouseI} = splittersLRonly{mouseI} + splittersSTonly{mouseI};
+    propOneDimSplitters{mouseI} = sum(oneDimSplitters{mouseI},1)./sum(dayUse{mouseI},1);
+    propNonSplitters{mouseI} = sum(splittersNone{mouseI},1)./sum(dayUse{mouseI},1); 
+    
+    [slopeRankLRsplitters(mouseI), RsquaredRankLRsplitters(mouseI)] = slopeRankWrapper(propLRsplitters{mouseI}, cellRealDays{mouseI}, numPerms);
+    [slopeLRsplitters(mouseI), intercept, fitLine, rrLRsplitters(mouseI)] = fitLinRegSL(propLRsplitters{mouseI}, cellRealDays{mouseI});
+    [slopeRankSTsplitters(mouseI), RsquaredRankSTsplitters(mouseI)] = slopeRankWrapper(propSTsplitters{mouseI}, cellRealDays{mouseI}, numPerms);
+    [slopeSTsplitters(mouseI), intercept, fitLine, rrSTsplitters(mouseI)] = fitLinRegSL(propSTsplitters{mouseI}, cellRealDays{mouseI});
+    [slopeRankOneDimSplitters(mouseI), RsquaredRankOneDimSplitters(mouseI)] = slopeRankWrapper(propOneDimSplitters{mouseI}, cellRealDays{mouseI}, numPerms);
+    [slopeOneDimSplitters(mouseI), intercept, fitLine, rrOneDimSplitters(mouseI)] = fitLinRegSL(propOneDimSplitters{mouseI}, cellRealDays{mouseI});
+    [slopeRankNonSplitters(mouseI), RsquaredRankNonSplitters(mouseI)] = slopeRankWrapper(propNonSplitters{mouseI}, cellRealDays{mouseI}, numPerms);
+    [slopeNonSplitters(mouseI), intercept, fitLine, rrNonSplitters(mouseI)] = fitLinRegSL(propNonSplitters{mouseI}, cellRealDays{mouseI});
+    disp(['Done splitter slopes mouse ' num2str(mouseI)])
+end
 %{
     splittersLR{mouseI});
     splittersST{mouseI});
@@ -314,6 +348,10 @@ end
     splittersEXany{mouseI});
     splittersNone{mouseI});
 %}
+
+
+%Lr, st, how often is LR also ST, how often is ST also LR?
+%How many full convert to other type?
 
 %Evaluate splitting: days bias numbers and center of mass per cell
 for mouseI = 1:numMice
@@ -364,7 +402,9 @@ for mouseI = 1:numMice
     pctDailySplittersNone{mouseI}, rangePctDailySplittersNone(mouseI,:), splitAllDaysNone{mouseI}]...
      = DailyTraitRanges(splittersNone{mouseI}, splitterDayBiasNone{mouseI}, dayUse{mouseI});
  
- 
+ [numDailySplittersOneDim{mouseI}, daysSplitOneDim{mouseI}, rangeDailySplittersOneDim(mouseI,:),...
+    pctDailySplittersOneDim{mouseI}, rangePctDailySplittersOneDim(mouseI,:), splitAllDaysOneDim{mouseI}]...
+     = DailyTraitRanges(oneDimSplitters{mouseI}, splitterDayBiasNone{mouseI}, dayUse{mouseI});
 end
 
 %How many days active by splitter type
@@ -387,6 +427,13 @@ for mouseI = 1:numMice
     activeDaysSplitANY{mouseI} = daysEachCellActive{mouseI}(everSplitANY{mouseI})';
     activeDaysSplitEXany{mouseI} = daysEachCellActive{mouseI}(everSplitEXany{mouseI})';
     activeDaysSplitNone{mouseI} = daysEachCellActive{mouseI}(everSplitNone{mouseI})';
+    
+    %Pct active days a splitter
+   
+    pctDaysLRsplitter{mouseI} = daysSplitLR{mouseI}./daysEachCellActive{mouseI};
+    pctDaysSTsplitter{mouseI} = daysSplitST{mouseI}./daysEachCellActive{mouseI};
+    pctDaysOneDimSplitter{mouseI} = sum(oneDimSplitters{mouseI},2)./daysEachCellActive{mouseI};
+    pctDaysNonSplitter{mouseI} = daysSplitNone{mouseI}./daysEachCellActive{mouseI};
 end
     
 pooledActiveDaysSplitLR = [activeDaysSplitLR{:}];
@@ -883,91 +930,8 @@ Can I decode the next trial based on current?
 Does population correlation look better or worse for X after X than splitting by top-down difference
 %% Population Vector Correlations
 
-%Pooled pop vector corrs
-pooledCondPairs = [1 1; 2 2; 3 3; 4 4; 1 2; 2 1; 3 4; 4 3];
-dayPairs = [];
-traitLogical = threshAndConsec;
-for mouseI = 1:numMice
-    pooledTraitLogical = [];
-    pooledTraitLogical(:,:,1) = sum(traitLogical{mouseI}(:,:,[1 3]),3) > 0;
-    pooledTraitLogical(:,:,2) = sum(traitLogical{mouseI}(:,:,[2 4]),3) > 0;
-    pooledTraitLogical(:,:,3) = sum(traitLogical{mouseI}(:,:,[1 2]),3) > 0;
-    pooledTraitLogical(:,:,4) = sum(traitLogical{mouseI}(:,:,[3 4]),3) > 0;
-    [pooledCorrs{mouseI}, pooldNumCellsUsed{mouseI}, pooledDayPairs{mouseI}, pooledCondPairsOut{mouseI}] = ...
-        PopVectorCorrs1(cellPooledTMap_unsmoothed{mouseI},pooledTraitLogical, 'activeEither', 'Spearman', pooledCondPairs, []);
-    pooledDayDiffs{mouseI} = abs(diff(pooledDayPairs{mouseI},1,2));
-    pooledRealDayPairs{mouseI} = cellRealDays{mouseI}(pooledDayPairs{mouseI});
-    pooledRealDayDiffs{mouseI} = abs(diff(pooledRealDayPairs{mouseI},1,2));
-end
 
-condSet{1} = 1:4;   % VS. Self
-condSet{2} = [5 6]; % L v R
-condSet{3} = [7 8]; % S v T
-
-%Reorganize across mice, mean across spatial bins
-allDayDiffs = [];
-allRealDayDiffs = [];
-allPooledMouseID = [];
-allCorrsMean = cell(size(pooledCondPairs,1),1);
-for mouseI = 1:numMice
-    allDayDiffs = [allDayDiffs; pooledDayDiffs{mouseI}];
-    allRealDayDiffs = [allRealDayDiffs; pooledRealDayDiffs{mouseI}];
-    allPooledMouseID = [allPooledMouseID; mouseI*ones(length(pooledDayDiffs{mouseI}),1)];
-    for cpI = 1:size(pooledCondPairs,1)    
-        allCorrsMean{cpI} = [allCorrsMean{cpI}; mean(squeeze(pooledCorrs{mouseI}(:,cpI,:)),2)]; %Mean across spatial bins    
-    end
-end
-
-%Pooled by condSet
-for csI = 1:length(condSet)
-    tempHold = [allCorrsMean{condSet{csI}}];
-    tempDays = repmat(allDayDiffs,1,length(condSet{csI}));
-    tempRealDays = repmat(allRealDayDiffs,1,length(condSet{csI}));
-    
-    allCorrsMeanCS{csI} = tempHold(:);
-    allDayDiffsCS{csI} = tempDays(:);
-    allRealDayDiffsCS{csI} = tempRealDays(:);
-end
-        
-
-% Mean by day diff 
-eachDayDiffs = unique(allDayDiffs); eachDayDiffs = eachDayDiffs(eachDayDiffs > 0);
-eachRealDayDiffs = unique(allRealDayDiffs); eachRealDayDiffs = eachRealDayDiffs(eachRealDayDiffs > 0);
-for cpJ = 1:size(pooledCondPairs,1)
-    for ddJ = 1:length(eachDayDiffs)
-        ddMeanLine(cpJ,ddJ) = mean(allCorrsMean{cpJ}(allDayDiffs==eachDayDiffs(ddJ)));
-        ddSEMline(cpJ,ddJ) = standarderrorSL(allCorrsMean{cpJ}(allDayDiffs==eachDayDiffs(ddJ)));
-    end
-    for ddK = 1:length(eachRealDayDiffs)
-        ddRealMeanLine(cpJ,ddK) = mean(allCorrsMean{cpJ}(allRealDayDiffs==eachRealDayDiffs(ddK)));
-        ddRealSEMline(cpJ,ddK) = standarderrorSL(allCorrsMean{cpJ}(allRealDayDiffs==eachRealDayDiffs(ddK)));
-    end
-end
-
-% Mean across condSets
-for csI = 1:length(condSet)
-    ddMeanLineCS(csI,:) = mean(ddMeanLine(condSet{csI},:),1);
-    ddSEMlineCS(csI,:) = mean(ddSEMline(condSet{csI},:),1);
-    
-    ddRealMeanLineCS(csI,:) = mean(ddRealMeanLine(condSet{csI},:),1);
-    ddRealSEMlineCS(csI,:) = mean(ddRealSEMline(condSet{csI},:),1);
-end
-
-%Progression over experiment 
-dayCorrsMean{cpJ} = cell(size(condPairs,1),1);
-for mouseI = 1:numMice
-    sameDay = find(pooledDayPairs{mouseI}(:,1) == pooledDayPairs{mouseI}(:,2));
-    [~,rightOrder] = sort(pooledDayPairs{mouseI}(sameDay,1),'ascend');
-    sameDaySorted = sameDay(rightOrder);
-    for cpJ = 1:size(pooledCondPairs,1)
-        dayCorrsMean{mouseI}(:,cpJ) = mean(squeeze(pooledCorrs{mouseI}(sameDaySorted,cpJ,:)),2);
-    end
-    for csI = 1:length(condSet)
-        dayCorrsMeanCS{mouseI}(:,csI) = mean(dayCorrsMean{mouseI}(:,condSet{csI}),2);
-    end    
-end
-
-%Split days pv corrs
+% Split days pv corrs: still pooled
 TMapA = cell(1,numMice); TMapB = cell(1,numMice);
 for mouseI = 1:numMice
     %Split the tbt
@@ -982,12 +946,13 @@ for mouseI = 1:numMice
         [],'trialReli',trialReli{mouseI},'smooth',false,'condPairs',[1 3; 2 4; 1 2; 3 4]);
 end
 
-numPerms = 100;
+%Progression over experiment with split data;
+numPerms = 1000;
 condSet{1} = 1:4;   % VS. Self
 condSet{2} = [5 6]; % L v R
 condSet{3} = [7 8]; % S v T
-%Progression over experiment with split data; also days apart
 traitLogical = threshAndConsec;
+ pooledCondPairs = [1 1; 2 2; 3 3; 4 4; 1 2; 2 1; 3 4; 4 3];
 for mouseI = 1:numMice
     pooledTraitLogical = [];
     pooledTraitLogical(:,:,1) = sum(traitLogical{mouseI}(:,:,[1 3]),3) > 0;
@@ -996,7 +961,7 @@ for mouseI = 1:numMice
     pooledTraitLogical(:,:,4) = sum(traitLogical{mouseI}(:,:,[3 4]),3) > 0;
   
     %pop vector corrs with 2 tmaps, 1 day only
-    pooledCondPairs = [1 1; 2 2; 3 3; 4 4; 1 2; 2 1; 3 4; 4 3];
+   
     dayPairs = repmat(1:numDays(mouseI),2,1)';
     [pooledSplitCorrs{mouseI}, pooledSplitCumCells{mouseI}, ~, ~] = PopVectorCorrs2TMaps(TMapA{mouseI}, TMapB{mouseI}, pooledTraitLogical,...
         'activeEither', 'Spearman', pooledCondPairs, dayPairs);
@@ -1016,14 +981,15 @@ for mouseI = 1:numMice
     
     disp(['done  corrs mouse ' num2str(mouseI)])
 end
+%How to pool across mice with diff days?
 
 
+%By Days apart with split data
 numPerms = 1000;   
 condSet{1} = 1:4;   % VS. Self
 condSet{2} = [5 6]; % L v R
 condSet{3} = [7 8]; % S v T
 compLabels = {'vSelf','LvR','SvT'};
-%PV corrs days apart with split
 traitLogical = threshAndConsec;
 pooledCondPairs = [1 1; 2 2; 3 3; 4 4; 1 2; 2 1; 3 4; 4 3];
 allMiceSplitDayCorrsMean = cell(1,size(pooledCondPairs,1));
@@ -1122,7 +1088,114 @@ for csJ = 1:length(condSet)
         ddRealAllMiceSplitMeanSEM(ddJ,csJ) = standarderrorSL(allMiceSplitDayCorrsMeanCS{csJ}(allMiceSplitRealDayDayDiffsCS{csJ}==calDayDiffs(ddJ)));
     end
 end
+    
+%Ranksum test each pair of day diffs for each color line pair
+sessDayDiffs = unique(pooledAllMiceSplitDayDayDiffs{1});
+calDayDiffs = unique(pooledAllMiceSplitRealDayDayDiffs{1});
+compares = combnk(1:length(condSet),2);
+for compI = 1:size(compares,1)
+    for ddI = 1:length(sessDayDiffs)
+        dataHereA = pooledAllMiceSplitDayCorrsMean{compares(compI,1)}...
+            (pooledAllMiceSplitDayDayDiffs{compares(compI,1)}==sessDayDiffs(ddI));
+        dataHereB = pooledAllMiceSplitDayCorrsMean{compares(compI,2)}...
+            (pooledAllMiceSplitDayDayDiffs{compares(compI,2)}==sessDayDiffs(ddI));
         
+        [pPooledSplitDaySess(compI,ddI),hPooledSplitDaySess(compI,ddI)] = ranksum(dataHereA,dataHereB);
+    end
+    for ddJ = 1:length(calDayDiffs)
+        dataHereA = pooledAllMiceSplitDayCorrsMean{compares(compI,1)}...
+            (pooledAllMiceSplitRealDayDayDiffs{compares(compI,1)}==calDayDiffs(ddJ));
+        dataHereB = pooledAllMiceSplitDayCorrsMean{compares(compI,2)}...
+            (pooledAllMiceSplitRealDayDayDiffs{compares(compI,2)}==calDayDiffs(ddJ));
+        
+        [pPooledSplitDayCal(compI,ddJ),hPooledSplitDayCal(compI,ddJ)] = ranksum(dataHereA,dataHereB);
+    end
+end
+
+
+
+%Pooled pop vector corrs
+pooledCondPairs = [1 1; 2 2; 3 3; 4 4; 1 2; 2 1; 3 4; 4 3];
+dayPairs = [];
+traitLogical = threshAndConsec;
+for mouseI = 1:numMice
+    pooledTraitLogical = [];
+    pooledTraitLogical(:,:,1) = sum(traitLogical{mouseI}(:,:,[1 3]),3) > 0;
+    pooledTraitLogical(:,:,2) = sum(traitLogical{mouseI}(:,:,[2 4]),3) > 0;
+    pooledTraitLogical(:,:,3) = sum(traitLogical{mouseI}(:,:,[1 2]),3) > 0;
+    pooledTraitLogical(:,:,4) = sum(traitLogical{mouseI}(:,:,[3 4]),3) > 0;
+    [pooledCorrs{mouseI}, pooldNumCellsUsed{mouseI}, pooledDayPairs{mouseI}, pooledCondPairsOut{mouseI}] = ...
+        PopVectorCorrs1(cellPooledTMap_unsmoothed{mouseI},pooledTraitLogical, 'activeEither', 'Spearman', pooledCondPairs, []);
+    pooledDayDiffs{mouseI} = abs(diff(pooledDayPairs{mouseI},1,2));
+    pooledRealDayPairs{mouseI} = cellRealDays{mouseI}(pooledDayPairs{mouseI});
+    pooledRealDayDiffs{mouseI} = abs(diff(pooledRealDayPairs{mouseI},1,2));
+end
+
+condSet{1} = 1:4;   % VS. Self
+condSet{2} = [5 6]; % L v R
+condSet{3} = [7 8]; % S v T
+%Reorganize across mice, mean across spatial bins
+allDayDiffs = [];
+allRealDayDiffs = [];
+allPooledMouseID = [];
+allCorrsMean = cell(size(pooledCondPairs,1),1);
+for mouseI = 1:numMice
+    allDayDiffs = [allDayDiffs; pooledDayDiffs{mouseI}];
+    allRealDayDiffs = [allRealDayDiffs; pooledRealDayDiffs{mouseI}];
+    allPooledMouseID = [allPooledMouseID; mouseI*ones(length(pooledDayDiffs{mouseI}),1)];
+    for cpI = 1:size(pooledCondPairs,1)    
+        allCorrsMean{cpI} = [allCorrsMean{cpI}; mean(squeeze(pooledCorrs{mouseI}(:,cpI,:)),2)]; %Mean across spatial bins    
+    end
+end
+
+%Pooled by condSet
+for csI = 1:length(condSet)
+    tempHold = [allCorrsMean{condSet{csI}}];
+    tempDays = repmat(allDayDiffs,1,length(condSet{csI}));
+    tempRealDays = repmat(allRealDayDiffs,1,length(condSet{csI}));
+    
+    allCorrsMeanCS{csI} = tempHold(:);
+    allDayDiffsCS{csI} = tempDays(:);
+    allRealDayDiffsCS{csI} = tempRealDays(:);
+end
+        
+
+% Mean by day diff 
+eachDayDiffs = unique(allDayDiffs); eachDayDiffs = eachDayDiffs(eachDayDiffs > 0);
+eachRealDayDiffs = unique(allRealDayDiffs); eachRealDayDiffs = eachRealDayDiffs(eachRealDayDiffs > 0);
+for cpJ = 1:size(pooledCondPairs,1)
+    for ddJ = 1:length(eachDayDiffs)
+        ddMeanLine(cpJ,ddJ) = mean(allCorrsMean{cpJ}(allDayDiffs==eachDayDiffs(ddJ)));
+        ddSEMline(cpJ,ddJ) = standarderrorSL(allCorrsMean{cpJ}(allDayDiffs==eachDayDiffs(ddJ)));
+    end
+    for ddK = 1:length(eachRealDayDiffs)
+        ddRealMeanLine(cpJ,ddK) = mean(allCorrsMean{cpJ}(allRealDayDiffs==eachRealDayDiffs(ddK)));
+        ddRealSEMline(cpJ,ddK) = standarderrorSL(allCorrsMean{cpJ}(allRealDayDiffs==eachRealDayDiffs(ddK)));
+    end
+end
+
+% Mean across condSets
+for csI = 1:length(condSet)
+    ddMeanLineCS(csI,:) = mean(ddMeanLine(condSet{csI},:),1);
+    ddSEMlineCS(csI,:) = mean(ddSEMline(condSet{csI},:),1);
+    
+    ddRealMeanLineCS(csI,:) = mean(ddRealMeanLine(condSet{csI},:),1);
+    ddRealSEMlineCS(csI,:) = mean(ddRealSEMline(condSet{csI},:),1);
+end
+
+%Progression over experiment 
+dayCorrsMean{cpJ} = cell(size(condPairs,1),1);
+for mouseI = 1:numMice
+    sameDay = find(pooledDayPairs{mouseI}(:,1) == pooledDayPairs{mouseI}(:,2));
+    [~,rightOrder] = sort(pooledDayPairs{mouseI}(sameDay,1),'ascend');
+    sameDaySorted = sameDay(rightOrder);
+    for cpJ = 1:size(pooledCondPairs,1)
+        dayCorrsMean{mouseI}(:,cpJ) = mean(squeeze(pooledCorrs{mouseI}(sameDaySorted,cpJ,:)),2);
+    end
+    for csI = 1:length(condSet)
+        dayCorrsMeanCS{mouseI}(:,csI) = mean(dayCorrsMean{mouseI}(:,condSet{csI}),2);
+    end    
+end
 
 
 %% Other PV stuff

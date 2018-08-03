@@ -6,10 +6,11 @@ data = data(:);
 if isempty(realDays)
     realDays = (1:length(data))';
 end
+
 %model = [ones(numDays,1) [1:numDays]'.*data];
 %[b,~,r,~,stats] = regress(data, model);
 
-lm = fitlm(table(realDays,data),'linear');
+lm = fitlm(table(realDays(:),data(:)),'linear');
 
 %slope = b(2);
 %intercept = b(1);

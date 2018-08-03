@@ -30,7 +30,7 @@ title('Performance by Number of Cells')
 %% Accuracy per day
 figure;
 for mouseI = 1:numMice
-    subplot(3,1,mouseI)
+    subplot(numMice,1,mouseI)
     plot(accuracy{mouseI},'-o','LineWidth',1.5)
     ylabel('Performance')
     ylim([0.5 1])
@@ -116,7 +116,7 @@ refDay = 1;
 plotDays = 5;
 condPlot = 1;
 topBuffer = 0.05;
-boxSpaceV = 0.005;
+boxSpaceV = 0.0025;
 boxSpaceH = 0.025;
 bottomBuffer = 0.05;
 for mouseI = 1:numMice
@@ -176,6 +176,73 @@ end
 
 %Splitter props. by average num conds active
 
+%% Splitters: what proportion per day 2, with slopes
+figure;
+daysPlotHere = cellRealDays;
+%daysPlotHere = cellfun(@(x) 1:length(x),cellRealDays,'UniformOutput',false);
+for mouseI = 1:numMice
+    subplot(2,2,mouseI)
+    hold on
+    plot(daysPlotHere{mouseI}, propLRsplitters{mouseI},'r','LineWidth',1.5)
+    plot(daysPlotHere{mouseI}, propSTsplitters{mouseI},'b','LineWidth',1.5)
+    plot(daysPlotHere{mouseI}, propOneDimSplitters{mouseI},'g','LineWidth',1.5)
+    plot(daysPlotHere{mouseI}, propNonSplitters{mouseI},'k','LineWidth',1.5)
+    xlabel('Calendar Day')
+    %xlabel('Session Number')
+    ylabel('Prop of active cells')
+    xlim([1 max(daysPlotHere{mouseI})])
+    ylim([0 1])
+    slopeStr = {['slope = ' num2str(round(slopeLRsplitters(mouseI),3)), ', rank = ' num2str(slopeRankLRsplitters(mouseI)) ];...
+                ['slope = ' num2str(round(slopeSTsplitters(mouseI),3)), ', rank = ' num2str(slopeRankSTsplitters(mouseI)) ];...
+                ['slope = ' num2str(round(slopeOneDimSplitters(mouseI),3)), ', rank = ' num2str(slopeRankOneDimSplitters(mouseI)) ];...
+                ['slope = ' num2str(round(slopeNonSplitters(mouseI),3)), ', rank = ' num2str(slopeRankNonSplitters(mouseI)) ]};
+   text(1,0.5,slopeStr)
+end
+suptitleSL('Splitter Type: R = LR, B = ST, G = One Dim. (ex), K = NonSplitter')
+%% Splitter dim overlap
+
+figure;
+for mouseI = 1:numMice
+    subplot(numMice,1,mouseI) 
+    hold on
+    plot(splitLRalsoSplitSTprop{mouseI},'m','LineWidth',2)
+    plot(splitSTalsoSplitLRprop{mouseI},'c','LineWidth',2)
+    ylim([0.5 1])
+    xlabel('Session Number')
+    ylabel('Prop. of splitters')
+end
+subplot(numMice,1,1)
+title('Prop splitters that also split other dimension. m = LR that split ST, c = ST that also split LR')
+
+figure;
+for mouseI = 1:numMice
+    subplot(numMice,1,mouseI) 
+    hold on
+    plot(cellRealDays{mouseI},splitLRalsoSplitSTprop{mouseI},'m','LineWidth',2)
+    plot(cellRealDays{mouseI},splitSTalsoSplitLRprop{mouseI},'c','LineWidth',2)
+    ylim([0 1])
+    xlabel('Calendar day')
+    ylabel('Prop. of splitters')
+    title(['Slope is ' num2str(slopeLRalsoST(mouseI)) ', p = ' num2str(1 - (numPerms-slopeRankLRalsoST(mouseI))/numPerms)])
+end
+suptitleSL('Prop splitters that also split other dimension. m = LR that split ST, c = ST that also split LR')
+
+%% Days each splitter type
+for mouseI = 1:numMice
+    figure
+    subplot(2,2,1)
+    histogram(pctDaysLRsplitter{mouseI},0:0.1:1)%(~isnan(pctDaysLRsplitter{mouseI}))
+    title('Range days LRsplitter')
+    subplot(2,2,2)
+    histogram(pctDaysSTsplitter{mouseI},0:0.1:1)
+    title('Range days STsplitter')
+    subplot(2,2,3)
+    histogram(pctDaysOneDimSplitter{mouseI},0:0.1:1)
+    title('Range days OneDimSplitter')
+    subplot(2,2,4)
+    histogram(pctDaysNonSplitter{mouseI},0:0.1:1)
+    title('Range days NonSplitter')
+end
 %% Splitter example fig
 mouseI = 1;
 %cellsUse = [14 36 37 44 18 55];
@@ -1178,6 +1245,7 @@ dispNames = {'Within Condition' 'Left vs. Right' 'Study vs Test'};
 eachDayDiffs = unique(allDayDiffs); eachDayDiffs = eachDayDiffs(eachDayDiffs > 0);
 eachRealDayDiffs = unique(allRealDayDiffs); eachRealDayDiffs = eachRealDayDiffs(eachRealDayDiffs > 0);
 
+%PV by days apart, session days
 figure; hold on
 clear h
 for csI = 1:length(condSet)
@@ -1198,6 +1266,7 @@ ylabel('Mean Correlation')
 title('All Mice, Population Vector Corrs by Days Apart')
 legend(h,dispNames) 
 
+%PV by days apart, calendar days
 figure; hold on
 clear h
 for csI = 1:length(condSet)
@@ -1212,13 +1281,15 @@ end
 for csI = 1:length(condSet)
     errorbar(eachRealDayDiffs,ddRealMeanLineCS(csI,:),ddRealSEMlineCS(csI,:),'-o','Color',plotColors{csI},'LineWidth',1.5)
 end
+
 ylim([-1 1])
 xlabel('Number of Calendar Days Apart')
 ylabel('Mean Correlation')
 title('All Mice, Population Vector Corrs by Days Apart')
 legend(h,dispNames) 
 
-%% Pop vector corrs, split sessions, bu days apart
+
+%% Pop vector corrs, split sessions, by days apart USE THIS ONE
 
 condSet{1} = 1:4;   % VS. Self
 condSet{2} = [5 6]; % L v R
@@ -1280,6 +1351,31 @@ legend(h,dispNames)
 ylim([-1 1])
 annotation('textbox',[0.5 0.7 0.25 0.2],'String',annotationToPlot,'FitBoxToText','on')
 
+%Rank sum comparison of each lne
+figure; 
+y1Height = 0.9;
+y2Height = 0.8;
+for compI = 1:size(compares,1)
+    subplot(3,1,compI)
+    hold on
+    plot(pooledAllMiceSplitRealDayDayDiffs{compares(compI,1)}+0.05,pooledAllMiceSplitDayCorrsMean{compares(compI,1)},...
+        '.','Color',plotColors{compares(compI,1)})
+    plot(pooledAllMiceSplitRealDayDayDiffs{compares(compI,2)}-0.05,pooledAllMiceSplitDayCorrsMean{compares(compI,2)},...
+        '.','Color',plotColors{compares(compI,2)})
+    ylim([-1 1])
+    xlim([-0.5 max(calDayDiffs)+0.5])
+    xlabel('Number of calendar days apart')
+    txtStr = [pPooledSplitDayCal(compI,:)]; 
+    txtStr = cellfun(@num2str,num2cell(txtStr),'UniformOutput',false);
+    txtStr(hPooledSplitDayCal(compI,:)==0) = deal({'n.s.'});
+    txtStr(hPooledSplitDayCal(compI,:)==1) = deal({'*'}); %Unfortunately, no room to plot
+    text(calDayDiffs,y2Height*ones(length(calDayDiffs),1),txtStr)
+end
+subplot(3,1,1)
+title('Ranksum difference between lines at each day diff (b = vsSelf, r = LvR, g = SvT)')
+        
+        
+    
 
 
 %% Pop vector corrs by days apart
