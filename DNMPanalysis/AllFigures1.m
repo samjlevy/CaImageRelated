@@ -160,8 +160,10 @@ end
 
 
 %% Splitters: what proportion per day?
+figure;
 for mouseI = 1:numMice
-    figure; hold on
+    subplot(numMice,1,mouseI)
+    hold on
     title(['Mouse ' num2str(mouseI) ', Pct Active cells that split, R = LR, B = ST, G = Both'])
     plot(pctDailySplittersLR{mouseI},'r','LineWidth',1.5)
     plot(pctDailySplittersST{mouseI},'b','LineWidth',1.5)
@@ -192,11 +194,11 @@ for mouseI = 1:numMice
     ylabel('Prop of active cells')
     xlim([1 max(daysPlotHere{mouseI})])
     ylim([0 1])
-    slopeStr = {['slope = ' num2str(round(slopeLRsplitters(mouseI),3)), ', rank = ' num2str(slopeRankLRsplitters(mouseI)) ];...
-                ['slope = ' num2str(round(slopeSTsplitters(mouseI),3)), ', rank = ' num2str(slopeRankSTsplitters(mouseI)) ];...
-                ['slope = ' num2str(round(slopeOneDimSplitters(mouseI),3)), ', rank = ' num2str(slopeRankOneDimSplitters(mouseI)) ];...
-                ['slope = ' num2str(round(slopeNonSplitters(mouseI),3)), ', rank = ' num2str(slopeRankNonSplitters(mouseI)) ]};
-   text(1,0.5,slopeStr)
+    %slopeStr = {['slope = ' num2str(round(slopeLRsplitters(mouseI),3)), ', rank = ' num2str(slopeRankLRsplitters(mouseI)) ];...
+    %            ['slope = ' num2str(round(slopeSTsplitters(mouseI),3)), ', rank = ' num2str(slopeRankSTsplitters(mouseI)) ];...
+    %            ['slope = ' num2str(round(slopeOneDimSplitters(mouseI),3)), ', rank = ' num2str(slopeRankOneDimSplitters(mouseI)) ];...
+    %            ['slope = ' num2str(round(slopeNonSplitters(mouseI),3)), ', rank = ' num2str(slopeRankNonSplitters(mouseI)) ]};
+   %text(1,0.5,slopeStr)
 end
 suptitleSL('Splitter Type: R = LR, B = ST, G = One Dim. (ex), K = NonSplitter')
 %% Splitter dim overlap
