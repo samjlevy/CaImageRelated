@@ -1,6 +1,7 @@
 %% Process all data
 
 mainFolder = 'C:\Users\Sam\Desktop\DNMPfinalData';
+mainFolder = 'E:\DNMPfinalData';
 mice = {'Bellatrix', 'Polaris', 'Calisto', 'Nix'}; %'Europa'
 numMice = length(mice);
 
@@ -925,9 +926,13 @@ for mouseI = 1:numMice
 end
 are there splitters based on this?
 
-Can I decode the next trial based on current? 
 
-Does population correlation look better or worse for X after X than splitting by top-down difference
+%% Variance of diff types of cell? Like splitting, but more wishy washy
+
+[b,r,stats, MSE] = GetCellVarianceSource(trialbytrial,pooledUnpooled)
+
+
+
 %% Population Vector Correlations
 
 
