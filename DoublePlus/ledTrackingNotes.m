@@ -137,33 +137,36 @@ for tfI = 1:nTestFrames
     calibrateFrames(tfI,1) = rFrameNum;
     
     for uh = 1:length(Rrind)
-        howRed{tfI,1}(uh,1) = uFrame(Rrind(uh),Rcind(uh),1);
-        howGreen{tfI,1}(uh,1) = uFrame(Grind(uh),Gcind(uh),2);
+        howRed{tfI,1}(uh,1) = double(uFrame(Rrind(uh),Rcind(uh),1));
+        howGreen{tfI,1}(uh,1) = double(uFrame(Grind(uh),Gcind(uh),2));
     end
 end
 
 RbrightThresh = mean(Rbrightness) - std(Rbrightness); %Use in sub frame
-howRedThresh =  %Use in raw frame
-
 GbrightThresh = mean(Gbrightness) - std(Gbrightness); %Use in sub frame
-howGreenThresh = %Use in raw frame
 
+gMeans = cell2mat(cellfun(@mean,howGreen,'UniformOutput',false));
+rMeans = cell2mat(cellfun(@mean,howRed,'UniformOutput',false));
+
+howGreenThresh = mean(gMeans) - 2*std(gMeans); %Use in raw frame
+howRedThresh =  mean(rMeans) - 2*std(rMeans); %Use in raw frame
 
 testFrames = 2610:3600;
-testFrames = 2610:2620;
+testFrames = 2610:2700;
 
 scnsz = [1600 900];
 figSize = [scnsz(1)/4 scnsz(2)/4-100 frameSize(2)*1.25 frameSize(1)*1.25];
 posMethod = 'subtractOnly';
+rawColorThresh = 1;
 testFig = figure('Position',figSize);
 for frameI = 1:length(testFrames)
     frameGet = testFrames(frameI);
     obj.CurrentTime = (frameGet - 1) / aviSR;
     uFrame = readFrame(obj);
     imagesc(uFrame); hold on
-    switch posMethod
-        case 'subtractOnly'
-            title(['Frame # ' num2str(frameGet) ', subtraction method'])
+    %switch posMethod
+    %    case 'subtractOnly'
+            titleStr = ['Frame # ' num2str(frameGet) ', subtraction method'];
             
             uFrameR = double(uFrame(:,:,1) - uFrame(:,:,2)).*BW;
             uFrameG = double(uFrame(:,:,2)).*BW;
@@ -171,35 +174,66 @@ for frameI = 1:length(testFrames)
             rfRsub = uFrameR - v0r; rfRsub(rfRsub < 0) = 0;
             rfGsub = uFrameG - v0g; rfGsub(rfGsub < 0) = 0;
     
-            rfGsub = uFrameG.*rfGsub;
             rfRsub = uFrameR.*rfRsub;
+            rfGsub = uFrameG.*rfGsub;
+            
+            if rawColorThresh == 1
+                ufRthreshed = uFrame(:,:,1) > howRedThresh;
+                ufGthreshed = uFrame(:,:,2) > howGreenThresh;
+                
+                rfRsub = rfRsub.*ufRthreshed;
+                rfGsub = rfGsub.*ufGthreshed;
+                
+                titleStr = [titleStr ', threshed'];
+            end
     
+            title(titleStr)
+            
             %Find the 5 reddest points in the subtraction frame, see which is brightest 
             [sortedRsubVals, sortOrderRsub] = sort(rfRsub(:),'descend');
             allIndR = sortOrderRsub(1:nBrightPoints);
     
+            if rawColorThresh == 1
+                allIndR(rfRsub(allIndR) == 0) = [];
+            end
+            
             %Get the biggest blob
             redBlobs = zeros(frameSize); redBlobs(allIndR) = 1; 
             redMaxBlobs = bwconncomp(redBlobs);
             [~,biggerRblob] = max(cell2mat(cellfun(@length,redMaxBlobs.PixelIdxList,'UniformOutput',false)));
-            allIndR = redMaxBlobs.PixelIdxList{biggerRblob};
+            
+            if any(biggerRblob)
+                allIndR = redMaxBlobs.PixelIdxList{biggerRblob};
 
+                %Convert to X/Y
+                [redRowAll,redColAll] = ind2sub(frameSize,allIndR);
+                redY = mean(redRowAll); redX = mean(redColAll);
+            else
+                redY = NaN; redX = NaN;
+            end
+                
             %Find the 5 greenest points in the subtraction frame, see which is brightest 
             [sortedGsubVals, sortOrderGsub] = sort(rfGsub(:),'descend');
             allIndG = sortOrderGsub(1:nBrightPoints);
+            
+            if rawColorThresh == 1
+                allIndG(rfGsub(allIndG) == 0) = [];
+            end
             
             %Get the biggest blob
             greenBlobs = zeros(frameSize); greenBlobs(allIndG) = 1; 
             greenMaxBlobs = bwconncomp(greenBlobs);
             [~,biggerGblob] = max(cell2mat(cellfun(@length,greenMaxBlobs.PixelIdxList,'UniformOutput',false)));
-            allIndG = greenMaxBlobs.PixelIdxList{biggerGblob};
             
-            %Convert to X/Y
-            [redRowAll,redColAll] = ind2sub(frameSize,allIndR);
-            redY = mean(redRowAll); redX = mean(redColAll);
+            if any(biggerGblob)
+                allIndG = greenMaxBlobs.PixelIdxList{biggerGblob};
             
-            [greenRowAll,greenColAll] = ind2sub(frameSize,allIndG);
-            greenY = mean(greenRowAll); greenX = mean(greenColAll);
+               %Convert to X/Y
+               [greenRowAll,greenColAll] = ind2sub(frameSize,allIndG);
+               greenY = mean(greenRowAll); greenX = mean(greenColAll);
+            else
+                greenY = NaN; greenX = NaN;
+            end
             
             try 
                 plot(redX, redY,'*c')
@@ -219,14 +253,46 @@ for frameI = 1:length(testFrames)
             greenXlong(frameI) = greenX;
             greenYlong(frameI) = greenY;
             
-        case 'threshed'
-            title(['Frame # ' num2str(frameGet) ', threshold method'])
+        %case 'threshed'
+        
     
-    end
+    %end
     
     pause(0.200)
 end
 
+
+
+
+threshFig = figure('Position',[250 300 1550 475]);
+ax1 = subplot(1,3,1); ax2 = subplot(1,3,2); ax3 = subplot(1,3,3);
+ax1.Position = [0.025 0.05 0.28 0.9];
+ax2.Position = [0.35 0.05 0.28 0.9];
+ax3.Position = [0.7 0.05 0.28 0.9];
+title(ax1,'Raw Frame'); title(ax2,'Red Thresh'); title(ax3,'Green Thresh')
+
+for frameI = 1:length(testFrames)
+    frameGet = testFrames(frameI);
+    obj.CurrentTime = (frameGet - 1) / aviSR;
+    uFrame = readFrame(obj);
+    
+    redFrame = uFrame(:,:,1);
+    greenFrame = uFrame(:,:,2);
+    
+    redThreshed = redFrame > howRedThresh;
+    greenThreshed = greenFrame > howGreenThresh;
+    
+    imagesc(ax1,uFrame)
+    imagesc(ax2,redThreshed)
+    imagesc(ax3,greenThreshed)
+    
+    pause(5)
+end
+    
+    
+    
+    
+    
 
 %use that to get and idea of the range to expect
 
