@@ -39,7 +39,7 @@ msgbox({'Notes on use:';' Q/R - step back/forward 100';...
 
 miscVar.panelHeight = 480;
 videoFig.videoPanel = figure('Position',[100,100,900,miscVar.panelHeight],'MenuBar','none','KeyPressFcn',@keyPress);
-videoFig.plotted = subplot(1,2,1,'Position',[0.05,0.1,0.55,0.8]);
+videoFig.plotted = subplot('Position',[0.05,0.1,0.55,0.8]);
 title('Frame 1/lots')
 
 miscVar.upperLimit = miscVar.panelHeight - 100;
