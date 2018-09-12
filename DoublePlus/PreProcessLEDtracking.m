@@ -11,7 +11,7 @@ yAVI = zeros(nFrames,1);
 mcfScaleFactor = 1;
 mcfOriginalSize = [680 558 560 420];
 DVTtoAVIscale = 0.6246;
-definitelyGood = false(nFrames,1);
+definitelyGood = false(size(xAVI,1),size(xAVI,2));
 load('PosLED_temp.mat')
 
 %{
@@ -174,45 +174,13 @@ mcfCurrentSize(3:4) = mcfCurrentSize(3:4)*mcfScaleFactor;
 manCorrFig = figure('Position',mcfOriginalSize);
 imagesc(v0)
 rawColorThresh = 1;
-%p = ProgressBar(nFrames);
+%First pass just correct all the frames
+p = ProgressBar(nFrames);
 for corrFrame = 1:nFrames
-%for corrFrame = 2610:2700
-    %Get the frame to correct
-    obj.CurrentTime = (corrFrame-1)/aviSR;
-    uFrame = readFrame(obj);
-    
-    %Do some friendly UI stuff
-    
-    imagesc(manCorrFig.Children,uFrame);
-    title(['Frame# ' num2str(corrFrame)])
-    
-    boundaryX = onMazeX; boundaryX = [boundaryX; boundaryX(1)];
-    boundaryY = onMazeY; boundaryY = [boundaryY; boundaryY(1)];
-    hold(manCorrFig.Children,'on')
-    plot(manCorrFig.Children,boundaryX,boundaryY,'r','LineWidth',1.5)
-    hold(manCorrFig.Children,'off')
-    
-    %Do our image subtract and mult
-    [rfRsub, rfGsub] =  GetSelfSubFrame(uFrame, v0r, v0g, onMazeMask);
-    
-    %Threshold frames by how much the right color
-    if rawColorThresh == 1
-        ufRthreshed = uFrame(:,:,1) > howRedThresh;
-        ufGthreshed = uFrame(:,:,2) > howGreenThresh;
+    [redX, redY, greenX, greenY, allIndR, allIndG] = AutoCorrByLED(...
+    manCorrFig, obj, corrFrame, onMazeX, onMazeY, onMazeMask, v0r, v0g, rawColorThresh,...
+    howRedThresh, nBrightPoints);
 
-        rfRsub = rfRsub.*ufRthreshed;
-        rfGsub = rfGsub.*ufGthreshed;
-    end
-    
-    %Find the red and green LEDs
-    [allIndR,redX,redY] = GetBrightBlobPixels(rfRsub,nBrightPoints);
-    [allIndG,greenX,greenY] = GetBrightBlobPixels(rfGsub,nBrightPoints);
-    
-    hold(manCorrFig.Children,'on')
-    plot(manCorrFig.Children,redX,redY,'or')
-    plot(manCorrFig.Children,greenX,greenY,'og')
-    hold(manCorrFig.Children,'off') 
-    
     subMultRedX(corrFrame) = redX;
     subMultRedY(corrFrame) = redY;
     subMultGreenX(corrFrame) = greenX;
@@ -222,33 +190,16 @@ for corrFrame = 1:nFrames
     redPix{corrFrame} = allIndR;
     greenPix{corrFrame} = allIndG;
     
-    %p.progress;
-end
-%p.stop;
-%{
-p = ProgressBar(nFrames);
-for corrFrame = 1:nFrames
-     obj.CurrentTime = (corrFrame-1)/aviSR;
-    uFrame = readFrame(obj);
-    ufRthreshed = uFrame(:,:,1) > howRedThresh;
-    ufGthreshed = uFrame(:,:,2) > howGreenThresh;
-
-    rPixFrame = ufRthreshed.*onMazeMask;
-    gPixFrame = ufGthreshed.*onMazeMask;
-    
-    anyRpix(corrFrame) = sum(sum(rPixFrame));
-    anyGpix(corrFrame) = sum(sum(gPixFrame));
-    
     p.progress;
 end
 p.stop;
-%}
-disp('ss')
-save testPos.mat subMultRedX subMultRedY subMultGreenX subMultGreenY nRed nGreen...
-    redPix greenPix v0 onMazeMask onMazeX onMazeY anyRpix anyGpix
 
+
+SaveTemp;
+%save testPos.mat subMultRedX subMultRedY subMultGreenX subMultGreenY nRed nGreen...
+%    redPix greenPix v0 onMazeMask onMazeX onMazeY anyRpix anyGpix
 disp('Done, saved')
-
+%{
 figure;
 subplot(3,1,1)
 plot(1:nFrames,subMultGreenX,'b','LineWidth',1.5)
@@ -260,6 +211,7 @@ velSubMult = hypot(diff(subMultGreenX,1),diff(subMultGreenY,1));
 subplot(3,1,3)
 plot(1:nFrames-1,velSubMult,'b','LineWidth',1.5)
 title('Velocity subMult')
+%}
 
 haveRedX = ~isnan(subMultRedX);
 haveRedY = ~isnan(subMultRedY);
@@ -280,9 +232,6 @@ missingPoints = haveColorData == 0;
 velRed = hypot(diff(subMultRedX,1),diff(subMultRedY,1));
 velGreen = hypot(diff(subMultGreenX,1),diff(subMultGreenY,1));
 
-
-
-
 %Fill in where we have color information
 xAVI(haveBothColors) = mean([subMultRedX(haveBothColors) subMultGreenX(haveBothColors)],2);
 yAVI(haveBothColors) = mean([subMultRedY(haveBothColors) subMultGreenY(haveBothColors)],2);
@@ -293,6 +242,272 @@ xAVI(haveGreenOnly) = subMultGreenX(haveGreenOnly);
 yAVI(haveGreenOnly) = subMultGreenY(haveGreenOnly);
 
 
+
+%Here is where user decides how to correct things here on out
+velThresh = 25;
+
+skipDefGood = 1;
+%plot pos and vel
+editChoice = input('How would you like to edit? >>','s');
+switch editChoice
+    case 'm'
+        %mark off maze
+        
+        onMaze(57449:58050) = 0;
+    case 'z'
+        %Correct zero frames
+        zeroFrames = xAVI==0 & yAVI==0;
+        %exclude off maze?
+        if strcmpi(eom,'Yes')
+            zeroFrames = zeroFrames.*onMaze;
+        end
+        %Redo def good?
+        if strcmpi(exDG,'No')
+            zeroFrames(definitelyGood) = 0;
+        end
+        
+        zeroFramesN = find(zeroFrames);
+        disp(['Now correcting ' num2str(length(zeroFramesN)) ' (0,0) frames'])
+        p = ProgressBar(length(zeroFramesN));
+        zfI = 1;
+        while zfI < length(zeroFramesN)+1
+            corrFrame = zeroFramesN(zfI);
+            
+            obj.CurrentTime = (corrFrame-1)/aviSR;
+            uFrame = readFrame(obj);
+            imagesc(manCorrFig.Children,uFrame);
+            title(['Frame # ' num2str(corrFrame) ', click here, right to accept current'])
+            hold(manCorrFig.Children,'on')
+            plot(manCorrFig.Children,xAVI(corrFrame),yAVI(corrFrame),'+r')
+            if (xAVI(corrFrame)==0) && (yAVI(corrFrame)==0)
+                plot(manCorrFig.Children,20,20,'^r')
+            end
+            hold(manCorrFig.Children,'off')
+            
+            figure(manCorrFig);
+            [xclick,yclick,buttonClicked] = ginput(1);
+            switch buttonClicked
+                case 1
+                    xAVI(corrFrame) = xclick;
+                    yAVI(corrFrame) = yclick;
+                    definitelyGood(corrFrame) = 1;
+                    imagesc(manCorrFig.Children,uFrame);
+                    hold(manCorrFig.Children,'on')
+                    plot(manCorrFig.Children,xAVI(corrFrame),yAVI(corrFrame),'+g')
+                    hold(manCorrFig.Children,'off')
+                case 3
+                    hold(manCorrFig.Children,'on')
+                    plot(manCorrFig.Children,xAVI(corrFrame),yAVI(corrFrame),'+g')
+                    hold(manCorrFig.Children,'off')
+                    definitelyGood(corrFrame) = 1;
+                case 2
+                    %Code here to end this correction segment3
+                    %Ask to stop correcting
+                            %Or go back to last man corr frame?
+                    disp('Halting correction')
+                    zfI = length(zeroFramesN)+1;
+                    
+            end
+            zfI = zfI + 1;
+            
+            p.progress;
+        end
+        p.stop;
+        disp('Done zero frames correction')
+    case 'b'
+        [onMazeFinal] = parseOnMazeBehavior(xAVI,yAVI,v0,obj);
+        onMaze = zeros(size(xAVI,1),size(xAVI,2));
+        for omII = 1:size(onMazeFinal,1)
+            onMaze(onMazeFinal(omII,1):onMazeFinal(omII,2)) = 1;
+        end
+    case 'p'
+        %Correct by position
+        
+        posInclude = true(size(xAVI,1),size(xAVI,2));
+        %Plot off maze pos?
+        if strcmpi(pomp,'No')
+            posInclude(onMaze==0) = 0;
+        end
+        %plot def good pos?
+        if strcmpi(pdgp,'No')
+            posInclude(definitelyGood) = 0;
+        end
+        
+        posFig = figure; imagesc(v0);
+        hold on
+        plot(xAVI(posInclude),yAVI(posInclude),'.b')
+        [~,lassoX,lassoY]=roipoly;
+        
+        posIncInds = find(posInclude);
+        inLasso = inpolygon(xAVI(posInclude),yAVI(posInclude),lassoX,lassoY);
+        
+        plot(xAVI(posIncInds(inLasso)),yAVI(posIncInds(inLasso)),'.r')
+        
+        disp(['Found ' num2str(sum(inLasso)) ' points here, fix them?'])
+        
+        % code to fix them
+        
+    case 'v'
+        CorrectByVelocity;
+    case 's'
+        SaveTemp;
+    case 't'
+        threshEdit = questdlg(['Current is ' num2str(velThresh) '. How to edit velocity threshold?'], 'Edit vel thresh', ...
+                              'ginput','number','ginput');
+        switch threshEdit
+            case 'ginput'
+                tt = figure;
+                veloc = hypot(diff(xAVI,1),diff(yAVI,1));
+                veloc(definitelyGood(1:end-1)) = 0;
+                plot(veloc); hold on; plot([1 length(veloc)],[velThresh velThresh],'r')
+                [~,velThresh] = ginput(1);
+                
+            case 'number'
+                velThresh = input('What is the new velThresh?  >>');
+        end 
+        disp(['New velThresh is ' num2str(velThresh)])   
+    case 'q'
+        
+    otherwise 
+        disp('Not a recognized input')
+end
+
+    function SaveTemp
+        save PosLED_temp.mat xAVI yAVI definitelyGood v0 dvtPos... 
+            subMultRedX subMultRedY subMultGreenX subMultGreenY...
+            Rbrightness Gbrightness calibrateFrames howRed howGreen...
+            nRed nGreen redPix greenPix...
+            onMaze velThresh
+        disp('Saved!')
+    end
+
+end
+
+function [redX, redY, greenX, greenY, allIndR, allIndG] = AutoCorrByLED(...
+    manCorrFig, obj, corrFrame, onMazeX, onMazeY, onMazeMask, v0r, v0g, rawColorThresh,...
+    howRedThresh, nBrightPoints)
+
+%Get the frame to correct
+obj.CurrentTime = (corrFrame-1)/aviSR;
+uFrame = readFrame(obj);
+
+%Do some friendly UI stuff
+
+imagesc(manCorrFig.Children,uFrame);
+title(['Frame# ' num2str(corrFrame)])
+
+boundaryX = onMazeX; boundaryX = [boundaryX; boundaryX(1)];
+boundaryY = onMazeY; boundaryY = [boundaryY; boundaryY(1)];
+hold(manCorrFig.Children,'on')
+plot(manCorrFig.Children,boundaryX,boundaryY,'r','LineWidth',1.5)
+hold(manCorrFig.Children,'off')
+
+%Do our image subtract and mult
+[rfRsub, rfGsub] =  GetSelfSubFrame(uFrame, v0r, v0g, onMazeMask);
+
+%Threshold frames by how much the right color
+if rawColorThresh == 1
+    ufRthreshed = uFrame(:,:,1) > howRedThresh;
+    ufGthreshed = uFrame(:,:,2) > howGreenThresh;
+    
+    rfRsub = rfRsub.*ufRthreshed;
+    rfGsub = rfGsub.*ufGthreshed;
+end
+
+%Find the red and green LEDs
+[allIndR,redX,redY] = GetBrightBlobPixels(rfRsub,nBrightPoints);
+[allIndG,greenX,greenY] = GetBrightBlobPixels(rfGsub,nBrightPoints);
+
+hold(manCorrFig.Children,'on')
+plot(manCorrFig.Children,redX,redY,'or')
+plot(manCorrFig.Children,greenX,greenY,'og')
+hold(manCorrFig.Children,'off')
+
+%{
+p = ProgressBar(nFrames);
+for corrFrame = 1:nFrames
+     obj.CurrentTime = (corrFrame-1)/aviSR;
+    uFrame = readFrame(obj);
+    ufRthreshed = uFrame(:,:,1) > howRedThresh;
+    ufGthreshed = uFrame(:,:,2) > howGreenThresh;
+
+    rPixFrame = ufRthreshed.*onMazeMask;
+    gPixFrame = ufGthreshed.*onMazeMask;
+    
+    anyRpix(corrFrame) = sum(sum(rPixFrame));
+    anyGpix(corrFrame) = sum(sum(gPixFrame));
+    
+    p.progress;
+end
+p.stop;
+%}
+
+end
+
+function [rfRsub, rfGsub] =  GetSelfSubFrame(uFrame, v0r, v0g, onMazeMask)
+    
+%Strip down frames, find max green and red
+uFrameR = double(uFrame(:,:,1) - uFrame(:,:,2));
+uFrameG = double(uFrame(:,:,2));
+    
+%rfRsub = rFrameR - v0g;
+rfRsub = uFrameR - v0r; rfRsub(rfRsub < 0) = 0;
+rfGsub = uFrameG - v0g; rfGsub(rfGsub < 0) = 0;
+   
+rfGsub = uFrameG.*rfGsub;
+rfRsub = uFrameR.*rfRsub;
+    
+if ~isempty(onMazeMask)
+    rfRsub = rfRsub.*onMazeMask;
+    rfGsub = rfGsub.*onMazeMask;
+end
+    
+end
+
+function [allIndX,colorX,colorY] = GetBrightBlobPixels(rfSubFrame,nBrightPoints)
+frameSize = [size(rfSubFrame,1) size(rfSubFrame,2)];
+
+%Find the 5 reddest/greenest points in the subtraction frame, see which is brightest 
+[sortedSubVals, sortOrderSub] = sort(rfSubFrame(:),'descend');
+allIndX = sortOrderSub(1:nBrightPoints);
+%figure; imagesc(uFrame); hold on; [ploty, plotx] = ind2sub(frameSize,allIndR); plot(plotx,ploty,'*c')
+
+%Eliminate pixels where the value is 0
+allIndX( rfSubFrame(allIndX) == 0 ) = [];
+
+%If there are 2 blobs, get the bigger one
+xBlobs = zeros(frameSize); xBlobs(allIndX) = 1; 
+xMaxBlobs = bwconncomp(xBlobs);
+[~,biggerXblob] = max(cell2mat(cellfun(@length,xMaxBlobs.PixelIdxList,'UniformOutput',false)));
+
+if any(biggerXblob)
+    allIndX = xMaxBlobs.PixelIdxList{biggerXblob};
+
+    %Convert to X/Y
+    [xRowAll,xColAll] = ind2sub(frameSize,allIndX);
+    colorY = mean(xRowAll); colorX = mean(xColAll);
+else
+    colorY = NaN; colorX = NaN;
+end
+
+end
+
+function [velNow,xRep,yRep] = TryNewPointVelocity(xAVI,yAVI,problemFramesCheck,xNew,yNew)      
+origX = xAVI(problemFramesCheck);
+origY = yAVI(problemFramesCheck);
+    
+xRep = xNew(problemFramesCheck);
+yRep = yNew(problemFramesCheck);
+    
+%Replace first point, try velocity
+firstRepVel = hypot(diff([xRep(1) origX(2)]),diff([yRep(1) origY(2)]));
+%Replace second point, try velocity
+secondRepVel = hypot(diff([xRep(2) origX(1)]),diff([yRep(2) origY(1)]));
+    
+velNow = [firstRepVel; secondRepVel];
+end
+
+function [onMazeFinal] = parseOnMazeBehavior(xAVI,yAVI,v0,obj)
 
 %Find epochs of missing points based on expected plus maze behavior
 ff = figure;
@@ -380,6 +595,13 @@ for aeI = 1:length(enterArmEnd)
     probablyOnMaze(enterArmEnd(aeI):leaveArmEnd(aeI)) = 1;
 end
 
+%{
+realOnMazeDur = 0;
+for ii = 1:size(handCoded,1)
+    realOnMazeDur = realOnMazeDur + handCoded(ii,2) - handCoded(ii,1) + 1;
+end
+%}
+
 %Check for leaveCenter - enterCenter where there's only one arm entry and
 %exit
 behTable = [zeros(length(enterCenter),2) enterCenter leaveCenter zeros(length(enterCenter),2)];
@@ -460,6 +682,7 @@ for ceJ = 1:(length(leaveCenter)-1)
     end  
 %figure; imagesc(v0); hold on; plot(xAVI(behaviorMarker==5),yAVI(behaviorMarker==5),'.g')    
 end
+%Fill in last row
 armEntries = enterArmEnd(enterArmEnd > leaveCenter(length(leaveCenter)));
 armLeavings = leaveArmEnd(leaveArmEnd > leaveCenter(length(leaveCenter)));
 if any(armEntries)
@@ -470,6 +693,7 @@ else %probably carried through center?
     behTable(length(leaveCenter),5) = NaN;
     behTable(length(leaveCenter),5) = NaN;
 end
+
 %Get user input on overlapped segments, check if mouse is on the maze
 for ceK = 1:size(behTable,1)-1
     if behTable(ceK,5) == behTable(ceK+1,1) %|| behTable(ceK,6) == behTable(ceK+1,2)
@@ -504,196 +728,164 @@ for ceK = 1:size(behTable,1)-1
     end
 end
 
+%parse this all out into onmaze time
+onMazeTable = behTable(:,[1 6]);
+onMazeTableEditor = behTable(:,[2 6]);
+%if theres a nan, delete the lap
+%if there are still repeats but no nans, it's an ongoing lap, 
+%    can delete for onmaze and just get the first enter through last leave
+nanRows = isnan(onMazeTableEditor(:,1)) | isnan(onMazeTableEditor(:,2)); 
+onMazeTable(nanRows,:) = [];
+onMazeTableEditor(nanRows,:) = [];
 
-%{
-realOnMazeDur = 0;
-for ii = 1:size(handCoded,1)
-    realOnMazeDur = realOnMazeDur + handCoded(ii,2) - handCoded(ii,1) + 1;
-end
-%}
+%Find instances where there are shared entries across a lap (ongoing on maze)
+lookmatches = [onMazeTableEditor(1:end-1,2) onMazeTableEditor(2:end,1)];
+matchedInd = lookmatches(:,1) == lookmatches(:,2);
 
+lookmatches(matchedInd,:) = [];
 
+onMazeReArr = [onMazeTable(1:end-1,2) onMazeTable(2:end,1)];
+onMazeReArr(matchedInd,:) = [];
 
-%Find possible trial boundaries
-posTrialEnd = [];
-posTrialStart = [];
-for tbI = 1:(length(leaveArmEnd)-1)
-    centerHere = sum(behaviorMarker(enterArmEnd(tbI):leaveArmEnd(tbI+1))==1);
-    switch centerHere > 0
-        case 1
-            %Not a trial boundary
-        case 0
-            %possibly a trial boundary
-            posTrialEnd = [posTrialEnd; enterArmEnd(tbI)];
-            posTrialStart = [posTrialStart; leaveArmEnd(tbI+1)];
-        otherwise
-            disp('switch error')
-            keyboard
-    end
-end   
+onMazeFinal = [[onMazeTable(1,1); onMazeReArr(:,2)], [onMazeReArr(:,1); onMazeTable(end,2)]];
 
-checkMazeStarts = [leaveArmEnd(1); posTrialStart];
-checkMazeEnds = [posTrialEnd; enterArmEnd(end)];
-
-%Do this working out from centers
-behTable = zeros(1,6);
-for cbI = 1:length(enterCenter)
-    %Work backwards
-    behTable(cbI+1,3) = enterCenter(cbI);
-    try
-        behTable(cbI+1,1) = checkMazeStarts(find(checkMazeStarts < behTable(cbI+1,3),1,'last'));
-    catch
-        %Case is likely where carrying from ITI platform, through center,
-        %to arm end
-        behTable(cbI+1,1) = NaN;
-    end
-    
-    %Work forwards
-    behTable(cbI+1,4) = leaveCenter(cbI);
-    try
-        behTable(cbI+1,6) = checkMazeEnds(find(checkMazeEnds > behTable(cbI+1,4),1,'first'));    
-    catch
-        %Case is likely moving mouse from end, through center back to ITI
-        %platform
-        behTable(cbI+1,6) = NaN;
-    end
-end
-behTable(1,:) = [];
-
-%Look at start/end overlaps
-cbJ = 1;
-while cbJ < size(behTable,1)
-    doubleRows = find(behTable(:,1)==behTable(cbJ,1));
-    centerDursHere = behTable(doubleRows,4) - behTable(doubleRows,3);
-
-    [~,deleteRow] = min(centerDursHere)
-    
-    
-    
 end
 
+function [posAndVelFig] = UpdatePosAndVel(xAVI,yAVI,onMaze,definitelyGood,velThresh,posAndVelFig)
+border = 0.05;
+boxHeight = (1-border*4) / 3;
+boxWidth = 1-border*2;
 
-%{
+plotOnMaze = onMaze; 
+plotOnMaze(plotOnMaze==0) = NaN;
+defGoodWork = definitelyGood==0;
 
+veloc = hypot(diff(xAVI.*plotOnMaze.*defGoodWork,1),diff(yAVI.*plotOnMaze.*defGoodWork,1));
 
-%leaveArmEnd = [1; leaveArmEnd];
-%enterArmEnd = [enterArmEnd; nFrames];
-posOnMazeEpochs = [leaveArmEnd(1:end-1) enterArmEnd(2:end)];
+try
+close(posAndVelFig);
+end
+posAndVelFig = figure('Position',[267 152 1582 758]);
 
-passedThruCenter = zeros(length(leaveArmEnd)-1,1);
-for oaeI = 1:size(length(leaveArmEnd)-1,1)
-    centerNow = sum(behaviorMarker(posOnMazeEpochs(oaeI,1):posOnMazeEpochs(oaeI,2))==1); 
-    passedThruCenter(oaeI) = centerNow > 1;
+subplot('Position',[border border*3+boxHeight*2 boxWidth boxHeight])
+plot(xAVI.*plotOnMaze)
+title('X position'); %xlabel('Frame Number')
+subplot('Position',[border border*2+boxHeight*1 boxWidth boxHeight])
+plot(yAVI.*plotOnMaze)
+title('Y position'); %xlabel('Frame Number')
+subplot('Position',[border border*1+boxHeight*0 boxWidth boxHeight])
+plot(veloc)
+hold on
+plot([1 length(veloc)],[velThresh velThresh],'r')
+badVel = veloc > velThresh;
+fn = 1:length(badVel);
+plot(fn(badVel),veloc(badVel),'or')
+title('Velocity'); xlabel('Frame Number')
+
 end
 
-
-possibleLap = passedThruCenter==1;
-
-posOnMazeEpochs = posOnMazeEpochs(possibleLap,:);
-
-
+function CorrectByVelocity(xAVI,yAVI,onMaze,definitelyGood,velThresh,v0,obj,manCorrFig,posAndVelFig)
+aviSR = obj.FrameRate;
+onMazeWork = onMaze;
+onMazeWork(onMazeWork==0) = NaN;
 
 
+posAndVelFig = UpdatePosAndVel(xAVI,yAVI,onMaze,definitelyGood, velThresh,posAndVelFig);
 
-
-yesAnITI = passedThruCenter == 0; %Epochs where tracking jumps from one arm end to another (good, that's an ITI)
-
-
-
-
-
-
-%Delete off maze too short first
-offMazeEpochs = [leaveArmEnd(1:end-1) enterArmEnd(2:end)];
-outArmDurations = diff(offMazeEpochs,1,2);
-badArmEpochs = outArmDurations < offMazeMin; %unlikely to be real
-offMazeEpochs(badArmEpochs,:) = [];
-
-%Delete off maze where passed through center
-passedThruCenter = zeros(size(offMazeEpochs,1),1);
-for oaeI = 1:size(offMazeEpochs,1)
-    centerNow = sum(behaviorMarker(offMazeEpochs(oaeI,1):offMazeEpochs(oaeI,2))==1); 
-    passedThruCenter(oaeI) = centerNow > 1;
-end
-yesAnITI = passedThruCenter == 0; %Epochs where tracking jumps from one arm end to another (good, that's an ITI)
-
-offMazeEpochs = offMazeEpochs(yesAnITI,:);
-
-posOntoMaze = [enterArmEnd(1); offMazeEpochs(:,2)];
-posOffofMaze = [offMazeEpochs(:,1); leaveArmEnd(end)];
-
-posOnMazeEpochs = [posOntoMaze posOffofMaze];
-
-
-
-
-
-
-
-%Delete on maze too short
-enterArmEnd2 = [enterArmEnd(1); offMazeEpochs(:,2)]; 
-leaveArmEnd2 = [offMazeEpochs(:,1); leaveArmEnd(end)]; 
-
-posOnMazeEpochs = [enterArmEnd2 leaveArmEnd2];
-tooShortOnMaze = diff(posOnMazeEpochs,1,2) < onMazeMin;
-posOnMazeEpochs(tooShortOnMaze,:) = [];
-
-%Delete off maze that includes the center
-offMazeEpochs2 = [posOnMazeEpochs(:,1:end-1) posOnMazeEpochs(:,2:end)]; %[leave enter]
-passedThruCenter = zeros(size(offMazeEpochs2,1),1);
-for oaeI = 1:size(offMazeEpochs2,1)
-    centerNow = sum(behaviorMarker(offMazeEpochs2(oaeI,1):offMazeEpochs2(oaeI,2))==1); 
-    passedThruCenter(oaeI) = centerNow > 1;
-end
-possibleITIs = passedThruCenter == 0; %Epochs where tracking jumps from one arm end to another (good, that's an ITI)
-
-offMazeEpochs2 = offMazeEpochs2(possibleITIs,:);
-
-enterArmEnd3 = 
-
-onMazeEpochs = [offMazeEpochs2(1:end-1,2) offMazeEpochs2(2:end,1)];
-
-%Delete on meaze where skips the center
-
-
-armEpochEntries = [enterArmEnd(1); offMazeEpochs(:,2)];
-armEpochExits = [offMazeEpochs(:,1); leaveArmEnd(end)];
-
-posOnMazeEpochs = [armEpochEntries armEpochExits];
-passedThruCenter = zeros(size(posOnMazeEpochs,1),1);
-for oaeI = 1:size(posOnMazeEpochs,1)
-    centerNow = sum(behaviorMarker(posOnMazeEpochs(oaeI,1):posOnMazeEpochs(oaeI,2))==1); 
-    passedThruCenter(oaeI) = (centerNow > 1);
-end
-possibleTrials = passedThruCenter == 1; %Epochs where tracking jumps from one arm end to another
-
-onMazeEpochs
-
-
-
-%}
-
-
-
-
-
-%Here is where user decides how to correct things here on out
-
-velThresh = 25;
-
+%Ask about range to look for bad points
 skipDefGood = 1;
-editChoice = input('How would you like to edit? >>','s');
-switch editChoice
+
+doneVel = 0;
+while doneVel == 0
+    defGoodWork = definitelyGood==0;
+    veloc = hypot(diff(xAVI.*onMazeWork,1),diff(yAVI.*onMazeWork,1));
+    badVel = veloc > velThresh;
     
-    case 'v'
-        doneVel = 0;
+    triedVel = zeros(length(xAVI),1);
+    
+    if sum(badVel)==0
+        doneVel = 1;
+        disp('Found no more high velocity points')
+    elseif sum(badVel) > 0
+        disp(['Found ' num2str(sum(badVel)) ' points above velocity threshold'])
+        %Try to find a frame to correct
+        
+        %defGoodWork = definitelyGood==0;
+        anyBadVel = 1;
+        while anyBadVel == 1
+            veloc = hypot(diff(xAVI.*onMazeWork,1),diff(yAVI.*onMazeWork,1));
+            badVel = veloc > velThresh;
+            if skipDefGood==1
+                skdg = definitelyGood(1:end-1) & definitelyGood(2:end);
+                badVel(skdg) = 0;
+            end
+
+            if sum(badVel) == 0
+                anyBadVel=0;
+            elseif sum(badVel) > 0
+                frameTry = find(badVel,1,'first');
+
+                if triedVel(frameTry)==1
+                    frameTry=frameTry+1;
+                elseif triedVel(frameTry)>1
+                    disp(['tried this frame ' num2str(triedVel(frameTry)) ' times'])    
+                    keyboard   
+                end
+
+                %Display the frame and current position
+                corrFrame = frameTry;
+                obj.CurrentTime = (corrFrame-1)/aviSR;
+                uFrame = readFrame(obj);
+                imagesc(manCorrFig.Children,uFrame);
+                title(['Frame # ' num2str(corrFrame) ', click here, right to accept current'])
+                hold(manCorrFig.Children,'on')
+                plot(manCorrFig.Children,xAVI(corrFrame),yAVI(corrFrame),'+r')
+                if (xAVI(corrFrame)==0) && (yAVI(corrFrame)==0)
+                    plot(manCorrFig.Children,20,20,'^r')
+                end
+                hold(manCorrFig.Children,'off')
+
+                figure(manCorrFig);
+                [xclick,yclick,buttonClicked] = ginput(1);
+                switch buttonClicked
+                    case 1
+                        xAVI(corrFrame) = xclick;
+                        yAVI(corrFrame) = yclick;
+                        definitelyGood(corrFrame) = 1;
+                        imagesc(manCorrFig.Children,uFrame);
+                        hold(manCorrFig.Children,'on')
+                        plot(manCorrFig.Children,xAVI(corrFrame),yAVI(corrFrame),'+g')
+                        hold(manCorrFig.Children,'off')
+                    case 3
+                        hold(manCorrFig.Children,'on')
+                        plot(manCorrFig.Children,xAVI(corrFrame),yAVI(corrFrame),'+g')
+                        hold(manCorrFig.Children,'off')
+                        definitelyGood(corrFrame) = 1;
+                end
+                triedVel(corrFrame) = triedVel(corrFrame)+1;
+
+            end
+
+                
+        end
+        
+        
+        
+        
+        
+    end
+        
+
+    
+    
+    
+end   
+        
+        %This is an attempt at automatically solving high velocity frames
+        %using data from the dvt files or individual color channels
+        %{
         
         triedVel = zeros(length(veloc),1);
-        while doneVel == 0
-        
-        veloc = hypot(diff(xAVI,1),diff(yAVI,1));
-        
-
         if skipDefGood == 1
             veloc(definitelyGood(1:end-1)) = 0;
         end
@@ -812,96 +1004,9 @@ switch editChoice
         
         
         end
-    case 's'
-        save PosLED_temp.mat xAVI yAVI definitelyGood v0 subMultRedX subMultRedY...
-            subMultGreenX subMultGreenY dvtPos Rbrightness Gbrightness calibrateFrames...
-            howRed howGreen...
-            nRed nGreen redPix greenPix
-        disp('Saved!')
-    case 't'
-        threshEdit = questdlg(['Current is ' num2str(velThresh) '. How to edit velocity threshold?'], 'Edit vel thresh', ...
-                              'ginput','number','ginput');
-        switch threshEdit
-            case 'ginput'
-                tt = figure;
-                veloc = hypot(diff(xAVI,1),diff(yAVI,1));
-                veloc(definitelyGood(1:end-1)) = 0;
-                plot(veloc); hold on; plot([1 length(veloc)],[velThresh velThresh],'r')
-                [~,velThresh] = ginput(1);
-                
-            case 'number'
-                velThresh = input('What is the new velThresh?  >>');
-        end 
-        disp(['New velThresh is ' num2str(velThresh)])   
-    otherwise 
-        disp('Not a recognized input')
+        %}
 end
-
-end
-
-function [rfRsub, rfGsub] =  GetSelfSubFrame(uFrame, v0r, v0g, onMazeMask)
-    
-%Strip down frames, find max green and red
-uFrameR = double(uFrame(:,:,1) - uFrame(:,:,2));
-uFrameG = double(uFrame(:,:,2));
-    
-%rfRsub = rFrameR - v0g;
-rfRsub = uFrameR - v0r; rfRsub(rfRsub < 0) = 0;
-rfGsub = uFrameG - v0g; rfGsub(rfGsub < 0) = 0;
-   
-rfGsub = uFrameG.*rfGsub;
-rfRsub = uFrameR.*rfRsub;
-    
-if ~isempty(onMazeMask)
-    rfRsub = rfRsub.*onMazeMask;
-    rfGsub = rfGsub.*onMazeMask;
-end
-    
-end
-
-function [allIndX,colorX,colorY] = GetBrightBlobPixels(rfSubFrame,nBrightPoints)
-frameSize = [size(rfSubFrame,1) size(rfSubFrame,2)];
-
-%Find the 5 reddest/greenest points in the subtraction frame, see which is brightest 
-[sortedSubVals, sortOrderSub] = sort(rfSubFrame(:),'descend');
-allIndX = sortOrderSub(1:nBrightPoints);
-%figure; imagesc(uFrame); hold on; [ploty, plotx] = ind2sub(frameSize,allIndR); plot(plotx,ploty,'*c')
-
-%Eliminate pixels where the value is 0
-allIndX( rfSubFrame(allIndX) == 0 ) = [];
-
-%If there are 2 blobs, get the bigger one
-xBlobs = zeros(frameSize); xBlobs(allIndX) = 1; 
-xMaxBlobs = bwconncomp(xBlobs);
-[~,biggerXblob] = max(cell2mat(cellfun(@length,xMaxBlobs.PixelIdxList,'UniformOutput',false)));
-
-if any(biggerXblob)
-    allIndX = xMaxBlobs.PixelIdxList{biggerXblob};
-
-    %Convert to X/Y
-    [xRowAll,xColAll] = ind2sub(frameSize,allIndX);
-    colorY = mean(xRowAll); colorX = mean(xColAll);
-else
-    colorY = NaN; colorX = NaN;
-end
-
-end
-
-function [velNow,xRep,yRep] = TryNewPointVelocity(xAVI,yAVI,problemFramesCheck,xNew,yNew)      
-origX = xAVI(problemFramesCheck);
-origY = yAVI(problemFramesCheck);
-    
-xRep = xNew(problemFramesCheck);
-yRep = yNew(problemFramesCheck);
-    
-%Replace first point, try velocity
-firstRepVel = hypot(diff([xRep(1) origX(2)]),diff([yRep(1) origY(2)]));
-%Replace second point, try velocity
-secondRepVel = hypot(diff([xRep(2) origX(1)]),diff([yRep(2) origY(1)]));
-    
-velNow = [firstRepVel; secondRepVel];
-end
-
+        
 function FrameTrackingViewer(v0,obj,startFrame,xAVI,yAVI)
 
 
