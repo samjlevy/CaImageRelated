@@ -9,6 +9,7 @@ if isempty('v0')
             switch makeChoice
                 case 'Use'
                     makebackground=0;
+                    backgroundImage=v0;
                 case 'Remake'
                     makebackground=1;
             end
@@ -18,6 +19,9 @@ if isempty('v0')
     end
 elseif ~exist('v0','var') || any(v0(:))==0 %need the any since declaring as global
     makebackground=1;
+else
+    makebackground=0;
+    backgroundImage=v0;
 end
 
 if makebackground==1
