@@ -43,7 +43,7 @@ bkgChoice = questdlg('Supply/Load background image or composite?', ...
         obj.CurrentTime = (bkgFrameNum-1)/obj.FrameRate;
         backgroundImage = readFrame(obj);
         backgroundFrame=figure('name','backgroundFrame'); imagesc(backgroundImage); title('Background Image')
-        compositeBkg = backgroundImage;
+        %compositeBkg = backgroundImage;
         %could break here to allow fixing a piece of this one
     case 'Composite'
         try
@@ -89,6 +89,7 @@ while bkgNotFlipped==0
                 bkgNotFlipped=1;
             case 'No'
                 backgroundImage=flipud(backgroundImage);
+                imagesc(backgroundImage);
         end
 end     
 
@@ -119,8 +120,23 @@ while compGood==0
             %might replace with 2 field dialog box
             obj.CurrentTime = (swapInNum-1)/obj.FrameRate;
             swapClearFrame = readFrame(obj);
-            [rows,cols]=ind2sub([obj.Height,obj.Width],find(swapRegion));
-            backgroundImage(rows,cols,:)=swapClearFrame(rows,cols,:);
+            %[rows,cols]=ind2sub([obj.Height,obj.Width],find(swapRegion(:)));
+            %backgroundImage(rows,cols,:)=swapClearFrame(rows,cols,:);
+            swapSub = find(swapRegion);
+            bg1 = backgroundImage(:,:,1);
+            bg2 = backgroundImage(:,:,2);
+            bg3 = backgroundImage(:,:,3);
+            sc1 = swapClearFrame(:,:,1);
+            sc2 = swapClearFrame(:,:,2);
+            sc3 = swapClearFrame(:,:,3);
+            for ssI = 1:length(swapSub)
+                bg1(swapSub(ssI)) = sc1(swapSub(ssI));
+                bg2(swapSub(ssI)) = sc2(swapSub(ssI));
+                bg3(swapSub(ssI)) = sc3(swapSub(ssI));
+            end
+            backgroundImage(:,:,1) = bg1;
+            backgroundImage(:,:,2) = bg2;
+            backgroundImage(:,:,3) = bg3;
             figure(backgroundFrame);imagesc(backgroundImage)
             compGood=0;
     end

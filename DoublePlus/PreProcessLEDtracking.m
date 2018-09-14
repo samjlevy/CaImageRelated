@@ -18,7 +18,7 @@ end
 disp(['Using ' avi_filepath ])
 obj = VideoReader(avi_filepath);
 aviSR = obj.FrameRate;
-nFrames = obj.Duration*aviSR;  
+nFrames = round(obj.Duration*aviSR);  
 frameSize = [obj.Height obj.Width];
 
 %Pre-allocate stuff
@@ -66,13 +66,6 @@ while doneDVTs == 0
 
     pos_data{dd} = importdata(filepath); %#ok<AGROW>
     
-    ss = input('Done loading DVTs? (y/n) >> ','s');
-    if strcmpi(ss,'y')
-        doneDVTs = 1;
-    else
-        dd = dd+1;
-    end
-
     dvtPos{dd}.redX = pos_data{dd}(:,5)*DVTtoAVIscale; %#ok<AGROW>
     dvtPos{dd}.redY = pos_data{dd}(:,6)*DVTtoAVIscale; %#ok<AGROW>
     dvtPos{dd}.redY = frameSize(1) - dvtPos{dd}.redY; %#ok<AGROW>
@@ -82,6 +75,15 @@ while doneDVTs == 0
 
     dvtPos{dd}.redX( dvtPos{dd}.redX==0 & dvtPos{dd}.redY==0 ) = NaN; %#ok<AGROW>
     dvtPos{dd}.redY( dvtPos{dd}.redX==0 & dvtPos{dd}.redY==0 ) = NaN; %#ok<AGROW>
+    
+    ss = input('Done loading DVTs? (y/n) >> ','s');
+    if strcmpi(ss,'y')
+        doneDVTs = 1;
+    else
+        dd = dd+1;
+    end
+
+    
 end
 
 end
