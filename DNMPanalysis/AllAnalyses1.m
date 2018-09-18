@@ -1,7 +1,7 @@
 %% Process all data
 
 mainFolder = 'C:\Users\Sam\Desktop\DNMPfinalData';
-mainFolder = 'E:\DNMPfinalData';
+%mainFolder = 'E:\DNMPfinalData';
 mice = {'Bellatrix', 'Polaris', 'Calisto', 'Nix'}; %'Europa'
 numMice = length(mice);
 

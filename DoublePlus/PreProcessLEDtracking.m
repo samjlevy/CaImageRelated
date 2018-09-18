@@ -206,13 +206,31 @@ for tfI = 1:nTestFrames
 
     brightnessCalibrated = 1;
 end
-end
 
 rMeans = cell2mat(cellfun(@mean,howRed,'UniformOutput',false));
 gMeans = cell2mat(cellfun(@mean,howGreen,'UniformOutput',false));
 
 howRedThresh =  mean(rMeans) - 1.5*std(rMeans); %Use in raw frame
 howGreenThresh = mean(gMeans) - 2*std(gMeans); %Use in raw frame
+
+
+end
+
+if howRedThresh < 175
+    chR = input(['Red thresh now is ' num2str(howRedThresh) ', default is 175. Change now? (y/n)>>'],'s');
+    if strcmpi(chR,'y')
+        howRedThresh = str2double(input('Enter new RED thresh value:','s'));
+    end
+end
+
+if howGreenThresh < 210
+    chG = input(['Green thresh now is ' num2str(howRedThresh) ', default is 210. Change now? (y/n)>>'],'s');
+    if strcmpi(chG,'y')
+        howGreenThresh = str2double(input('Enter new GREEN thresh value:','s'));
+    end
+end
+        
+
 
 mcfCurrentSize = mcfOriginalSize;
 mcfCurrentSize(3:4) = mcfCurrentSize(3:4)*mcfScaleFactor;
@@ -253,6 +271,16 @@ haveGreenY = ~isnan(subMultGreenY);
 haveGreenBoth = (haveGreenX+haveGreenY)==2;
 
 haveBothColors = (haveRedBoth + haveGreenBoth) == 2;
+
+%Check dist between red and green isn't too high
+rgDistMax = 20;
+bothColorDist = hypot(diff([subMultRedX subMultGreenX]),diff([subMultRedY subMultGreenY]));
+badDist = bothColorDist > rgDistMax;
+haveBothColors(badDist) = 0;
+subInGreen = badDist & haveGreenBoth;
+
+
+
 haveRedOnly = ((haveRedBoth + haveGreenBoth) == 1) & haveRedBoth;
 haveGreenOnly = ((haveRedBoth + haveGreenBoth) == 1) & haveGreenBoth;
 
@@ -266,11 +294,25 @@ velGreen = hypot(diff(subMultGreenX,1),diff(subMultGreenY,1)); %#ok<NASGU>
 %Fill in where we have color information
 xAVI(haveBothColors) = mean([subMultRedX(haveBothColors) subMultGreenX(haveBothColors)],2);
 yAVI(haveBothColors) = mean([subMultRedY(haveBothColors) subMultGreenY(haveBothColors)],2);
+xAVI(subInGreen) = subMultGreenX(subInGreen);
+yAVI(subInGreen) = subMultGreenY(subInGreen);
 
-xAVI(haveRedOnly) = subMultRedX(haveRedOnly);
-yAVI(haveRedOnly) = subMultRedY(haveRedOnly);
-xAVI(haveGreenOnly) = subMultGreenX(haveGreenOnly);
-yAVI(haveGreenOnly) = subMultGreenY(haveGreenOnly);
+
+%Check points aren't off maze
+goodPts = inpolygon(xAVI,yAVI,[onMazeX; onMazeX(1)],[onMazeY; onMazeY(1)]);
+badPts = goodPts==0;
+badPts(xAVI==0 & yAVI==0) = 0;
+xAVI(badPts & haveGreenBoth) = subMultGreenX(badPts & haveGreenBoth);
+yAVI(badPts & haveGreenBoth) = subMultGreenY(badPts & haveGreenBoth);
+
+
+%Fill in the rest
+goodRed = inpolygon(subMultRedX(haveRedOnly),subMultRedY(haveRedOnly),[onMazeX; onMazeX(1)],[onMazeY; onMazeY(1)]);
+xAVI(haveRedOnly) = subMultRedX(haveRedOnly & goodRed);
+yAVI(haveRedOnly) = subMultRedY(haveRedOnly & goodRed);
+goodGreen = inpolygon(subMultGreenX(haveGreenOnly),subMultGreenY(haveGreenOnly),[onMazeX; onMazeX(1)],[onMazeY; onMazeY(1)]);
+xAVI(haveGreenOnly) = subMultGreenX(haveGreenOnly & goodGreen);
+yAVI(haveGreenOnly) = subMultGreenY(haveGreenOnly & goodGreen);
 end
 SaveTemp;
 
@@ -317,23 +359,26 @@ while stillEditing == 1
             
             framesFix = min(answer):max(answer);
                         
-            %howEdit = questdlg(['Edit these ' num2str(length(framesFix)) ' frames?'],'Edit','Auto','Manual','Cancel','Auto'); 
+            %howEdit = questdlg(['Edit these ' num2str(length(framesFix)) ' frames?'],'Edit',...
+            %           'Auto','Manual','Cancel','Auto'); 
             
-            [xAVI,yAVI,definitelyGood] = CorrectManualFrames(obj,xAVI,yAVI,v0,definitelyGood,manCorrFig,framesFix,velThresh);
+            [xAVI,yAVI,definitelyGood] = CorrectManualFrames(obj,xAVI,yAVI,v0,...
+                definitelyGood,manCorrFig,framesFix,velThresh);
         
         case 'm'
-            onoroff = questdlg('Mark on-maze or off-maze?','Oh, Hi Mark','on','off','off');
+            onoroff = questdlg('Mark on-maze or off-maze?','Oh, Hi Mark','ON','OFF','OFF');
             omStart = str2double(input(['Mark ' onoroff '-maze start frame: '],'s'));
             omEnd = str2double(input(['Mark ' onoroff '-maze stop frame: '],'s'));
-            doIt = input(['Marking ' num2str(omStart) ' through ' num2str(omEnd) ', yes? (y/n)'],'s');
+            doIt = input(['Marking ' num2str(omStart) ' through ' num2str(omEnd) ' as ' onoroff ', yes? (y/n)'],'s');
             if strcmpi(doIt,'y')
             switch onoroff
-                case 'on'
+                case 'ON'
                     onMaze(omStart:omEnd) = 1;
-                case 'off'
+                case 'OFF'
                     onMaze(omStart:omEnd) = 0;
             end
             end
+            
         case 'z'
             %Correct zero frames
             zeroFrames = xAVI==0 & yAVI==0;
@@ -349,7 +394,8 @@ while stillEditing == 1
             zeroFramesN = find(zeroFrames);
             disp(['Now correcting ' num2str(length(zeroFramesN)) ' (0,0) frames'])
             
-            [xAVI,yAVI,definitelyGood] = CorrectManualFrames(obj,xAVI,yAVI,v0,definitelyGood,manCorrFig,framesFix,velThresh);
+            [xAVI,yAVI,definitelyGood] = CorrectManualFrames(obj,xAVI,yAVI,v0,...
+                definitelyGood,manCorrFig,framesFix,velThresh);
             
             disp('Done zero frames correction')
         case 'b'
@@ -386,7 +432,8 @@ while stillEditing == 1
             close(posFig);
             if strcmpi(fixp,'y')
                  framesFix = posIncInds(inLasso);
-                 [xAVI,yAVI,definitelyGood] = CorrectManualFrames(obj,xAVI,yAVI,v0,definitelyGood,manCorrFig,framesFix,velThresh);
+                 [xAVI,yAVI,definitelyGood] = CorrectManualFrames(...
+                     obj,xAVI,yAVI,v0,definitelyGood,manCorrFig,framesFix,velThresh);
             end
             
         case 'v'
@@ -395,8 +442,9 @@ while stillEditing == 1
         case 's'
             SaveTemp;
         case 't'
-            threshEdit = questdlg(['Current is ' num2str(velThresh) '. How to edit velocity threshold?'], 'Edit vel thresh', ...
-                                  'ginput','number','ginput');
+            threshEdit = questdlg(...
+                ['Current is ' num2str(velThresh) '. How to edit velocity threshold?'],...
+                'Edit vel thresh', 'ginput','number','ginput');
             switch threshEdit
                 case 'ginput'
                     tt = figure;
@@ -427,6 +475,11 @@ while stillEditing == 1
             try %#ok<TRYNC>
                 close(hb);
             end
+            pbs = ls('progressbar_*.txt');
+            if any(pbs)
+                delete(fullfile(cd,pbs))
+            end
+            
             stillEditing = 0;
         otherwise 
             disp('Not a recognized input')
@@ -471,7 +524,8 @@ end
 
 end
 %%
-function [xAVI,yAVI,definitelyGood] = CorrectManualFrames(obj,xAVI,yAVI,v0,definitelyGood,manCorrFig,zeroFramesN,velThresh)
+function [xAVI,yAVI,definitelyGood] = CorrectManualFrames(obj,xAVI,yAVI,v0,...
+    definitelyGood,manCorrFig,zeroFramesN,velThresh)
 p = ProgressBar(length(zeroFramesN));
 aviSR = obj.FrameRate;
 zfI = 1;
@@ -683,11 +737,19 @@ for elI = 1:nEndLocs
     close(ff);
 end
 
+pedsX = []; pedsY = [];
+getped = input('Draw a pedestel region? (y/n) >>','s');
+if strcmpi(getped,'y')
+     ff = figure; imagesc(v0); title('Draw boundary for Pedestal')
+    [~,pedsX,pedsY] = roipoly; 
+    close(ff);
+end
+
 disp('Now parsing maze center - arm end epochs')
 minCenterDur = 2;
 
 enterCenter = find(diff(inCenter) == 1);
-leaveCenter = find(diff(inCenter) == -1)+1;
+leaveCenter = find(diff(inCenter) == -1)+1; %This may be a problem, needs to be consistend w/ arm entries to handle uncut flickers
 
 if size(enterCenter,1) == 1
     enterCenter = enterCenter';
@@ -699,12 +761,13 @@ end
 outEpochs = [leaveCenter(1:end-1) enterCenter(2:end)];
 outDurations = diff(outEpochs,1,2);
 
-badEpochs = outDurations < minCenterDur; %unlikely to be real
+badEpochs = outDurations <= minCenterDur; %unlikely to be real
 
 enterCenter(logical([0; badEpochs])) = [];
 leaveCenter(logical([badEpochs; 0])) = [];
 
-offMazeMin = 10; %Minimum number of frames an entrance is separated from an exit to be considered real
+%offMazeMin = 10;  maybe this is causing problems?
+offMazeMin = 0; %Minimum number of frames an entrance is separated from an exit to be considered real
 %onMazeMin = 20;
 
 behaviorMarker = inCenter;
@@ -774,6 +837,11 @@ for ceJ = 1:(length(leaveCenter)-1)
     armEntries = enterArmEnd(enterArmEnd > leaveCenter(ceJ) & enterArmEnd < enterCenter(ceJ+1));
     armLeavings = leaveArmEnd(leaveArmEnd > leaveCenter(ceJ) & leaveArmEnd < enterCenter(ceJ+1));
     
+    if length(armEntries) ~= length(armLeavings)
+        disp('not the same number as entries and exits here, error somewhere')
+        keyboard
+    end
+    
     switch length(armEntries)
         case 2
             behTable(ceJ,5) = armEntries(1);
@@ -798,7 +866,13 @@ for ceJ = 1:(length(leaveCenter)-1)
             possibleBadMazeEntry(ceJ+1) = 1;
         case 0
             %Won't happen
-            keyboard
+            %keyboard
+            disp('No arm entries here')
+            behTable(ceJ,5) = NaN;
+            behTable(ceJ,6) = NaN;
+            
+            behTable(ceJ+1,1) = NaN;
+            behTable(ceJ+1,2) = NaN;
         otherwise
             %Figure out if any are the same as the first and last, and assume they go with that one
             %If they are all the same, could up to the first and last one
@@ -835,6 +909,7 @@ for ceJ = 1:(length(leaveCenter)-1)
                 behTable(ceJ+1,1) = posLast(1,1);
                 behTable(ceJ+1,2) = posLast(end,2);
             else
+                disp('Wrong num changes from start or end')
                 keyboard
                 %probably just take first in changes from start, last in changes from end
                 %see commented out modification for ^^          and          ^^
@@ -848,16 +923,16 @@ armEntries = enterArmEnd(enterArmEnd > leaveCenter(length(leaveCenter)));
 armLeavings = leaveArmEnd(leaveArmEnd > leaveCenter(length(leaveCenter)));
 if any(armEntries)
     behTable(length(leaveCenter),5) = armEntries(1);
-    behTable(length(leaveCenter),5) = armLeavings(end);
+    behTable(length(leaveCenter),6) = armLeavings(end);
 else %probably carried through center? 
     keyboard
     behTable(length(leaveCenter),5) = NaN;
-    behTable(length(leaveCenter),5) = NaN;
+    behTable(length(leaveCenter),6) = NaN;
 end
 
 disp('Getting user input to refine off-maze time')
 %Get user input on overlapped segments, check if mouse is on the maze
-for ceK = 1:size(behTable,1)-1
+for ceK = 57:size(behTable,1)-1
     if behTable(ceK,5) == behTable(ceK+1,1) %|| behTable(ceK,6) == behTable(ceK+1,2)
         segsComp = [4 5; 2 3];
         for segI = 1:2
@@ -983,7 +1058,8 @@ veloc = hypot(diff(xAVI),diff(yAVI)).*onMazeWork.*windowWork;
 
 end
 %%
-function [xAVI,yAVI, definitelyGood] = CorrectByVelocity(xAVI,yAVI,onMaze,definitelyGood,velThresh,v0,obj,manCorrFig,posAndVelFig)
+function [xAVI,yAVI, definitelyGood] = CorrectByVelocity(xAVI,yAVI,onMaze,definitelyGood,...
+    velThresh,v0,obj,manCorrFig,posAndVelFig)
 aviSR = obj.FrameRate;
 
 
@@ -1215,7 +1291,8 @@ end
                         end
 
                         hold(manCorrFig.Children,'on')
-                        plot(manCorrFig.Children,xAVI(problemFramesCheck(velGood)),yAVI(problemFramesCheck(velGood)),'+g')
+                        plot(manCorrFig.Children,xAVI(problemFramesCheck(velGood)),...
+                                                 yAVI(problemFramesCheck(velGood)),'+g')
                         hold(manCorrFig.Children,'off') 
                     case 2
                         %Probably an error
