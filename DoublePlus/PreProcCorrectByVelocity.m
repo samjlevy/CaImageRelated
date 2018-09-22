@@ -14,7 +14,7 @@ switch velChoice
         windowSearch(:) = true;
         limitToHundredClicks = 0;
     case 'Select Window'
-        [posAndVelFig] = UpdatePosAndVel(xAVI,yAVI,onMaze,definitelyGood,velThresh,posAndVelFig); 
+        [posAndVelFig] = PreProcUpdatePosAndVel(xAVI,yAVI,onMaze,definitelyGood,velThresh,posAndVelFig); 
         figure(posAndVelFig);
         [windowLims,~] = ginput(2);
         windowLims = round(windowLims);

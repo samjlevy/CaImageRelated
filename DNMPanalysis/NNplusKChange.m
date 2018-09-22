@@ -17,6 +17,10 @@ pctChange = nan(numDayPairs,1);
 for dpI = 1:numDayPairs
     numChange(dpI) = numEachDay(dayPairs(dpI,2)) - numEachDay(dayPairs(dpI,1));
     pctChange(dpI) = pctEachDay(dayPairs(dpI,2)) - pctEachDay(dayPairs(dpI,1));
+    
+    if pctChange(dpI) < -1
+        keyboard
+    end
 end
 
 end

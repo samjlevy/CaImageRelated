@@ -227,7 +227,7 @@ behTable(1,1) = enterArmEnd(1);
 behTable(1,2) = leaveArmEnd(1);
 possibleBadMazeExit = zeros(length(enterCenter),1);
 possibleBadMazeEntry = zeros(length(enterCenter),1);
-for ceJ = 1:(length(leaveCenter)-1)
+for ceJ = 18:(length(leaveCenter)-1)
     %Get the arm entries and exits surrounding the current center epoch
     armEntries = enterArmEnd(enterArmEnd > leaveCenter(ceJ) & enterArmEnd < enterCenter(ceJ+1));
     armLeavings = leaveArmEnd(leaveArmEnd > leaveCenter(ceJ) & leaveArmEnd < enterCenter(ceJ+1));
@@ -317,6 +317,21 @@ for ceJ = 1:(length(leaveCenter)-1)
                     if sum(sharedFirstLast) > 0
                         disp('Some how a shared first and last either side of a pedestal epoch. What?')
                         keyboard
+                        
+                        cbI = 1;
+                        while cbI < length(armEntries)-1
+                            otherHere = sum(behaviorMarker((armLeavings(cbI)+1):(armEntries(cbI+1)-1)) > 0);
+                            switch otherHere > 0
+                                case 0
+                                    armLeavings(cbI) = [];
+                                    armEntries(cbI+1) = [];
+                                case 1
+                                    cbI = cbI+1;    
+                                otherwise
+                                    disp('switch error')
+                                    keyboard
+                            end
+                        end
                     end
                     
                     waeStart = whichArmEnds; waeStart = waeStart.*armEndPrePed';
@@ -369,8 +384,8 @@ for ceK = 1:size(behTable,1)-1
              midFrameN = stretchCheck(midFrameInd);
              obj.CurrentTime = (midFrameN-1)/aviSR;
              midFrame = readFrame(obj);
-             orFrame = figure; imagesc(midFrame);
-             usrApp = figure;%('Position',mcfOriginalSize);
+             orFrame = figure('Position',[422 462 560 420]); imagesc(midFrame);
+             usrApp = figure('Position',[1004 459 560 420]);%('Position',mcfOriginalSize);
              imagesc(midFrame); hold on
              plot(xAVI(stretchCheck(1:midFrameInd-1)),yAVI(stretchCheck(1:midFrameInd-1)),'og')
              plot(xAVI(stretchCheck(midFrameInd+1:end)),yAVI(stretchCheck(midFrameInd+1:end)),'or')

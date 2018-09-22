@@ -18,43 +18,30 @@ end
 disp(['Using ' avi_filepath ])
 obj = VideoReader(avi_filepath);
 aviSR = obj.FrameRate;
-nFrames = round(obj.Duration*aviSR);  
+%nFrames = round(obj.Duration*aviSR);  
 frameSize = [obj.Height obj.Width];
-
-%Pre-allocate stuff
-velThresh = 25;
-xAVI = zeros(nFrames,1);
-yAVI = zeros(nFrames,1);
+DVTtime = [];
+nFrames = [];
 mcfScaleFactor = 1;
 mcfOriginalSize = [680 558 560 420];
 DVTtoAVIscale = 0.6246;
-definitelyGood = false(size(xAVI,1),size(xAVI,2));
-dvtPos = [];
-brightnessCalibrated = 0;
-v0 = [];
-subMultRedX = nan(nFrames,1);
-subMultRedY = nan(nFrames,1);
-subMultGreenX = nan(nFrames,1);
-subMultGreenY = nan(nFrames,1);
-nRed = nan(nFrames,1);
-nGreen = nan(nFrames,1);
-redPix = cell(nFrames,1);
-greenPix = cell(nFrames,1);
-onMazeX = []; onMazeY = []; onMazeMask = [];
-Rbrightness = []; Gbrightness = [];
-howRed = []; howGreen = [];
-anyRpix = []; anyGpix = [];
-onMaze = ones(size(xAVI,1),size(xAVI,2)); behTable = [];
+dvtPos = []; 
+%Pre-allocate stuff
+velThresh = 25;
 
+startFresh = 0;
 posFile =fullfile(cd,'PosLED_temp.mat');
 if exist(posFile,'file')==2
     usePos = questdlg('Found a PosLED_temp.mat, want to use it?','Use found pos',...
                     'Yes','No, start over','Yes');
     if strcmp(usePos,'Yes')
         load('PosLED_temp.mat') %#ok<LOAD>
+    else 
+        startFresh = 1;
     end
 else
     disp('Did not find existing PosLED_temp.mat, starting fresh')
+    startFresh = 1;
 end
 
 
@@ -75,6 +62,10 @@ while doneDVTs == 0
 
     dvtPos{dd}.redX( dvtPos{dd}.redX==0 & dvtPos{dd}.redY==0 ) = NaN; %#ok<AGROW>
     dvtPos{dd}.redY( dvtPos{dd}.redX==0 & dvtPos{dd}.redY==0 ) = NaN; %#ok<AGROW>
+    if dd == 1
+        DVTtime = pos_data{dd}(:,2);
+        nFrames = length(DVTtime);
+    end
     
     ss = questdlg('Load another DVT?','Load DVT','Yes','No','Yes');
     if strcmpi(ss,'No')
@@ -86,6 +77,27 @@ while doneDVTs == 0
     
 end
 
+end
+
+if startFresh == 1
+    xAVI = zeros(nFrames,1);
+    yAVI = zeros(nFrames,1);
+    definitelyGood = false(size(xAVI,1),size(xAVI,2));
+    brightnessCalibrated = 0;
+    v0 = [];
+    subMultRedX = nan(nFrames,1);
+    subMultRedY = nan(nFrames,1);
+    subMultGreenX = nan(nFrames,1);
+    subMultGreenY = nan(nFrames,1);
+    nRed = nan(nFrames,1);
+    nGreen = nan(nFrames,1);
+    redPix = cell(nFrames,1);
+    greenPix = cell(nFrames,1);
+    onMazeX = []; onMazeY = []; onMazeMask = [];
+    Rbrightness = []; Gbrightness = [];
+    howRed = []; howGreen = [];
+    anyRpix = []; anyGpix = [];
+    onMaze = ones(size(xAVI,1),size(xAVI,2)); behTable = [];
 end
 
 [v0] = AdjustWithBackgroundImage(avi_filepath, obj, v0);
@@ -498,7 +510,7 @@ end
             howRedThresh howGreenThresh anyRpix anyGpix...
             nRed nGreen redPix greenPix brightnessCalibrated...
             onMazeMask onMazeX onMazeY...
-            onMaze behTable velThresh
+            onMaze behTable velThresh DVTtime nFrames
         disp('Saved!')
     end
 
