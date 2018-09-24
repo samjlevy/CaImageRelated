@@ -180,22 +180,91 @@ for tgI = 1:length(pooledSplitPctChangeFWD)
 end
 
 %Comparison
-for cpI = 1:size(pairsCompareInd,1)
-    figure;
+figure;
+sRows = 2;
+sCols = 2;
+for pcI = 1:size(pairsCompareInd,1)
+    subplot(2,2,pcI)
+    %plot data
     plot(pooledDaysApartFWD-0.1,pooledSplitPctChangeFWD{pairsCompareInd(pcI,1)},'.','Color',colorAssc{pairsCompareInd(pcI,1)},'MarkerSize',8)
     hold on
-    plot(pooledDaysApartFWD+0.1,pooledSplitPctChangeFWD{pairsCompareInd(pcI,2)},'.','Color',colorAssc{pairsCompareInd(pcI,1)},'MarkerSize',8)
-    fitX = unique(splitterFitLine{pairsCompareInd(pcI,1)}(:,1));
-    
-    plot the lin reg. fit line
+    plot(pooledDaysApartFWD+0.1,pooledSplitPctChangeFWD{pairsCompareInd(pcI,2)},'.','Color',colorAssc{pairsCompareInd(pcI,2)},'MarkerSize',8)
+    %plot reg fit line    
+    plot(splitterFitPlotDays,splitterFitPlotPct{pairsCompareInd(pcI,1)},'Color',colorAssc{pairsCompareInd(pcI,1)},'LineWidth',1.5)
+    plot(splitterFitPlotDays,splitterFitPlotPct{pairsCompareInd(pcI,2)},'Color',colorAssc{pairsCompareInd(pcI,2)},'LineWidth',1.5)
     
     ylim([-0.5 0.5])
-    indicate the r2 of each line
-    switch slopeDiffRank(pcI)>=(1*numPerms-numPerms*pThresh); case 1; diffTxt='ARE'; case 0; diffTxt ='ARE NOT'; end
-    title([pairsCompare{pcI,1} ' vs ' pairsCompare{pcI,2} ', slopes ' diffTxt ' diff at p = ' num2str(1-slopeDiffRank(pcI)/1000)])
+    xlim([0.5 max(numDays)-0.5]) %has to change if using realdays
+    xlabel('Days Apart')
+    ylabel('Proportion Change')
+    %indicate the r2 of each line
+    %switch slopeDiffRank(pcI)>=(1*numPerms-numPerms*pThresh); case 1; diffTxt='ARE'; case 0; diffTxt ='ARE NOT'; end
+    %title([pairsCompare{pcI,1} ' vs ' pairsCompare{pcI,2} ', slopes ' diffTxt ' diff at p = ' num2str(1-slopeDiffRank(pcI)/1000)])
+    switch pVal(pcI)<pThresh; case 1; diffTxt='ARE'; case 0; diffTxt ='are NOT'; end
+    title([pairsCompare{pcI,1} ' vs ' pairsCompare{pcI,2} ', slopes ' diffTxt ' diff at p = ' num2str(pVal(pcI))])
+    legend(pairsCompare{pcI,1},pairsCompare{pcI,2})
 end
+suptitleSL('Changes by days apart in proportion of splitting type')
 
-shuffSlope
+%% Prop of cells still a splitter
+%Comparison
+figure;
+sRows = 2;
+sCols = 2;
+for pcI = 1:size(pairsCompareInd,1)
+    subplot(2,2,pcI)
+    plot(pooledDaysApartFWD-0.1,pooledSplitterComesBackFWD{pairsCompareInd(pcI,1)},'.','Color',colorAssc{pairsCompareInd(pcI,1)},'MarkerSize',8)
+    hold on
+    plot(pooledDaysApartFWD+0.1,pooledSplitterComesBackFWD{pairsCompareInd(pcI,2)},'.','Color',colorAssc{pairsCompareInd(pcI,2)},'MarkerSize',8)
+    
+    plot(pooledDaysApartREV-0.1,pooledSplitterComesBackREV{pairsCompareInd(pcI,1)},'.','Color',colorAssc{pairsCompareInd(pcI,1)},'MarkerSize',8)
+    hold on
+    plot(pooledDaysApartREV+0.1,pooledSplitterComesBackREV{pairsCompareInd(pcI,2)},'.','Color',colorAssc{pairsCompareInd(pcI,2)},'MarkerSize',8)
+    
+    %pValSplitterComesBack{pcI},whichWonSplitterComesBack{pcI}
+    
+    
+    ylim([-0.01 1.01])
+    xlim([(-1*max(numDays)+0.5) (max(numDays)-0.5)])
+    xlabel('Days Apart')
+    ylabel('% of cells in model')
+    legend(pairsCompare{pcI,1},pairsCompare{pcI,2},'location','NW')
+end
+suptitleSL('Percent cells of model day come back')
+
+
+figure;
+sRows = 2;
+sCols = 2;
+for pcI = 1:size(pairsCompareInd,1)
+    subplot(2,2,pcI)
+    plot(pooledDaysApartFWD-0.1,pooledSplitterStillSplitterFWD{pairsCompareInd(pcI,1)},'.','Color',colorAssc{pairsCompareInd(pcI,1)},'MarkerSize',8)
+    hold on
+    plot(pooledDaysApartFWD+0.1,pooledSplitterStillSplitterFWD{pairsCompareInd(pcI,2)},'.','Color',colorAssc{pairsCompareInd(pcI,2)},'MarkerSize',8)
+    
+    
+    plot(pooledDaysApartREV-0.1,pooledSplitterStillSplitterREV{pairsCompareInd(pcI,1)},'.','Color',colorAssc{pairsCompareInd(pcI,1)},'MarkerSize',8)
+    hold on
+    plot(pooledDaysApartREV+0.1,pooledSplitterStillSplitterREV{pairsCompareInd(pcI,2)},'.','Color',colorAssc{pairsCompareInd(pcI,2)},'MarkerSize',8)
+    
+    %pValSplitterStillSplitter{pcI},whichWonSplitterStillSplitter{pcI}
+    
+    ylim([-0.01 1.01])
+    xlim([(-1*max(numDays)+0.5) (max(numDays)-0.5)])
+    xlabel('Days Apart')
+    ylabel('% of cells in model')
+    legend(pairsCompare{pcI,1},pairsCompare{pcI,2},'location','NW')
+end
+suptitleSL('Percent cells of model day apart still that trait')
+
+%Now plot within trait pos vs. negative day change
+
+
+
+
+
+
+
 %% Cells by accuracy 
 for mouseI = 1:numMice
     figure;

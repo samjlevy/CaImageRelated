@@ -2,7 +2,7 @@ function [activeCellsOverlap, overlapWithModel, overlapWithTest] = GetCellsOverl
 %Looks at which cells overlap by dayPairs in tl1 and tl2. E.g., put in
 %splittersLR in tl1 and cellSSI>0 in tl2
 
-numDays = size(cellSSE,2);
+numDays = size(traitLogicalOne,2);
 if isempty(dayPairs)
     dayPairs = GetAllCombs(1:numDays, 1:numDays);
 end
@@ -21,3 +21,4 @@ for dpI = 1:size(dayPairs,1)
     overlapWithTest(dpI,1) = activeCellsOverlap(dpI,1)/numInTest(dpI,1);
 end
 
+end

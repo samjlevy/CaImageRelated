@@ -60,6 +60,7 @@ for mouseI = 1:numMice
     [dayUse{mouseI},threshAndConsec{mouseI}] = GetUseCells(cellTBT{mouseI}, lapPctThresh, consecLapThresh);
     [trialReli{mouseI},aboveThresh{mouseI},~,~] = TrialReliability(cellTBT{mouseI}, lapPctThresh);
     cellsActiveToday{mouseI} = sum(dayUse{mouseI},1);
+    daysEachCellActive{mouseI} = sum(dayUse{mouseI},2);
     %disp(['Mouse ' num2str(mouseI) ' completed'])
 end
 
@@ -181,8 +182,9 @@ for mouseI = 1:numMice
     splittersEXany{mouseI} = (splittersLRonly{mouseI} + splittersSTonly{mouseI}) > 0;
 end
 
-orng = [0.9294    0.6902    0.1294]; % uisetcolor
-colorAssc = {'r'            'b'     'g'             'm'         'c'              orng     [1 0.8 0]         'k'  };
+purp = [0.4902    0.1804    0.5608]; % uisetcolor
+orng = [0.8510    0.3294    0.1020];
+colorAssc = {'r'            'b'     'g'             'm'         'c'              purp     orng         'k'  };
 traitLabels = {'splitLR' 'splitST' 'splitEITHER' 'splitLRonly' 'splitSTonly' 'splitBOTH' 'splitONE' 'dontSplit'};
 
 for mouseI = 1:numMice
@@ -233,27 +235,93 @@ for mouseI = 1:numMice
     end
 end
 
-%Compare statistically
-%For self comparison (to zero), shuffle the data points against days apart, and measure the slope
 
-%An F-test will do it, for now just doing a permutation test on difference in regression lines
+% Compare the slops of these lines to each other and zero
+splitterFitPlotDays = unique(splitterFitLine{1}(:,1));
 numPerms = 1000;
 for tgI = 1:length(traitGroups{mouseI})
     %Here's the slope of each line
     [splitterSlope(tgI,1), splitterIntercept(tgI,1), splitterFitLine{tgI}, splitterRR{tgI}] = fitLinRegSL(pooledSplitPctChangeFWD{tgI}, pooledDaysApartFWD);
     [splitterSlopeREV(tgI,1), ~, ~, splitterRR{tgI}] = fitLinRegSL(pooledSplitPctChangeREV{tgI}, pooledDaysApartREV);
-    
+    for sfpI = 1:length(splitterFitPlotDays)
+        splitterFitPlotPct{tgI}(sfpI,1) = splitterFitLine{tgI}(find(splitterFitLine{tgI}==splitterFitPlotDays(sfpI),1,'first'),2);
+    end
     %sameSlope = splitterSlope == splitterSlopeREV; %Rounding error a problem here
     
     %Is that slope different from a shuffle?
-    [splitterSlopeRank(tgI,1), splitterRRrank(tgI,1)] = slopeRankWrapper(pooledSplitPctChangeFWD{tgI}, pooledDaysApartFWD, numPerms);
+    [splitterSlopeRank(tgI,1), splitterRRrank(tgI,1)] = slopeRankWrapper2(pooledSplitPctChangeFWD{tgI}, pooledDaysApartFWD, numPerms, pThresh);
 end
+
 
 %Are the slopes different from each other?
 for pcI = 1:size(pairsCompareInd,1)    
-    [slopeDiffRank(pcI)] = multiSlopeRankWrapper(pooledSplitPctChangeFWD{pairsCompareInd(pcI,1)},...
-                                                 pooledSplitPctChangeFWD{pairsCompareInd(pcI,2)}, pooledDaysApartFWD, numPerms);
+    disp(['pci 'num2str(pcI)])
+    %[slopeDiffRank(pcI)] = multiSlopeRankWrapper(pooledSplitPctChangeFWD{pairsCompareInd(pcI,1)},...
+    %                                             pooledSplitPctChangeFWD{pairsCompareInd(pcI,2)}, pooledDaysApartFWD, numPerms);
+    [Fval(pcI),dfNum(pcI),dfDen(pcI),pVal(pcI)] = TwoSlopeFTest(pooledSplitPctChangeFWD{pairsCompareInd(pcI,1)},...
+                                                pooledSplitPctChangeFWD{pairsCompareInd(pcI,2)}, pooledDaysApartFWD);
+    [rho(pcI),rsP(pcI)] = ranksum(pooledSplitPctChangeFWD{pairsCompareInd(pcI,1)},pooledSplitPctChangeFWD{pairsCompareInd(pcI,2)});
 end
+
+%% Days each cell is this splitter type
+for mouseI = 1:numMice
+    daysTrait{mouseI}=cellfun(@(x) sum(x,2),traitGroups{mouseI},'UniformOutput',false);
+    activeMoreThanOnce{mouseI} = daysEachCellActive{mouseI};
+    activeMoreThanOnce{mouseI}(activeMoreThanOnce{mouseI}==1) = NaN;
+    daysTraitOutOfActive{mouseI} = cellfun(@(x) x./activeMoreThanOnce{mouseI},daysTrait{mouseI},'UniformOutput',false);
+end
+
+% Splitters shared by days apart, normalized by reactivation
+splitterComesBack = cell(numMice,1); splitterComesBackREV = cell(numMice,1); 
+splitterStillSplitter = cell(numMice,1); splitterStillSplitterREV = cell(numMice,1); 
+cellComesBack = cell(numMice,1); pooledCellComesBack = [];
+pooledSplitterComesBackFWD = cell(length(traitGroups{1}),1); pooledSplitterStillSplitterFWD = cell(length(traitGroups{1}),1);
+pooledSplitterComesBackREV = cell(length(traitGroups{1}),1); pooledSplitterStillSplitterREV = cell(length(traitGroups{1}),1);
+for mouseI = 1:numMice
+    %Splitter active at all
+    [splitterComesBack{mouseI}] = RunGroupFunction('GetCellsOverlap',traitGroups{mouseI},dayUse{mouseI},splitterPctDayChangesFWD{mouseI}(1).dayPairs);
+    [splitterComesBackREV{mouseI}] = RunGroupFunction('GetCellsOverlap',traitGroupsREV{mouseI},dayUseREV{mouseI},splitterPctDayChangesFWD{mouseI}(1).dayPairs);
+    %Splitter splitter again
+    [splitterStillSplitter{mouseI}] = RunGroupFunction('GetCellsOverlap',traitGroups{mouseI},traitGroups{mouseI},splitterPctDayChangesFWD{mouseI}(1).dayPairs);
+    [splitterStillSplitterREV{mouseI}] = RunGroupFunction('GetCellsOverlap',traitGroupsREV{mouseI},traitGroupsREV{mouseI},splitterPctDayChangesFWD{mouseI}(1).dayPairs);
+    
+    for tgI = 1:length(traitGroups{1})
+         pooledSplitterComesBackFWD{tgI} = [pooledSplitterComesBackFWD{tgI}; splitterComesBack{mouseI}(tgI).overlapWithModel];
+         pooledSplitterComesBackREV{tgI} = [pooledSplitterComesBackREV{tgI}; splitterComesBackREV{mouseI}(tgI).overlapWithModel];
+         pooledSplitterStillSplitterFWD{tgI} = [pooledSplitterStillSplitterFWD{tgI}; splitterStillSplitter{mouseI}(tgI).overlapWithModel];
+         pooledSplitterStillSplitterREV{tgI} = [pooledSplitterStillSplitterREV{tgI}; splitterStillSplitterREV{mouseI}(tgI).overlapWithModel];
+    end
+    
+    %Baseline rate for normalizing
+    [cellComesBack{mouseI}] = GetCellsOverlap(dayUse{mouseI},dayUse{mouseI},splitterPctDayChangesFWD{mouseI}(1).dayPairs);
+    pooledCellComesBack = [pooledCellComesBack; cellComesBack{mouseI}.overlapWithModel];
+end   
+
+cellfun(@(x) x./pooledSplitterComesBackFWD,pooledSplitterComesBackFWD,'UniformOutput',false)
+
+%Rank sum each self vs. negative day pairs
+for tgI = 1:length(traitGroups{1})
+    [rhoSplitCBpvn{pcI},pValCBpvn{pcI},whichWonCBpvn{pcI}] = ...
+                    RankSumAllDaypairs(pooledSplitterComesBackFWD{tgI}, pooledSplitterComesBackREV{tgI},pooledDaysApartFWD);
+    [rhoSplitSSpvn{pcI},pValSSpvn{pcI},whichWonSSpvn{pcI}] = ...
+                    RankSumAllDaypairs(pooledSplitterStillSplitterFWD{tgI}, pooledSplitterStillSplitterREV{tgI},pooledDaysApartFWD);
+end
+
+%Rank sum each day pair for comparison
+for pcI = 1:size(pairsCompareInd,1)  
+    [rhoSplitterComesBack{pcI},pValSplitterComesBack{pcI},whichWonSplitterComesBack{pcI}] =...
+                    RankSumAllDaypairs([pooledSplitterComesBackFWD{pairsCompareInd(pcI,1)}; pooledSplitterComesBackREV{pairsCompareInd(pcI,1)}],...
+                                       [pooledSplitterComesBackFWD{pairsCompareInd(pcI,2)}; pooledSplitterComesBackFWD{pairsCompareInd(pcI,2)}],...
+                                       [pooledDaysApartFWD; pooledDaysApartREV]);
+                                   
+    [rhoSplitterStillSplitter{pcI},pValSplitterStillSplitter{pcI},whichWonSplitterStillSplitter{pcI}] =...
+                    RankSumAllDaypairs([pooledSplitterStillSplitterFWD{pairsCompareInd(pcI,1)}; pooledSplitterStillSplitterREV{pairsCompareInd(pcI,1)}],...
+                                       [pooledSplitterStillSplitterFWD{pairsCompareInd(pcI,2)}; pooledSplitterStillSplitterFWD{pairsCompareInd(pcI,2)}],...
+                                       [pooledDaysApartFWD; pooledDaysApartREV]);    
+end
+
+
+
 
 
 %% Single Cells Stats

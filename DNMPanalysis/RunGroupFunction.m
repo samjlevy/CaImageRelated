@@ -7,10 +7,14 @@ for ngI = 1:length(traitGroup)
                 NNplusKChange(traitGroup{ngI}, dayUse);
         case 'TraitDailyPct'
             groupout{ngI} = TraitDailyPct(traitGroup{ngI},dayUse);
-        %case 'slopeRankWrapper'
-        %    days = varargin{1}; 
-        %    numPerms = varargin{2};
-        %    [groupout(ngI).slopeRank, groupout(ngI).RsquaredRank] = slopeRankWrapper(dataVec, days, numPerms);
+        case 'GetCellsOverlap'
+            if iscell(dayUse) && length(dayUse)==length(traitGroup)
+                [groupout(ngI).activeCellsOverlap, groupout(ngI).overlapWithModel, groupout(ngI).overlapWithTest] =...
+                    GetCellsOverlap(traitGroup{ngI}, dayUse{ngI},varargin{1});
+            else
+                [groupout(ngI).activeCellsOverlap, groupout(ngI).overlapWithModel, groupout(ngI).overlapWithTest] =...
+                    GetCellsOverlap(traitGroup{ngI},dayUse,varargin{1});
+            end
         otherwise
             disp('not a recognized option')
     end
