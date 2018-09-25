@@ -213,22 +213,28 @@ sRows = 2;
 sCols = 2;
 for pcI = 1:size(pairsCompareInd,1)
     subplot(2,2,pcI)
-    plot(pooledDaysApartFWD-0.1,pooledSplitterComesBackFWD{pairsCompareInd(pcI,1)},'.','Color',colorAssc{pairsCompareInd(pcI,1)},'MarkerSize',8)
+    p1 = plot(pooledDaysApartFWD-0.1,pooledSplitterComesBackFWD{pairsCompareInd(pcI,1)},'.','Color',colorAssc{pairsCompareInd(pcI,1)},'MarkerSize',8,'DisplayName',pairsCompare{pcI,1});
     hold on
-    plot(pooledDaysApartFWD+0.1,pooledSplitterComesBackFWD{pairsCompareInd(pcI,2)},'.','Color',colorAssc{pairsCompareInd(pcI,2)},'MarkerSize',8)
+    p2 = plot(pooledDaysApartFWD+0.1,pooledSplitterComesBackFWD{pairsCompareInd(pcI,2)},'.','Color',colorAssc{pairsCompareInd(pcI,2)},'MarkerSize',8,'DisplayName',pairsCompare{pcI,2});
     
     plot(pooledDaysApartREV-0.1,pooledSplitterComesBackREV{pairsCompareInd(pcI,1)},'.','Color',colorAssc{pairsCompareInd(pcI,1)},'MarkerSize',8)
-    hold on
     plot(pooledDaysApartREV+0.1,pooledSplitterComesBackREV{pairsCompareInd(pcI,2)},'.','Color',colorAssc{pairsCompareInd(pcI,2)},'MarkerSize',8)
-    
-    %pValSplitterComesBack{pcI},whichWonSplitterComesBack{pcI}
-    
     
     ylim([-0.01 1.01])
     xlim([(-1*max(numDays)+0.5) (max(numDays)-0.5)])
     xlabel('Days Apart')
     ylabel('% of cells in model')
-    legend(pairsCompare{pcI,1},pairsCompare{pcI,2},'location','NW')
+    
+    yHeight = 0.8;
+    for dpI = 1:length(dayPairsSCB{pcI})
+        if hValSplitterComesBack{pcI}(dpI)==1
+            plot(dayPairsSCB{pcI}(dpI),yHeight,'*','Color',colorAssc{pairsCompareInd(pcI,whichWonSplitterComesBack{pcI}(dpI))})
+        end
+        %pValSplitterComesBack{pcI}
+    end
+       
+     % legend([p1; p2],[pairsCompare{pcI,1}; pairsCompare{pcI,2}],'location','NW')  
+      legend([p1; p2],'location','NW') 
 end
 suptitleSL('Percent cells of model day come back')
 
@@ -238,26 +244,89 @@ sRows = 2;
 sCols = 2;
 for pcI = 1:size(pairsCompareInd,1)
     subplot(2,2,pcI)
-    plot(pooledDaysApartFWD-0.1,pooledSplitterStillSplitterFWD{pairsCompareInd(pcI,1)},'.','Color',colorAssc{pairsCompareInd(pcI,1)},'MarkerSize',8)
+    p1 = plot(pooledDaysApartFWD-0.1,pooledSplitterStillSplitterFWD{pairsCompareInd(pcI,1)},'.','Color',colorAssc{pairsCompareInd(pcI,1)},'MarkerSize',8,'DisplayName',pairsCompare{pcI,1});
     hold on
-    plot(pooledDaysApartFWD+0.1,pooledSplitterStillSplitterFWD{pairsCompareInd(pcI,2)},'.','Color',colorAssc{pairsCompareInd(pcI,2)},'MarkerSize',8)
-    
+    p2 = plot(pooledDaysApartFWD+0.1,pooledSplitterStillSplitterFWD{pairsCompareInd(pcI,2)},'.','Color',colorAssc{pairsCompareInd(pcI,2)},'MarkerSize',8,'DisplayName',pairsCompare{pcI,2});
     
     plot(pooledDaysApartREV-0.1,pooledSplitterStillSplitterREV{pairsCompareInd(pcI,1)},'.','Color',colorAssc{pairsCompareInd(pcI,1)},'MarkerSize',8)
-    hold on
     plot(pooledDaysApartREV+0.1,pooledSplitterStillSplitterREV{pairsCompareInd(pcI,2)},'.','Color',colorAssc{pairsCompareInd(pcI,2)},'MarkerSize',8)
-    
-    %pValSplitterStillSplitter{pcI},whichWonSplitterStillSplitter{pcI}
     
     ylim([-0.01 1.01])
     xlim([(-1*max(numDays)+0.5) (max(numDays)-0.5)])
     xlabel('Days Apart')
     ylabel('% of cells in model')
-    legend(pairsCompare{pcI,1},pairsCompare{pcI,2},'location','NW')
+    
+    yHeight = 0.8;
+    for dpI = 1:length(dayPairsSCB{pcI})
+        if hValSplitterStillSplitter{pcI}(dpI)==1
+            plot(dayPairsSCB{pcI}(dpI),yHeight,'*','Color',colorAssc{pairsCompareInd(pcI,whichWonSplitterStillSplitter{pcI}(dpI))})
+        end
+        %pValSplitterComesBackStillSplitter{pcI}(dpI)
+    end
+
+    legend([p1; p2],'location','NW')
 end
 suptitleSL('Percent cells of model day apart still that trait')
 
 %Now plot within trait pos vs. negative day change
+figure; 
+sRows = 3;
+sCols = ceil(length(pooledSplitPctChangeFWD)/sRows);
+for tgI = 1:length(traitGroups{1})
+    subplot(sRows,sCols,tgI)
+    color1 = colorAssc{tgI}+0.2; color1(color1>1) = 1; color1(color1<0) = 0;
+    color2 = colorAssc{tgI}-0.2; color2(color2>1) = 1; color2(color2<0) = 0;
+    p1 = plot(pooledDaysApartFWD+0.15,pooledSplitterComesBackFWD{tgI},'.','Color',color1,'MarkerSize',8,'DisplayName','Days Forward');
+    hold on
+    p2 = plot(-1*pooledDaysApartREV-0.15,pooledSplitterComesBackREV{tgI},'o','Color',color2,'MarkerSize',3,'DisplayName','Days Backwards');
+    
+    yHeight = 0.8;
+    for dpI = 1:length(dayPairsCBpvn{tgI})
+        if hValCBpvn{tgI}(dpI)
+            markerss = {'.' 'o'}; markersz = [8 3]; colorss = [color1; color2];
+            plot(dayPairsCBpvn{tgI}(dpI),yHeight,markerss{whichWonCBpvn{tgI}(dpI)},'Color',colorss(whichWonCBpvn{tgI}(dpI),:),'MarkerSize',markersz(whichWonCBpvn{tgI}(dpI)))    
+        end
+        %pValSplitCBpvn{tgI}
+    end
+    
+    ylim([-0.01 1.01])
+    xlim([min(pooledDaysApartFWD)-0.5 max(pooledDaysApartFWD)+0.5])
+    title(traitLabels{tgI})
+    legend([p1; p2],'location','NE')
+end
+suptitleSL('Percent cells of model day come back, Positive vs. negative time')
+
+figure; 
+sRows = 3;
+sCols = ceil(length(pooledSplitPctChangeFWD)/sRows);
+for tgI = 1:length(traitGroups{1})
+    subplot(sRows,sCols,tgI)
+    color1 = colorAssc{tgI}+0.2; color1(color1>1) = 1; color1(color1<0) = 0;
+    color2 = colorAssc{tgI}-0.2; color2(color2>1) = 1; color2(color2<0) = 0;
+    p1 = plot(pooledDaysApartFWD+0.15,pooledSplitterStillSplitterFWD{tgI},'.','Color',color1,'MarkerSize',8,'DisplayName','Days Forward');
+    hold on
+    p2 = plot(-1*pooledDaysApartREV-0.15,pooledSplitterStillSplitterREV{tgI},'o','Color',color2,'MarkerSize',3,'DisplayName','Days Backwards');
+    
+    yHeight = 0.8;
+    for dpI = 1:length(dayPairsSSpvn{tgI})
+        if hValSSpvn{tgI}(dpI)
+            markerss = {'.' 'o'}; markersz = [8 3]; colorss = [color1; color2];
+            plot(dayPairsSSpvn{tgI}(dpI),yHeight,markerss{whichWonSSpvn{tgI}(dpI)},'Color',colorss(whichWonSSpvn{tgI}(dpI),:),'MarkerSize',markersz(whichWonCBpvn{tgI}(dpI)))    
+        end
+        %pValSplitSSpvn{tgI}
+    end
+    
+    ylim([-0.01 1.01])
+    xlim([min(pooledDaysApartFWD)-0.5 max(pooledDaysApartFWD)+0.5])
+    title(traitLabels{tgI})
+    legend([p1; p2],'location','NE')
+end
+suptitleSL('Percent cells of model day still that trait v self, Positive vs. negative time')
+
+
+
+
+
 
 
 

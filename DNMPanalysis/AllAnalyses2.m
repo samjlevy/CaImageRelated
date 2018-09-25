@@ -185,6 +185,7 @@ end
 purp = [0.4902    0.1804    0.5608]; % uisetcolor
 orng = [0.8510    0.3294    0.1020];
 colorAssc = {'r'            'b'     'g'             'm'         'c'              purp     orng         'k'  };
+colorAssc = { [1 0 0]     [0 0 1]    [0 1 0]       [1 0 1]       [0 1 1]         purp     orng        [0 0 0]};
 traitLabels = {'splitLR' 'splitST' 'splitEITHER' 'splitLRonly' 'splitSTonly' 'splitBOTH' 'splitONE' 'dontSplit'};
 
 for mouseI = 1:numMice
@@ -301,26 +302,89 @@ cellfun(@(x) x./pooledSplitterComesBackFWD,pooledSplitterComesBackFWD,'UniformOu
 
 %Rank sum each self vs. negative day pairs
 for tgI = 1:length(traitGroups{1})
-    [rhoSplitCBpvn{pcI},pValCBpvn{pcI},whichWonCBpvn{pcI}] = ...
+    [pValSplitCBpvn{tgI},hValCBpvn{tgI},whichWonCBpvn{tgI},dayPairsCBpvn{tgI}] = ...
                     RankSumAllDaypairs(pooledSplitterComesBackFWD{tgI}, pooledSplitterComesBackREV{tgI},pooledDaysApartFWD);
-    [rhoSplitSSpvn{pcI},pValSSpvn{pcI},whichWonSSpvn{pcI}] = ...
+    [pValSplitSSpvn{tgI},hValSSpvn{tgI},whichWonSSpvn{tgI},dayPairsSSpvn{tgI}] = ...
                     RankSumAllDaypairs(pooledSplitterStillSplitterFWD{tgI}, pooledSplitterStillSplitterREV{tgI},pooledDaysApartFWD);
 end
 
 %Rank sum each day pair for comparison
 for pcI = 1:size(pairsCompareInd,1)  
-    [rhoSplitterComesBack{pcI},pValSplitterComesBack{pcI},whichWonSplitterComesBack{pcI}] =...
+    [pValSplitterComesBack{pcI},hValSplitterComesBack{pcI},whichWonSplitterComesBack{pcI},dayPairsSCB{pcI}] =...
                     RankSumAllDaypairs([pooledSplitterComesBackFWD{pairsCompareInd(pcI,1)}; pooledSplitterComesBackREV{pairsCompareInd(pcI,1)}],...
                                        [pooledSplitterComesBackFWD{pairsCompareInd(pcI,2)}; pooledSplitterComesBackFWD{pairsCompareInd(pcI,2)}],...
                                        [pooledDaysApartFWD; pooledDaysApartREV]);
                                    
-    [rhoSplitterStillSplitter{pcI},pValSplitterStillSplitter{pcI},whichWonSplitterStillSplitter{pcI}] =...
+    [pValSplitterStillSplitter{pcI},hValSplitterStillSplitter{pcI},whichWonSplitterStillSplitter{pcI},dayPairsSSS{pcI}] =...
                     RankSumAllDaypairs([pooledSplitterStillSplitterFWD{pairsCompareInd(pcI,1)}; pooledSplitterStillSplitterREV{pairsCompareInd(pcI,1)}],...
                                        [pooledSplitterStillSplitterFWD{pairsCompareInd(pcI,2)}; pooledSplitterStillSplitterFWD{pairsCompareInd(pcI,2)}],...
                                        [pooledDaysApartFWD; pooledDaysApartREV]);    
 end
 
 
+
+%% Pop vector corrs
+
+numPerms = 1000;
+pooledCondPairs = [1 3; 2 4; 1 2; 3 4];
+poolLabels = {'Left','Right','Study','Test'};
+traitLogical = threshAndConsec;
+for mouseI = 1:numMice
+    pooledTraitLogical = [];
+    pooledTraitLogical(:,:,1) = sum(traitLogical{mouseI}(:,:,pooledCondPairs(1,:)),3) > 0;
+    pooledTraitLogical(:,:,2) = sum(traitLogical{mouseI}(:,:,pooledCondPairs(2,:)),3) > 0;
+    pooledTraitLogical(:,:,3) = sum(traitLogical{mouseI}(:,:,pooledCondPairs(3,:)),3) > 0;
+    pooledTraitLogical(:,:,4) = sum(traitLogical{mouseI}(:,:,pooledCondPairs(4,:)),3) > 0;
+end
+
+condSet{1} = 1:4;   % VS. Self
+condSet{2} = [5 6]; % L v R
+condSet{3} = [7 8]; % S v T
+pooledCompPairs = [1 1; 2 2; 3 3; 4 4; 1 2; 2 1; 3 4; 4 3]; %PFs from half tmap1/2 to use
+PVdayPairs = [];
+for mouseI = 1:numMice
+    PVdayPairs{mouseI} = [repmat(1:numDays(mouseI),2,1)'; combnk(1:numDays(mouseI),2)];
+    
+    
+    %Split TBTs
+    [tbtSmallA, tbtSmallB] = SplitTrialByTrial(cellTBT{mouseI}, 'alternate');
+    
+    %Pool dims (for easy shuffling
+    tbtPooledA = PoolTBTacrossConds(tbtSmallA,pooledCondPairs,poolLabels);
+    tbtPooledB = PoolTBTacrossConds(tbtSmallB,pooledCondPairs,poolLabels);
+    
+    for dpI = 1:size(PVdayPairs{mouseI},1)
+        for cpI = 1:size(pooledCompPairs,1)
+            %Strip down to essential day and condition pair
+            minTbtA = StripTBT(tbtPooledA,pooledCompPairs(cpI,1),PVdayPairs(dpI,1));
+            minTbtB = StripTBT(tbtPooledB,pooledCompPairs(cpI,2),PVdayPairs(dpI,2));
+                            
+            %Make place fields
+            %Run PV
+            
+            for permI = 1:numPerms
+                %Shuffle between the two: this will shuffle both day and condition
+
+                %Make place fields
+                %Run PV
+            end
+        end
+    end
+    
+    %Process: find 95 lims, get which points are outside of shuffle
+    
+end
+
+%Pool across animals
+        
+   
+[TMapA{mouseI}, ~, ~, ~, ~, ~] =...
+        PFsLinTrialbyTrial2(tbtA, xlims, cmperbin, minspeed,...
+        [],'trialReli',trialReli{mouseI},'smooth',false,'condPairs',pooledCondPairs);
+
+%% Variance of diff types of cell? Like splitting, but more wishy washy
+
+[b,r,stats, MSE] = GetCellVarianceSource(trialbytrial,pooledUnpooled)
 
 
 
@@ -1025,10 +1089,6 @@ for mouseI = 1:numMice
 end
 are there splitters based on this?
 
-
-%% Variance of diff types of cell? Like splitting, but more wishy washy
-
-[b,r,stats, MSE] = GetCellVarianceSource(trialbytrial,pooledUnpooled)
 
 
 

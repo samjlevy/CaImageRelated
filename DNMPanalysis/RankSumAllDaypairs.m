@@ -1,23 +1,23 @@
-function [rho,pVal,whichWon] = RankSumAllDaypairs(dataVecA,dataVecB,dayPairs)
+function [pVal,hVal,whichWon,eachDayPair] = RankSumAllDaypairs(dataVecA,dataVecB,dayPairs)
 
 eachDayPair = unique(dayPairs);
 
 for dpI = 1:length(eachDayPair)
-    datX = dataVecA(dayPairs==eachDayPair(dpI));
-    datY = dataVecB(dayPairs==eachDayPair(dpI));
+    datA = dataVecA(dayPairs==eachDayPair(dpI));
+    datB = dataVecB(dayPairs==eachDayPair(dpI));
     
     %Do the stat
-    [rho(dpI),pVal(dpI)] = ranksum(datX,datY);
+    [pVal(dpI),hVal(dpI)] = ranksum(datA,datB);
     
     %Return a value for plotting
-    markerVal = [zeros(length(datX),1); ones(length(datY),1)];
-    [ranks,tiedRanks] = tiedrank([datX; datY]);
-    xRank = sum(ranks(markerVal==0));
-    yRank = sum(ranks(markerVal==1));
+    markerVal = [zeros(length(datA),1); ones(length(datB),1)];
+    [ranks,tiedRanks] = tiedrank([datA; datB]);
+    aRank = sum(ranks(markerVal==0));
+    bRank = sum(ranks(markerVal==1));
     
-    if xRank > yRank
+    if aRank > bRank
         whichWon(dpI) = 1;
-    elseif yRank > xRank
+    elseif bRank > aRank
         whichWon(dpI) = 2;
     else
         whichWon(dpI) = 0;

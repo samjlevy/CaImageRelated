@@ -227,7 +227,13 @@ behTable(1,1) = enterArmEnd(1);
 behTable(1,2) = leaveArmEnd(1);
 possibleBadMazeExit = zeros(length(enterCenter),1);
 possibleBadMazeEntry = zeros(length(enterCenter),1);
-for ceJ = 18:(length(leaveCenter)-1)
+ceJstart = 1;
+if ceJstart~=1
+    disp('warning: not starting at first index')
+    keyboard
+end
+
+for ceJ = ceJstart:(length(leaveCenter)-1)
     %Get the arm entries and exits surrounding the current center epoch
     armEntries = enterArmEnd(enterArmEnd > leaveCenter(ceJ) & enterArmEnd < enterCenter(ceJ+1));
     armLeavings = leaveArmEnd(leaveArmEnd > leaveCenter(ceJ) & leaveArmEnd < enterCenter(ceJ+1));
