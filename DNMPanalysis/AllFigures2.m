@@ -96,6 +96,14 @@ for cellI = 1:length(cellsUse)
     end
 end
 
+%% How many splitters pie chart
+
+%For all here, mean+sem (all mice all days) 
+%Split both
+%only lr
+%only st
+%don't split
+
 
 %% One condition heatmap over days (Ziv-style) (Figure 1d?)
 refDay = 1;
@@ -324,8 +332,29 @@ end
 suptitleSL('Percent cells of model day still that trait v self, Positive vs. negative time')
 
 
+%% Pop Vector corrs
 
-
+figure;
+condSetColors = {'b' 'r' 'g'};
+for cpI = 1:size(pooledCompPairs,1)
+    dayPairsHere = unique(abs(pooledPVdayDiffs{cpI}));
+    for dpI = 1:length(dayPairsHere)
+        pvsHere = pooledMeanCorr{cpI}(abs(pooledPVdayDiffs{cpI})==dayPairsHere(dpI));
+        plot(dayPairsHere(dpI)*ones(length(pvsHere),1),pvsHere,'.','MarkerSize',6,'Color',condSetColors{condSetInds(cpI)})
+        hold on
+        meanLine(dpI,cpI) = mean(pvsHere);
+    end
+end
+for csI = 1:length(condSet)
+    meanLinePlot = mean(meanLine(:,condSet{csI}),2);
+    plot(dayPairsHere,meanLinePlot,'LineWidth',1.5,'Color',condSetColors{csI})
+end
+ylabel('Mean Correlation')
+xlabel('Days Apart')
+title('Population vector correlation by number of sessions apart')
+%legend
+    
+    
 
 
 

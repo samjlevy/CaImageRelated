@@ -416,14 +416,21 @@ while stillEditing == 1
             end
             end
         case 'b'
-            [onMazeFinal,behTable] = PreProcParseOnMazeBehavior(xAVI,yAVI,v0,obj);
+            lop = questdlg('Load behTable or parse positions?','Load or parse','Load','Parse','Parse');
+            switch lop
+                case 'Parse'
+                    [onMazeFinal,behTable] = PreProcParseOnMazeBehavior(xAVI,yAVI,v0,obj);
+                case 'Load'
+                    [fileN, folderN] = uigetfile('*.mat','Choose the behTable file');
+                    load(fullfile(folderN,fileN),'onMazeFinal')
+            end
+            
             onMaze = zeros(size(xAVI,1),size(xAVI,2));
             for omII = 1:size(onMazeFinal,1)
                 onMaze(onMazeFinal(omII,1):onMazeFinal(omII,2)) = 1;
             end
         case 'p'
             %Correct by position
-
             posInclude = true(size(xAVI,1),size(xAVI,2));
             pomp = questdlg('Plot off maze pos?','pomp','Yes','No','No');
             if strcmpi(pomp,'No')
@@ -493,8 +500,10 @@ while stillEditing == 1
                 close(hb);
             end
             pbs = ls('progressbar_*.txt');
-            if any(pbs)
-                delete(fullfile(cd,pbs))
+            pbd = [];
+            for pp = 1:size(pbs,1)
+                pbd{pp} = pbs(pp,1:end);
+                delete(fullfile(cd,pbd{pp}))
             end
             
             stillEditing = 0;

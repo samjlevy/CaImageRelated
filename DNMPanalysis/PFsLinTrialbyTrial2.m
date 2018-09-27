@@ -12,6 +12,8 @@ function [TMap_unsmoothed, TMap_zRates, OccMap, RunOccMap, xBin, TCounts] =...
     p.addParameter('smooth',false,@(x) islogical(x)); 
     p.addParameter('trialReli',[]);  
     p.addParameter('condPairs',[1:length(trialbytrial)]');
+    p.addParameter('dispProgress',true,@(x) islogical(x));
+    p.addParameter('getZscore',true,@(x) islogical(x));
     %p.addParameter('saveName',[],@(x) ischar(x));
     %}
     %addRequired(p,'trialbytrial');
@@ -27,6 +29,8 @@ function [TMap_unsmoothed, TMap_zRates, OccMap, RunOccMap, xBin, TCounts] =...
     smooth = p.Results.smooth;
     condPairs = p.Results.condPairs;
     trialReli = p.Results.trialReli;
+    dispProgress = p.Results.dispProgress;
+    getZscore = p.Results.getZscore;
     %saveName = p.Results.saveName;
     
 sessions = unique(trialbytrial(1).sessID);
@@ -70,7 +74,9 @@ nXBins = ceil(Xrange/cmperbin);
 xEdges = (0:nXBins)*cmperbin+xmin;
 TMap_blank = zeros(1,nXBins);
 
+if dispProgress
 p = ProgressBar(100);
+end
 update_points = round(linspace(1,numCells*numConds*numSess,101));
 update_points = update_points(2:end);
 updateInd = 0;
@@ -149,8 +155,7 @@ for condPairI = 1:size(condPairs,1) %condType = 1:4
                     allSpikeTs = logical([spikeTs{:}]);
                     
                     [TMap_unsmoothed{cellI,tSess,condPairI},TCounts{cellI,tSess,condPairI}]...%TMap_gauss{cellI,condType,tSess}
-                        = MakePlacefieldLin(allSpikeTs,allX,xEdges,RunOccMap{condPairI,tSess},...
-                        'cmperbin',cmperbin,'smooth',smooth); %false
+                        = MakePlacefieldLin(allSpikeTs,allX,xEdges,RunOccMap{condPairI,tSess},[],cmperbin,smooth); %false
                     
                     if any(TMap_unsmoothed{cellI,tSess,condPairI} > 1)
                         keyboard
@@ -169,23 +174,28 @@ for condPairI = 1:size(condPairs,1) %condType = 1:4
                 
                 updateInd = updateInd + 1;
                 if sum(update_points == updateInd)==1
-                    p.progress;
+                    if dispProgress
+                        p.progress;
+                    end
                 end
             end %cellI
         end %any laps
     end %sess
-end %condPair   
+end %condPair 
+if dispProgress
 p.stop;
-
+end
 %SpatialInformationSL(RunOccMap,TCounts)
 
 %Get z-scores of firing rates across conditions
+if getZscore
 for cellI = 1:numCells
     for tSess = 1:numSess
         allRates = reshape([TMap_unsmoothed{cellI,tSess,:}]',nXBins,numConds)';
         zRates = zscore(allRates);
         TMap_zRates(cellI,tSess,1:numConds) = num2cell(zRates,2)';       
     end
+end
 end
 
 if saveThis==1

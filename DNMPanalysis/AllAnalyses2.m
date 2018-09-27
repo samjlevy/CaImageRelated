@@ -256,7 +256,7 @@ end
 
 %Are the slopes different from each other?
 for pcI = 1:size(pairsCompareInd,1)    
-    disp(['pci 'num2str(pcI)])
+    disp(['pci ' num2str(pcI)])
     %[slopeDiffRank(pcI)] = multiSlopeRankWrapper(pooledSplitPctChangeFWD{pairsCompareInd(pcI,1)},...
     %                                             pooledSplitPctChangeFWD{pairsCompareInd(pcI,2)}, pooledDaysApartFWD, numPerms);
     [Fval(pcI),dfNum(pcI),dfDen(pcI),pVal(pcI)] = TwoSlopeFTest(pooledSplitPctChangeFWD{pairsCompareInd(pcI,1)},...
@@ -329,22 +329,27 @@ numPerms = 1000;
 pooledCondPairs = [1 3; 2 4; 1 2; 3 4];
 poolLabels = {'Left','Right','Study','Test'};
 traitLogical = threshAndConsec;
+pooledTraitLogical = [];
 for mouseI = 1:numMice
-    pooledTraitLogical = [];
-    pooledTraitLogical(:,:,1) = sum(traitLogical{mouseI}(:,:,pooledCondPairs(1,:)),3) > 0;
-    pooledTraitLogical(:,:,2) = sum(traitLogical{mouseI}(:,:,pooledCondPairs(2,:)),3) > 0;
-    pooledTraitLogical(:,:,3) = sum(traitLogical{mouseI}(:,:,pooledCondPairs(3,:)),3) > 0;
-    pooledTraitLogical(:,:,4) = sum(traitLogical{mouseI}(:,:,pooledCondPairs(4,:)),3) > 0;
+    for cc = 1:size(pooledCondPairs,1)
+        pooledTraitLogical{mouseI}(:,:,cc) = sum(traitLogical{mouseI}(:,:,pooledCondPairs(cc,:)),3) > 0;
+    end
+        %pooledTraitLogical{mouseI}(:,:,2) = sum(traitLogical{mouseI}(:,:,pooledCondPairs(2,:)),3) > 0;
+    %pooledTraitLogical{mouseI}(:,:,3) = sum(traitLogical{mouseI}(:,:,pooledCondPairs(3,:)),3) > 0;
+    %pooledTraitLogical{mouseI}(:,:,4) = sum(traitLogical{mouseI}(:,:,pooledCondPairs(4,:)),3) > 0;
 end
 
 condSet{1} = 1:4;   % VS. Self
 condSet{2} = [5 6]; % L v R
 condSet{3} = [7 8]; % S v T
+condSetInds = [1*ones(length(condSet{1}),1); 2*ones(length(condSet{2}),1); 3*ones(length(condSet{3}),1)];
 pooledCompPairs = [1 1; 2 2; 3 3; 4 4; 1 2; 2 1; 3 4; 4 3]; %PFs from half tmap1/2 to use
 PVdayPairs = [];
+tic
+pvCorrs = []; numCellsUsed = []; numNans = []; meanCorr = [];
 for mouseI = 1:numMice
-    PVdayPairs{mouseI} = [repmat(1:numDays(mouseI),2,1)'; combnk(1:numDays(mouseI),2)];
-    
+    %PVdayPairs{mouseI} = [repmat(1:numDays(mouseI),2,1)'; combnk(1:numDays(mouseI),2)];
+    PVdayPairs{mouseI} = AllCombsV1V2(1:numDays(mouseI),1:numDays(mouseI));
     
     %Split TBTs
     [tbtSmallA, tbtSmallB] = SplitTrialByTrial(cellTBT{mouseI}, 'alternate');
@@ -356,31 +361,96 @@ for mouseI = 1:numMice
     for dpI = 1:size(PVdayPairs{mouseI},1)
         for cpI = 1:size(pooledCompPairs,1)
             %Strip down to essential day and condition pair
-            minTbtA = StripTBT(tbtPooledA,pooledCompPairs(cpI,1),PVdayPairs(dpI,1));
-            minTbtB = StripTBT(tbtPooledB,pooledCompPairs(cpI,2),PVdayPairs(dpI,2));
+            minTbtA = StripTBT(tbtPooledA,pooledCompPairs(cpI,1),PVdayPairs{mouseI}(dpI,1));
+            minTbtB = StripTBT(tbtPooledB,pooledCompPairs(cpI,2),PVdayPairs{mouseI}(dpI,2));
                             
             %Make place fields
+            trialReliA = pooledTraitLogical{mouseI}(:,PVdayPairs{mouseI}(dpI,1),pooledCompPairs(cpI,1));
+            [TMapMinA , ~, ~, ~, ~, ~] = PFsLinTrialbyTrial2(minTbtA, xlims, cmperbin, minspeed,...
+                                [],'trialReli',trialReliA,'smooth',false,'dispProgress',false,'getZscore',false);
+            trialReliB = pooledTraitLogical{mouseI}(:,PVdayPairs{mouseI}(dpI,2),pooledCompPairs(cpI,2));
+            [TMapMinB , ~, ~, ~, ~, ~] = PFsLinTrialbyTrial2(minTbtB, xlims, cmperbin, minspeed,...
+                                [],'trialReli',trialReliB,'smooth',false,'dispProgress',false,'getZscore',false);
+                           
             %Run PV
+            [pvCorrs{mouseI}{dpI,cpI},meanCorr{mouseI}{dpI,cpI},numCellsUsed{mouseI}{dpI,cpI},numNans{mouseI}{dpI,cpI}] = PopVectorCorrsSmallTMaps(...
+                            TMapMinA,TMapMinB,trialReliA,trialReliB,'activeEither','Spearman');
             
             for permI = 1:numPerms
                 %Shuffle between the two: this will shuffle both day and condition
-
+                [shuffMinTbtA, shuffMinTbtB] = ShuffleMinTBTs(minTbtA,minTbtB,'random');
+                shuffMinTbtA.sessID(:) = 1; shuffMinTbtB.sessID(:) = 1;
+                
                 %Make place fields
+                [shuffTMapMinA , ~, ~, ~, ~, ~] = PFsLinTrialbyTrial2(shuffMinTbtA, xlims, cmperbin, minspeed,...
+                                [],'trialReli',trialReliA,'smooth',false,'dispProgress',false,'getZscore',false);
+                [shuffTMapMinB , ~, ~, ~, ~, ~] = PFsLinTrialbyTrial2(shuffMinTbtB, xlims, cmperbin, minspeed,...
+                                [],'trialReli',trialReliB,'smooth',false,'dispProgress',false,'getZscore',false);
+                
                 %Run PV
+                [shuffpvCorrs{mouseI}{dpI,cpI}(permI,:),shuffMeanCorr{mouseI}{dpI,cpI}(permI,1),~,~] = PopVectorCorrsSmallTMaps(...
+                            shuffTMapMinA,shuffTMapMinB,trialReliA,trialReliB,'activeEither','Spearman');
             end
         end
     end
+end
+toc
+
+%Process: find 95 lims, get which points are outside of shuffle
+lims95 = [numPerms*(pThresh/2) numPerms-numPerms*(pThresh/2)];
+lims95 = [2 9];
+for mouseI = 1:numMice
+    %Mean sort shuffles, check if real is outside of shuffled
+    shuffMeanCorrSorted{mouseI} = cellfun(@sort,shuffMeanCorr{mouseI},'UniformOutput',false);
     
-    %Process: find 95 lims, get which points are outside of shuffle
+    upperMeanShuff{mouseI} = cellfun(@(x) x(lims95(2)),shuffMeanCorrSorted{mouseI},'UniformOutput',false);
+    lowerMeanShuff{mouseI} = cellfun(@(x) x(lims95(1)),shuffMeanCorrSorted{mouseI},'UniformOutput',false);
     
+    meanCorrOutOfShuff{mouseI} = cell2mat(cellfun(@(a,x,y) (a>x || a<y),meanCorr{mouseI},upperMeanShuff{mouseI}, lowerMeanShuff{mouseI},'UniformOutput',false));
+    
+    %Indiv bins sort shuffles, check if real is outside of shuffled
+    shuffCorrsSorted{mouseI} = cellfun(@sort,shuffpvCorrs{mouseI},'UniformOutput',false);
+    upperCorrShuff{mouseI} = cellfun(@(x) x(max(lims95),:),shuffCorrsSorted{mouseI},'UniformOutput',false);
+    lowerCorrShuff{mouseI} = cellfun(@(x) x(min(lims95),:),shuffCorrsSorted{mouseI},'UniformOutput',false);
+    
+    aboveUpper{mouseI} = cellfun(@(a,x) a>x,pvCorrs{mouseI},upperCorrShuff{mouseI},'UniformOutput',false);
+    belowLower{mouseI} = cellfun(@(a,y) a<y,pvCorrs{mouseI},lowerCorrShuff{mouseI},'UniformOutput',false);
+    
+    corrsOutOfShuff{mouseI} = cellfun(@(e,f) (e+f)==1,belowLower{mouseI},aboveUpper{mouseI},'UniformOutput',false);
+    meanCorrsOutShuff{mouseI} = cell2mat(cellfun(@(g,h) mean(g(h)),pvCorrs{mouseI},corrsOutOfShuff{mouseI},'UniformOutput',false));
+    numCorrsOutShuff{mouseI} = cell2mat(cellfun(@sum,corrsOutOfShuff{mouseI},'UniformOutput',false));
+    corrsOutCOM{mouseI} = cellfun(@FiringCOM,corrsOutOfShuff{mouseI},'UniformOutput',false);
+    
+    bothOutError{mouseI} = cell2mat(cellfun(@(e,f) sum(e+f==2),belowLower{mouseI},aboveUpper{mouseI},'UniformOutput',false));
+    if any(sum(bothOutError{mouseI},1))
+        disp(['error: ' num2str(mouseI) ', some corr on both sides of confidence interval'])
+    end
 end
 
 %Pool across animals
+pooledPVdayPairs = cell(1,size(pooledCompPairs,1));
+pooledMeanCorr = cell(1,size(pooledCompPairs,1));
+pooledMeanCorrOutofShuff = cell(1,size(pooledCompPairs,1));
+pooledPVcorrs = cell(1,size(pooledCompPairs,1));
+pooledPVcorrsOutShuff = cell(1,size(pooledCompPairs,1));
+pooledMeanPVcorrsOutShuff = cell(1,size(pooledCompPairs,1));
+pooledNumPVcorrsOutShuff = cell(1,size(pooledCompPairs,1));
+for cpJ = 1:size(pooledCompPairs,1)
+    for mouseI = 1:numMice   
+        pooledPVdayPairs{cpJ} = [pooledPVdayPairs{cpJ}; (PVdayPairs{mouseI})];
         
-   
-[TMapA{mouseI}, ~, ~, ~, ~, ~] =...
-        PFsLinTrialbyTrial2(tbtA, xlims, cmperbin, minspeed,...
-        [],'trialReli',trialReli{mouseI},'smooth',false,'condPairs',pooledCondPairs);
+        pooledMeanCorr{cpJ} = [pooledMeanCorr{cpJ}; cell2mat(meanCorr{mouseI}(:,cpJ))];
+        pooledMeanCorrOutofShuff{cpJ} = [pooledMeanCorrOutofShuff{cpJ}; meanCorrOutOfShuff{mouseI}(:,cpJ)];
+        
+        pooledPVcorrs{cpJ} = [pooledPVcorrs{cpJ}; cell2mat({pvCorrs{mouseI}{:,cpJ}}')];
+        pooledPVcorrsOutShuff{cpJ} = [pooledPVcorrsOutShuff{cpJ}; cell2mat({corrsOutOfShuff{mouseI}{:,cpJ}}')];
+        pooledMeanPVcorrsOutShuff{cpJ} = [pooledMeanPVcorrsOutShuff{cpJ}; meanCorrsOutShuff{mouseI}(:,cpJ)];
+        pooledNumPVcorrsOutShuff{cpJ} = [pooledNumPVcorrsOutShuff{cpJ}; numCorrsOutShuff{mouseI}(:,cpJ)];
+    end
+    pooledPVdayDiffs{cpJ} = diff(fliplr(pooledPVdayPairs{cpJ}),1,2);
+end
+
+
 
 %% Variance of diff types of cell? Like splitting, but more wishy washy
 

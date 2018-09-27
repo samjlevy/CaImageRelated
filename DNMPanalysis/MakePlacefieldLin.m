@@ -1,5 +1,5 @@
 function [TMap_unsmoothed,TCounts,varargout] = ...
-    MakePlacefieldLin(FT,pos,xEdges,RunOccMap,varargin)
+    MakePlacefieldLin(FT,pos,xEdges,RunOccMap,gauss_std,cmperbin,smth)
 %[TCounts,TMap_gauss,TMap_unsmoothed] = ...
 %    MakePlacefield(spkpos,xEdges,yEdges,RunOccMap,varargin)
 %
@@ -33,19 +33,22 @@ function [TMap_unsmoothed,TCounts,varargout] = ...
 %
 
 %% Parse inputs.
-    p = inputParser;
-    p.addRequired('FT');
-    p.addRequired('pos');
-    p.addParameter('gauss_std',2.5,@(x) isscalar(x)); 
-    p.addParameter('cmperbin',1,@(x) isscalar(x)); 
-    p.addParameter('smooth',true,@(x) islogical(x)); 
+    %p = inputParser;
+    %p.addRequired('FT');
+    %p.addRequired('pos');
+    %p.addParameter('gauss_std',2.5,@(x) isscalar(x)); 
+    %p.addParameter('cmperbin',1,@(x) isscalar(x)); 
+    %p.addParameter('smooth',true,@(x) islogical(x)); 
     
-    p.parse(FT,pos,varargin{:}); 
+    %p.parse(varargin{:}); 
     
-    gauss_std = p.Results.gauss_std; 
-    cmperbin = p.Results.cmperbin;
-    smth = p.Results.smooth;
+    %gauss_std = p.Results.gauss_std; 
+    %cmperbin = p.Results.cmperbin;
+    %smth = p.Results.smooth;
     x = pos;
+    if isempty(gauss_std); gauss_std = 2.5; end
+    if isempty(cmperbin); cmperbin = 1; end
+    if isempty(smth); smth = true; end
     
 %% Make place field.
     if any(FT)
