@@ -210,9 +210,18 @@ pairsCompare = {'splitLR' 'splitST';...
 pairsCompareInd = cell2mat(cellfun(@(x) find(strcmpi(traitLabels,x)),pairsCompare,'UniformOutput',false));
 
 %% How many each type per day? 
+pooledSplitProp = cell(1,length(traitGroups{1}));
 for mouseI = 1:numMice
     splitPropEachDay{mouseI} = RunGroupFunction('TraitDailyPct',traitGroups{mouseI},dayUse{mouseI});
+    for tgI = 1:length(traitGroups{1})
+        pooledSplitProp{tgI} = [pooledSplitProp{tgI}; splitPropEachDay{mouseI}{tgI}(:)];
+    end
 end
+
+splitPropMeans = cell2mat(cellfun(@mean,pooledSplitProp,'UniformOutput',false));
+splitPropSEMs = cell2mat(cellfun(@standarderrorSL,pooledSplitProp,'UniformOutput',false));
+
+
 
 %% Get changes in number of splitters over time
 %Packaging for running neatly in a big group
@@ -348,51 +357,10 @@ PVdayPairs = [];
 tic
 pvCorrs = []; numCellsUsed = []; numNans = []; meanCorr = [];
 for mouseI = 1:numMice
-    %PVdayPairs{mouseI} = [repmat(1:numDays(mouseI),2,1)'; combnk(1:numDays(mouseI),2)];
-    PVdayPairs{mouseI} = AllCombsV1V2(1:numDays(mouseI),1:numDays(mouseI));
     
-    %Split TBTs
-    [tbtSmallA, tbtSmallB] = SplitTrialByTrial(cellTBT{mouseI}, 'alternate');
+    MakePVcorrsWrapper
     
-    %Pool dims (for easy shuffling
-    tbtPooledA = PoolTBTacrossConds(tbtSmallA,pooledCondPairs,poolLabels);
-    tbtPooledB = PoolTBTacrossConds(tbtSmallB,pooledCondPairs,poolLabels);
     
-    for dpI = 1:size(PVdayPairs{mouseI},1)
-        for cpI = 1:size(pooledCompPairs,1)
-            %Strip down to essential day and condition pair
-            minTbtA = StripTBT(tbtPooledA,pooledCompPairs(cpI,1),PVdayPairs{mouseI}(dpI,1));
-            minTbtB = StripTBT(tbtPooledB,pooledCompPairs(cpI,2),PVdayPairs{mouseI}(dpI,2));
-                            
-            %Make place fields
-            trialReliA = pooledTraitLogical{mouseI}(:,PVdayPairs{mouseI}(dpI,1),pooledCompPairs(cpI,1));
-            [TMapMinA , ~, ~, ~, ~, ~] = PFsLinTrialbyTrial2(minTbtA, xlims, cmperbin, minspeed,...
-                                [],'trialReli',trialReliA,'smooth',false,'dispProgress',false,'getZscore',false);
-            trialReliB = pooledTraitLogical{mouseI}(:,PVdayPairs{mouseI}(dpI,2),pooledCompPairs(cpI,2));
-            [TMapMinB , ~, ~, ~, ~, ~] = PFsLinTrialbyTrial2(minTbtB, xlims, cmperbin, minspeed,...
-                                [],'trialReli',trialReliB,'smooth',false,'dispProgress',false,'getZscore',false);
-                           
-            %Run PV
-            [pvCorrs{mouseI}{dpI,cpI},meanCorr{mouseI}{dpI,cpI},numCellsUsed{mouseI}{dpI,cpI},numNans{mouseI}{dpI,cpI}] = PopVectorCorrsSmallTMaps(...
-                            TMapMinA,TMapMinB,trialReliA,trialReliB,'activeEither','Spearman');
-            
-            for permI = 1:numPerms
-                %Shuffle between the two: this will shuffle both day and condition
-                [shuffMinTbtA, shuffMinTbtB] = ShuffleMinTBTs(minTbtA,minTbtB,'random');
-                shuffMinTbtA.sessID(:) = 1; shuffMinTbtB.sessID(:) = 1;
-                
-                %Make place fields
-                [shuffTMapMinA , ~, ~, ~, ~, ~] = PFsLinTrialbyTrial2(shuffMinTbtA, xlims, cmperbin, minspeed,...
-                                [],'trialReli',trialReliA,'smooth',false,'dispProgress',false,'getZscore',false);
-                [shuffTMapMinB , ~, ~, ~, ~, ~] = PFsLinTrialbyTrial2(shuffMinTbtB, xlims, cmperbin, minspeed,...
-                                [],'trialReli',trialReliB,'smooth',false,'dispProgress',false,'getZscore',false);
-                
-                %Run PV
-                [shuffpvCorrs{mouseI}{dpI,cpI}(permI,:),shuffMeanCorr{mouseI}{dpI,cpI}(permI,1),~,~] = PopVectorCorrsSmallTMaps(...
-                            shuffTMapMinA,shuffTMapMinB,trialReliA,trialReliB,'activeEither','Spearman');
-            end
-        end
-    end
 end
 toc
 
@@ -435,6 +403,7 @@ pooledPVcorrs = cell(1,size(pooledCompPairs,1));
 pooledPVcorrsOutShuff = cell(1,size(pooledCompPairs,1));
 pooledMeanPVcorrsOutShuff = cell(1,size(pooledCompPairs,1));
 pooledNumPVcorrsOutShuff = cell(1,size(pooledCompPairs,1));
+pooledCorrsOutCOM = cell(1,size(pooledCompPairs,1));
 for cpJ = 1:size(pooledCompPairs,1)
     for mouseI = 1:numMice   
         pooledPVdayPairs{cpJ} = [pooledPVdayPairs{cpJ}; (PVdayPairs{mouseI})];
@@ -446,6 +415,7 @@ for cpJ = 1:size(pooledCompPairs,1)
         pooledPVcorrsOutShuff{cpJ} = [pooledPVcorrsOutShuff{cpJ}; cell2mat({corrsOutOfShuff{mouseI}{:,cpJ}}')];
         pooledMeanPVcorrsOutShuff{cpJ} = [pooledMeanPVcorrsOutShuff{cpJ}; meanCorrsOutShuff{mouseI}(:,cpJ)];
         pooledNumPVcorrsOutShuff{cpJ} = [pooledNumPVcorrsOutShuff{cpJ}; numCorrsOutShuff{mouseI}(:,cpJ)];
+        pooledCorrsOutCOM{cpJ} = [pooledCorrsOutCOM{cpJ}; cell2mat({corrsOutCOM{mouseI}{:,cpJ}}')];
     end
     pooledPVdayDiffs{cpJ} = diff(fliplr(pooledPVdayPairs{cpJ}),1,2);
 end

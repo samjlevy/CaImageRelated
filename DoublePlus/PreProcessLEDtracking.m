@@ -237,19 +237,19 @@ if brightnessCalibrated == 0
 
 end
 
-if howRedThresh < 175
+%if howRedThresh < 175
     chR = input(['Red thresh now is ' num2str(howRedThresh) ', default is 175. Change now? (y/n)>>'],'s');
     if strcmpi(chR,'y')
         howRedThresh = str2double(input('Enter new RED thresh value:','s'));
     end
-end
+%end
 
-if howGreenThresh < 210
-    chG = input(['Green thresh now is ' num2str(howRedThresh) ', default is 210. Change now? (y/n)>>'],'s');
+%if howGreenThresh < 210
+    chG = input(['Green thresh now is ' num2str(howGreenThresh) ', default is 210. Change now? (y/n)>>'],'s');
     if strcmpi(chG,'y')
         howGreenThresh = str2double(input('Enter new GREEN thresh value:','s'));
     end
-end
+%end
         
 
 

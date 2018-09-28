@@ -232,7 +232,7 @@ if ceJstart~=1
     disp('warning: not starting at first index')
     keyboard
 end
-
+%ceJstart = ceJ+1
 for ceJ = ceJstart:(length(leaveCenter)-1)
     %Get the arm entries and exits surrounding the current center epoch
     armEntries = enterArmEnd(enterArmEnd > leaveCenter(ceJ) & enterArmEnd < enterCenter(ceJ+1));
@@ -345,7 +345,15 @@ for ceJ = ceJstart:(length(leaveCenter)-1)
                     waeEnd = whichArmEnds; waeEnd = waeEnd.*armEndPostPed';
                     changesFromEnd = find(diff([0 waeEnd(2:end)==waeEnd(end)])==1)+1;
             end
-                            
+                  
+            if length(changesFromStart)~=1 || length(changesFromEnd)~=1
+                if changesFromStart(end) < changesFromEnd(1)
+                    changesFromStart = changesFromStart(end);
+                    changesFromEnd = changesFromEnd(1);
+                end
+            end
+               
+            
             if length(changesFromStart)==1 && length(changesFromEnd)==1
                 armEndsStart = armEndInds(1:changesFromStart);
                 armEndsEnd = armEndInds(changesFromEnd:end);
@@ -436,4 +444,5 @@ onMazeReArr(matchedInd,:) = [];
 
 onMazeFinal = [[onMazeTable(1,1); onMazeReArr(:,2)], [onMazeReArr(:,1); onMazeTable(end,2)]];
 
+%save beh.mat onMazeFinal behTable onMazeTable
 end

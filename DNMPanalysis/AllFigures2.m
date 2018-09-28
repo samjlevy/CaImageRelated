@@ -98,12 +98,37 @@ end
 
 %% How many splitters pie chart
 
-%For all here, mean+sem (all mice all days) 
-%Split both
-%only lr
-%only st
-%don't split
+pieSplitLabels = {'splitBOTH','splitLRonly','dontSplit','splitSTonly'};
+splitterTGinds = cell2mat(cellfun(@(x) find(strcmpi(traitLabels,x)),pieSplitLabels,'UniformOutput',false));
+pieSplitColors = colorAssc(splitterTGinds);
+pieSplitColors{3} = [1 1 1];
+pieData = splitPropMeans(splitterTGinds);
+pieSEMs = splitPropSEMs(splitterTGinds);
 
+pieDataPct = round(pieData'*100,3); 
+pieDataPct(rem(pieDataPct,0.01)==0) = pieDataPct(rem(pieDataPct,0.01)==0)+0.001;
+pieDataPct = mat2cell(pieDataPct,ones(1,length(pieData)),1);
+pieDataPct = cellfun(@num2str,pieDataPct,'UniformOutput',false);
+pieDataPct = cellfun(@(x) x(1:end-1),pieDataPct,'UniformOutput',false);
+
+pieDataSEMs = round(pieSEMs'*100,3); 
+pieDataSEMs(rem(pieDataSEMs,0.01)==0) = pieDataSEMs(rem(pieDataSEMs,0.01)==0)+0.001;
+pieDataSEMs = mat2cell(pieDataSEMs,ones(1,length(pieData)),1);
+pieDataSEMs = cellfun(@num2str,pieDataSEMs,'UniformOutput',false);
+pieDataSEMs = cellfun(@(x) x(1:end-1),pieDataSEMs,'UniformOutput',false);
+
+pp=figure; axes(pp)
+pie(pieData,pieSplitLabels);
+colormap(reshape([pieSplitColors{:}],3,length(pieSplitColors))')
+for ppI = 1:length(pp.Children.Children)
+    if strcmpi(class(pp.Children.Children(ppI)),'matlab.graphics.primitive.Text')
+        ppUse = find(cell2mat(cellfun(@(x) strcmpi(x,pp.Children.Children(ppI).String),pieSplitLabels,'UniformOutput',false)));
+        pp.Children.Children(ppI).String = {pieSplitLabels{ppUse}; [pieDataPct{ppUse} ' ' char(177) ' ' pieDataSEMs{ppUse} '%']}; 
+        pp.Children.Children(ppI).FontSize = 13;
+    end
+end
+
+title('Mean number of each splitter, all days all mice')
 
 %% One condition heatmap over days (Ziv-style) (Figure 1d?)
 refDay = 1;
@@ -336,10 +361,78 @@ suptitleSL('Percent cells of model day still that trait v self, Positive vs. neg
 
 figure;
 condSetColors = {'b' 'r' 'g'};
+csMod = [-0.1 0 0.1];
 for cpI = 1:size(pooledCompPairs,1)
     dayPairsHere = unique(abs(pooledPVdayDiffs{cpI}));
     for dpI = 1:length(dayPairsHere)
         pvsHere = pooledMeanCorr{cpI}(abs(pooledPVdayDiffs{cpI})==dayPairsHere(dpI));
+        plot(dayPairsHere(dpI)*ones(length(pvsHere),1)+csMod(condSetInds(cpI)),pvsHere,'.','MarkerSize',6,'Color',condSetColors{condSetInds(cpI)})
+        hold on
+        meanLine(dpI,cpI) = mean(pvsHere);
+    end
+end
+for csI = 1:length(condSet)
+    meanLinePlot = mean(meanLine(:,condSet{csI}),2);
+    plot(dayPairsHere,meanLinePlot,'LineWidth',1.5,'Color',condSetColors{csI})
+end
+xlim([-0.5 max(dayPairsHere)+0.5])
+ylabel('Mean Correlation')
+xlabel('Days Apart')
+title('Mean Population vector correlation by number of sessions apart')
+%legend
+    
+
+%% Pop vector corrs don't work (no new info)
+figure;
+condSetColors = {'b' 'r' 'g'};
+for cpI = 1:size(pooledCompPairs,1)
+    dayPairsHere = unique(abs(pooledPVdayDiffs{cpI}));
+    for dpI = 1:length(dayPairsHere)
+        pvsHere = pooledMeanPVcorrsOutShuff{cpI}(abs(pooledPVdayDiffs{cpI})==dayPairsHere(dpI));
+        plot(dayPairsHere(dpI)*ones(length(pvsHere),1),pvsHere,'.','MarkerSize',6,'Color',condSetColors{condSetInds(cpI)})
+        hold on
+        meanLine(dpI,cpI) = mean(pvsHere);
+    end
+end
+for csI = 1:length(condSet)
+    meanLinePlot = nanmean(meanLine(:,condSet{csI}),2);
+    plot(dayPairsHere,meanLinePlot,'LineWidth',1.5,'Color',condSetColors{csI})
+end
+ylabel('Mean out of shuffle corr')
+xlabel('Days Apart')
+title('Mean PV corr only bins out of shuffle by number of sessions apart')
+%legend
+
+
+%num bins out of shuffle, looks like by 1 day apart almost all are all bins   
+figure;
+condSetColors = {'b' 'r' 'g'};
+for cpI = 1:size(pooledCompPairs,1)
+    dayPairsHere = unique(abs(pooledPVdayDiffs{cpI}));
+    for dpI = 1:length(dayPairsHere)
+        pvsHere = pooledNumPVcorrsOutShuff{cpI}(abs(pooledPVdayDiffs{cpI})==dayPairsHere(dpI));
+        plot(dayPairsHere(dpI)*ones(length(pvsHere),1),pvsHere,'.','MarkerSize',6,'Color',condSetColors{condSetInds(cpI)})
+        hold on
+        meanLine(dpI,cpI) = mean(pvsHere);
+    end
+end
+for csI = 1:length(condSet)
+    meanLinePlot = mean(meanLine(:,condSet{csI}),2);
+    plot(dayPairsHere,meanLinePlot,'LineWidth',1.5,'Color',condSetColors{csI})
+end
+ylabel('Num bins')
+xlabel('Days Apart')
+title('Num bins in pop vector corr out of shuffle by number of sessions apart')
+%legend
+
+
+%Only uses mean corr values that are out of shuffle, looks basically the same
+figure;
+condSetColors = {'b' 'r' 'g'};
+for cpI = 1:size(pooledCompPairs,1)
+    dayPairsHere = unique(abs(pooledPVdayDiffs{cpI}));
+    for dpI = 1:length(dayPairsHere)
+        pvsHere = pooledMeanCorr{cpI}((abs(pooledPVdayDiffs{cpI})==dayPairsHere(dpI)) &  pooledMeanCorrOutofShuff{cpI});
         plot(dayPairsHere(dpI)*ones(length(pvsHere),1),pvsHere,'.','MarkerSize',6,'Color',condSetColors{condSetInds(cpI)})
         hold on
         meanLine(dpI,cpI) = mean(pvsHere);
@@ -351,13 +444,11 @@ for csI = 1:length(condSet)
 end
 ylabel('Mean Correlation')
 xlabel('Days Apart')
-title('Population vector correlation by number of sessions apart')
+title('Population vector correlation by number of sessions apart, sig corrs only')
 %legend
-    
-    
 
 
-
+        
 
 
 
