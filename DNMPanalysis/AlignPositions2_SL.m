@@ -103,7 +103,7 @@ for pathI = 1:length(align_paths)
         ymin = min(y_adj_cm);
 
         save(fullfile(align_paths{pathI},'Pos_align.mat'),'x_adj_cm','y_adj_cm',...
-            'PSAbool','xmin','xmax','ymin','ymax','speed','PSAbool')
+            'PSAbool','xmin','xmax','ymin','ymax','speed')
         disp('done')
     else 
         disp(['file ' align_paths{pathI} ' already registered'])

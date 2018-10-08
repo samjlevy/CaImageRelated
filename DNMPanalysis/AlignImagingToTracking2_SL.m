@@ -93,5 +93,5 @@ brain_time = brainTime(brainTimeUse(1):brainTimeUse(2));
 PSAboolUseIndices = FTuse(1):FTuse(2);
 PSAboolAdjusted = FT(:,PSAboolUseIndices);
 
-save Pos_brain.mat xBrain yBrain PSAboolUseIndices PSAboolAdjusted brain_time            
+save Pos_brain.mat xBrain yBrain PSAboolUseIndices PSAboolAdjusted brain_time TrackingUse            
 end

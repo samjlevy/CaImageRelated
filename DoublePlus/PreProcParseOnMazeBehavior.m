@@ -340,6 +340,14 @@ for ceJ = ceJstart:(length(leaveCenter)-1)
                         end
                     end
                     
+                    armEndInds = 1:length(armEntries);
+                    whichArmEnds = [];
+                    for aeI = 1:length(armEntries)
+                        whichArmEnds(aeI) = mode(behaviorMarker(armEntries(aeI):armLeavings(aeI))); %#ok<AGROW>
+                    end
+                    armEndPrePed = armEntries<onPedLim;
+                    armEndPostPed = armEntries>offPedLim;
+                    
                     waeStart = whichArmEnds; waeStart = waeStart.*armEndPrePed';
                     changesFromStart = find(diff([waeStart(1:end-1)==waeStart(1) 0])==-1);
                     waeEnd = whichArmEnds; waeEnd = waeEnd.*armEndPostPed';

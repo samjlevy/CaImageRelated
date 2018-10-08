@@ -159,6 +159,7 @@ if brightnessCalibrated == 0
                         rFrameNum = round(str2double(input(['Please give a frame number between ' num2str(tfEdges(tfI)) ' and '...
                             num2str(tfEdges(tfI+1)) '. >>'],'s')));
                     end
+                    mouseInFrame = 1;
                     close(h1);
                     obj.CurrentTime = (rFrameNum-1)/aviSR;
                     uFrame = readFrame(obj);

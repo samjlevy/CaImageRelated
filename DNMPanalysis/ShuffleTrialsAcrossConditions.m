@@ -61,15 +61,18 @@ for condJ = 1:4
     shuffledTBT(condJ).trialsX = cell(length(sessIDlong),1);
     shuffledTBT(condJ).trialsY = cell(length(sessIDlong),1);
     shuffledTBT(condJ).trialPSAbool = cell(length(sessIDlong),1);
-    shuffledTBT(condJ).sessID = sessIDlong;
-    shuffledTBT(condJ).sessID(shuffTBTassign(:,condJ)==0) = 0;
+    shuffledTBT(condJ).trialRawTrace = cell(length(sessIDlong),1);
+    %shuffledTBT(condJ).sessID = sessIDlong;
+    %shuffledTBT(condJ).sessID(shuffTBTassign(:,condJ)==0) = 0;
+    shuffledTBT(condJ).sessID = zeros(length(sessIDlong),1);
+    shuffledTBT(condJ).lapNumber = zeros(length(sessIDlong),1);
     shuffledTBT(condJ).name = trialbytrial(condJ).name;
 end
 
 %Deal out trials to new conditions
 for sessJ = 1:length(sessions)
     for fn = 1:length(ss)
-        if iscell(trialbytrial(1).(ss{fn}))
+        if iscell(trialbytrial(1).(ss{fn})) || isnumeric(trialbytrial(1).(ss{fn}))
             for condType = 1:4
                 for condDraw = 1:4
                     %Get the indices to fill
@@ -92,7 +95,9 @@ for condK = 1:4
     shuffledTBT(condK).trialsX(shuffTBTassign(:,condK)==0) = [];
     shuffledTBT(condK).trialsY(shuffTBTassign(:,condK)==0) = [];
     shuffledTBT(condK).trialPSAbool(shuffTBTassign(:,condK)==0) = [];
+    shuffledTBT(condK).trialRawTrace(shuffTBTassign(:,condK)==0) = [];
     shuffledTBT(condK).sessID(shuffTBTassign(:,condK)==0) = [];
+    shuffledTBT(condK).lapNumber(shuffTBTassign(:,condK)==0) = [];
 end
 
 %{    

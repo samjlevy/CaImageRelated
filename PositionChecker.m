@@ -71,6 +71,9 @@ videoFig.RandomFrameButton = uicontrol('Style','pushbutton','String','RANDOM FRA
                            miscVar.buttonWidth,miscVar.buttonHeight],...
                            'Callback',{@fcnRandomFrame});                       
 
+videoFig.flipUDbox = uicontrol('Style','checkbox','String','FlipUD','Position',[miscVar.buttonLeftEdge,miscVar.upperLimit-135,...
+                            200,25],'Callback',{@fcnFlipUd});
+                       
 miscVar.controlButtonHeight=65;                         
 videoFig.LoadVideoButton = uicontrol('Style','pushbutton','String','LOAD VIDEO',...
                              'Position',[miscVar.buttonLeftEdge,miscVar.controlButtonHeight,...
@@ -128,6 +131,21 @@ if miscVar.currentEvent > 1
     end
 else
     disp('Already at event 1')   
+end
+
+end
+%%
+function fcnFlipUd(~,~)
+global videoFig
+global miscVar
+global video
+
+yHeight = video.Height;
+
+if videoFig.flipUDbox.Value==1
+    miscVar.yAVI = yHeight - miscVar.yAVIorig;
+elseif videoFig.flipUDbox.Value==0
+    miscVar.yAVI = miscVar.yAVIorig;
 end
 
 end
@@ -211,6 +229,8 @@ try
 catch
     disp('sorry, cannot load xAVI/yAVI')
 end
+
+miscVar.yAVIorig = miscVar.yAVI;
 
 end
 %%
