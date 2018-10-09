@@ -7,9 +7,9 @@ onMaze = logical(onMaze);
 xAVI(onMaze==0) = NaN; yAVI(onMaze==0) = NaN;
 save('Pos.mat','xAVI','yAVI','DVTtime','onMaze')
         
-JustFToffset
+JustFToffset;
 
-AlignImagingToTracking2_SL %- Pos.brain, only wants Pos.mat
+AlignImagingToTracking2_SL; %- Pos.brain, only wants Pos.mat
     %has indices for frames to use from PSAbool and DVT
     %NaNs out times where onMaze == 0
     
