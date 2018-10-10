@@ -66,7 +66,7 @@ MakeTrialByTrial
     %that x, y and spiking activity for every cell (realigned across
     %sessions according to registration) can be easily called
     %together.
-    MakeDayByDay
+MakeDayByDay
     
 AllAnalyses1
     %loads trial by trial for each folder indicated, runs all the same

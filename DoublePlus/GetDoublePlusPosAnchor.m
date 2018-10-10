@@ -15,38 +15,47 @@ aviSR = obj.FrameRate;
 %nFrames = round(obj.Duration*aviSR);  
 frameSize = [obj.Height obj.Width];
 
-%Get frames for calibration
-h1 = implay(avi_filepath);
-calNames = {'WEST','EAST','SOUTH','NORTH'};
-for cnI = 1:length(calNames)
-    calFrameN(cnI) = str2double(input(['Enter frame number for ' calNames{cnI} ' arm calibration >> '],'s'));
-    obj.CurrentTime = (calFrameN(cnI)-1)/aviSR;
-    calFrame{cnI} = readFrame(obj);
-end
-close(h1);
-
 %Get scaling calibration points
-scalingX = cell(length(calNames),1); scalingY = cell(length(calNames),1);
-for cnJ = 1:length(calNames)
-    hh = figure('Position',[500,100,560*2,420*2]);
-    imagesc(calFrame{cnJ})
-    hold on
-    title(['Click along calibration inputs from center to end for ' calNames{cnJ}])
-    disp('Right click to end finding points')
-    buttonPressed = 1;
-    bg = 0;
-    while buttonPressed == 1
-        bg = bg + 1;
-        [xi,yi,buttonPressed] = ginput(1);
-        if buttonPressed==1
-            scalingX{cnJ}(bg)=xi; scalingY{cnJ}(bg)=yi;
-            plot(scalingX{cnJ}(bg),scalingY{cnJ}(bg),'.m','MarkerSize',6)
+calNames = {'WEST','EAST','SOUTH','NORTH'};
+loadscaling = input('Load existing scaling? (y/n)>> ','s');
+switch loadscaling
+    case 'n'
+        %Get frames for calibration
+        h1 = implay(avi_filepath);
+        for cnI = 1:length(calNames)
+            calFrameN(cnI) = str2double(input(['Enter frame number for ' calNames{cnI} ' arm calibration >> '],'s'));
+            obj.CurrentTime = (calFrameN(cnI)-1)/aviSR;
+            calFrame{cnI} = readFrame(obj);
         end
-    end
-    close(hh)
-    
-    [scalingX{cnJ},scalingY{cnJ}]=fixPts(calFrame{cnJ},scalingX{cnJ},scalingY{cnJ},[]);
-    
+        close(h1);
+
+        scalingX = cell(length(calNames),1); scalingY = cell(length(calNames),1);
+        for cnJ = 1:length(calNames)
+            hh = figure('Position',[500,100,560*2,420*2]);
+            imagesc(calFrame{cnJ})
+            hold on
+            title(['Click along calibration inputs from center to end for ' calNames{cnJ}])
+            disp('Right click to end finding points')
+            buttonPressed = 1;
+            bg = 0;
+            while buttonPressed == 1
+                bg = bg + 1;
+                [xi,yi,buttonPressed] = ginput(1);
+                if buttonPressed==1
+                    scalingX{cnJ}(bg)=xi; scalingY{cnJ}(bg)=yi;
+                    plot(scalingX{cnJ}(bg),scalingY{cnJ}(bg),'.m','MarkerSize',6)
+                end
+            end
+            close(hh)
+            [scalingX{cnJ},scalingY{cnJ}]=fixPts(calFrame{cnJ},scalingX{cnJ},scalingY{cnJ},[]);
+        end
+    case 'y'
+        [fileN,dirN] = uigetfile('Please select the scaling file');
+        load(fullfile(dirN,fileN),'scalingX','scalingY','calFrameN')
+        
+        %for cnJ = 1:length(calNames)
+        %    [scalingX{cnJ},scalingY{cnJ}]=fixPts(calFrame{cnJ},scalingX{cnJ},scalingY{cnJ},[]);
+        %end
 end
 
 %Get maze calibration points
@@ -57,15 +66,24 @@ v0Anchors={'Center SW','Center NW','Center SE','Center NE',...
            'West N','West S','East N','East S',...
            'South W','South E','North W','North E'};
        
-hh=figure('Position',[500,100,560*2,420*2]);
-imagesc(v0); hold on
-for vI = 1:length(v0Anchors)
-    title(['Please click at: ' v0Anchors{vI} ' corner'])
-    [v0anchorX(vI),v0anchorY(vI)] = ginput(1);
-    plot(v0anchorX(vI),v0anchorY(vI),'.m','MarkerSize',6)
+loadvanchor = input('Load existing v0anchor? (y/n)>> ','s');
+switch loadvanchor
+    case 'n'
+        hh=figure('Position',[500,100,560*2,420*2]);
+        imagesc(v0); hold on
+        for vI = 1:length(v0Anchors)
+            title(['Please click at: ' v0Anchors{vI} ' corner'])
+            [v0anchorX(vI),v0anchorY(vI)] = ginput(1);
+            plot(v0anchorX(vI),v0anchorY(vI),'.m','MarkerSize',6)
+        end
+        close(hh)
+    case 'y'
+        [fileN,dirN] = uigetfile('Please select the anchor file')
+        load(fullfile(dirN,fileN),'v0anchor')
+        v0anchorX = v0anchor(:,1)';
+        v0anchorY = v0anchor(:,2)';
+        
 end
-close(hh)
-
 [v0anchorX,v0anchorY]=fixPts(v0,v0anchorX,v0anchorY,[0 1 0]);
 
 [anchorX,anchorY,bounds] = MakeDoublePlusPosAnchor([]);

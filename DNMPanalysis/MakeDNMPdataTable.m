@@ -1,6 +1,7 @@
 function DNMPdataTable = MakeDNMPdataTable(fullRegPath)
 
 %Get some full reg stuff
+
 load(fullfile(fullRegPath,'fullReg.mat'))
 load(fullfile(fullRegPath,'realDays.mat'))
 load(fullfile(fullRegPath,'sessType.mat'))

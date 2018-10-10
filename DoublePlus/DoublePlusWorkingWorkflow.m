@@ -11,10 +11,12 @@ GetDoublePlusPosAnchor % - Pos.scaled
 PosScaledToPosAlign
 
 
+ParseDoublePlusBehavior('turn')
+
+
 MakeDoublePlusLimsManually
     MakeDoublePlusBehaviorBounds
 
-ParseDoublePlusBehavior('turn')
 
 
 

@@ -24,6 +24,23 @@ onSouth = inpolygon(x_adj_cm,y_adj_cm,endBounds.south(:,1),endBounds.south(:,2))
 onEast = inpolygon(x_adj_cm,y_adj_cm,endBounds.east(:,1),endBounds.east(:,2));
 onWest = inpolygon(x_adj_cm,y_adj_cm,endBounds.west(:,1),endBounds.west(:,2));
 
+onMaze = ~isnan(x_adj_cm);
+ontoMaze = find(diff([0 onMaze 0]) == 1);
+offMaze = find(diff([0 onMaze 0]) == -1) -1; 
+if length(ontoMaze) ~= length(offMaze)
+    disp('error, not the same number of maze entries and exits')
+    keyboard
+end
+
+offEs = [offMaze(1:end-1)' ontoMaze(2:end)'];
+for oeI = 1:size(offEs)
+    numOffMaze = sum(onMaze(offEs(oeI,1)-10:offEs(oeI,2)+10)==0);
+    if numOffMaze<100
+        disp('Error: found a short off maze epoch. What do you want to do?')
+        keyboard
+    end
+end
+
 locInds = {1 'center'; 2 'north'; 3 'south'; 4 'east'; 5 'west'};
 armOrCent = inCenter + onNorth*2 + onSouth*3 + onEast*4 + onWest*5;
 intoCent = find(diff([0 armOrCent==1 0]) == 1);
@@ -46,14 +63,6 @@ end
 intoEnd = find(diff([0 (armOrCent==4 | armOrCent==5) 0]) == 1);
 outEnd = find(diff([0 (armOrCent==4 | armOrCent==5) 0]) == -1) -1;
 if length(intoEnd) ~= length(outEnd)
-    disp('error, not the same number of end entries and exits')
-    keyboard
-end
-
-onMaze = ~isnan(x_adj_cm);
-ontoMaze = find(diff([0 onMaze 0]) == 1);
-offMaze = find(diff([0 onMaze 0]) == -1) -1; 
-if length(ontoMaze) ~= length(offMaze)
     disp('error, not the same number of end entries and exits')
     keyboard
 end
@@ -107,6 +116,8 @@ for omI = 1:length(ontoMaze)
         omI
         keyboard
         %approxFrame = round(lapStruct.startMaze*(30/20) + TrackingUse(1) - 1)
+        %approxFrame = round(lapStruct.enterMid*(30/20) + TrackingUse(1) - 1)
+        %approxFrame = round(offMaze(omI)*(30/20) + TrackingUse(1) - 1)
         %figure; plot(x_adj_cm,y_adj_cm,'.k'); hold on
         %plot(x_adj_cm(lapStruct.startMaze(1):lapStruct.leaveMaze(end)),y_adj_cm(lapStruct.startMaze(1):lapStruct.leaveMaze(end)),'.m')
         %plot(x_adj_cm(lapStruct.endLap(ii):lapStruct.leaveMaze(ii)),y_adj_cm(lapStruct.endLap(ii):lapStruct.leaveMaze(ii)),'.g')
@@ -115,11 +126,40 @@ for omI = 1:length(ontoMaze)
     
 end
 
-save('behaviorStruct.mat','lapParsed')
-disp('done, saved')
+saveNow = input('save this? (y/n)>> ','s');
+if strcmpi(saveNow,'y')
+    save('behaviorStruct.mat','lapParsed')
+    disp('done, saved')
+else
+    disp('done, not saved')
+end
 
 end
 
+function evalAndCheckOffMaze(bStart,bEnd)
+
+bStart = 61104;
+bEnd = 61597;
+
+bStart = 8255
+bEnd = 8692
+
+load('PosLED_temp.mat', 'onMaze')
+numOffmaze = sum(onMaze(bStart:bEnd)==0)
+
+approxFrame = round(ans*(30/20) + TrackingUse(1) - 1)
+onMaze(bStart:bEnd)=0;
+onMaze = double(onMaze);
+%clear bStart bEnd
+save('PosLED_temp.mat','onMaze','-append')
+onMaze = logical(onMaze);
+save('PosScaled.mat','onMaze','-append')
+
+PosScaledToPosAlign
+
+ParseDoublePlusBehavior('turn')
+
+end
 function lapStruct = IdentifyLapType(lapStruct,sessType,locInds)
 
 to = lapStruct.order.all;
@@ -243,7 +283,8 @@ for cs = 1:length(lapStruct.startMaze)
     lapStruct.startLabels{cs} = locInds{labInd,2}; 
 end
 for ce = 1:length(lapStruct.endLap)
-    labInd = mode(armOrCent(lapStruct.endLap(ce):lapStruct.leaveMaze(ce)));
+    behHere = armOrCent(lapStruct.endLap(ce):lapStruct.endLap(ce));
+    labInd = mode(behHere(behHere>0));
     lapStruct.endLabels{ce} = locInds{labInd,2}; 
 end
 

@@ -1,29 +1,21 @@
-function [daybyday, sortedSessionInds, useDataTable] = MakeDayByDayDoublePlus(basePath,accuracyThresh, getFluoresence, deleteSilentCells)
+function [daybyday, sortedSessionInds, useDataTable] = MakeDayByDayDoublePlus(mousePath, getFluoresence, deleteSilentCells)
 
-fdPts = strsplit(basePath,'\');
+fdPts = strsplit(mousePath,'\');
 finalDataRoot = fullfile(fdPts{1:end-1});
+mouseName = fdPts{end};
 
-load(fullfile(basePath,'DNMPdataTable.mat'))
-load(fullfile(basePath,'fullReg.mat'))
-
-if isempty(accuracyThresh)
-    accuracyThresh = 0.5;
-end
+load(fullfile(mousePath,'DoublePlusDataTable.mat'))
 
 %Choose which files being included: these should have user input options
-whichFilesUse = cell2mat(cellfun(@(x) strcmpi(x,'DNMP'),[DNMPdataTable.SessType],'UniformOutput',false))...
-                & DNMPdataTable.Accuracy >= accuracyThresh...
-                & DNMPdataTable.HasPos == 1 ...
-                & DNMPdataTable.HasFinalBeh;
+whichFilesUse = DoublePlusDataTable.HasPos == 1 & DoublePlusDataTable.HasFinalBeh;
                 
-
 figHa = figure;
 ut = uitable(figHa);
-DNMPdataTable.KeepSession = whichFilesUse;
-tt = table2cell(DNMPdataTable);
+DoublePlusDataTable.KeepSession = whichFilesUse;
+tt = table2cell(DoublePlusDataTable);
 
 ut.Data = tt;
-ut.ColumnName = DNMPdataTable.Properties.VariableNames;
+ut.ColumnName = DoublePlusDataTable.Properties.VariableNames;
 ut.Parent.Position = [300 300 700 450];
 ut.Position = [20 20 640 400];
 ut.ColumnEditable = logical([0 0 0 0 0 0 1]);
@@ -45,31 +37,47 @@ try
 close(figHa);
 end
 
-useDataTable = DNMPdataTable(whichFilesUse,1:6);
+useDataTable = DoublePlusDataTable(whichFilesUse,1:6);
 
-%Get the sort order for fullReg.sessionInds that corresponds to DNMPdataTable
-fullRegFiles = [fullReg.BaseSession; fullReg.RegSessions(:)];
-fullRegFilesPts = cellfun(@(x) strsplit(x,'\'),fullRegFiles,'UniformOutput',false);
-fullRegFilesEnds = cellfun(@(x) x{end},fullRegFilesPts,'UniformOutput',false);
+footFolder = ls(fullfile(mousePath,'*Footprints'));
+footFile = ls(fullfile(footFolder,'cellRegistered*.mat'));
+load(fullfile(footFolder,footFile))
+sortedSessionInds = cell_registered_struct.cell_to_index_map;
 
-useDataDelete = false(height(useDataTable),1);
-for ssI = 1:height(useDataTable)
-    ssIind = find(strcmpi(fullRegFilesEnds,useDataTable.FolderName(ssI)));
-    if isempty(ssIind)
-        useDataDelete(ssI) = true;
-        disp(['File ' useDataTable.FolderName(ssI) ' is not registered, deleting'])
-    else
-        useDataTable.fullRegInd(ssI) = ssIind;
-    end
+%Get the sort order for fullReg.sessionInds that corresponds to DoublePlusDataTable
+txtFile = ls(fullfile(mousePath,footFolder,'*.txt'));
+tFile = fullfile(mousePath,footFolder,txtFile);
+fileID = fopen(tFile);
+allText = textscan(fileID,'%s');
+fclose(fileID);
+sessionLines = find(cell2mat(cellfun(@(x) strcmp(x,'Session'),allText,'UniformOutput',false)));
+dashLines = find(cell2mat(cellfun(@(x) strcmp(x,'-'),allText,'UniformOutput',false)));
+dashFollowSess = find(sum((sessionLines'+2)==dashLines,2));
+sessTxt = allText{1}(sessionLines(dashFollowSess)+3); %#ok<FNDSB>
+for stI = 1:size(sessTxt,1)
+    strpts = strsplit(sessTxt{stI},'\');
+    dateHere = strpts{end}(end-9:end-4);
+    regSess{stI} = [mouseName '_' dateHere];
 end
+
+%useDataDelete = false(height(useDataTable),1);
+%for ssI = 1:height(useDataTable)
+%    ssIind = find(strcmpi(fullRegFilesEnds,useDataTable.FolderName(ssI)));
+%    if isempty(ssIind)
+%        useDataDelete(ssI) = true;
+%        disp(['File ' useDataTable.FolderName(ssI) ' is not registered, deleting'])
+%    else
+%        useDataTable.fullRegInd(ssI) = ssIind;
+%    end
+%end
 useDataTable(useDataDelete,:) = [];
 
 %Load all the data
 for ff = 1:height(useDataTable)
-    thisDir = fullfile(finalDataRoot,useDataTable.FolderName{ff});
+    thisDir = fullfile(mousePath,useDataTable.FolderName{ff});
     disp(['Working on file ' thisDir])
     %Make cell registration alignment matrix
-    sortedSessionInds(:,ff) = fullReg.sessionInds(:,useDataTable.fullRegInd(ff));
+    %sortedSessionInds(:,ff) = fullReg.sessionInds(:,useDataTable.fullRegInd(ff));
 
     %Load Imaging data
     load(fullfile(thisDir,'Pos_align.mat'))
@@ -78,9 +86,9 @@ for ff = 1:height(useDataTable)
     daybyday.all_y_adj_cm{ff,1} = y_adj_cm;
     
     %Get behavior indices
-    xlsfile = ls(fullfile(thisDir,'*Finalized.xlsx'));
+    load(fullfile(thisDir,'behaviorStruct.mat'))
     
-    [daybyday.frames{ff,1}, daybyday.txt{ff,1}] = xlsread(fullfile(thisDir,xlsfile), 1);
+    daybyday.behavior{ff,1} = lapParsed;
     
     %Load fluoresence, align to PSAbool(adjusted)
     if getFluoresence == 1
@@ -94,7 +102,7 @@ for ff = 1:height(useDataTable)
     
     %Check for imaging exclude, delete bad frames
     if exist(fullfile(thisDir,'excludeFromImaging.mat'),'file')==2
-        ssaa = input(['Found imaging exclude frames for ' useDataTable.FolderName{ff} ', include them? (y/n) '],'s')
+        ssaa = input(['Found imaging exclude frames for ' useDataTable.FolderName{ff} ', include them? (y/n) '],'s');
         if strcmpi(ssaa,'y')
             %Assumes this refers to the original FinalOutput PSAbool
             load(fullfile(thisDir,'excludeFromImaging.mat'))
@@ -103,11 +111,6 @@ for ff = 1:height(useDataTable)
 
             daybyday.imagingFramesDelete{ff} = logical(sum(PSAboolUseIndices == excludeFromImaging',1));
 
-            %PSAbool(:,imagingFramesDelete) = [];
-            %all_Fluoresence{ff,1}(:,imagingFramesDelete) = [];
-            %daybyday.all_x_adj_cm{ff,1}(imagingFramesDelete) = [];
-            %daybyday.all_y_adj_cm{ff,1}(imagingFramesDelete) = [];
-            
             %Still need to do something for frames/txt
         end
     else
@@ -134,9 +137,10 @@ if getFluoresence == 1
     daybyday.RawTrace = PoolPSA2(all_Fluoresence, sortedSessionInds);
 end
     
-
-
-%save daybyday.mat daybyday sortedSessionInds useDataTable -v7.3
+sdbd = input('Save daybyday? (y/n) >> ','s');
+if strcmpi(sdbd,'y')
+    save(fullfile(mousePath,'daybyday.mat'),'daybyday','sortedSessionInds','useDataTable','-v7.3')
+end
 
 end
     
