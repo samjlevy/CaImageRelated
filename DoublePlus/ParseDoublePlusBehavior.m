@@ -1,4 +1,6 @@
-function ParseDoublePlusBehavior(sessType)
+function ParseDoublePlusBehavior(sessType,locInds)
+
+%locInds = {1 'center'; 2 'north'; 3 'south'; 4 'east'; 5 'west'};
 
 load Pos_align.mat x_adj_cm y_adj_cm TrackingUse
 
@@ -41,7 +43,7 @@ for oeI = 1:size(offEs)
     end
 end
 
-locInds = {1 'center'; 2 'north'; 3 'south'; 4 'east'; 5 'west'};
+
 armOrCent = inCenter + onNorth*2 + onSouth*3 + onEast*4 + onWest*5;
 intoCent = find(diff([0 armOrCent==1 0]) == 1);
 outCent = find(diff([0 armOrCent==1 0]) == -1) -1;

@@ -1,4 +1,5 @@
 %DoublePlusWorkingWorkflow
+
 mainFolder = 'G:\DoublePlus';
 mainFolder = 'C:\Users\Sam\Desktop\DoublePlusFinalData';
 mice = {'Kerberos','Marble07','Marble11','Pandora','Styx','Titan'};

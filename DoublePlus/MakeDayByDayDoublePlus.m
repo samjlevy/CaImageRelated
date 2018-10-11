@@ -1,5 +1,7 @@
 function [daybyday, sortedSessionInds, useDataTable] = MakeDayByDayDoublePlus(mousePath, getFluoresence, deleteSilentCells)
 
+cd(mousePath)
+
 fdPts = strsplit(mousePath,'\');
 finalDataRoot = fullfile(fdPts{1:end-1});
 mouseName = fdPts{end};
@@ -39,17 +41,20 @@ end
 
 useDataTable = DoublePlusDataTable(whichFilesUse,1:6);
 
-footFolder = ls(fullfile(mousePath,'*Footprints'));
+%Get the sort order for fullReg.sessionInds that corresponds to DoublePlusDataTable
+disp('Checking registration')
+%Load the registration
+footFolder = fullfile(mousePath,[mouseName 'Footprints']);
 footFile = ls(fullfile(footFolder,'cellRegistered*.mat'));
 load(fullfile(footFolder,footFile))
 sortedSessionInds = cell_registered_struct.cell_to_index_map;
-
-%Get the sort order for fullReg.sessionInds that corresponds to DoublePlusDataTable
-txtFile = ls(fullfile(mousePath,footFolder,'*.txt'));
-tFile = fullfile(mousePath,footFolder,txtFile);
+%Load the registration log
+txtFile = ls(fullfile(footFolder,'logFile*.txt'));
+tFile = fullfile(footFolder,txtFile);
 fileID = fopen(tFile);
 allText = textscan(fileID,'%s');
 fclose(fileID);
+%check to see that they map to the DataTable
 sessionLines = find(cell2mat(cellfun(@(x) strcmp(x,'Session'),allText,'UniformOutput',false)));
 dashLines = find(cell2mat(cellfun(@(x) strcmp(x,'-'),allText,'UniformOutput',false)));
 dashFollowSess = find(sum((sessionLines'+2)==dashLines,2));
@@ -70,7 +75,7 @@ end
 %        useDataTable.fullRegInd(ssI) = ssIind;
 %    end
 %end
-useDataTable(useDataDelete,:) = [];
+%useDataTable(useDataDelete,:) = [];
 
 %Load all the data
 for ff = 1:height(useDataTable)
@@ -141,6 +146,8 @@ sdbd = input('Save daybyday? (y/n) >> ','s');
 if strcmpi(sdbd,'y')
     save(fullfile(mousePath,'daybyday.mat'),'daybyday','sortedSessionInds','useDataTable','-v7.3')
 end
+
+disp('done this daybyday')
 
 end
     
