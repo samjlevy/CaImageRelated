@@ -1,4 +1,6 @@
 function  [Corrs,meanCorr,numCellsUsed,numNans] = PopVectorCorrsSmallTMaps(TMapA,TMapB,traitLogicalA,traitLogicalB,cellsUseOption,corrType)
+%Expects small tmaps to be 1 column of the tmaps for each cell on 1 day in
+%one condition
 
 if isempty('corrType')
     corrType = 'Spearman';  

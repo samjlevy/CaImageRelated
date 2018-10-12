@@ -19,11 +19,8 @@ function [TMap_unsmoothed, TMap_gauss, TMap_zRates, OccMap, RunOccMap, xBin, TCo
     dispProgress = p.Results.dispProgress;
     getZscore = p.Results.getZscore;
     
-    
-armAlignment.north = {'Y' 1};
-armAlignment.south = {'Y' -1};
-armAlignment.west = {'X' -1};
-armAlignment.east = {'X' 1};
+  
+armAlignment = GetDoublePlusArmAlignment;
 
 sessions = unique(trialbytrial(1).sessID);
 numSess = length(sessions);
@@ -83,12 +80,12 @@ for condI = 1:numConds
         isrunning = good;                         %Running frames that were not excluded.
         %isrunning(velocity < minspeed) = false;
          
-        linEdges = binEdges*armAlignment.(trialbytrial(condI).name){2};
-        linEdges =  sort(linEdges,'ascend');
+        linearEdges = binEdges*armAlignment.(trialbytrial(condI).name){2};
+        linearEdges =  sort(linearEdges,'ascend');
         
         %Make an occupancy map
         [OccMap{condI,sessI},RunOccMap{condI,sessI},xBin{condI,sessI}]...
-            = MakeOccMapLin(posUse,good,isrunning,linEdges);
+            = MakeOccMapLin(posUse,good,isrunning,linearEdges);
             
         %Get spiking
         lapsSpiking = logical([trialbytrial(condI).trialPSAbool{lapsUse,1}]);
@@ -97,7 +94,7 @@ for condI = 1:numConds
                 cellSpiking = lapsSpiking(cellI,:);
                 
                 [TMap_unsmoothed{cellI,sessI,condI},TCounts{cellI,sessI,condI}]...%TMap_gauss{cellI,condType,tSess}
-                        = MakePlacefieldLin(cellSpiking,posUse,binEdges,RunOccMap{condI,sessI},[],cmperbin,smth); %false
+                        = MakePlacefieldLin(cellSpiking,posUse,linearEdges,RunOccMap{condI,sessI},[],cmperbin,smth); %false
                     
                 if any(TMap_unsmoothed{cellI,sessI,condI} > 1)
                     keyboard
