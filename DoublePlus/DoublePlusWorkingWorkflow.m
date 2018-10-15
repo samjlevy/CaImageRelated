@@ -15,8 +15,8 @@ PosScaledToPosAlign
 ParseDoublePlusBehavior('turn')
 
 
-MakeDoublePlusLimsManually
-    MakeDoublePlusBehaviorBounds
+MakeDoublePlusBehaviorBounds
+%MakeDoublePlusLimsManually
 
 
 

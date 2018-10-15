@@ -115,7 +115,7 @@ for cpI = 1:numCondPairs
         diffMicePVcorrs{dpI,cpI} = pooledPVcorrs{dpI,cpI}(diffMice,:);
         diffMicePVcorrsMeans{dpI,cpI} = mean(diffMicePVcorrs{dpI,cpI},1);
         
-        diffMinusSame{dpI,cpI} = diffMicePVcorrsMeans{dpI,cpI} - sameMicePVcorrsMeans{dpI,cpI};
+        diffMinusSame{dpI,cpI} = sameMicePVcorrsMeans{dpI,cpI} - diffMicePVcorrsMeans{dpI,cpI};
     end
 end
 
@@ -147,9 +147,23 @@ for mouseI = 1:numMice
     end
 end
 
-
-
-
-
-
+sameMiceTrimPVcorrs = cell(numDayChunks,numDayPairs,numCondPairs);
+sameMiceTrimPVcorrsMeans = cell(numDayChunks,numDayPairs,numCondPairs);
+diffMiceTrimPVcorrs = cell(numDayChunks,numDayPairs,numCondPairs);
+diffMiceTrimPVcorrsMeans = cell(numDayChunks,numDayPairs,numCondPairs);
+diffMinusSameTrim = cell(numDayChunks,numDayPairs,numCondPairs);
+        
+for dcI = 1:numDayChunks
+for cpI = 1:numCondPairs
+    for dpI = 1:numDayPairs
+        sameMiceTrimPVcorrs{dcI,dpI,cpI} = trimPooledPVcorrs{dcI,dpI,cpI}(sameMice,:);
+        sameMiceTrimPVcorrsMeans{dcI,dpI,cpI} = mean(sameMiceTrimPVcorrs{dcI,dpI,cpI},1);
+        
+        diffMiceTrimPVcorrs{dcI,dpI,cpI} = trimPooledPVcorrs{dcI,dpI,cpI}(diffMice,:);
+        diffMiceTrimPVcorrsMeans{dcI,dpI,cpI} = mean(diffMiceTrimPVcorrs{dcI,dpI,cpI},1);
+        
+        diffMinusSameTrim{dcI,dpI,cpI} = diffMiceTrimPVcorrsMeans{dcI,dpI,cpI} - sameMiceTrimPVcorrsMeans{dcI,dpI,cpI};
+    end
+end
+end
 
