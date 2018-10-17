@@ -1,4 +1,4 @@
-function shuffledTBT = ShuffleTrialsAcrossConditions(trialbytrial,dimShuffle)
+function shuffledTBT = ShuffleTrialsAcrossConditionsDoublePlus(trialbytrial,dimShuffle)
 %This one only shuffles trials across conditions, maintains day assignment
 
 lStudy = find(strcmpi({trialbytrial(:).name},'study_l'));
@@ -112,36 +112,6 @@ for sessJ = 1:length(sessions)
     end
 end
 
-if length(dimShuffle)>1
-    condShuffles = mat2cell(shuffTBTassign,size(shuffTBTassign,1),ones(1,4));
-    shuffConds = [];
-    allNamesHere = {trialbytrial(:).name};
-    for shuffPairI = 1:size(dimShuffle,1)
-        for shuffThisI = 1:size(dimShuffle,2)
-            shuffConds(shuffPairI,shuffThisI) = find(strcmpi({trialbytrial(:).name},dimShuffle{shuffPairI,shuffThisI}));
-        end
-    end
-    for condI = 1:4 
-        [shuffPair,~] = ind2sub([2,2],find(shuffConds==condI));
-        for shuffR = 1:size(condShuffles{condI},1)
-            if condI~=condShuffles{condI}(shuffR)
-                holdX = shuffledTBT(condI).trialsX{shuffR};
-                holdY = shuffledTBT(condI).trialsY{shuffR};
-            
-                switch [dimShuffle{shuffPair,:}]
-                    case {'southnorth','northsouth','eastwest','westeast'}
-                        shuffledTBT(condI).trialsX{shuffR} = holdX*-1;
-                        shuffledTBT(condI).trialsY{shuffR} = holdY*-1;
-                    case {'eastsouth','southeast','westnorth','northwest'}
-                        shuffledTBT(condI).trialsX{shuffR} = holdY*-1;
-                        shuffledTBT(condI).trialsY{shuffR} = holdX*-1;
-                end
-            end
-        end
-    end
-end
-    
-    
 %Delete empty cells
 for condK = 1:4
     shuffledTBT(condK).trialsX(shuffTBTassign(:,condK)==0) = [];

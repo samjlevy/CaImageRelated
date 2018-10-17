@@ -1,5 +1,22 @@
 %AllFiguresDoublePlus
 
+%Interesting cells
+sameSplitters = [];
+notSameSplitters = [];
+phaseSplitters = [];
+notPhaseSplitters = [];
+for mouseI = 1:numMice
+    for dayI = 1:size(dayUse{mouseI},2)
+        activeCells{mouseI}{dayI} = find(dayUse{mouseI}(:,dayI));
+        
+        sameSplitters{mouseI}{dayI} = find(dayUse{mouseI}(:,dayI).*splittersSame{mouseI}(:,dayI));
+        notSameSplitters{mouseI}{dayI} = find(dayUse{mouseI}(:,dayI).*(splittersSame{mouseI}(:,dayI)==0));
+        phaseSplitters{mouseI}{dayI} = find(dayUse{mouseI}(:,dayI).*splittersPhase{mouseI}(:,dayI));
+        notPhaseSplitters{mouseI}{dayI} = find(dayUse{mouseI}(:,dayI).*(splittersPhase{mouseI}(:,dayI)==0));
+    end
+end
+
+
 %% Demo figure for task setup
 
 [mazeOneA,mazeOneB,mazeTwo] = DoublePlusDemoFig;
@@ -41,9 +58,11 @@ title('Performance over time, b = same, r = diff')
 
 %% Sample dot/heatmaps
 
-load(fullfile(mainFolder,mice{1},'daybyday.mat'))
+%load(fullfile(mainFolder,mice{1},'daybyday.mat'))
 
-cellsUse = 8;
+%cellsUse = 102; 141 272 378 1295 861 594 419 (all mouse 1)
+
+cellsUse = notSameSplitters{1}{1}(notSameSplitters{1}{1}>400);
 
 %plot dot plot
 for cellI = 1:length(cellsUse)
@@ -79,11 +98,10 @@ for cellI = 1:length(cellsUse)
     suptitleSL(['Mouse ' num2str(mouseI) ', cell ' num2str(cellJ)])
 end
  
-%plot heatmap
-
-PlusMapBlank = ones(numBins*2+3,numBins*2+3);
+%% plot heatmap
 bins.north = [[1:numBins]'+1, (numBins+1)*ones(numBins,1)+1];
 bins.south = [[1:numBins]'+ numBins+2, (numBins+1)*ones(numBins,1)+1];
+bins.south(:,1) = flipud(bins.south(:,1));
 bins.east = [(numBins+1)*ones(numBins,1)+1, [1:numBins]'+ numBins+2];
 bins.west = [(numBins+1)*ones(numBins,1)+1, [1:numBins]'+1];
 
@@ -150,7 +168,6 @@ for cellI = 1:length(cellsUse)
 end
 
 
-
 %% PV corr figure
 %armAlignment = GetDoublePlusArmAlignment;
 %condNames = {cellTBT{1}.name};
@@ -197,7 +214,7 @@ end
 
 PlusMapBlank = zeros(numBins*2+3,numBins*2+3);
 bins.north = [[1:numBins]'+1, (numBins+1)*ones(numBins,1)+1];
-bins.south = [[1:numBins]'+ numBins+2, (numBins+1)*ones(numBins,1)+1];
+bins.south = [[1:numBins]'+ numBins+2, (numBins+1)*ones(numBins,1)+1]; %need to be flipped too?
 bins.east = [(numBins+1)*ones(numBins,1)+1, [1:numBins]'+ numBins+2];
 bins.west = [(numBins+1)*ones(numBins,1)+1, [1:numBins]'+1];
 
@@ -275,8 +292,6 @@ end
 
 %% PV corr by chunk of trials
 
-
-
 for dpI = 1:numDayPairs
 
 for dcI = 1:numDayChunks
@@ -319,3 +334,26 @@ figure;
 end
 
 end
+
+%% Splitters?
+
+plotColors = {'g'  'r'  ; 'c'  'm'};
+pairsPlot = [1 2; 3 4];
+xLabels = {'NORTH          SOUTH'; 'EAST             WEST'};
+yLabels = {'START          CENTER'; 'CENTER          END'};
+
+daysPlot = 1:3;
+            
+cellsUse = 141;
+for cellI = 1:length(cellsUse)
+    for daysPlotI = 1:3
+        TMapPlot = {cellTMap_unsmoothed{mouseI}{cellsUse(cellI),daysPlot(daysPlotI),:}};
+        PlotSplitterFigDoublePlus(TMapPlot, pairsPlot, xLabels, plotColors, yLabels, [], [])
+    end
+end
+
+
+posUse =  [584   324   305   427];
+hh = gcf;
+        hh.Position = posUse;
+    

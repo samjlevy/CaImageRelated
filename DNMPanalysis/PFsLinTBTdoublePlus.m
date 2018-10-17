@@ -1,23 +1,23 @@
 function [TMap_unsmoothed, TMap_gauss, TMap_zRates, OccMap, RunOccMap, xBin, TCounts] =...
-    PFsLinTBTdoublePlus(trialbytrial, binEdges, minspeed, saveName, varargin)
+    PFsLinTBTdoublePlus(trialbytrial, binEdges, minspeed, saveName, smth)
 %This is specialized to run with the double plus data format. 
 %All TMaps get return in bins arranged from center outwards
 
-    p = inputParser;
+    %p = inputParser;
 
-    p.addParameter('smth',false,@(x) islogical(x)); 
-    p.addParameter('trialReli',[]);  
+    %p.addParameter('smth',false,@(x) islogical(x)); 
+    %p.addParameter('trialReli',[]);  
     %p.addParameter('condPairs',[1:length(trialbytrial)]');
-    p.addParameter('dispProgress',true,@(x) islogical(x));
-    p.addParameter('getZscore',true,@(x) islogical(x));
+    %p.addParameter('dispProgress',true,@(x) islogical(x));
+    %p.addParameter('getZscore',true,@(x) islogical(x));
 
-    p.parse(varargin{:})
+    %p.parse(varargin{:})
     
-    smth = p.Results.smth;
+    %smth = p.Results.smth;
     %condPairs = p.Results.condPairs;
-    trialReli = p.Results.trialReli;
-    dispProgress = p.Results.dispProgress;
-    getZscore = p.Results.getZscore;
+    %trialReli = p.Results.trialReli;
+    %dispProgress = p.Results.dispProgress;
+    %getZscore = p.Results.getZscore;
     
   
 armAlignment = GetDoublePlusArmAlignment;
@@ -27,12 +27,12 @@ numSess = length(sessions);
 numCells = length(trialbytrial(1).trialPSAbool{1,1});
 numConds = 4;
 
-if isempty(trialReli)
-    trialReli = ones(numCells,numSess,length(trialbytrial));
-end
-if size(trialReli,3) < length(trialbytrial)
-    trialReli(:,:,2:numConds) = trialReli;
-end
+%if isempty(trialReli)
+%    trialReli = ones(numCells,numSess,length(trialbytrial));
+%end
+%if size(trialReli,3) < length(trialbytrial)
+%    trialReli(:,:,2:numConds) = trialReli;
+%end
 
 saveThis = 1;
 if isempty(saveName)
@@ -149,7 +149,7 @@ for condI = 1:numConds
 end
 
 %Get z-scores of firing rates across conditions
-if getZscore
+%if getZscore
 for cellI = 1:numCells
     for tSess = 1:numSess
         allRates = reshape([TMap_unsmoothed{cellI,sessI,:}]',numBins,numConds)';
@@ -157,7 +157,7 @@ for cellI = 1:numCells
         TMap_zRates(cellI,tSess,1:numConds) = num2cell(zRates,2)';       
     end
 end
-end
+%end
 
 if saveThis==1
     if ~exist('saveName','var')

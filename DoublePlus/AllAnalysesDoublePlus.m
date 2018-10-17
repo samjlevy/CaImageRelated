@@ -200,8 +200,43 @@ numShuffles = 1000;
 shuffThresh = 1 - pThresh;
 binsMin = 1;
 
-%Shuffle between start arm and finish arm
+%Shuffle between start arm and finish arm ('phase')
 dimShuffle = {'south','east';'north','west'};
+for mouseI = 1:numMice    
+    tic
+    shuffDirFull = fullfile(mainFolder,mice{mouseI},'shufflePhase');
+    condPairs = [];
+    for shuffPairI = 1:size(dimShuffle,1)
+        for shuffThisI = 1:size(dimShuffle,2)
+            condPairs(shuffPairI,shuffThisI) = find(strcmpi({cellTBT{mouseI}(:).name},dimShuffle{shuffPairI,shuffThisI}));
+        end
+    end
+
+    [rateDiffPhase{mouseI}, rateSplitPhase{mouseI}, meanRateDiffPhase{mouseI}, DIeachPhase{mouseI}, DImeanPhase{mouseI}, DIallPhase{mouseI}] =...
+        LookAtSplitters4(cellTMap_unsmoothed{mouseI}, condPairs, []);
+    
+    if exist(shuffDirFull,'dir')~=7
+        mkdir(shuffDirFull)
+        disp('making shuffle directory')
+    end
+    
+    splitterFilePhase = fullfile(shuffDirFull,'splittersPhase.mat');
+    if exist(splitterFilePhase,'file')==2
+        disp(['found phase splitters for mouse ' num2str(mouseI)])
+        load(splitterFilePhase)
+    else
+        disp(['did not find Phase splitting for mouse ' num2str(mouseI) ', making now'])
+        [~, binsAboveShufflePhase, thisCellSplitsPhase] = SplitterWrapperDoublePlus(cellTBT{mouseI}, dimShuffle,...
+                numShuffles, shuffDirFull, binEdges, minspeed, shuffThresh, binsMin);
+        save(splitterFilePhase,'binsAboveShufflePhase','thisCellSplitsPhase')
+    end
+    
+    splittersPhase{mouseI} = thisCellSplitsPhase.*dayUse{mouseI};
+    binsAboveShuffPhase{mouseI} = binsAboveShufflePhase;
+end
+
+%Shuffle across starts, across finishes ('same')
+dimShuffle = {'south','north';'east','west'};
 for mouseI = 1:numMice    
     tic
     shuffDirFull = fullfile(mainFolder,mice{mouseI},'shuffleSame');
@@ -222,19 +257,55 @@ for mouseI = 1:numMice
     
     splitterFileSame = fullfile(shuffDirFull,'splittersSame.mat');
     if exist(splitterFileSame,'file')==2
+        disp(['found same splitters for mouse ' num2str(mouseI)])
         load(splitterFileSame)
     else
         disp(['did not find Same splitting for mouse ' num2str(mouseI) ', making now'])
         [~, binsAboveShuffleSame, thisCellSplitsSame] = SplitterWrapperDoublePlus(cellTBT{mouseI}, dimShuffle,...
-                numShuffles, shuffDirFull, binEdges, minspeed, trialReli{mouseI}, shuffThresh, binsMin);
+                numShuffles, shuffDirFull, binEdges, minspeed, shuffThresh, binsMin);
         save(splitterFileSame,'binsAboveShuffleSame','thisCellSplitsSame')
     end
     toc
+    
+    splittersSame{mouseI} = thisCellSplitsSame.*dayUse{mouseI};
+    binsAboveShuffSame{mouseI} = binsAboveShuffleSame;
 end
-%Shuffle across starts, across finishes
-dimShuffle = {'south','north';'east','west'};
-        
 
+
+%% Splitter breakdowns
+
+for mouseI = 1:numMice
+    nonPhaseSplitter{mouseI} = splittersPhase{mouseI}==0 & dayUse{mouseI};
+    nonSameSplitter{mouseI} = splittersSame{mouseI}==0 & dayUse{mouseI};
+    nonSplitter{mouseI} = nonPhaseSplitter{mouseI} & nonSameSplitter{mouseI};
+    splitterBoth{mouseI} = splittersPhase{mouseI} & splittersSame{mouseI};
+    
+    %codes for start/end but doesnt care which
+    splittersPhaseOnly{mouseI} = splittersPhase{mouseI} & splittersSame{mouseI}==0;
+
+    %codes for only one trajectory, doesn't care start or end
+    splittersSameOnly{mouseI} = splittersSame{mouseI} & splittersPhase{mouseI}==0;
+end
+
+
+%splitters coming and going?
+traitGroups = {splittersPhase; splittersSame; splittersPhaseOnly; splittersSameOnly}; %add other groups? refine to the actual question
+for mouseI = 1:numMice
+    [splitterPctDayChangesFWD{mouseI}] = RunGroupFunction('NNplusKChange',traitGroups{mouseI},dayUse{mouseI});
+    [splitterPctDayChangesREV{mouseI}] = RunGroupFunction('NNplusKChange',traitGroupsREV{mouseI},dayUseREV{mouseI});
+
+    daysApartFWD{mouseI} = diff(splitterPctDayChangesFWD{mouseI}(1).dayPairs,1,2);
+    daysApartREV{mouseI} = -1*daysApartFWD{mouseI};
+    
+    %realDaysApart cellRealDays
+    
+    pooledDaysApartFWD = [pooledDaysApartFWD; daysApartFWD{mouseI}];
+    pooledDaysApartREV = [pooledDaysApartREV; daysApartREV{mouseI}];
+    for tgI = 1:length(traitGroups{mouseI})
+        pooledSplitPctChangeFWD{tgI} = [pooledSplitPctChangeFWD{tgI}; splitterPctDayChangesFWD{mouseI}(tgI).pctChange];
+        pooledSplitPctChangeREV{tgI} = [pooledSplitPctChangeREV{tgI}; splitterPctDayChangesREV{mouseI}(tgI).pctChange];
+    end
+end
 
 
 

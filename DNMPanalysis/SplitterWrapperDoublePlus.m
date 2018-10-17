@@ -1,5 +1,5 @@
 function [rateDiff, binsAboveShuffle, thisCellSplits] = SplitterWrapperDoublePlus(trialbytrial, dimShuffle,...
-            numShuffles, shuffDirFull, binEdges, minspeed, trialReli, shuffThresh, binsMin)
+            numShuffles, shuffDirFull, binEdges, minspeed, shuffThresh, binsMin)
 %typeShuff = 'leftright' or 'studytest'  
 %pooledunpooled = 'pooled' or 'unpooled' - e.g. puts study l and r together
 %against test l and r
@@ -23,7 +23,7 @@ end
 %}
 
 [baseTMap_unsmoothed, ~, ~, ~, ~, ~, ~] =...
-            PFsLinTBTdoublePlus(trialbytrial, binEdges, minspeed, [], 'smth',false,'trialReli',trialReli);
+            PFsLinTBTdoublePlus(trialbytrial, binEdges, minspeed, [], false);
 
 numCells = size(baseTMap_unsmoothed,1);
 numSess = size(baseTMap_unsmoothed,2);
@@ -40,10 +40,13 @@ if length(possibleShuffles) < numShuffles
     for shuffleI = 1:numShuffles
         saveName = fullfile(shuffDirFull,['shuff' num2str(shuffleI) '.mat']);
         
-        
         shuffledTBT = ShuffleTrialsAcrossConditions(trialbytrial,dimShuffle);
+        %shuffledTBT = ShuffleTrialsAcrossConditionsDoublePlus(trialbytrial,dimShuffle);
+        smth = false;
+        %[tmapcheck, ~, ~, ~, ~, ~, ~] =...
+        %    PFsLinTBTdoublePlus(shuffledTBT, binEdges, minspeed, [], smth);
         [~, ~, ~, ~, ~, ~, ~] =...
-            PFsLinTBTdoublePlus(shuffledTBT, binEdges, minspeed, saveName, 'smth',false,'trialReli',trialReli);
+            PFsLinTBTdoublePlus(shuffledTBT, binEdges, minspeed, saveName, smth);
         disp(['done shuffle ' num2str(shuffleI) ])
     end
     disp('Done with shuffling')
@@ -71,7 +74,7 @@ for shuffleI = 1:numShuffles
     load(fullfile(shuffDirFull,possibleShuffles(shuffleI).name),'TMap_unsmoothed')
     for cpI = 1:numCondPairs
         [rateDiff, ~, ~, ~, ~] =... % rateSplit{shuffleI}, meanRateDiff{shuffleI}, DIeach{shuffleI}, DImean{shuffleI}
-            LookAtSplitters4(TMap_unsmoothed,condPairs(cpI,:),trialReli);
+            LookAtSplitters4(TMap_unsmoothed,condPairs(cpI,:),[]);
 
         %Need to reorganize here , takes too much memory
         for cellI = 1:numCells
@@ -88,7 +91,7 @@ end
 p.stop;
 disp('Done measuring split')
 
-[baseRateDiff, ~, ~, ~, ~, ~] = LookAtSplitters4(baseTMap_unsmoothed,condPairs,trialReli);
+[baseRateDiff, ~, ~, ~, ~, ~] = LookAtSplitters4(baseTMap_unsmoothed,condPairs,[]);
 [~, binsAboveShuffle, thisCellSplits] = SplitterRateRank2(baseRateDiff, rateDiffReorg, shuffThresh, binsMin);
     
 thisCellSplits = sum(thisCellSplits,3) > 0;
