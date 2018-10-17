@@ -52,9 +52,9 @@ numBins = length(binEdges)-1;
 TMap_blank = zeros(1,numBins);
 cmperbin = mean(abs(diff(binEdges)));
 
-if dispProgress
-p = ProgressBar(numCells*numConds*numSess);
-end
+%if dispProgress
+%p = ProgressBar(numCells*numConds*numSess);
+%end
 
 for condI = 1:numConds
     for sessI = 1:numSess
@@ -89,6 +89,35 @@ for condI = 1:numConds
             
         %Get spiking
         lapsSpiking = logical([trialbytrial(condI).trialPSAbool{lapsUse,1}]);
+        
+        cellSpiking = mat2cell(lapsSpiking,ones(numCells,1),size(lapsSpiking,2));
+        spikePos = cellfun(@(x) posUse(x),cellSpiking,'UniformOutput',false);
+        spikeCounts = cellfun(@(x) histcounts(x,linearEdges),spikePos,'UniformOutput',false);
+        TMap_unsmoothed(1:numCells,sessI,condI) = cellfun(@(x) x./RunOccMap{condI,sessI},spikeCounts,'UniformOutput',false);
+        
+        
+        if smth
+            Tsum = cellfun(@sum,spikeCounts,'UniformOutput',false);
+
+
+            %Make smoothing kernel.
+            gauss_std = 2.5;
+            gauss_std = gauss_std/cmperbin; 
+            sm = fspecial('gaussian',round(8*gauss_std),gauss_std);
+            sm = sm(round(size(sm,1)/2),:);
+
+            %Smooth. 
+            TMap_gauss(1:numCells,sessI,condI) = cellfun(@(x) imfilter(x,sm),...
+                        [TMap_unsmoothed(:,sessI,condI)],'UniformOutput',false);
+            TMap_gaussSum = cellfun(@sum,[TMap_gauss(:,sessI,condI)],'UniformOutput',false);
+            TMap_gauss(1:numCells,sessI,condI) = cellfun(@(x,y,z) x.*y./z,[TMap_gauss(:,sessI,condI)],Tsum,TMap_gaussSum,'UniformOutput',false);
+
+
+            %Dump into varargout.
+            TMap_gauss(RunOccMap==0) = nan;
+        end
+        
+        %{
         for cellI = 1:numCells
             if sum(trialReli(cellI, sessI, condI)) > 0
                 cellSpiking = lapsSpiking(cellI,:);
@@ -113,6 +142,7 @@ for condI = 1:numConds
                 p.progress;
             end
         end
+        %}
         
         end %any laps use
     end
@@ -137,8 +167,8 @@ if saveThis==1
     save(savePath,'OccMap','RunOccMap', 'xBin', 'TMap_unsmoothed', 'TMap_gauss', 'TCounts', 'TMap_zRates') %, 'TMap_gauss'
 end
 
-if dispProgress
-    p.stop;
-end
+%if dispProgress
+%    p.stop;
+%end
 
 end

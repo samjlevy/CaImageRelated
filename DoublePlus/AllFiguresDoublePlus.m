@@ -1,8 +1,8 @@
-AllFiguresDoublePlus
+%AllFiguresDoublePlus
 
 %% Demo figure for task setup
 
-[mazeOne,mazeTwo] = DoublePlusDemoFig;
+[mazeOneA,mazeOneB,mazeTwo] = DoublePlusDemoFig;
 
 
 %% Performance figure
@@ -22,6 +22,135 @@ xlabel('Day Number')
 ylabel('Performance')
 title('Performance over time, b = same, r = diff')
 
+load webPerformance.mat
+figure; hold on
+patch([3.5 6.5 6.5 3.5],[0.4 0.4 1.05 1.05],[0.9 0.7 0.1294],'EdgeColor','none','FaceAlpha',0.4)
+for smouseI = 1:size(sameMice,1)
+    plot(webPerformance(sameMice(smouseI),:),'.b','MarkerSize',8)
+    plot(webPerformance(sameMice(smouseI),:),'b','LineWidth',2.5)
+end
+for dmouseI = 1:size(diffMice,1)
+    plot(webPerformance(diffMice(dmouseI),:),'.r','MarkerSize',10)
+    plot(webPerformance(diffMice(dmouseI),:),'r','LineWidth',2.5)
+end 
+xlim([0.95 9.05])
+ylim([0.4 1.05])
+xlabel('Day Number')
+ylabel('Performance')
+title('Performance over time, b = same, r = diff')
+
+%% Sample dot/heatmaps
+
+load(fullfile(mainFolder,mice{1},'daybyday.mat'))
+
+cellsUse = 8;
+
+%plot dot plot
+for cellI = 1:length(cellsUse)
+    cellJ = cellsUse(cellI);
+
+    hh=figure('Position',[65 398 1775 580]);
+    for sessI = 1:3
+        bStarts = []; bStops = [];
+        %cellHere = cellSSI{mouseI}(cellJ,sessI);
+        cellHere = cellJ;
+        lapsFetch = [daybyday.behavior{sessI}(:).goodSequence] & [daybyday.behavior{sessI}(:).isCorrect];
+        bStarts = [daybyday.behavior{sessI}(lapsFetch).startLap];
+        bStops = [daybyday.behavior{sessI}(lapsFetch).endLap];
+
+        xPos = []; yPos = []; PSAhere = [];
+        for bI = 1:length(bStarts)
+            xPos = [xPos daybyday.all_x_adj_cm{sessI}(bStarts(bI):bStops(bI))];
+            yPos = [yPos daybyday.all_y_adj_cm{sessI}(bStarts(bI):bStops(bI))];
+            PSAhere = [PSAhere daybyday.PSAbool{sessI}(cellHere,bStarts(bI):bStops(bI))];
+        end
+        PSAhere = logical(PSAhere);
+        
+        subplot(1,3,sessI)
+        plot(xPos,yPos,'.k','MarkerSize',5)
+        hold on
+        plot(xPos(PSAhere),yPos(PSAhere),'.r','MarkerSize',8)
+        axis equal
+        xlim([-60 60])
+        ylim([-60 60])
+        title(['Day ' num2str(realDays{mouseI}(sessI))])
+    end
+    
+    suptitleSL(['Mouse ' num2str(mouseI) ', cell ' num2str(cellJ)])
+end
+ 
+%plot heatmap
+
+PlusMapBlank = ones(numBins*2+3,numBins*2+3);
+bins.north = [[1:numBins]'+1, (numBins+1)*ones(numBins,1)+1];
+bins.south = [[1:numBins]'+ numBins+2, (numBins+1)*ones(numBins,1)+1];
+bins.east = [(numBins+1)*ones(numBins,1)+1, [1:numBins]'+ numBins+2];
+bins.west = [(numBins+1)*ones(numBins,1)+1, [1:numBins]'+1];
+
+sigPlotLocs = [8 7; 13 18; 16 10.5; 7 13]; 
+horizAlign = {'right','left','center','center'};
+
+figure;
+jj = colormap(jet);
+jj(end-1,:) = jj(end,:);
+jj(end,:) = [1 1 1];
+close(gcf);
+for cellI = 1:length(cellsUse)
+    cellJ = cellsUse(cellI);
+
+    allData = [];
+    for sessJ = 1:3
+        for cnI = 1:length(condNames)
+            allData = [allData cellTMap_unsmoothed{mouseI}{cellJ,sessJ,cnI}];
+        end
+    end
+    roundSteps = [0:0.1:1];
+    maxRateHere = max(allData);
+    rateScaleMax = roundSteps(find(roundSteps>maxRateHere,1,'first'));
+    PlusMapBlank = ones(numBins*2+3,numBins*2+3)*(rateScaleMax + 0.01);
+    
+    ii=figure('Position',[65 398 1775 580]);
+    for sessI = 1:3
+
+        thisMap = PlusMapBlank;
+        for cnI = 1:length(condNames)
+            ratesHere = cellTMap_unsmoothed{mouseI}{cellJ,sessI,cnI};
+            if strcmpi(condNames{cnI},'west')
+                ratesHere = fliplr(ratesHere);
+            end
+            for binI = 1:numBins 
+                thisMap(bins.(condNames{cnI})(binI,1),bins.(condNames{cnI})(binI,2)) = ratesHere(binI);
+            end
+        end
+        
+        subplot(1,3,sessI)
+        imagesc(thisMap) 
+        hold on
+        colormap(jj)
+        %caxis([0 1])
+        qq=colorbar;
+        qq.Limits = [0 rateScaleMax];
+        axis equal
+        xlim([1 23])
+        ylim([1 23])
+        if plotBins == 1
+            for cnI = 1:length(condNames)
+            sBins = bins.(condNames{cnI});
+                for binI = 1:numBins
+                    xCorns = [sBins(binI,2)-0.5 sBins(binI,2)+0.5 sBins(binI,2)+0.5 sBins(binI,2)-0.5 sBins(binI,2)-0.5];
+                    yCorns = [sBins(binI,1)-0.5 sBins(binI,1)-0.5 sBins(binI,1)+0.5 sBins(binI,1)+0.5 sBins(binI,1)-0.5];
+                    plot(xCorns,yCorns,'k','LineWidth',0.5)
+                end
+            end
+        end
+
+        title(['Day ' num2str(realDays{mouseI}(sessI))])
+    end
+    suptitleSL(['Mouse ' num2str(mouseI) ', cell ' num2str(cellJ)])
+end
+
+
+
 %% PV corr figure
 %armAlignment = GetDoublePlusArmAlignment;
 %condNames = {cellTBT{1}.name};
@@ -36,14 +165,9 @@ figure;
         allCorrsDiff = diffMicePVcorrs{dpI,cpI};
         meanCorrDiff = diffMicePVcorrsMeans{dpI,cpI};
 
-        switch condNames{cpI}
-            case {'south','east'}
-                %don't fliplr: ascending linearEdges (binEdges) will be order
-                %of pfs/pvcorrs
-            case {'north','west'}
-                %yes fliplr: ascending linearEdges is reverse of behavior
-                allCorrsSame = fliplr(allCorrsSame); meanCorrSame = fliplr(meanCorrSame);
-                allCorrsDiff = fliplr(allCorrsDiff); meanCorrDiff = fliplr(meanCorrDiff);
+        if strcmpi(condNames{cnI},'west')
+            allCorrsSame = fliplr(allCorrsSame); meanCorrSame = fliplr(meanCorrSame);
+            allCorrsDiff = fliplr(allCorrsDiff); meanCorrDiff = fliplr(meanCorrDiff);
         end
 
         plot(repmat(xBins,length(sameMice),1),allCorrsSame,'.c','MarkerSize',4)
@@ -71,35 +195,79 @@ end
 %same - different: if different is higher, than score is negative; if
 %different is lower, score is positive
 
-PlusMapBlank = zeros(numBins*2+1,numBins*2+1);
-bins.north = [[1:numBins]', (numBins+1)*ones(numBins,1)];
-bins.south = [[1:numBins]'+ numBins+1, (numBins+1)*ones(numBins,1)];
-bins.east = [(numBins+1)*ones(numBins,1), [1:numBins]'+ numBins+1];
-bins.west = [(numBins+1)*ones(numBins,1), [1:numBins]'];
+PlusMapBlank = zeros(numBins*2+3,numBins*2+3);
+bins.north = [[1:numBins]'+1, (numBins+1)*ones(numBins,1)+1];
+bins.south = [[1:numBins]'+ numBins+2, (numBins+1)*ones(numBins,1)+1];
+bins.east = [(numBins+1)*ones(numBins,1)+1, [1:numBins]'+ numBins+2];
+bins.west = [(numBins+1)*ones(numBins,1)+1, [1:numBins]'+1];
 
+sigPlotLocs = [8 7; 13 18; 16 10.5; 7 13]; 
+horizAlign = {'right','left','center','center'};
+
+figure;
 hh = colormap(hot);
+close(gcf);
 jj = flipud(fliplr(hh));
 
-newCmap = [hh(2:2:end,:); flipud(jj(1:2:end,:))];
+newCmap = [hh(2:2:end,:); jj(1:2:end,:)];
 for dpI = 1:numDayPairs
        
     thisMap = PlusMapBlank;
     for cnI = 1:length(condNames)
-        corrsHere = diffMinusSame{dpI,cpI};
-        if sum(strcmpi(condNames{cnI},{'north','west'}))
+        corrsHere = diffMinusSame{dpI,cnI};
+        if strcmpi(condNames{cnI},'west')
            corrsHere = fliplr(corrsHere); 
         end
+        
         for binI = 1:numBins 
             thisMap(bins.(condNames{cnI})(binI,1),bins.(condNames{cnI})(binI,2)) = corrsHere(binI);
         end
     end
     %minThisMap = min(min(thisMap))
-    figure; imagesc(thisMap)
+    figure; imagesc(thisMap) 
+    hold on
     %colormap jet
     %caxis([-0.4 0.4]) 
     colormap(newCmap)
-    caxis([-0.4 0])
+    caxis([-0.4 0.4])
     colorbar
+    
+    for cnI = 1:length(condNames)
+        
+        sBins = bins.(condNames{cnI});
+        
+        switch armAlignment.(condNames{cnI}){1}
+            case 'Y'
+                %sBins(:,1) = sBins(:,1)+0.5;
+                sBins(:,2) = sBins(:,2)+ -1*armAlignment.(condNames{cnI}){2};
+            case 'X'
+                sBins(:,1) = sBins(:,1)+ -1.5*armAlignment.(condNames{cnI}){2};
+        end
+        plotHere = fliplr(mean(sBins,1));
+        
+        switch (1-diffRank{dpI,cnI}) < pThresh
+                case 1
+                    plotAdd = '*';  
+                case 0
+                    plotAdd = 'n.s.';
+        end
+        %}
+        plotLab = [plotAdd ' p = ' num2str(round(1-diffRank{dpI,cnI},2))];
+        text(plotHere(1),plotHere(2),plotLab,'HorizontalAlignment',horizAlign{cnI},'FontSize',12)
+    end
+    
+    if plotBins == 1
+        for cnI = 1:length(condNames)
+        sBins = bins.(condNames{cnI});
+            for binI = 1:numBins
+                xCorns = [sBins(binI,2)-0.5 sBins(binI,2)+0.5 sBins(binI,2)+0.5 sBins(binI,2)-0.5 sBins(binI,2)-0.5];
+                yCorns = [sBins(binI,1)-0.5 sBins(binI,1)-0.5 sBins(binI,1)+0.5 sBins(binI,1)+0.5 sBins(binI,1)-0.5];
+                plot(xCorns,yCorns,'k','LineWidth',0.5)
+            end
+        end
+    end
+
+    title(['Difference of Mean PV corrs, day pair ' num2str(dayPairs(dpI,:))])
 end
     
 
@@ -120,6 +288,7 @@ figure;
         allCorrsDiff = diffMiceTrimPVcorrs{dcI,dpI,cpI};
         meanCorrDiff = diffMiceTrimPVcorrsMeans{dcI,dpI,cpI};
 
+        %{
         switch condNames{cpI}
             case {'south','east'}
                 %don't fliplr: ascending linearEdges (binEdges) will be order
@@ -129,7 +298,7 @@ figure;
                 allCorrsSame = fliplr(allCorrsSame); meanCorrSame = fliplr(meanCorrSame);
                 allCorrsDiff = fliplr(allCorrsDiff); meanCorrDiff = fliplr(meanCorrDiff);
         end
-
+%}
         plot(repmat(xBins,length(sameMice),1),allCorrsSame,'.c','MarkerSize',4)
         plot(repmat(xBins,length(diffMice),1),allCorrsDiff,'.m','MarkerSize',4)
 

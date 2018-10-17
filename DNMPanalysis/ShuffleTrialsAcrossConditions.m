@@ -6,6 +6,7 @@ rStudy =  find(strcmpi({trialbytrial(:).name},'study_r'));
 lTest =  find(strcmpi({trialbytrial(:).name},'test_l'));
 rTest =  find(strcmpi({trialbytrial(:).name},'test_r'));
 
+
 sessions = unique(trialbytrial(1).sessID);
 shuffledTBT = trialbytrial;
 ss = fieldnames(trialbytrial);
@@ -20,27 +21,48 @@ for sessI = 1:length(sessions)
         whichTrials{aa} = find(trialbytrial(aa).sessID==sessions(sessI));
     end
     moreTrials = max(howManyTrials);
+    if length(dimShuffle)==1
+        switch dimShuffle
+            case {'direction','leftright'}
+                useSess = [lStudy rStudy lTest rTest];
 
-    switch dimShuffle
-        case {'direction','leftright'}
-            useSess = [lStudy rStudy lTest rTest];
+                shuffleThis = round(rand(moreTrials,2));
+                trialShuffAssign = [useSess(shuffleThis(:,1)+1)' useSess(~shuffleThis(:,1)+1)' ...
+                                    useSess(shuffleThis(:,2)+3)' useSess(~shuffleThis(:,2)+3)'];
+            case {'studytest','trialtype'}
+                useSess = [lStudy lTest rStudy rTest];
 
-            shuffleThis = round(rand(moreTrials,2));
-            trialShuffAssign = [useSess(shuffleThis(:,1)+1)' useSess(~shuffleThis(:,1)+1)' ...
-                                useSess(shuffleThis(:,2)+3)' useSess(~shuffleThis(:,2)+3)'];
-        case {'studytest','trialtype'}
-            useSess = [lStudy lTest rStudy rTest];
+                shuffleThis = round(rand(moreTrials,2));
+                trialShuffAssign = [useSess(shuffleThis(:,1)+1)' useSess(~shuffleThis(:,1)+1)' ...
+                                    useSess(shuffleThis(:,2)+3)' useSess(~shuffleThis(:,2)+3)'];
+                trialShuffAssign = trialShuffAssign(:, [1 3 2 4]);
+            case 'all'
+                useSess = [lStudy rStudy lTest rTest];
 
-            shuffleThis = round(rand(moreTrials,2));
-            trialShuffAssign = [useSess(shuffleThis(:,1)+1)' useSess(~shuffleThis(:,1)+1)' ...
-                                useSess(shuffleThis(:,2)+3)' useSess(~shuffleThis(:,2)+3)'];
-            trialShuffAssign = trialShuffAssign(:, [1 3 2 4]);
-        case 'all'
-            useSess = [lStudy rStudy lTest rTest];
-
-            for tt = 1:moreTrials
-                trialShuffAssign(tt,:) = useSess(randperm(4));
+                for tt = 1:moreTrials
+                    trialShuffAssign(tt,:) = useSess(randperm(4));
+                end
+        end
+    else
+        %custom shuffling pairs
+        useSess = [];
+        allNamesHere = {trialbytrial(:).name};
+        for shuffPairI = 1:size(dimShuffle,1)
+            for shuffThisI = 1:size(dimShuffle,2)
+                useSess = [useSess,  find(strcmpi({trialbytrial(:).name},dimShuffle{shuffPairI,shuffThisI}))];
             end
+        end        
+        
+        shuffleThis = round(rand(moreTrials,2));
+        trialShuffAssign = [useSess(shuffleThis(:,1)+1)' useSess(~shuffleThis(:,1)+1)' ...
+                            useSess(shuffleThis(:,2)+3)' useSess(~shuffleThis(:,2)+3)'];
+
+        finalColOrder = [];
+        for nameI = 1:length(allNamesHere)
+            finalColOrder(nameI) = find(useSess==nameI);
+        end
+                        
+        trialShuffAssign = trialShuffAssign(:, finalColOrder);
     end
     
     %Mod assignments to better index
