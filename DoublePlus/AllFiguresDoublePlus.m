@@ -99,14 +99,22 @@ for cellI = 1:length(cellsUse)
 end
  
 %% plot heatmap
+
+%this needs to be tested
+for cellI = 1:length(cellsUse)
+    cellJ = cellsUse(cellI);
+    transparentBkg = 0;
+    figHand = PlusMazeHeatmap(cellTMap_unsmoothed{mouseI},cellJ,realDays{mouseI},condNames,transparentBkg) ;
+    suptitleSL(['Mouse ' num2str(mouseI) ', cell ' num2str(cellJ)])
+end
+
+%{
 bins.north = [[1:numBins]'+1, (numBins+1)*ones(numBins,1)+1];
 bins.south = [[1:numBins]'+ numBins+2, (numBins+1)*ones(numBins,1)+1];
 bins.south(:,1) = flipud(bins.south(:,1));
 bins.east = [(numBins+1)*ones(numBins,1)+1, [1:numBins]'+ numBins+2];
 bins.west = [(numBins+1)*ones(numBins,1)+1, [1:numBins]'+1];
 
-sigPlotLocs = [8 7; 13 18; 16 10.5; 7 13]; 
-horizAlign = {'right','left','center','center'};
 
 figure;
 jj = colormap(jet);
@@ -166,7 +174,7 @@ for cellI = 1:length(cellsUse)
     end
     suptitleSL(['Mouse ' num2str(mouseI) ', cell ' num2str(cellJ)])
 end
-
+%}
 
 %% PV corr figure
 %armAlignment = GetDoublePlusArmAlignment;
@@ -187,11 +195,11 @@ figure;
             allCorrsDiff = fliplr(allCorrsDiff); meanCorrDiff = fliplr(meanCorrDiff);
         end
 
-        plot(repmat(xBins,length(sameMice),1),allCorrsSame,'.c','MarkerSize',4)
-        plot(repmat(xBins,length(diffMice),1),allCorrsDiff,'.m','MarkerSize',4)
+        plot(repmat(xBins,length(sameMice),1),allCorrsSame,'.c','MarkerSize',8)
+        plot(repmat(xBins,length(diffMice),1),allCorrsDiff,'.m','MarkerSize',8)
 
-        plot(xBins,meanCorrSame,'.-b','MarkerSize',6)
-        plot(xBins,meanCorrDiff,'.-r','MarkerSize',6)
+        plot(xBins,meanCorrSame,'.-b','MarkerSize',8,'LineWidth',2)
+        plot(xBins,meanCorrDiff,'.-r','MarkerSize',8,'LineWidth',2)
 
         ylabel('Correlation Value')
         switch condNames{cpI}
@@ -201,7 +209,7 @@ figure;
                 xlabel('CENTER     REWARD')
         end
         title(['PVcorrs ' condNames{cpI} ' arm'])
-        
+        xlim([0.95 numBins+0.05])
     end
     suptitleSL(['Day pair ' num2str(dayPairs(dpI,:)) ', red=diff blue=same'])
 end
@@ -212,81 +220,10 @@ end
 %same - different: if different is higher, than score is negative; if
 %different is lower, score is positive
 
-PlusMapBlank = zeros(numBins*2+3,numBins*2+3);
-bins.north = [[1:numBins]'+1, (numBins+1)*ones(numBins,1)+1];
-bins.south = [[1:numBins]'+ numBins+2, (numBins+1)*ones(numBins,1)+1]; %need to be flipped too?
-bins.east = [(numBins+1)*ones(numBins,1)+1, [1:numBins]'+ numBins+2];
-bins.west = [(numBins+1)*ones(numBins,1)+1, [1:numBins]'+1];
-
-sigPlotLocs = [8 7; 13 18; 16 10.5; 7 13]; 
-horizAlign = {'right','left','center','center'};
-
-figure;
-hh = colormap(hot);
-close(gcf);
-jj = flipud(fliplr(hh));
-
-newCmap = [hh(2:2:end,:); jj(1:2:end,:)];
-for dpI = 1:numDayPairs
-       
-    thisMap = PlusMapBlank;
-    for cnI = 1:length(condNames)
-        corrsHere = diffMinusSame{dpI,cnI};
-        if strcmpi(condNames{cnI},'west')
-           corrsHere = fliplr(corrsHere); 
-        end
-        
-        for binI = 1:numBins 
-            thisMap(bins.(condNames{cnI})(binI,1),bins.(condNames{cnI})(binI,2)) = corrsHere(binI);
-        end
-    end
-    %minThisMap = min(min(thisMap))
-    figure; imagesc(thisMap) 
-    hold on
-    %colormap jet
-    %caxis([-0.4 0.4]) 
-    colormap(newCmap)
-    caxis([-0.4 0.4])
-    colorbar
-    
-    for cnI = 1:length(condNames)
-        
-        sBins = bins.(condNames{cnI});
-        
-        switch armAlignment.(condNames{cnI}){1}
-            case 'Y'
-                %sBins(:,1) = sBins(:,1)+0.5;
-                sBins(:,2) = sBins(:,2)+ -1*armAlignment.(condNames{cnI}){2};
-            case 'X'
-                sBins(:,1) = sBins(:,1)+ -1.5*armAlignment.(condNames{cnI}){2};
-        end
-        plotHere = fliplr(mean(sBins,1));
-        
-        switch (1-diffRank{dpI,cnI}) < pThresh
-                case 1
-                    plotAdd = '*';  
-                case 0
-                    plotAdd = 'n.s.';
-        end
-        %}
-        plotLab = [plotAdd ' p = ' num2str(round(1-diffRank{dpI,cnI},2))];
-        text(plotHere(1),plotHere(2),plotLab,'HorizontalAlignment',horizAlign{cnI},'FontSize',12)
-    end
-    
-    if plotBins == 1
-        for cnI = 1:length(condNames)
-        sBins = bins.(condNames{cnI});
-            for binI = 1:numBins
-                xCorns = [sBins(binI,2)-0.5 sBins(binI,2)+0.5 sBins(binI,2)+0.5 sBins(binI,2)-0.5 sBins(binI,2)-0.5];
-                yCorns = [sBins(binI,1)-0.5 sBins(binI,1)-0.5 sBins(binI,1)+0.5 sBins(binI,1)+0.5 sBins(binI,1)-0.5];
-                plot(xCorns,yCorns,'k','LineWidth',0.5)
-            end
-        end
-    end
-
-    title(['Difference of Mean PV corrs, day pair ' num2str(dayPairs(dpI,:))])
+for dpI = 1:size(dayPairs,1)
+figHand = PlusMazePVcorrHeatmap({diffMinusSame{dpI,:}},condNames,armAlignment,{diffRank{dpI,:}},pThresh,1);
+title(['Difference of Mean PV corrs, day pair ' num2str(dayPairs(dpI,:))])
 end
-    
 
 
 
@@ -303,17 +240,6 @@ figure;
         allCorrsDiff = diffMiceTrimPVcorrs{dcI,dpI,cpI};
         meanCorrDiff = diffMiceTrimPVcorrsMeans{dcI,dpI,cpI};
 
-        %{
-        switch condNames{cpI}
-            case {'south','east'}
-                %don't fliplr: ascending linearEdges (binEdges) will be order
-                %of pfs/pvcorrs
-            case {'north','west'}
-                %yes fliplr: ascending linearEdges is reverse of behavior
-                allCorrsSame = fliplr(allCorrsSame); meanCorrSame = fliplr(meanCorrSame);
-                allCorrsDiff = fliplr(allCorrsDiff); meanCorrDiff = fliplr(meanCorrDiff);
-        end
-%}
         plot(repmat(xBins,length(sameMice),1),allCorrsSame,'.c','MarkerSize',4)
         plot(repmat(xBins,length(diffMice),1),allCorrsDiff,'.m','MarkerSize',4)
 
@@ -335,7 +261,15 @@ end
 
 end
 
-%% Splitters?
+for dcI = 1:numDayChunks
+    for dpI = 1:size(dayPairs,1)
+        figHand = PlusMazePVcorrHeatmap({sameMinusDiffTrim{dcI,dpI,:}},condNames,armAlignment,{diffRankTrim{dcI,dpI,:}},pThresh,1);
+        title(['Difference of Mean PV corrs, day pair ' num2str(dayPairs(dpI,:)), ', dayChunk ' num2str(dayChunks(dcI,:))])
+    end
+end
+
+
+%% Splitters plot
 
 plotColors = {'g'  'r'  ; 'c'  'm'};
 pairsPlot = [1 2; 3 4];
@@ -356,4 +290,6 @@ end
 posUse =  [584   324   305   427];
 hh = gcf;
         hh.Position = posUse;
-    
+   
+%% Splitter changes
+

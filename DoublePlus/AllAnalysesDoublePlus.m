@@ -94,6 +94,7 @@ meanCorr = cell(numMice,1);
 numCellsUsed = cell(numMice,1); 
 numNan = cell(numMice,1); 
 
+disp('Making corrs')
 pooledPVcorrs = cell(numDayPairs,numCondPairs);
 pooledMeanCorr = cell(numDayPairs,numCondPairs);
 pooledNumCellsUsed = cell(numDayPairs,numCondPairs);
@@ -115,6 +116,7 @@ groupNames = unique(groupAssign(:,2));
 diffMice = find(strcmpi('diff',groupAssign(:,2)));
 sameMice = find(strcmpi('same',groupAssign(:,2)));
 
+disp('testing diffs')
 for cpI = 1:numCondPairs
     for dpI = 1:numDayPairs
         sameMicePVcorrs{dpI,cpI} = pooledPVcorrs{dpI,cpI}(sameMice,:);
@@ -124,6 +126,8 @@ for cpI = 1:numCondPairs
         diffMicePVcorrsMeans{dpI,cpI} = mean(diffMicePVcorrs{dpI,cpI},1);
         
         sameMinusDiff{dpI,cpI} = sameMicePVcorrsMeans{dpI,cpI} - diffMicePVcorrsMeans{dpI,cpI};
+        
+        sepMinusInt{dfI,cpI} = diffMicePVcorrsMeans{dpI,cpI} - sameMicePVcorrsMeans{dpI,cpI};
         
         for binI = 1:numBins
             %[pPVs{dpI,cpI}(binI),hPVs{dpI,cpI}(binI)] = ranksum(sameMicePVcorrs{dpI,cpI}(:,binI),diffMicePVcorrs{dpI,cpI}(:,binI));
@@ -149,12 +153,13 @@ trimPooledPVcorrs = cell(numDayChunks,numDayPairs,numCondPairs);
 trimPooledMeanCorr = cell(numDayChunks,numDayPairs,numCondPairs);
 trimPooledNumCellsUsed = cell(numDayChunks,numDayPairs,numCondPairs);
 
+disp('Making corrs')
 for mouseI = 1:numMice
     for dcI = 1:numDayChunks
         trimmedTBT = SlimDownTBT(cellTBT{mouseI},dayChunks(dcI,:));
 
         [TMapTrimmed, ~, ~, ~, ~, ~, ~] =...
-            PFsLinTBTdoublePlus(trimmedTBT, binEdges, minspeed, [], 'smth',false,'trialReli',trialReli{mouseI}); %'trialReli',trialReli{mouseI},
+            PFsLinTBTdoublePlus(trimmedTBT, binEdges, minspeed, [], false);
 
         [pvCorrsTrim, meanCorrTrim, ~, ~] =...
             PVcorrsWrapperBasic(TMapTrimmed,condPairs,dayPairs,traitLogical{mouseI},cellsUseOption,corrType);
@@ -173,8 +178,9 @@ sameMiceTrimPVcorrs = cell(numDayChunks,numDayPairs,numCondPairs);
 sameMiceTrimPVcorrsMeans = cell(numDayChunks,numDayPairs,numCondPairs);
 diffMiceTrimPVcorrs = cell(numDayChunks,numDayPairs,numCondPairs);
 diffMiceTrimPVcorrsMeans = cell(numDayChunks,numDayPairs,numCondPairs);
-diffMinusSameTrim = cell(numDayChunks,numDayPairs,numCondPairs);
-        
+sameMinusDiffTrim = cell(numDayChunks,numDayPairs,numCondPairs);
+
+disp('testing diffs')
 for dcI = 1:numDayChunks
 for cpI = 1:numCondPairs
     for dpI = 1:numDayPairs
@@ -184,14 +190,15 @@ for cpI = 1:numCondPairs
         diffMiceTrimPVcorrs{dcI,dpI,cpI} = trimPooledPVcorrs{dcI,dpI,cpI}(diffMice,:);
         diffMiceTrimPVcorrsMeans{dcI,dpI,cpI} = mean(diffMiceTrimPVcorrs{dcI,dpI,cpI},1);
         
-        diffMinusSameTrim{dcI,dpI,cpI} = sameMiceTrimPVcorrsMeans{dcI,dpI,cpI} - diffMiceTrimPVcorrsMeans{dcI,dpI,cpI};
+        sameMinusDiffTrim{dcI,dpI,cpI} = sameMiceTrimPVcorrsMeans{dcI,dpI,cpI} - diffMiceTrimPVcorrsMeans{dcI,dpI,cpI};
         
-        diffRank{dcI,dpI,cpI} = PermutationTestSL(sameMicePVcorrs{dcI,dpI,cpI},diffMicePVcorrs{dcI,dpI,cpI},numPerms);
-        isSig{dcI,dpI,cpI} = diffRank{dcI,dpI,cpI} > (1-pThresh);
+        diffRankTrim{dcI,dpI,cpI} = PermutationTestSL(sameMiceTrimPVcorrs{dcI,dpI,cpI},diffMiceTrimPVcorrs{dcI,dpI,cpI},numPerms);
+        isSigTrim{dcI,dpI,cpI} = diffRankTrim{dcI,dpI,cpI} > (1-pThresh);
     end
 end
 end
 
+disp('Done with portion of day')
 
 
 %% Splitter cells? 
@@ -287,27 +294,58 @@ for mouseI = 1:numMice
     splittersSameOnly{mouseI} = splittersSame{mouseI} & splittersPhase{mouseI}==0;
 end
 
+for mouseI = 1:numMice     
+    traitGroups{mouseI} = {splittersPhase{mouseI}; splittersSame{mouseI}; splittersPhaseOnly{mouseI};...
+                           splittersSameOnly{mouseI}; nonSplitter{mouseI}; splitterBoth{mouseI}};
+end
+
+
+%Pct each day? 
+
+[] = RunGroupFunction('TraitDailyPct',traitGroups{mouseI},dayUse{mouseI});
+
 
 %splitters coming and going?
-traitGroups = {splittersPhase; splittersSame; splittersPhaseOnly; splittersSameOnly}; %add other groups? refine to the actual question
+pooledSplitPctChangeFWD = cell(1,length(traitGroups{1})); pooledDaysApartFWD = [];
 for mouseI = 1:numMice
     [splitterPctDayChangesFWD{mouseI}] = RunGroupFunction('NNplusKChange',traitGroups{mouseI},dayUse{mouseI});
-    [splitterPctDayChangesREV{mouseI}] = RunGroupFunction('NNplusKChange',traitGroupsREV{mouseI},dayUseREV{mouseI});
 
     daysApartFWD{mouseI} = diff(splitterPctDayChangesFWD{mouseI}(1).dayPairs,1,2);
-    daysApartREV{mouseI} = -1*daysApartFWD{mouseI};
     
     %realDaysApart cellRealDays
     
     pooledDaysApartFWD = [pooledDaysApartFWD; daysApartFWD{mouseI}];
-    pooledDaysApartREV = [pooledDaysApartREV; daysApartREV{mouseI}];
     for tgI = 1:length(traitGroups{mouseI})
         pooledSplitPctChangeFWD{tgI} = [pooledSplitPctChangeFWD{tgI}; splitterPctDayChangesFWD{mouseI}(tgI).pctChange];
-        pooledSplitPctChangeREV{tgI} = [pooledSplitPctChangeREV{tgI}; splitterPctDayChangesREV{mouseI}(tgI).pctChange];
     end
 end
 
+dayPairsForward = [1 2; 1 3; 2 3];
+dSame = find([ones(2,length(sameMice));zeros(1,length(sameMice))]);
+dDiff = find([ones(2,length(diffMice));zeros(1,length(diffMice))]);
+%Cells becoming phase splitters?
+cellHere = cellfun(@(x) x>0,cellSSI,'UniformOutput',false);
+cellsRegistered = RunGroupFunction('GetCellsOverlap',cellHere,cellHere,dayPairsForward);
+registrationRateDiffPct = [cellsRegistered(diffMice).overlapWithModel]; %(dayPair,mouseI)
+registrationRateSamePct = [cellsRegistered(sameMice).overlapWithModel]; %(dayPair,mouseI)
+regRateSig = PermutationTestSL(registrationRateDiffPct(dDiff),registrationRateSamePct(dSame),1000) > (1 - pThresh);
 
+becomesPhase = RunGroupFunction('GetCellsOverlap',nonPhaseSplitter,splittersPhase,dayPairsForward);
+becomesPhaseDiffPct = [becomesPhase(diffMice).overlapWithModel]; %(dayPair,mouseI)
+becomesPhaseSamePct = [becomesPhase(sameMice).overlapWithModel]; %(dayPair,mouseI)
+becomesPhaseSig = PermutationTestSL(becomesPhaseDiffPct(dDiff),becomesPhaseSamePct(dSame),1000) > (1 - pThresh);
 
+becomesSame = RunGroupFunction('GetCellsOverlap',nonSameSplitter,splittersSame,dayPairsForward);
+becomesSameDiffPct = [becomesSame(diffMice).overlapWithModel]; %(dayPair,mouseI)
+becomesSameSamePct = [becomesSame(sameMice).overlapWithModel]; %(dayPair,mouseI)
+becomesSameSig = PermutationTestSL(becomesSameDiffPct(dDiff),becomesSameSamePct(dSame),1000) > (1 - pThresh);
 
+losesPhase = RunGroupFunction('GetCellsOverlap',splittersPhase,nonPhaseSplitter,dayPairsForward);
+losesPhaseDiffPct = [losesPhase(diffMice).overlapWithModel]; %(dayPair,mouseI)
+losesPhaseSamePct = [losesPhase(sameMice).overlapWithModel]; %(dayPair,mouseI)
+losesPhaseSig = PermutationTestSL(losesPhaseDiffPct(dDiff),losesPhaseSamePct(dSame),1000) > (1 - pThresh);
 
+losesSame = RunGroupFunction('GetCellsOverlap',splittersSame,nonSameSplitter,dayPairsForward);
+losesSameDiffPct = [losesSame(diffMice).overlapWithModel]; %(dayPair,mouseI)
+losesSameSamePct = [losesSame(sameMice).overlapWithModel]; %(dayPair,mouseI)
+losesSameSig = PermutationTestSL(losesSameDiffPct(dDiff),losesSameSamePct(dSame),1000) > (1 - pThresh);

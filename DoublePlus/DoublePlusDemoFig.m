@@ -30,6 +30,9 @@ blankBkg = zeros(figSize);
 
 inBound = poly2mask(mazeOutline(:,1),mazeOutline(:,2),figSize(1),figSize(2));
 outBound = ~inBound;
+ptsZero = find(outBound);
+transparentBkg = ones(figSize(1),figSize(2));
+transparentBkg(ptsZero) = 0;
 
 %make striped background
 rotBigSz = [250 250];
@@ -54,7 +57,7 @@ barBkg = imrotate(barBkg,-15);
 barBkg = barBkg(76:76+figSize(1)-1,76:76+figSize(2)-1,:);
 
 %Restrict to maze area
-ptsZero = find(outBound);
+
 for ee = 1:3
     imhere = barBkg(:,:,ee);
     imhere(ptsZero) = 1;
@@ -105,7 +108,7 @@ arrowends.corner.se = [mazeBump + mazeWidth/2 + arrowoffset, mazeBump + mazeWidt
 
 triangleHeight = 8;
 
-mazeOneA = figure; imagesc(barBkg); hold on
+mazeOneA = figure; imagesc(barBkg,'AlphaData',transparentBkg); hold on
 plot([mazeOutline(:,1); mazeOutline(1,1)],[mazeOutline(:,2); mazeOutline(1,2)],'k','LineWidth',2)
 %Turn Arrow N-W
 plot([arrowends.nw(1) arrowends.corner.nw(1) arrowends.wn(1)],[arrowends.nw(2) arrowends.corner.nw(2) arrowends.wn(2)],'k','LineWidth',8)
@@ -115,10 +118,11 @@ patch([arrowends.wn(1) arrowends.wn(1) arrowends.wn(1)-triangleHeight],...
 plot([arrowends.se(1) arrowends.corner.se(1) arrowends.es(1)],[arrowends.se(2) arrowends.corner.se(2) arrowends.es(2)],'k','LineWidth',8)
 patch([arrowends.es(1) arrowends.es(1) arrowends.es(1)+triangleHeight],...
       [arrowends.es(2)+triangleHeight/2 arrowends.es(2)-triangleHeight/2 arrowends.es(2)],'k')
+mazeOneA.Renderer = 'painters';
 axis equal
 axis off
   
-mazeOneB = figure; imagesc(barBkg); hold on
+mazeOneB = figure; imagesc(barBkg,'AlphaData',transparentBkg); hold on
 plot([mazeOutline(:,1); mazeOutline(1,1)],[mazeOutline(:,2); mazeOutline(1,2)],'k','LineWidth',2)
 %Turn Arrow N-E
 plot([arrowends.ne(1) arrowends.corner.ne(1) arrowends.en(1)],[arrowends.ne(2) arrowends.corner.ne(2) arrowends.en(2)],'k','LineWidth',8)
@@ -128,10 +132,12 @@ patch([arrowends.en(1) arrowends.en(1) arrowends.en(1)+triangleHeight],...
 plot([arrowends.se(1) arrowends.corner.se(1) arrowends.es(1)],[arrowends.se(2) arrowends.corner.se(2) arrowends.es(2)],'k','LineWidth',8)
 patch([arrowends.es(1) arrowends.es(1) arrowends.es(1)+triangleHeight],...
       [arrowends.es(2)+triangleHeight/2 arrowends.es(2)-triangleHeight/2 arrowends.es(2)],'k')
+mazeOneB.Renderer = 'painters';
 axis equal
 axis off
 
-mazeTwo = figure; imagesc(checkBkg); hold on
+mazeTwo = figure; imagesc(checkBkg,'AlphaData',transparentBkg); hold on
+
 plot([mazeOutline(:,1); mazeOutline(1,1)],[mazeOutline(:,2); mazeOutline(1,2)],'k','LineWidth',2)
 %Turn Arrow N-E
 plot([arrowends.ne(1) arrowends.corner.ne(1) arrowends.en(1)],[arrowends.ne(2) arrowends.corner.ne(2) arrowends.en(2)],'k','LineWidth',8)
@@ -141,6 +147,7 @@ patch([arrowends.en(1) arrowends.en(1) arrowends.en(1)+triangleHeight],...
 plot([arrowends.se(1) arrowends.corner.se(1) arrowends.es(1)],[arrowends.se(2) arrowends.corner.se(2) arrowends.es(2)],'k','LineWidth',8)
 patch([arrowends.es(1) arrowends.es(1) arrowends.es(1)+triangleHeight],...
       [arrowends.es(2)+triangleHeight/2 arrowends.es(2)-triangleHeight/2 arrowends.es(2)],'k')
+mazeTwo.Renderer = 'painters';
 axis equal
 axis off
   
