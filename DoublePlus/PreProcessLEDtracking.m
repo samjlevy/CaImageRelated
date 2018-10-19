@@ -28,6 +28,9 @@ DVTtoAVIscale = 0.6246;
 dvtPos = []; 
 %Pre-allocate stuff
 velThresh = 25;
+calFrameN = [];
+lapParsed = []; scalingX = []; v0anchor = [];
+numOffmaze = []; scalingY = []; xAlign = []; yAlign = [];
 
 startFresh = 0;
 posFile =fullfile(cd,'PosLED_temp.mat');

@@ -1,4 +1,6 @@
 %AllFiguresDoublePlus
+sepColors = [0.9 0.7 0.1; 0.6 0.1 0.2];
+intColors = [0.3 0.75 0.9; 0 0.5 0.75];
 
 %Interesting cells
 sameSplitters = [];
@@ -26,13 +28,13 @@ end
 
 figure; hold on
 patch([3.5 6.5 6.5 3.5],[0.5 0.5 1 1],[0.9 0.7 0.1294],'EdgeColor','none','FaceAlpha',0.4)
-for smouseI = 1:size(sameMice,1)
-    plot(realDays{sameMice(smouseI)},accuracy{sameMice(smouseI)},'.b','MarkerSize',8)
-    plot(realDays{sameMice(smouseI)},accuracy{sameMice(smouseI)},'b','LineWidth',1.5)
+for smouseI = 1:size(intMice,1)
+    plot(realDays{intMice(smouseI)},accuracy{intMice(smouseI)},'.b','MarkerSize',8)
+    plot(realDays{intMice(smouseI)},accuracy{intMice(smouseI)},'b','LineWidth',1.5)
 end
-for dmouseI = 1:size(sameMice,1)
-    plot(realDays{diffMice(dmouseI)},accuracy{diffMice(dmouseI)},'.r','MarkerSize',8)
-    plot(realDays{diffMice(dmouseI)},accuracy{diffMice(dmouseI)},'r','LineWidth',1.5)
+for dmouseI = 1:size(intMice,1)
+    plot(realDays{sepMice(dmouseI)},accuracy{sepMice(dmouseI)},'.r','MarkerSize',8)
+    plot(realDays{sepMice(dmouseI)},accuracy{sepMice(dmouseI)},'r','LineWidth',1.5)
 end 
 xlim([0.5 9.5])
 xlabel('Day Number')
@@ -42,13 +44,13 @@ title('Performance over time, b = same, r = diff')
 load webPerformance.mat
 figure; hold on
 patch([3.5 6.5 6.5 3.5],[0.4 0.4 1.05 1.05],[0.9 0.7 0.1294],'EdgeColor','none','FaceAlpha',0.4)
-for smouseI = 1:size(sameMice,1)
-    plot(webPerformance(sameMice(smouseI),:),'.b','MarkerSize',8)
-    plot(webPerformance(sameMice(smouseI),:),'b','LineWidth',2.5)
+for smouseI = 1:size(intMice,1)
+    plot(webPerformance(intMice(smouseI),:),'.b','MarkerSize',8)
+    plot(webPerformance(intMice(smouseI),:),'b','LineWidth',2.5)
 end
-for dmouseI = 1:size(diffMice,1)
-    plot(webPerformance(diffMice(dmouseI),:),'.r','MarkerSize',10)
-    plot(webPerformance(diffMice(dmouseI),:),'r','LineWidth',2.5)
+for dmouseI = 1:size(sepMice,1)
+    plot(webPerformance(sepMice(dmouseI),:),'.r','MarkerSize',10)
+    plot(webPerformance(sepMice(dmouseI),:),'r','LineWidth',2.5)
 end 
 xlim([0.95 9.05])
 ylim([0.4 1.05])
@@ -61,43 +63,84 @@ title('Performance over time, b = same, r = diff')
 %load(fullfile(mainFolder,mice{1},'daybyday.mat'))
 
 %cellsUse = 102; 141 272 378 1295 861 594 419 (all mouse 1)
-
-cellsUse = notSameSplitters{1}{1}(notSameSplitters{1}{1}>400);
-
-%plot dot plot
-for cellI = 1:length(cellsUse)
-    cellJ = cellsUse(cellI);
-
-    hh=figure('Position',[65 398 1775 580]);
-    for sessI = 1:3
-        bStarts = []; bStops = [];
-        %cellHere = cellSSI{mouseI}(cellJ,sessI);
-        cellHere = cellJ;
-        lapsFetch = [daybyday.behavior{sessI}(:).goodSequence] & [daybyday.behavior{sessI}(:).isCorrect];
-        bStarts = [daybyday.behavior{sessI}(lapsFetch).startLap];
-        bStops = [daybyday.behavior{sessI}(lapsFetch).endLap];
-
-        xPos = []; yPos = []; PSAhere = [];
-        for bI = 1:length(bStarts)
-            xPos = [xPos daybyday.all_x_adj_cm{sessI}(bStarts(bI):bStops(bI))];
-            yPos = [yPos daybyday.all_y_adj_cm{sessI}(bStarts(bI):bStops(bI))];
-            PSAhere = [PSAhere daybyday.PSAbool{sessI}(cellHere,bStarts(bI):bStops(bI))];
-        end
-        PSAhere = logical(PSAhere);
-        
-        subplot(1,3,sessI)
-        plot(xPos,yPos,'.k','MarkerSize',5)
-        hold on
-        plot(xPos(PSAhere),yPos(PSAhere),'.r','MarkerSize',8)
-        axis equal
-        xlim([-60 60])
-        ylim([-60 60])
-        title(['Day ' num2str(realDays{mouseI}(sessI))])
-    end
+cellsUse = cell(numMice,1);
+for mouseI = 1:numMice
+    cellsUse{mouseI} = [cellsUse{mouseI}; notSameSplitters{mouseI}{1}];
+    cellsUse{mouseI} = [cellsUse{mouseI}; notPhaseSplitters{mouseI}{1}];
+    cellsUse{mouseI} = [cellsUse{mouseI}; find(sum(splittersPhase{mouseI},2)==3)];
+    cellsUse{mouseI} = [cellsUse{mouseI}; find(sum(splittersSame{mouseI},2)==3)];
     
-    suptitleSL(['Mouse ' num2str(mouseI) ', cell ' num2str(cellJ)])
+    cellsUse{mouseI} = unique(cellsUse{mouseI});
+end
+
+
+
+mouseI = 1;
+while mouseI<numMice+1
+    cellI = 1;
+    mouseFolder = fullfile(mainFolder,mice{mouseI});
+    load(fullfile(mouseFolder,'daybyday.mat'))
+    while cellI < length(cellsUse{mouseI})+1
+        thisCell = cellsUse{mouseI}(cellI);
+        figHand = PlotDotplotDoublePlus(daybyday,thisCell ,realDays{mouseI}); 
+
+        suptitleSL(['Mouse ' num2str(mouseI) ', cell ' num2str(thisCell)])
+
+        getInput=1;
+        while getInput==1
+            getInput = 0;
+            what = input('save (s), previous cell (a), next cell(d), next mouse (m), previous mouse (b), be done (g). >>','s');
+            switch what
+                case 's'
+                    saveFolder = 'G:\DoublePlus\SFNposter\cellDotplots';
+                    print(fullfile(saveFolder,['dotplotM' num2str(mouseI) 'cell' num2str(thisCell)]),'-dpdf')
+                case 'a'
+                    if cellI~=1
+                    cellI = cellI - 2;
+                    end
+                case 'd'
+                    %do nothing
+                case 'm'
+                    cellI = length(cellsUse{mouseI})+1;
+                case 'b'
+                    if mouseI~=1
+                    cellI = length(cellsUse{mouseI})+1;
+                    mouseI = mouseI-2;
+                    end
+                    getInput=1;
+                case 'g'
+                    cellI = length(cellsUse{mouseI})+1;
+                    mouseI = numMice;
+            end
+
+        end
+        close(figHand)
+        cellI = cellI + 1;
+    end
+    mouseI = mouseI + 1;
 end
  
+
+cellsUse = {{8 22 27 50 72};{85 129 154 173 201 207 217 277 281};{}; {} ;{48 69 713};{224 355 377 399 463}};
+for mouseI = 1:numMice
+    if length(cellsUse{mouseI}
+        mouseFolder = fullfile(mainFolder,mice{mouseI});
+        load(fullfile(mouseFolder,'daybyday.mat'))
+
+        suptitleSL(['Mouse ' num2str(mouseI) ', cell ' num2str(thisCell)])
+        for cellI = 1:length(cellsUse{mouseI})
+            thisCell = cellsUse{mouseI}(cellI);
+            figHand = PlotDotplotDoublePlus(daybyday,thisCell ,realDays{mouseI}); 
+            
+            %rescale figure
+            
+            saveFolder = 'G:\DoublePlus\SFNposter\cellDotplots';
+            print(fullfile(saveFolder,['dotplotM' num2str(mouseI) 'cell' num2str(thisCell)]),'-dpdf')
+        end
+    end
+end
+            
+    
 %% plot heatmap
 
 %this needs to be tested
@@ -185,18 +228,18 @@ for dpI = 1:numDayPairs
 figure; 
     for cpI = 1:4
         subplot(2,2,cpI); hold on
-        allCorrsSame = sameMicePVcorrs{dpI,cpI};
-        meanCorrSame = sameMicePVcorrsMeans{dpI,cpI};
-        allCorrsDiff = diffMicePVcorrs{dpI,cpI};
-        meanCorrDiff = diffMicePVcorrsMeans{dpI,cpI};
+        allCorrsSame = intMicePVcorrs{dpI,cpI};
+        meanCorrSame = intMicePVcorrsMeans{dpI,cpI};
+        allCorrsDiff = sepMicePVcorrs{dpI,cpI};
+        meanCorrDiff = sepMicePVcorrsMeans{dpI,cpI};
 
         if strcmpi(condNames{cnI},'west')
             allCorrsSame = fliplr(allCorrsSame); meanCorrSame = fliplr(meanCorrSame);
             allCorrsDiff = fliplr(allCorrsDiff); meanCorrDiff = fliplr(meanCorrDiff);
         end
 
-        plot(repmat(xBins,length(sameMice),1),allCorrsSame,'.c','MarkerSize',8)
-        plot(repmat(xBins,length(diffMice),1),allCorrsDiff,'.m','MarkerSize',8)
+        plot(repmat(xBins,length(intMice),1),allCorrsSame,'.c','MarkerSize',8)
+        plot(repmat(xBins,length(sepMice),1),allCorrsDiff,'.m','MarkerSize',8)
 
         plot(xBins,meanCorrSame,'.-b','MarkerSize',8,'LineWidth',2)
         plot(xBins,meanCorrDiff,'.-r','MarkerSize',8,'LineWidth',2)
@@ -235,13 +278,13 @@ for dcI = 1:numDayChunks
 figure; 
     for cpI = 1:4
         subplot(2,2,cpI); hold on
-        allCorrsSame = sameMiceTrimPVcorrs{dcI,dpI,cpI};
-        meanCorrSame = sameMiceTrimPVcorrsMeans{dcI,dpI,cpI};
-        allCorrsDiff = diffMiceTrimPVcorrs{dcI,dpI,cpI};
-        meanCorrDiff = diffMiceTrimPVcorrsMeans{dcI,dpI,cpI};
+        allCorrsSame = intMiceTrimPVcorrs{dcI,dpI,cpI};
+        meanCorrSame = intMiceTrimPVcorrsMeans{dcI,dpI,cpI};
+        allCorrsDiff = sepMiceTrimPVcorrs{dcI,dpI,cpI};
+        meanCorrDiff = sepMiceTrimPVcorrsMeans{dcI,dpI,cpI};
 
-        plot(repmat(xBins,length(sameMice),1),allCorrsSame,'.c','MarkerSize',4)
-        plot(repmat(xBins,length(diffMice),1),allCorrsDiff,'.m','MarkerSize',4)
+        plot(repmat(xBins,length(intMice),1),allCorrsSame,'.c','MarkerSize',4)
+        plot(repmat(xBins,length(sepMice),1),allCorrsDiff,'.m','MarkerSize',4)
 
         plot(xBins,meanCorrSame,'.-b','MarkerSize',6)
         plot(xBins,meanCorrDiff,'.-r','MarkerSize',6)
@@ -292,4 +335,73 @@ hh = gcf;
         hh.Position = posUse;
    
 %% Splitter changes
+
+%individual mice
+for mouseI = 1:numMice
+    figure;
+    subplot(1,3,1); hold on
+    plot(splitterGroupPct{mouseI}{1})
+    plot(splitterGroupPct{mouseI}{2})
+    legend(groupNames{1},groupNames{2})
+    subplot(1,3,2); hold on
+    plot(splitterGroupPct{mouseI}{3})
+    plot(splitterGroupPct{mouseI}{4})
+    legend(groupNames{3},groupNames{4})
+    subplot(1,3,3); hold on
+    plot(splitterGroupPct{mouseI}{5})
+    plot(splitterGroupPct{mouseI}{6})
+    legend(groupNames{5},groupNames{6})
+end
+
+%Grouped
+figure;
+hh=subplot(1,3,1); hold on
+plot(pooledSplitterProps{1}(intMice,:),'.','Color',intColors(1,:),'MarkerSize',8)
+plot(pooledSplitterProps{2}(intMice,:),'.','Color',intColors(2,:),'MarkerSize',8)
+plot(pooledSplitterProps{1}(sepMice,:),'.','Color',sepColors(1,:),'MarkerSize',8)
+plot(pooledSplitterProps{2}(sepMice,:),'.','Color',sepColors(2,:),'MarkerSize',8)
+p1=plot(mean(pooledSplitterProps{1}(intMice,:),1),'Color',intColors(1,:),'LineWidth',2);
+p2=plot(mean(pooledSplitterProps{2}(intMice,:),1),'Color',intColors(2,:),'LineWidth',2);
+p3=plot(mean(pooledSplitterProps{1}(sepMice,:),1),'Color',sepColors(1,:),'LineWidth',2);
+p4=plot(mean(pooledSplitterProps{2}(sepMice,:),1),'Color',sepColors(2,:),'LineWidth',2);
+legend([p1 p2 p3 p4],['int ' groupNames{1}],['int ' groupNames{2}],['sep ' groupNames{1}],['sep ' groupNames{2}],'location','east')
+ylim([0.5 1]); ylabel('Proportion of Cells'); xlabel('Day Number')
+%hh.XTick = [0 0.5 1]; 
+hh.XTickLabel = {'3' '7' '8'};
+
+hh=subplot(1,3,2); hold on
+plot(pooledSplitterProps{3}(intMice,:),'.','Color',intColors(1,:),'MarkerSize',8)
+plot(pooledSplitterProps{4}(intMice,:),'.','Color',intColors(2,:),'MarkerSize',8)
+plot(pooledSplitterProps{3}(sepMice,:),'.','Color',sepColors(1,:),'MarkerSize',8)
+plot(pooledSplitterProps{4}(sepMice,:),'.','Color',sepColors(2,:),'MarkerSize',8)
+p1=plot(mean(pooledSplitterProps{3}(intMice,:),1),'Color',intColors(1,:),'LineWidth',2);
+p2=plot(mean(pooledSplitterProps{4}(intMice,:),1),'Color',intColors(2,:),'LineWidth',2);
+p3=plot(mean(pooledSplitterProps{3}(sepMice,:),1),'Color',sepColors(1,:),'LineWidth',2);
+p4=plot(mean(pooledSplitterProps{4}(sepMice,:),1),'Color',sepColors(2,:),'LineWidth',2);
+legend([p1 p2 p3 p4],['int ' groupNames{3}],['int ' groupNames{4}],['sep ' groupNames{3}],['sep ' groupNames{4}],'location','east')
+ylim([0 0.5]); ylabel('Proportion of Cells'); xlabel('Day Number')
+%hh.XTick = [0 0.5 1]; 
+hh.XTickLabel = {'3' '7' '8'};
+
+hh=subplot(1,3,3); hold on
+plot(pooledSplitterProps{5}(intMice,:),'.','Color',intColors(1,:),'MarkerSize',8)
+plot(pooledSplitterProps{6}(intMice,:),'.','Color',intColors(2,:),'MarkerSize',8)
+plot(pooledSplitterProps{5}(sepMice,:),'.','Color',sepColors(1,:),'MarkerSize',8)
+plot(pooledSplitterProps{6}(sepMice,:),'.','Color',sepColors(2,:),'MarkerSize',8)
+p1=plot(mean(pooledSplitterProps{5}(intMice,:),1),'Color',intColors(1,:),'LineWidth',2);
+p2=plot(mean(pooledSplitterProps{6}(intMice,:),1),'Color',intColors(2,:),'LineWidth',2);
+p3=plot(mean(pooledSplitterProps{5}(sepMice,:),1),'Color',sepColors(1,:),'LineWidth',2);
+p4=plot(mean(pooledSplitterProps{6}(sepMice,:),1),'Color',sepColors(2,:),'LineWidth',2);
+legend([p1 p2 p3 p4],['int ' groupNames{5}],['int ' groupNames{6}],['sep ' groupNames{5}],['sep ' groupNames{6}],'location','east')
+ylim([0 1]); ylabel('Proportion of Cells'); xlabel('Day Number')
+%hh.XTick = [0 0.5 1]; 
+hh.XTickLabel = {'3' '7' '8'};
+
+suptitleSL('Proportion of splitting type by group')
+
+
+
+
+
+
 

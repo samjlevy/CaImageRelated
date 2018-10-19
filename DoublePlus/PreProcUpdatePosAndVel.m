@@ -2,7 +2,7 @@ function [posAndVelFig] = PreProcUpdatePosAndVel(xAVI,yAVI,onMaze,definitelyGood
 border = 0.05;
 boxHeight = (1-border*4) / 3;
 boxWidth = 1-border*2;
-plotOnMaze = onMaze; 
+plotOnMaze = double(onMaze); 
 plotOnMaze(plotOnMaze==0) = NaN;
 %defGoodWork = definitelyGood==0;
 
