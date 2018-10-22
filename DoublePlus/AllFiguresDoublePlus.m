@@ -28,13 +28,13 @@ end
 
 figure; hold on
 patch([3.5 6.5 6.5 3.5],[0.5 0.5 1 1],[0.9 0.7 0.1294],'EdgeColor','none','FaceAlpha',0.4)
-for smouseI = 1:size(intMice,1)
-    plot(realDays{intMice(smouseI)},accuracy{intMice(smouseI)},'.b','MarkerSize',8)
-    plot(realDays{intMice(smouseI)},accuracy{intMice(smouseI)},'b','LineWidth',1.5)
+for smouseI = 1:size(oneEnvMice,1)
+    plot(realDays{oneEnvMice(smouseI)},accuracy{oneEnvMice(smouseI)},'.b','MarkerSize',8)
+    plot(realDays{oneEnvMice(smouseI)},accuracy{oneEnvMice(smouseI)},'b','LineWidth',1.5)
 end
-for dmouseI = 1:size(intMice,1)
-    plot(realDays{sepMice(dmouseI)},accuracy{sepMice(dmouseI)},'.r','MarkerSize',8)
-    plot(realDays{sepMice(dmouseI)},accuracy{sepMice(dmouseI)},'r','LineWidth',1.5)
+for dmouseI = 1:size(oneEnvMice,1)
+    plot(realDays{twoEnvMice(dmouseI)},accuracy{twoEnvMice(dmouseI)},'.r','MarkerSize',8)
+    plot(realDays{twoEnvMice(dmouseI)},accuracy{twoEnvMice(dmouseI)},'r','LineWidth',1.5)
 end 
 xlim([0.5 9.5])
 xlabel('Day Number')
@@ -44,13 +44,13 @@ title('Performance over time, b = same, r = diff')
 load webPerformance.mat
 figure; hold on
 patch([3.5 6.5 6.5 3.5],[0.4 0.4 1.05 1.05],[0.9 0.7 0.1294],'EdgeColor','none','FaceAlpha',0.4)
-for smouseI = 1:size(intMice,1)
-    plot(webPerformance(intMice(smouseI),:),'.b','MarkerSize',8)
-    plot(webPerformance(intMice(smouseI),:),'b','LineWidth',2.5)
+for smouseI = 1:size(oneEnvMice,1)
+    plot(webPerformance(oneEnvMice(smouseI),:),'.b','MarkerSize',8)
+    plot(webPerformance(oneEnvMice(smouseI),:),'b','LineWidth',2.5)
 end
-for dmouseI = 1:size(sepMice,1)
-    plot(webPerformance(sepMice(dmouseI),:),'.r','MarkerSize',10)
-    plot(webPerformance(sepMice(dmouseI),:),'r','LineWidth',2.5)
+for dmouseI = 1:size(twoEnvMice,1)
+    plot(webPerformance(twoEnvMice(dmouseI),:),'.r','MarkerSize',10)
+    plot(webPerformance(twoEnvMice(dmouseI),:),'r','LineWidth',2.5)
 end 
 xlim([0.95 9.05])
 ylim([0.4 1.05])
@@ -121,21 +121,32 @@ while mouseI<numMice+1
 end
  
 
+saveFolder = 'G:\DoublePlus\SFNposter\cellDotplots';
+
 cellsUse = {{8 22 27 50 72};{85 129 154 173 201 207 217 277 281};{}; {} ;{48 69 713};{224 355 377 399 463}};
 for mouseI = 1:numMice
-    if length(cellsUse{mouseI}
+    if ~isempty(cellsUse{mouseI})
         mouseFolder = fullfile(mainFolder,mice{mouseI});
         load(fullfile(mouseFolder,'daybyday.mat'))
-
-        suptitleSL(['Mouse ' num2str(mouseI) ', cell ' num2str(thisCell)])
+        
         for cellI = 1:length(cellsUse{mouseI})
-            thisCell = cellsUse{mouseI}(cellI);
-            figHand = PlotDotplotDoublePlus(daybyday,thisCell ,realDays{mouseI}); 
+            thisCell = cellsUse{mouseI}{cellI};
+            figHand = PlotDotplotDoublePlus(daybyday,thisCell ,realDays{mouseI},'vertical'); 
             
-            %rescale figure
+            %if strcmpi('individual')
+            %    for sessI = 1:length(realDays{mouseI})
+            %        figure(figHand{sessI});
+            %        title(['Mouse ' num2str(mouseI) ', cell ' num2str(thisCell) ', day' num2str(realDays{mouseI}(sessI)])
+            %        print(fullfile(saveFolder,['dotplotM' num2str(mouseI) 'cell' num2str(thisCell)]),'-dpdf')
+            %    end
+            %else
+            suptitleSL(['Mouse ' num2str(mouseI) ', cell ' num2str(thisCell)])
             
-            saveFolder = 'G:\DoublePlus\SFNposter\cellDotplots';
             print(fullfile(saveFolder,['dotplotM' num2str(mouseI) 'cell' num2str(thisCell)]),'-dpdf')
+            try
+                close(figHand);
+            end
+            %end
         end
     end
 end
@@ -219,7 +230,7 @@ for cellI = 1:length(cellsUse)
 end
 %}
 
-%% PV corr figure
+%% PV corr figure individual and mean data
 %armAlignment = GetDoublePlusArmAlignment;
 %condNames = {cellTBT{1}.name};
 xBins = 1:numBins;
@@ -228,18 +239,18 @@ for dpI = 1:numDayPairs
 figure; 
     for cpI = 1:4
         subplot(2,2,cpI); hold on
-        allCorrsSame = intMicePVcorrs{dpI,cpI};
-        meanCorrSame = intMicePVcorrsMeans{dpI,cpI};
-        allCorrsDiff = sepMicePVcorrs{dpI,cpI};
-        meanCorrDiff = sepMicePVcorrsMeans{dpI,cpI};
+        allCorrsSame = oneEnvMicePVcorrs{dpI,cpI};
+        meanCorrSame = oneEnvMicePVcorrsMeans{dpI,cpI};
+        allCorrsDiff = twoEnvMicePVcorrs{dpI,cpI};
+        meanCorrDiff = twoEnvMicePVcorrsMeans{dpI,cpI};
 
         if strcmpi(condNames{cnI},'west')
             allCorrsSame = fliplr(allCorrsSame); meanCorrSame = fliplr(meanCorrSame);
             allCorrsDiff = fliplr(allCorrsDiff); meanCorrDiff = fliplr(meanCorrDiff);
         end
 
-        plot(repmat(xBins,length(intMice),1),allCorrsSame,'.c','MarkerSize',8)
-        plot(repmat(xBins,length(sepMice),1),allCorrsDiff,'.m','MarkerSize',8)
+        plot(repmat(xBins,length(oneEnvMice),1),allCorrsSame,'.c','MarkerSize',8)
+        plot(repmat(xBins,length(twoEnvMice),1),allCorrsDiff,'.m','MarkerSize',8)
 
         plot(xBins,meanCorrSame,'.-b','MarkerSize',8,'LineWidth',2)
         plot(xBins,meanCorrDiff,'.-r','MarkerSize',8,'LineWidth',2)
@@ -257,8 +268,23 @@ figure;
     suptitleSL(['Day pair ' num2str(dayPairs(dpI,:)) ', red=diff blue=same'])
 end
 
+%% PVcorrHeatmap groups alone
+%Color scaling by positive or negative
+%same - different: if different is higher, than score is negative; if
+%different is lower, score is positive
 
-%% PVcorrHeatmap
+for dpI = 1:size(dayPairs,1)
+figHand = PlusMazePVcorrHeatmap({oneEnvMicePVcorrsMeans{dpI,:}},condNames,armAlignment,[],[],1);
+title(['Mean 1-Env PV corrs, day pair ' num2str(dayPairs(dpI,:))])
+end
+
+for dpI = 1:size(dayPairs,1)
+figHand = PlusMazePVcorrHeatmap({twoEnvMicePVcorrsMeans{dpI,:}},condNames,armAlignment,[],[],1);
+title(['Mean 2-Env PV corrs, day pair ' num2str(dayPairs(dpI,:))])
+end
+
+
+%% PVcorrHeatmap subtraction
 %Color scaling by positive or negative
 %same - different: if different is higher, than score is negative; if
 %different is lower, score is positive
@@ -278,13 +304,13 @@ for dcI = 1:numDayChunks
 figure; 
     for cpI = 1:4
         subplot(2,2,cpI); hold on
-        allCorrsSame = intMiceTrimPVcorrs{dcI,dpI,cpI};
-        meanCorrSame = intMiceTrimPVcorrsMeans{dcI,dpI,cpI};
-        allCorrsDiff = sepMiceTrimPVcorrs{dcI,dpI,cpI};
-        meanCorrDiff = sepMiceTrimPVcorrsMeans{dcI,dpI,cpI};
+        allCorrsSame = oneEnvMiceTrimPVcorrs{dcI,dpI,cpI};
+        meanCorrSame = oneEnvMiceTrimPVcorrsMeans{dcI,dpI,cpI};
+        allCorrsDiff = twoEnvMiceTrimPVcorrs{dcI,dpI,cpI};
+        meanCorrDiff = twoEnvMiceTrimPVcorrsMeans{dcI,dpI,cpI};
 
-        plot(repmat(xBins,length(intMice),1),allCorrsSame,'.c','MarkerSize',4)
-        plot(repmat(xBins,length(sepMice),1),allCorrsDiff,'.m','MarkerSize',4)
+        plot(repmat(xBins,length(oneEnvMice),1),allCorrsSame,'.c','MarkerSize',4)
+        plot(repmat(xBins,length(twoEnvMice),1),allCorrsDiff,'.m','MarkerSize',4)
 
         plot(xBins,meanCorrSame,'.-b','MarkerSize',6)
         plot(xBins,meanCorrDiff,'.-r','MarkerSize',6)
@@ -356,42 +382,42 @@ end
 %Grouped
 figure;
 hh=subplot(1,3,1); hold on
-plot(pooledSplitterProps{1}(intMice,:),'.','Color',intColors(1,:),'MarkerSize',8)
-plot(pooledSplitterProps{2}(intMice,:),'.','Color',intColors(2,:),'MarkerSize',8)
-plot(pooledSplitterProps{1}(sepMice,:),'.','Color',sepColors(1,:),'MarkerSize',8)
-plot(pooledSplitterProps{2}(sepMice,:),'.','Color',sepColors(2,:),'MarkerSize',8)
-p1=plot(mean(pooledSplitterProps{1}(intMice,:),1),'Color',intColors(1,:),'LineWidth',2);
-p2=plot(mean(pooledSplitterProps{2}(intMice,:),1),'Color',intColors(2,:),'LineWidth',2);
-p3=plot(mean(pooledSplitterProps{1}(sepMice,:),1),'Color',sepColors(1,:),'LineWidth',2);
-p4=plot(mean(pooledSplitterProps{2}(sepMice,:),1),'Color',sepColors(2,:),'LineWidth',2);
+plot(pooledSplitterProps{1}(oneEnvMice,:),'.','Color',intColors(1,:),'MarkerSize',8)
+plot(pooledSplitterProps{2}(oneEnvMice,:),'.','Color',intColors(2,:),'MarkerSize',8)
+plot(pooledSplitterProps{1}(twoEnvMice,:),'.','Color',sepColors(1,:),'MarkerSize',8)
+plot(pooledSplitterProps{2}(twoEnvMice,:),'.','Color',sepColors(2,:),'MarkerSize',8)
+p1=plot(mean(pooledSplitterProps{1}(oneEnvMice,:),1),'Color',intColors(1,:),'LineWidth',2);
+p2=plot(mean(pooledSplitterProps{2}(oneEnvMice,:),1),'Color',intColors(2,:),'LineWidth',2);
+p3=plot(mean(pooledSplitterProps{1}(twoEnvMice,:),1),'Color',sepColors(1,:),'LineWidth',2);
+p4=plot(mean(pooledSplitterProps{2}(twoEnvMice,:),1),'Color',sepColors(2,:),'LineWidth',2);
 legend([p1 p2 p3 p4],['int ' groupNames{1}],['int ' groupNames{2}],['sep ' groupNames{1}],['sep ' groupNames{2}],'location','east')
 ylim([0.5 1]); ylabel('Proportion of Cells'); xlabel('Day Number')
 %hh.XTick = [0 0.5 1]; 
 hh.XTickLabel = {'3' '7' '8'};
 
 hh=subplot(1,3,2); hold on
-plot(pooledSplitterProps{3}(intMice,:),'.','Color',intColors(1,:),'MarkerSize',8)
-plot(pooledSplitterProps{4}(intMice,:),'.','Color',intColors(2,:),'MarkerSize',8)
-plot(pooledSplitterProps{3}(sepMice,:),'.','Color',sepColors(1,:),'MarkerSize',8)
-plot(pooledSplitterProps{4}(sepMice,:),'.','Color',sepColors(2,:),'MarkerSize',8)
-p1=plot(mean(pooledSplitterProps{3}(intMice,:),1),'Color',intColors(1,:),'LineWidth',2);
-p2=plot(mean(pooledSplitterProps{4}(intMice,:),1),'Color',intColors(2,:),'LineWidth',2);
-p3=plot(mean(pooledSplitterProps{3}(sepMice,:),1),'Color',sepColors(1,:),'LineWidth',2);
-p4=plot(mean(pooledSplitterProps{4}(sepMice,:),1),'Color',sepColors(2,:),'LineWidth',2);
+plot(pooledSplitterProps{3}(oneEnvMice,:),'.','Color',intColors(1,:),'MarkerSize',8)
+plot(pooledSplitterProps{4}(oneEnvMice,:),'.','Color',intColors(2,:),'MarkerSize',8)
+plot(pooledSplitterProps{3}(twoEnvMice,:),'.','Color',sepColors(1,:),'MarkerSize',8)
+plot(pooledSplitterProps{4}(twoEnvMice,:),'.','Color',sepColors(2,:),'MarkerSize',8)
+p1=plot(mean(pooledSplitterProps{3}(oneEnvMice,:),1),'Color',intColors(1,:),'LineWidth',2);
+p2=plot(mean(pooledSplitterProps{4}(oneEnvMice,:),1),'Color',intColors(2,:),'LineWidth',2);
+p3=plot(mean(pooledSplitterProps{3}(twoEnvMice,:),1),'Color',sepColors(1,:),'LineWidth',2);
+p4=plot(mean(pooledSplitterProps{4}(twoEnvMice,:),1),'Color',sepColors(2,:),'LineWidth',2);
 legend([p1 p2 p3 p4],['int ' groupNames{3}],['int ' groupNames{4}],['sep ' groupNames{3}],['sep ' groupNames{4}],'location','east')
 ylim([0 0.5]); ylabel('Proportion of Cells'); xlabel('Day Number')
 %hh.XTick = [0 0.5 1]; 
 hh.XTickLabel = {'3' '7' '8'};
 
 hh=subplot(1,3,3); hold on
-plot(pooledSplitterProps{5}(intMice,:),'.','Color',intColors(1,:),'MarkerSize',8)
-plot(pooledSplitterProps{6}(intMice,:),'.','Color',intColors(2,:),'MarkerSize',8)
-plot(pooledSplitterProps{5}(sepMice,:),'.','Color',sepColors(1,:),'MarkerSize',8)
-plot(pooledSplitterProps{6}(sepMice,:),'.','Color',sepColors(2,:),'MarkerSize',8)
-p1=plot(mean(pooledSplitterProps{5}(intMice,:),1),'Color',intColors(1,:),'LineWidth',2);
-p2=plot(mean(pooledSplitterProps{6}(intMice,:),1),'Color',intColors(2,:),'LineWidth',2);
-p3=plot(mean(pooledSplitterProps{5}(sepMice,:),1),'Color',sepColors(1,:),'LineWidth',2);
-p4=plot(mean(pooledSplitterProps{6}(sepMice,:),1),'Color',sepColors(2,:),'LineWidth',2);
+plot(pooledSplitterProps{5}(oneEnvMice,:),'.','Color',intColors(1,:),'MarkerSize',8)
+plot(pooledSplitterProps{6}(oneEnvMice,:),'.','Color',intColors(2,:),'MarkerSize',8)
+plot(pooledSplitterProps{5}(twoEnvMice,:),'.','Color',sepColors(1,:),'MarkerSize',8)
+plot(pooledSplitterProps{6}(twoEnvMice,:),'.','Color',sepColors(2,:),'MarkerSize',8)
+p1=plot(mean(pooledSplitterProps{5}(oneEnvMice,:),1),'Color',intColors(1,:),'LineWidth',2);
+p2=plot(mean(pooledSplitterProps{6}(oneEnvMice,:),1),'Color',intColors(2,:),'LineWidth',2);
+p3=plot(mean(pooledSplitterProps{5}(twoEnvMice,:),1),'Color',sepColors(1,:),'LineWidth',2);
+p4=plot(mean(pooledSplitterProps{6}(twoEnvMice,:),1),'Color',sepColors(2,:),'LineWidth',2);
 legend([p1 p2 p3 p4],['int ' groupNames{5}],['int ' groupNames{6}],['sep ' groupNames{5}],['sep ' groupNames{6}],'location','east')
 ylim([0 1]); ylabel('Proportion of Cells'); xlabel('Day Number')
 %hh.XTick = [0 0.5 1]; 

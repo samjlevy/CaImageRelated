@@ -1,7 +1,29 @@
-function figHand = PlotDotplotDoublePlus(daybyday,cellPlot,realDays) 
+function figHand = PlotDotplotDoublePlus(daybyday,cellPlot,realDays,figOrientation) 
+if isempty(figOrientation)
+    figOrientation = 'horizontal';
+end
+switch figOrientation
+    case 'horizontal'
+        numRows = 1;
+        numCols = 3;
+        figPos = [65 398 1775 580];
+    case 'vertical'
+        numRows = 3;
+        numCols = 1;
+        figPos = [1076 67 633 915];
+end
 
+if ~strcmpi(figOrientation,'individual')
+    figHand=figure('Position',figPos);
+    blkSize = 5;
+    redSize = 8;
+end
 
-figHand=figure('Position',[65 398 1775 580]);
+if strcmpi(figOrientation,'individual')
+   blkSize = 3;
+   redSize = 5;    
+end
+
 for sessI = 1:3
     bStarts = []; bStops = [];
     lapsFetch = [daybyday.behavior{sessI}(:).goodSequence] & [daybyday.behavior{sessI}(:).isCorrect];
@@ -16,10 +38,14 @@ for sessI = 1:3
     end
     PSAhere = logical(PSAhere);
     
-    subplot(1,3,sessI)
-    plot(xPos,yPos,'.k','MarkerSize',5)
+    if strcmpi(figOrientation,'individual')
+        figHand{sessI} = figure;%('Position',indivPos);
+    else
+        subplot(numRows,numCols,sessI)
+    end
+    plot(xPos,yPos,'.k','MarkerSize',blkSize)
     hold on
-    plot(xPos(PSAhere),yPos(PSAhere),'.r','MarkerSize',8)
+    plot(xPos(PSAhere),yPos(PSAhere),'.r','MarkerSize',redSize)
     axis equal
     xlim([-60 60])
     ylim([-60 60])

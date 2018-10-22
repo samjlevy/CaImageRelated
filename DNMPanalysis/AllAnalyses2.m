@@ -98,6 +98,15 @@ for mouseI = 1:numMice
     cellPooledTMap_zRates{mouseI} = TMap_unsmoothed; 
 end
 
+for mouseI = 1:numMice
+     numTrialCells{mouseI} = CellsActiveEachTrial(trialbytrial);
+     for condI = 1:4
+     numTrialCellsPctTotal{mouseI}{condI} = numTrialCells{mouseI}{condI}/numCells(mouseI);
+     numTrialCellsPctDay{mouseI}{condI} = numTrialCells{mouseI}{condI}./sum(cellSSI{mouseI}>0,1);
+     numTrialCellsPctDayMean(mouseI,condI) = mean(mean(numTrialCellsPctDay{mouseI}{condI}));
+     end
+end
+
 Conds = GetTBTconds(cellTBT{1});
 disp('Done all setup stuff')
 %% Plot rasters for all good cells
