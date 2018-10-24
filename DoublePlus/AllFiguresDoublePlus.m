@@ -1,6 +1,6 @@
 %AllFiguresDoublePlus
-sepColors = [0.9 0.7 0.1; 0.6 0.1 0.2];
-intColors = [0.3 0.75 0.9; 0 0.5 0.75];
+twoColors = [0.9 0.7 0.1; 0.6 0.1 0.2];
+oneColors = [0.3 0.75 0.9; 0 0.5 0.75];
 
 %Interesting cells
 sameSplitters = [];
@@ -382,42 +382,42 @@ end
 %Grouped
 figure;
 hh=subplot(1,3,1); hold on
-plot(pooledSplitterProps{1}(oneEnvMice,:),'.','Color',intColors(1,:),'MarkerSize',8)
-plot(pooledSplitterProps{2}(oneEnvMice,:),'.','Color',intColors(2,:),'MarkerSize',8)
-plot(pooledSplitterProps{1}(twoEnvMice,:),'.','Color',sepColors(1,:),'MarkerSize',8)
-plot(pooledSplitterProps{2}(twoEnvMice,:),'.','Color',sepColors(2,:),'MarkerSize',8)
-p1=plot(mean(pooledSplitterProps{1}(oneEnvMice,:),1),'Color',intColors(1,:),'LineWidth',2);
-p2=plot(mean(pooledSplitterProps{2}(oneEnvMice,:),1),'Color',intColors(2,:),'LineWidth',2);
-p3=plot(mean(pooledSplitterProps{1}(twoEnvMice,:),1),'Color',sepColors(1,:),'LineWidth',2);
-p4=plot(mean(pooledSplitterProps{2}(twoEnvMice,:),1),'Color',sepColors(2,:),'LineWidth',2);
+plot(pooledSplitterProps{1}(oneEnvMice,:),'.','Color',oneColors(1,:),'MarkerSize',8)
+plot(pooledSplitterProps{2}(oneEnvMice,:),'.','Color',oneColors(2,:),'MarkerSize',8)
+plot(pooledSplitterProps{1}(twoEnvMice,:),'.','Color',twoColors(1,:),'MarkerSize',8)
+plot(pooledSplitterProps{2}(twoEnvMice,:),'.','Color',twoColors(2,:),'MarkerSize',8)
+p1=plot(mean(pooledSplitterProps{1}(oneEnvMice,:),1),'Color',oneColors(1,:),'LineWidth',2);
+p2=plot(mean(pooledSplitterProps{2}(oneEnvMice,:),1),'Color',oneColors(2,:),'LineWidth',2);
+p3=plot(mean(pooledSplitterProps{1}(twoEnvMice,:),1),'Color',twoColors(1,:),'LineWidth',2);
+p4=plot(mean(pooledSplitterProps{2}(twoEnvMice,:),1),'Color',twoColors(2,:),'LineWidth',2);
 legend([p1 p2 p3 p4],['int ' groupNames{1}],['int ' groupNames{2}],['sep ' groupNames{1}],['sep ' groupNames{2}],'location','east')
 ylim([0.5 1]); ylabel('Proportion of Cells'); xlabel('Day Number')
 %hh.XTick = [0 0.5 1]; 
 hh.XTickLabel = {'3' '7' '8'};
 
 hh=subplot(1,3,2); hold on
-plot(pooledSplitterProps{3}(oneEnvMice,:),'.','Color',intColors(1,:),'MarkerSize',8)
-plot(pooledSplitterProps{4}(oneEnvMice,:),'.','Color',intColors(2,:),'MarkerSize',8)
-plot(pooledSplitterProps{3}(twoEnvMice,:),'.','Color',sepColors(1,:),'MarkerSize',8)
-plot(pooledSplitterProps{4}(twoEnvMice,:),'.','Color',sepColors(2,:),'MarkerSize',8)
-p1=plot(mean(pooledSplitterProps{3}(oneEnvMice,:),1),'Color',intColors(1,:),'LineWidth',2);
-p2=plot(mean(pooledSplitterProps{4}(oneEnvMice,:),1),'Color',intColors(2,:),'LineWidth',2);
-p3=plot(mean(pooledSplitterProps{3}(twoEnvMice,:),1),'Color',sepColors(1,:),'LineWidth',2);
-p4=plot(mean(pooledSplitterProps{4}(twoEnvMice,:),1),'Color',sepColors(2,:),'LineWidth',2);
+plot(pooledSplitterProps{3}(oneEnvMice,:),'.','Color',oneColors(1,:),'MarkerSize',8)
+plot(pooledSplitterProps{4}(oneEnvMice,:),'.','Color',oneColors(2,:),'MarkerSize',8)
+plot(pooledSplitterProps{3}(twoEnvMice,:),'.','Color',twoColors(1,:),'MarkerSize',8)
+plot(pooledSplitterProps{4}(twoEnvMice,:),'.','Color',twoColors(2,:),'MarkerSize',8)
+p1=plot(mean(pooledSplitterProps{3}(oneEnvMice,:),1),'Color',oneColors(1,:),'LineWidth',2);
+p2=plot(mean(pooledSplitterProps{4}(oneEnvMice,:),1),'Color',oneColors(2,:),'LineWidth',2);
+p3=plot(mean(pooledSplitterProps{3}(twoEnvMice,:),1),'Color',twoColors(1,:),'LineWidth',2);
+p4=plot(mean(pooledSplitterProps{4}(twoEnvMice,:),1),'Color',twoColors(2,:),'LineWidth',2);
 legend([p1 p2 p3 p4],['int ' groupNames{3}],['int ' groupNames{4}],['sep ' groupNames{3}],['sep ' groupNames{4}],'location','east')
 ylim([0 0.5]); ylabel('Proportion of Cells'); xlabel('Day Number')
 %hh.XTick = [0 0.5 1]; 
 hh.XTickLabel = {'3' '7' '8'};
 
 hh=subplot(1,3,3); hold on
-plot(pooledSplitterProps{5}(oneEnvMice,:),'.','Color',intColors(1,:),'MarkerSize',8)
-plot(pooledSplitterProps{6}(oneEnvMice,:),'.','Color',intColors(2,:),'MarkerSize',8)
-plot(pooledSplitterProps{5}(twoEnvMice,:),'.','Color',sepColors(1,:),'MarkerSize',8)
-plot(pooledSplitterProps{6}(twoEnvMice,:),'.','Color',sepColors(2,:),'MarkerSize',8)
-p1=plot(mean(pooledSplitterProps{5}(oneEnvMice,:),1),'Color',intColors(1,:),'LineWidth',2);
-p2=plot(mean(pooledSplitterProps{6}(oneEnvMice,:),1),'Color',intColors(2,:),'LineWidth',2);
-p3=plot(mean(pooledSplitterProps{5}(twoEnvMice,:),1),'Color',sepColors(1,:),'LineWidth',2);
-p4=plot(mean(pooledSplitterProps{6}(twoEnvMice,:),1),'Color',sepColors(2,:),'LineWidth',2);
+plot(pooledSplitterProps{5}(oneEnvMice,:),'.','Color',oneColors(1,:),'MarkerSize',8)
+plot(pooledSplitterProps{6}(oneEnvMice,:),'.','Color',oneColors(2,:),'MarkerSize',8)
+plot(pooledSplitterProps{5}(twoEnvMice,:),'.','Color',twoColors(1,:),'MarkerSize',8)
+plot(pooledSplitterProps{6}(twoEnvMice,:),'.','Color',twoColors(2,:),'MarkerSize',8)
+p1=plot(mean(pooledSplitterProps{5}(oneEnvMice,:),1),'Color',oneColors(1,:),'LineWidth',2);
+p2=plot(mean(pooledSplitterProps{6}(oneEnvMice,:),1),'Color',oneColors(2,:),'LineWidth',2);
+p3=plot(mean(pooledSplitterProps{5}(twoEnvMice,:),1),'Color',twoColors(1,:),'LineWidth',2);
+p4=plot(mean(pooledSplitterProps{6}(twoEnvMice,:),1),'Color',twoColors(2,:),'LineWidth',2);
 legend([p1 p2 p3 p4],['int ' groupNames{5}],['int ' groupNames{6}],['sep ' groupNames{5}],['sep ' groupNames{6}],'location','east')
 ylim([0 1]); ylabel('Proportion of Cells'); xlabel('Day Number')
 %hh.XTick = [0 0.5 1]; 
@@ -426,6 +426,139 @@ hh.XTickLabel = {'3' '7' '8'};
 suptitleSL('Proportion of splitting type by group')
 
 
+%% Center of mass changes
+
+saveFolder = 'G:\DoublePlus\SFNposter';
+for dpI = 1:numDayPairs
+    gg = figure('Position',[428 376 590 515]);%[428 613 897 278]
+    for condI = 1:numConds
+        xx = subplot(2,numConds/2,condI); hold on
+        yy = cdfplot(oneEnvCOMchangeProps{dpI}{condI}); yy.Color = 'b'; yy.LineWidth = 2;
+        hold on
+        zz = cdfplot(twoEnvCOMchangeProps{dpI}{condI}); zz.Color = 'r'; zz.LineWidth = 2; 
+        
+        xlabel('CM change'); ylabel('Cumulative Proportion')
+        title(condNames{condI})
+        xlim([0 1])
+        xx.XTick = [0 0.5 1]; xx.XTickLabel = {'0' num2str(numBins/2) num2str(numBins)};
+        
+        [h,p] = kstest2(oneEnvCOMchangeProps{dpI}{condI},twoEnvCOMchangeProps{dpI}{condI});
+        text(0.4,0.5,['p=' num2str(round(p,2))])
+    end
+    suptitleSL(['Distribution of within-arm COM changes, day pair ' num2str(realDays{mouseI}(dayPairsForward(dpI,:))')])
+    
+    print(fullfile(saveFolder,['COMchangeKS' num2str(dpI)]),'-dpdf') 
+    close(gg)
+end
+
+for dpI = 1:numDayPairs
+    gg = figure;%('Position',[428 376 590 515]);%[428 613 897 278]
+    
+    yy = cdfplot(oneEnvCOMchanges{dpI}(:)); yy.Color = 'b'; yy.LineWidth = 2;
+    hold on
+    zz = cdfplot(twoEnvCOMchanges{dpI}(:)); zz.Color = 'r'; zz.LineWidth = 2; 
+        
+    xlabel('CM change'); ylabel('Cumulative Proportion')
+    %    title(condNames{condI})
+        %xlim([0 1])
+        %xx.XTick = [0 0.5 1]; xx.XTickLabel = {'0' num2str(numBins/2) num2str(numBins)};
+        
+    [p,h] = ranksum(oneEnvCOMchanges{dpI}(:),twoEnvCOMchanges{dpI}(:));
+    text(4.5,0.5,['p=' num2str(round(p,3))])
+    
+    title(['Distribution of within-arm COM changes, day pair ' num2str(realDays{mouseI}(dayPairsForward(dpI,:))')])
+    
+    %print(fullfile(saveFolder,['COMchangeKS' num2str(dpI)]),'-dpdf') 
+    %close(gg)
+end
+
+%% Rate remapping
+
+saveFolder = 'G:\DoublePlus\SFNposter';
+thingUseOne = oneEnvMeanRateDiffs;
+thingUseTwo = twoEnvMeanRateDiffs;
+label = 'mean firing rate differences';
+thingUseOne = oneEnvMeanRatePctChange;
+thingUseTwo = twoEnvMeanRatePctChange;
+label = 'mean firing rate pct changes';
+thingUseOne = oneEnvMaxRatePctChange;
+thingUseTwo = twoEnvMaxRatePctChange;
+label = 'max firing rate pct changes';
+thingUseOne = oneEnvMaxRateDiffs;
+thingUseTwo = twoEnvMaxRateDiffs;
+label = 'max firing rate differences';
+
+for dpI = 1:numDayPairs
+    gg = figure('Position',[428 376 590 515]);%[428 613 897 278]
+    
+    changesHereOne = thingUseOne{dpI}; changesHereOne(oneEnvFiredEither{dpI}==0)=NaN;
+    changesHereTwo = thingUseTwo{dpI}; changesHereTwo(twoEnvFiredEither{dpI}==0)=NaN;
+    
+    for condI = 1:numConds
+        xx = subplot(2,numConds/2,condI); hold on
+        
+        yy = cdfplot(changesHereOne(:,condI)); yy.Color = 'b'; yy.LineWidth = 2;
+        hold on
+        zz = cdfplot(changesHereTwo(:,condI)); zz.Color = 'r'; zz.LineWidth = 2; 
+        
+        %xlabel('Max rate change'); 
+        xlabel(label(1:end-1))
+        ylabel('Cumulative Proportion')
+        title(condNames{condI})
+        %xlim([0 1])
+        %xx.XTick = [0 0.5 1]; xx.XTickLabel = {'0' num2str(numBins/2) num2str(numBins)};
+        
+        %[h,p] = kstest2(changesHereOne(:,condI),changesHereTwo(:,condI));
+        [p,h] = ranksum(changesHereOne(:,condI),changesHereTwo(:,condI));
+        text(0.4,0.5,['p=' num2str(round(p,3))])%'h=' num2str(h) ', 
+    end
+    suptitleSL(['Distribution of within-arm ' label ', day pair ' num2str(realDays{mouseI}(dayPairsForward(dpI,:))')])
+    
+    %print(fullfile(saveFolder,['COMchangeKS' num2str(dpI)]),'-dpdf') 
+    %close(gg)
+end
+
+for dpI = 1:numDayPairs
+    gg = figure('Position',[428 376 590 515]);%[428 613 897 278]
+    
+    changesHereOne = thingUseOne{dpI}; changesHereOne(oneEnvFiredEither{dpI}==0)=NaN;
+    changesHereTwo = thingUseTwo{dpI}; changesHereTwo(twoEnvFiredEither{dpI}==0)=NaN;
+    changesHereOne(changesHereOne==1) = NaN;
+    changesHereTwo(changesHereTwo==1) = NaN;
+    
+    yy = cdfplot(changesHereOne(:)); yy.Color = 'b'; yy.LineWidth = 2;
+    hold on
+    zz = cdfplot(changesHereTwo(:)); zz.Color = 'r'; zz.LineWidth = 2; 
+        
+    xlabel(label(1:end-1))
+    ylabel('Cumulative Proportion')
+    title(condNames{condI})
+    %xlim([0 1])
+    %xx.XTick = [0 0.5 1]; xx.XTickLabel = {'0' num2str(numBins/2) num2str(numBins)};
+        
+    %[h,p] = kstest2(changesHereOne(:,condI),changesHereTwo(:,condI));
+    [p,h] = ranksum(changesHereOne(:),changesHereTwo(:));
+    text(0.4,0.5,['p=' num2str(round(p,3))])%'h=' num2str(h) ', 
+    
+    suptitleSL(['Distribution of within-arm ' label ', day pair ' num2str(realDays{mouseI}(dayPairsForward(dpI,:))')])
+    
+    %print(fullfile(saveFolder,['COMchangeKS' num2str(dpI)]),'-dpdf') 
+    %close(gg)
+end
+            
+%% Same arm max firing?
+
+gg=figure; hold on
+for dpI = 1:numDayPairs
+    plot((dpI-0.05)*ones(1,length(oneEnvMice)),sameArmPct(oneEnvMice,dpI),'.b','MarkerSize',18)
+    plot((dpI+0.05)*ones(1,length(twoEnvMice)),sameArmPct(twoEnvMice,dpI),'.r','MarkerSize',18)
+end
+xlim([0.9 numDayPairs+0.1])
+gg.Children.XTick = 1:numDayPairs;
+nn = mat2cell(realDays{mouseI}(dayPairsForward),ones(1,numDayPairs),2);
+gg.Children.XTickLabel = cellfun(@num2str,mat2cell(realDays{mouseI}(dayPairsForward),ones(1,numDayPairs),2),'UniformOutput',false);
+xlabel('Day Pair')
+ylabel('Pct. Cells with same arm max firing')
 
 
 

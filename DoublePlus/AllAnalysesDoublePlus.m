@@ -81,6 +81,11 @@ for mouseI = 1:numMice
     cellTMap_zScored{mouseI} = TMap_zRates;
 end   
 
+groupNames = unique(groupAssign(:,2));
+twoEnvMice = find(strcmpi('diff',groupAssign(:,2)));
+oneEnvMice = find(strcmpi('same',groupAssign(:,2)));
+
+disp('Done setup stuff')
 %% Pop vector corr analysis (most basic)
 cellsUseOption = 'activeEither';
 corrType = 'Spearman';
@@ -112,10 +117,6 @@ for mouseI = 1:numMice
         end
     end
 end
-
-groupNames = unique(groupAssign(:,2));
-twoEnvMice = find(strcmpi('diff',groupAssign(:,2)));
-oneEnvMice = find(strcmpi('same',groupAssign(:,2)));
 
 disp('testing diffs')
 for cpI = 1:numCondPairs
@@ -357,3 +358,122 @@ losesSame = RunGroupFunction('GetCellsOverlap',splittersSame,nonSameSplitter,day
 losesSameDiffPct = [losesSame(twoEnvMice).overlapWithModel]; %(dayPair,mouseI)
 losesSameSamePct = [losesSame(oneEnvMice).overlapWithModel]; %(dayPair,mouseI)
 losesSameSig = PermutationTestSL(losesSameDiffPct(dDiff),losesSameSamePct(dSame),1000) > (1 - pThresh);
+
+
+%% Single cell remapping
+
+dayPairsForward = [1 2; 1 3; 2 3]; numDayPairs = size(dayPairsForward,1);
+%Center of mass shift
+allFiringCOM = cell(numMice,1);
+oneEnvCOMchanges = cell(numDayPairs,1);
+twoEnvCOMchanges = cell(numDayPairs,1);
+
+for mouseI = 1:numMice
+    allFiringCOM{mouseI} = TMapFiringCOM(cellTMap_unsmoothed{mouseI});
+    
+    for dpI = 1:numDayPairs
+        comsA = squeeze(allFiringCOM{mouseI}(:,dayPairsForward(dpI,1),:));
+        comsB = squeeze(allFiringCOM{mouseI}(:,dayPairsForward(dpI,2),:));
+        COMchanges{mouseI}{dpI} = abs(comsB - comsA); %(cell, cond)
+    
+        %Ultimately want to compare this to a shuffle, is diff greater than suffle
+        
+        switch mouseI
+            case num2cell(oneEnvMice)'
+                oneEnvCOMchanges{dpI} = [oneEnvCOMchanges{dpI}; COMchanges{mouseI}{dpI}];%(cell, cond)
+            case num2cell(twoEnvMice)'
+                twoEnvCOMchanges{dpI} = [twoEnvCOMchanges{dpI}; COMchanges{mouseI}{dpI}];
+        end
+    end
+end
+histBins = 0:1:10;
+oneEnvCOMchangeProps = []; twoEnvCOMchangeProps = [];
+oneEnvCOMchangeCDF = []; twoEnvCOMchangeCDF = [];
+for dpI = 1:numDayPairs
+    for condI = 1:numConds
+        oneEnvCOMchangeProps{dpI}{condI} = histcounts(oneEnvCOMchanges{dpI}(:,condI),histBins) / sum(~isnan(oneEnvCOMchanges{dpI}(:,condI)));
+        twoEnvCOMchangeProps{dpI}{condI} = histcounts(twoEnvCOMchanges{dpI}(:,condI),histBins) / sum(~isnan(twoEnvCOMchanges{dpI}(:,condI)));
+        
+        oneEnvCOMchangeCDF{dpI}{condI} = CDFfromHistcounts(oneEnvCOMchangeProps{dpI}{condI});
+        twoEnvCOMchangeCDF{dpI}{condI} = CDFfromHistcounts(twoEnvCOMchangeProps{dpI}{condI});
+    end
+end
+
+%Rate Remapping:
+maxRates = []; meanRates = []; maxRateDiffs = []; meanRateDiffs = []; pctChangeMax = []; pctChangeMean = [];
+oneEnvMaxRateDiffs = cell(numDayPairs,1); oneEnvMaxRatePctChange = cell(numDayPairs,1);
+twoEnvMaxRateDiffs = cell(numDayPairs,1); twoEnvMaxRatePctChange = cell(numDayPairs,1);
+oneEnvMeanRateDiffs = cell(numDayPairs,1); oneEnvMeanRatePctChange = cell(numDayPairs,1);
+oneEnvFiredEither = cell(numDayPairs,1); twoEnvFiredEither = cell(numDayPairs,1);
+twoEnvMeanRateDiffs = cell(numDayPairs,1); twoEnvMeanRatePctChange = cell(numDayPairs,1);
+for mouseI = 1:numMice
+    maxRates{mouseI} = cell2mat(cellfun(@max,cellTMap_unsmoothed{mouseI},'UniformOutput',false));
+    for dpI = 1:numDayPairs
+        ratesA = squeeze(maxRates{mouseI}(:,dayPairsForward(dpI,1),:));
+        ratesB = squeeze(maxRates{mouseI}(:,dayPairsForward(dpI,2),:));
+        ratesAll = [];
+        ratesAll(:,:,1) = ratesA; 
+        ratesAll(:,:,2) = ratesB; 
+        firedEither = sum(ratesAll,3)>0;
+        maxRateDiffs{mouseI}{dpI} = max(ratesAll,[],3) - min(ratesAll,[],3);
+        pctChangeMax{mouseI}{dpI} = maxRateDiffs{mouseI}{dpI} ./ max(ratesAll,[],3);
+        
+        switch mouseI
+            case num2cell(oneEnvMice)'
+                oneEnvMaxRateDiffs{dpI} = [oneEnvMaxRateDiffs{dpI}; maxRateDiffs{mouseI}{dpI}];%(cell, cond)
+                oneEnvMaxRatePctChange{dpI} = [oneEnvMaxRatePctChange{dpI}; pctChangeMax{mouseI}{dpI}];
+            case num2cell(twoEnvMice)'
+                twoEnvMaxRateDiffs{dpI} = [twoEnvMaxRateDiffs{dpI}; maxRateDiffs{mouseI}{dpI}];
+                twoEnvMaxRatePctChange{dpI} = [twoEnvMaxRatePctChange{dpI}; pctChangeMax{mouseI}{dpI}];
+        end
+    end
+    
+    meanRates{mouseI} = cell2mat(cellfun(@mean,cellTMap_unsmoothed{mouseI},'UniformOutput',false));
+    for dpI = 1:numDayPairs
+        mratesA = squeeze(meanRates{mouseI}(:,dayPairsForward(dpI,1),:));
+        mratesB = squeeze(meanRates{mouseI}(:,dayPairsForward(dpI,2),:));
+        mratesAll = [];
+        mratesAll(:,:,1) = mratesA; 
+        mratesAll(:,:,2) = mratesB;
+        mfiredEither = sum(mratesAll,3)>0;
+        meanRateDiffs{mouseI}{dpI} = max(mratesAll,[],3) - min(mratesAll,[],3);
+        pctChangeMean{mouseI}{dpI} = meanRateDiffs{mouseI}{dpI} ./ max(mratesAll,[],3);
+        
+        switch mouseI
+            case num2cell(oneEnvMice)'
+                oneEnvMeanRateDiffs{dpI} = [oneEnvMeanRateDiffs{dpI}; meanRateDiffs{mouseI}{dpI}];%(cell, cond)
+                oneEnvMeanRatePctChange{dpI} = [oneEnvMeanRatePctChange{dpI}; pctChangeMean{mouseI}{dpI}];
+                oneEnvFiredEither{dpI} = [oneEnvFiredEither{dpI}; mfiredEither];
+            case num2cell(twoEnvMice)'
+                twoEnvMeanRateDiffs{dpI} = [twoEnvMeanRateDiffs{dpI}; meanRateDiffs{mouseI}{dpI}];
+                twoEnvMeanRatePctChange{dpI} = [twoEnvMeanRatePctChange{dpI}; pctChangeMean{mouseI}{dpI}];
+                twoEnvFiredEither{dpI} = [twoEnvFiredEither{dpI}; mfiredEither];
+        end
+    end
+end
+
+%Arm preference
+oneEnvSameArms = cell(numDayPairs,1);
+twoEnvSameArms = cell(numDayPairs,1);
+for mouseI = 1:numMice
+    [armPref{mouseI}] = CondFiringPreference(cellTMap_unsmoothed{mouseI});
+    firedAtAll = sum(trialReli{mouseI},3)>0;
+    
+    for dpI = 1:numDayPairs
+        firedBothDays = sum(firedAtAll(:,dayPairsForward(dpI,:)),2)==2;
+        armsA = armPref{mouseI}(firedBothDays,dayPairsForward(dpI,1));
+        armsB = armPref{mouseI}(firedBothDays,dayPairsForward(dpI,2));
+        
+        sameArm = armsA==armsB;
+        sameArmPct(mouseI,dpI) = sum(sameArm)/length(sameArm);
+        switch mouseI
+            case num2cell(oneEnvMice)'
+                oneEnvSameArms{dpI} = [oneEnvSameArms{dpI}; sameArm];
+            case num2cell(twoEnvMice)'
+                twoEnvSameArms{dpI} = [twoEnvSameArms{dpI}; sameArm];
+        end
+    end
+end
+   
+oneEnvSameArmsPct = cell2mat(cellfun(@(x) sum(x)/length(x),oneEnvSameArms,'UniformOutput',false));
+twoEnvSameArmsPct = cell2mat(cellfun(@(x) sum(x)/length(x),twoEnvSameArms,'UniformOutput',false));
