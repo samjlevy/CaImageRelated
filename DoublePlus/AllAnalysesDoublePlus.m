@@ -132,7 +132,8 @@ for cpI = 1:numCondPairs
         %sepMinusInt{dI,cpI} = twoEnvMicePVcorrsMeans{dpI,cpI} - oneEnvMicePVcorrsMeans{dpI,cpI};
         
         for binI = 1:numBins
-            %[pPVs{dpI,cpI}(binI),hPVs{dpI,cpI}(binI)] = ranksum(oneEnvMicePVcorrs{dpI,cpI}(:,binI),twoEnvMicePVcorrs{dpI,cpI}(:,binI));
+            %[pPVs{dpI,cpI}(binI),hPVs{dpI,cpI}(binI)] = ranksum(oneEnvMicePVcorrs{dpI,cpI}(:,binI),...
+            %twoEnvMicePVcorrs{dpI,cpI}(:,binI));
         end
         
         diffRank{dpI,cpI} = PermutationTestSL(oneEnvMicePVcorrs{dpI,cpI},twoEnvMicePVcorrs{dpI,cpI},numPerms);
@@ -175,6 +176,7 @@ for mouseI = 1:numMice
         end
     end
 end
+disp('Done making corrs')
 
 oneEnvMiceTrimPVcorrs = cell(numDayChunks,numDayPairs,numCondPairs);
 oneEnvMiceTrimPVcorrsMeans = cell(numDayChunks,numDayPairs,numCondPairs);
@@ -194,7 +196,8 @@ for cpI = 1:numCondPairs
         
         sameMinusDiffTrim{dcI,dpI,cpI} = oneEnvMiceTrimPVcorrsMeans{dcI,dpI,cpI} - twoEnvMiceTrimPVcorrsMeans{dcI,dpI,cpI};
         
-        diffRankTrim{dcI,dpI,cpI} = PermutationTestSL(oneEnvMiceTrimPVcorrs{dcI,dpI,cpI},twoEnvMiceTrimPVcorrs{dcI,dpI,cpI},numPerms);
+        diffRankTrim{dcI,dpI,cpI} = PermutationTestSL(oneEnvMiceTrimPVcorrs{dcI,dpI,cpI},...
+            twoEnvMiceTrimPVcorrs{dcI,dpI,cpI},numPerms);
         isSigTrim{dcI,dpI,cpI} = diffRankTrim{dcI,dpI,cpI} > (1-pThresh);
     end
 end
@@ -221,7 +224,8 @@ for mouseI = 1:numMice
         end
     end
 
-    [rateDiffPhase{mouseI}, rateSplitPhase{mouseI}, meanRateDiffPhase{mouseI}, DIeachPhase{mouseI}, DImeanPhase{mouseI}, DIallPhase{mouseI}] =...
+    [rateDiffPhase{mouseI}, rateSplitPhase{mouseI}, meanRateDiffPhase{mouseI},...
+        DIeachPhase{mouseI}, DImeanPhase{mouseI}, DIallPhase{mouseI}] =...
         LookAtSplitters4(cellTMap_unsmoothed{mouseI}, condPairs, []);
     
     if exist(shuffDirFull,'dir')~=7
@@ -256,7 +260,8 @@ for mouseI = 1:numMice
         end
     end
 
-    [rateDiffSame{mouseI}, rateSplitSame{mouseI}, meanRateDiffSame{mouseI}, DIeachSame{mouseI}, DImeanSame{mouseI}, DIallSame{mouseI}] =...
+    [rateDiffSame{mouseI}, rateSplitSame{mouseI}, meanRateDiffSame{mouseI},...
+        DIeachSame{mouseI}, DImeanSame{mouseI}, DIallSame{mouseI}] =...
         LookAtSplitters4(cellTMap_unsmoothed{mouseI}, condPairs, []);
     
     if exist(shuffDirFull,'dir')~=7
@@ -391,8 +396,10 @@ oneEnvCOMchangeProps = []; twoEnvCOMchangeProps = [];
 oneEnvCOMchangeCDF = []; twoEnvCOMchangeCDF = [];
 for dpI = 1:numDayPairs
     for condI = 1:numConds
-        oneEnvCOMchangeProps{dpI}{condI} = histcounts(oneEnvCOMchanges{dpI}(:,condI),histBins) / sum(~isnan(oneEnvCOMchanges{dpI}(:,condI)));
-        twoEnvCOMchangeProps{dpI}{condI} = histcounts(twoEnvCOMchanges{dpI}(:,condI),histBins) / sum(~isnan(twoEnvCOMchanges{dpI}(:,condI)));
+        oneEnvCOMchangeProps{dpI}{condI} = histcounts(oneEnvCOMchanges{dpI}(:,condI),histBins)...
+            / sum(~isnan(oneEnvCOMchanges{dpI}(:,condI)));
+        twoEnvCOMchangeProps{dpI}{condI} = histcounts(twoEnvCOMchanges{dpI}(:,condI),histBins)...
+            / sum(~isnan(twoEnvCOMchanges{dpI}(:,condI)));
         
         oneEnvCOMchangeCDF{dpI}{condI} = CDFfromHistcounts(oneEnvCOMchangeProps{dpI}{condI});
         twoEnvCOMchangeCDF{dpI}{condI} = CDFfromHistcounts(twoEnvCOMchangeProps{dpI}{condI});
@@ -477,3 +484,58 @@ end
    
 oneEnvSameArmsPct = cell2mat(cellfun(@(x) sum(x)/length(x),oneEnvSameArms,'UniformOutput',false));
 twoEnvSameArmsPct = cell2mat(cellfun(@(x) sum(x)/length(x),twoEnvSameArms,'UniformOutput',false));
+
+% Cells that totally stop/start firing
+regConfirmed = 0;
+oneEnvStoppedFiring = cell(numDayPairs,1);
+oneEnvStartedFiring = cell(numDayPairs,1);
+twoEnvStoppedFiring = cell(numDayPairs,1);
+twoEnvStartedFiring = cell(numDayPairs,1);
+for mouseI = 1:numMice
+    firedThisCond = trialReli{mouseI}>0;
+    
+    for dpI = 1:numDayPairs
+        firedA = squeeze(firedThisCond(:,dayPairsForward(dpI,1),:));
+        firedB = squeeze(firedThisCond(:,dayPairsForward(dpI,2),:));
+        
+        firedAll = []; firedAll(:,:,1) = firedA; firedAll(:,:,2) = firedB;
+        firedOne = sum(firedAll,3)==1;
+        
+        stoppedFiring = firedA & firedOne;
+        startedFiring = firedB & firedOne;
+        
+        %Make sure both cells were there
+        defHaveTheCells = cellSSI{mouseI}>0;
+        haveCellsBothDays = sum(defHaveTheCells(:,dayPairsForward(dpI,:)),2)==2;
+        dayPairMaxCells{mouseI}{dpI} = max(sum(defHaveTheCells(:,dayPairsForward(dpI,:)),1));
+        goodReg(mouseI,dpI) = sum(haveCellsBothDays,1)/size(cellSSI{mouseI},1);
+        if regConfirmed==1
+            stoppedFiring(haveCellsBothDays==0) = 0;
+            startedFiring(haveCellsBothDays==0) = 0;
+            
+            stoppedFiringAll(mouseI,dpI) = sum(sum(stoppedFiring))/(sum(haveCellsBothDays,1)*numConds);
+            startedFiringAll(mouseI,dpI) = sum(sum(startedFiring))/(sum(haveCellsBothDays,1)*numConds);
+        end
+            %could also do this for started or stopped in each mouse independently, add them up in the section vvvvv
+        
+        %stoppedFiringAll(mouseI,dpI) = sum(sum(stoppedFiring))/(size(stoppedFiring,1)*numConds);
+        %startedFiringAll(mouseI,dpI) = sum(sum(startedFiring))/(size(startedFiring,1)*numConds);
+         %could be normalized by dayPairMaxCells or defHaveboth
+        switch mouseI
+            case num2cell(oneEnvMice)'
+                oneEnvStoppedFiring{dpI} = [oneEnvStoppedFiring{dpI}; stoppedFiring];
+                oneEnvStartedFiring{dpI} = [oneEnvStartedFiring{dpI}; startedFiring];
+            case num2cell(twoEnvMice)'
+                twoEnvStoppedFiring{dpI} = [twoEnvStoppedFiring{dpI}; stoppedFiring];
+                twoEnvStartedFiring{dpI} = [twoEnvStartedFiring{dpI}; startedFiring];
+        end
+        
+        
+    end
+end
+ 
+
+oneEnvStoppedFiringPct = cell2mat(cellfun(@(x) sum(sum(x))/(size(x,1)*numConds),oneEnvStoppedFiring,'UniformOutput',false));
+oneEnvStartedFiringPct = cell2mat(cellfun(@(x) sum(sum(x))/(size(x,1)*numConds),oneEnvStartedFiring,'UniformOutput',false));
+twoEnvStoppedFiringPct = cell2mat(cellfun(@(x) sum(sum(x))/(size(x,1)*numConds),twoEnvStoppedFiring,'UniformOutput',false));
+twoEnvStartedFiringPct = cell2mat(cellfun(@(x) sum(sum(x))/(size(x,1)*numConds),twoEnvStartedFiring,'UniformOutput',false));

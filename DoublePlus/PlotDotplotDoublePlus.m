@@ -15,14 +15,16 @@ end
 
 if ~strcmpi(figOrientation,'individual')
     figHand=figure('Position',figPos);
-    blkSize = 5;
-    redSize = 8;
+    blkSize = 8;
+    redSize = 11;
 end
 
 if strcmpi(figOrientation,'individual')
    blkSize = 3;
    redSize = 5;    
 end
+
+blkColor = [0.6510    0.6510    0.6510];
 
 for sessI = 1:3
     bStarts = []; bStops = [];
@@ -43,7 +45,7 @@ for sessI = 1:3
     else
         subplot(numRows,numCols,sessI)
     end
-    plot(xPos,yPos,'.k','MarkerSize',blkSize)
+    plot(xPos,yPos,'.','MarkerSize',blkSize,'Color',blkColor)
     hold on
     plot(xPos(PSAhere),yPos(PSAhere),'.r','MarkerSize',redSize)
     axis equal
