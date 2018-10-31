@@ -51,3 +51,12 @@ for mouseI = 1:numMice
     end
     
 end
+
+%Make tbt for arms
+for mouseI = 1:numMice
+    load(fullfile(MouseRefFolder{mouseI},'daybyday.mat'))
+    fixedEpochs = AdjustArmXboundsDNMP(daybyday);%, stemXlims
+    armEpochs = fixedEpochs;
+    save(fullfile(MouseRefFolder{mouseI},'ArmEpochsCorrected.mat'),'armEpochs')
+end
+    

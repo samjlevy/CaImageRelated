@@ -244,7 +244,7 @@ figure;
         allCorrsDiff = twoEnvMicePVcorrs{dpI,cpI};
         meanCorrDiff = twoEnvMicePVcorrsMeans{dpI,cpI};
 
-        if strcmpi(condNames{cnI},'west')
+        if strcmpi(condNames{cpI},'west')
             allCorrsSame = fliplr(allCorrsSame); meanCorrSame = fliplr(meanCorrSame);
             allCorrsDiff = fliplr(allCorrsDiff); meanCorrDiff = fliplr(meanCorrDiff);
         end
@@ -272,15 +272,36 @@ end
 %Color scaling by positive or negative
 %same - different: if different is higher, than score is negative; if
 %different is lower, score is positive
-
+locations = [0.1 0.5 0.85];
+colors = [1.0000    0.4000    0.2000;
+          1.0000    1.0000         0;
+               0    0.4510    0.7412];
+locations = [0 0.15 0.3 0.5 0.7 0.85 1];
+colors = [0.0000    0.0    0.000;
+            1 0.0 0;
+            0.9    0    0;
+            1 1 1;
+            0.3020    0.7490    0.9294;
+            0    0.4510    0.7412;
+            0 0 0];
+        
+locations = [0 0.5 1];
+colors = [1.0000    0.0    0.000;
+            1 1 1;
+            0    0.45   0.74];
+           
+newGradient = GradientMaker(colors,locations);
+           
 for dpI = 1:size(dayPairs,1)
 figHand = PlusMazePVcorrHeatmap({oneEnvMicePVcorrsMeans{dpI,:}},condNames,armAlignment,[],[],1);
 title(['Mean 1-Env PV corrs, day pair ' num2str(dayPairs(dpI,:))])
+colormap(newGradient);
 end
 
 for dpI = 1:size(dayPairs,1)
 figHand = PlusMazePVcorrHeatmap({twoEnvMicePVcorrsMeans{dpI,:}},condNames,armAlignment,[],[],1);
 title(['Mean 2-Env PV corrs, day pair ' num2str(dayPairs(dpI,:))])
+colormap(newGradient);
 end
 
 
@@ -288,47 +309,24 @@ end
 %Color scaling by positive or negative
 %same - different: if different is higher, than score is negative; if
 %different is lower, score is positive
+locations = [0 0.5 1];
+colors = [1.0000    0.0    0.000;
+            1 1 0;
+            0.2   0.9   0.2];
+           
+newGradient = GradientMaker(colors,locations);
 
 for dpI = 1:size(dayPairs,1)
-figHand = PlusMazePVcorrHeatmap({diffMinusSame{dpI,:}},condNames,armAlignment,{diffRank{dpI,:}},pThresh,1);
+figHand = PlusMazePVcorrHeatmap({sameMinusDiff{dpI,:}},condNames,armAlignment,{diffRank{dpI,:}},pThresh,1);
 title(['Difference of Mean PV corrs, day pair ' num2str(dayPairs(dpI,:))])
+colormap(hot); 
+caxis([-0.4 0])
 end
 
 
 
 %% PV corr by chunk of trials
 
-for dpI = 1:numDayPairs
-
-for dcI = 1:numDayChunks
-figure; 
-    for cpI = 1:4
-        subplot(2,2,cpI); hold on
-        allCorrsSame = oneEnvMiceTrimPVcorrs{dcI,dpI,cpI};
-        meanCorrSame = oneEnvMiceTrimPVcorrsMeans{dcI,dpI,cpI};
-        allCorrsDiff = twoEnvMiceTrimPVcorrs{dcI,dpI,cpI};
-        meanCorrDiff = twoEnvMiceTrimPVcorrsMeans{dcI,dpI,cpI};
-
-        plot(repmat(xBins,length(oneEnvMice),1),allCorrsSame,'.c','MarkerSize',4)
-        plot(repmat(xBins,length(twoEnvMice),1),allCorrsDiff,'.m','MarkerSize',4)
-
-        plot(xBins,meanCorrSame,'.-b','MarkerSize',6)
-        plot(xBins,meanCorrDiff,'.-r','MarkerSize',6)
-
-        ylabel('Correlation Value')
-        switch condNames{cpI}
-            case {'north','south'} 
-                xlabel('START      CENTER')
-            case {'east','west'}
-                xlabel('CENTER     REWARD')
-        end
-        title(['PVcorrs ' condNames{cpI} ' arm'])
-        
-    end
-    suptitleSL(['Day pair ' num2str(dayPairs(dpI,:)) ', trial chunk ' num2str(dcI) ', red=diff blue=same'])
-end
-
-end
 
 for dcI = 1:numDayChunks
     for dpI = 1:size(dayPairs,1)
@@ -383,6 +381,38 @@ for dpI = 1:numDayPairs
 end
 suptitleSL('Mean Within Arm Correlation Difference by Portion of Session')
         
+
+for dpI = 1:numDayPairs
+
+for dcI = 1:numDayChunks
+figure; 
+    for cpI = 1:4
+        subplot(2,2,cpI); hold on
+        allCorrsSame = oneEnvMiceTrimPVcorrs{dcI,dpI,cpI};
+        meanCorrSame = oneEnvMiceTrimPVcorrsMeans{dcI,dpI,cpI};
+        allCorrsDiff = twoEnvMiceTrimPVcorrs{dcI,dpI,cpI};
+        meanCorrDiff = twoEnvMiceTrimPVcorrsMeans{dcI,dpI,cpI};
+
+        plot(repmat(xBins,length(oneEnvMice),1),allCorrsSame,'.c','MarkerSize',4)
+        plot(repmat(xBins,length(twoEnvMice),1),allCorrsDiff,'.m','MarkerSize',4)
+
+        plot(xBins,meanCorrSame,'.-b','MarkerSize',6)
+        plot(xBins,meanCorrDiff,'.-r','MarkerSize',6)
+
+        ylabel('Correlation Value')
+        switch condNames{cpI}
+            case {'north','south'} 
+                xlabel('START      CENTER')
+            case {'east','west'}
+                xlabel('CENTER     REWARD')
+        end
+        title(['PVcorrs ' condNames{cpI} ' arm'])
+        
+    end
+    suptitleSL(['Day pair ' num2str(dayPairs(dpI,:)) ', trial chunk ' num2str(dcI) ', red=diff blue=same'])
+end
+
+end
 
 %% Splitters plot
 
