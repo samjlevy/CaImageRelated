@@ -1,6 +1,7 @@
 function adjEpochs = AdjustArmXboundsDNMP(daybyday)%, stemXlims
 rightDirThresh = 0.75;
 armXlims = [5 35];
+armMid = mean(armXlims)
 
 numSess = length(daybyday.all_x_adj_cm);
 
@@ -42,8 +43,28 @@ for sessI = 1:numSess
             xPosHere = daybyday.all_x_adj_cm{sessI}(framesHere);
             yPosHere = daybyday.all_y_adj_cm{sessI}(framesHere);
             
-            newEpochs(ee).starts(lapI) = framesHere(find(xPosHere > max(armXlims),1,'last'));
-            newEpochs(ee).stops(lapI) = framesHere(find(xPosHere < min(armXlims),1,'first'));
+            startPlus = framesHere(find(xPosHere < max(armXlims),1,'first'));
+            startFrame = startPlus - 1;
+            %startFrame = framesHere(find(xPosHere > max(armXlims),1,'last'));
+            if isempty(startFrame)
+                %startFrame = framesHere(1);
+                %should probably plot the lap too
+                keyboard
+            end
+            newEpochs(ee).starts(lapI) = startFrame;
+            
+            stopPlus = framesHere(find(xPosHere < min(armXlims),1,'first'));
+            stopFrame = stopPlus; %-1
+            %stopFrame = framesHere(find(xPosHere < min(armXlims),1,'first'));
+            if isempty(startFrame)
+                %stopFrame = framesHere(end);
+                keyboard
+            end
+            newEpochs(ee).stops(lapI) = stopFrame;
+            
+            if startFrame > stopFrame
+                keyboard
+            end
             %{
             gf = figure;
             plot(daybyday.all_x_adj_cm{sessI},daybyday.all_y_adj_cm{sessI},'.k')
@@ -70,9 +91,12 @@ for sessI = 1:numSess
     end
     
     %Manually check for points outside of bounds
+    fixedEps = [];
     for aa = 1:4
-        [fixedEpochs(aa), reporter{aa}] = FindBadLaps(...
+        [fixedEps{aa}, reporter{aa}] = FindBadLaps(...
             daybyday.all_x_adj_cm{sessI}, daybyday.all_y_adj_cm{sessI}, newEpochs(aa));
+        fixedEpochs(aa).starts = fixedEps{aa}.starts;
+        fixedEpochs(aa).stops = fixedEps{aa}.stops;
     end
     
     %Check laps are generally going in the right direction
