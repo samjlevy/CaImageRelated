@@ -1,10 +1,20 @@
 function [trialbytrial, allfiles, sortedSessionInds, realdays]= MakeTrialByTrial2(basePath,taskSegment,correctOnly)
 %Task segment has to be one of the options in GetBlockDNMPbehavior
 
+cd(basePath)
 load(fullfile(basePath,'daybyday.mat'))
 
 numSess = length(daybyday.all_x_adj_cm);
 
+useExtFile = false;
+if strcmpi(taskSegment,'matFile')
+    taskSegment = 'whole_lap';
+    useExtFile = true;
+    [efName,efPath] = uigetfile;
+    extFile = load(fullfile(efPath,efName));
+    extFields = fieldnames(extFile);
+    extBounds = extFile(1).(extFields{1});
+end
 
 %First go through and gather all the data
 for sessI = 1:numSess
@@ -12,10 +22,27 @@ for sessI = 1:numSess
     [bounds(sessI), ~, ~, ~, correct, lapNum]...
         = GetBlockDNMPbehavior2( daybyday.frames{sessI}, daybyday.txt{sessI},...
         taskSegment, length(daybyday.all_x_adj_cm{sessI}));
-  
-    %Reorganize it
+    
     ss = fieldnames(bounds(sessI));
-    for block = 1:4
+    if useExtFile == true        
+        if length(ss) == length(extBounds{sessI})
+            for blck = 1:length(ss)
+                if size(bounds(sessI).(ss{blck}),1) == length(extBounds{sessI}(blck).starts) 
+                     bounds(sessI).(ss{blck}) = [extBounds{sessI}(blck).starts(:) extBounds{sessI}(blck).stops(:)];
+                else
+                    disp('wrong length number of timestamps')
+                    keyboard
+                end
+            end
+        else
+            disp('wrong number of bounds')
+            keyboard
+        end
+    end
+    
+    %Reorganize it
+    
+    for block = 1:length(ss)
         correctBounds(sessI).(ss{block}) =...
             [bounds(sessI).(ss{block})(correct.(ss{block}),1)...
             bounds(sessI).(ss{block})(correct.(ss{block}),2)];

@@ -21,6 +21,11 @@ switch block_type
         [ forced_stops ] = CondExcelParseout( frames, txt, 'Forced Choice', 0 );
         [ free_starts ] = CondExcelParseout( frames, txt, 'Lift barrier (start of free choice)', 0);
         [ free_stops ] = CondExcelParseout( frames, txt, 'Free Choice', 0);
+    case 'whole_lap'
+        [ forced_starts ] = CondExcelParseout( frames, txt, 'Start on maze (start of Forced', 0 );
+        [ forced_stops ] = CondExcelParseout( frames, txt, 'Enter Delay', 0 );
+        [ free_starts ] = CondExcelParseout( frames, txt, 'Lift barrier (start of free choice)', 0);
+        [ free_stops ] = CondExcelParseout( frames, txt, 'Leave Maze', 0 );
     case 'arm_min' %choice made through reward get
         [ forced_starts ] = CondExcelParseout( frames, txt, 'Start on maze (start of Forced', 0 );
         [ forced_stops ] = CondExcelParseout( frames, txt, 'ForcedChoiceEnter', 0 );
@@ -54,7 +59,7 @@ end
 
 %Make include/exclude arrays
 switch block_type
-    case {'stem_only', 'arm_min', 'whole_arm', 'stem_extended'}
+    case {'stem_only', 'arm_min', 'whole_arm', 'stem_extended','whole_lap'}
         start_stop_struct.study_l = [forced_starts(left_forced), forced_stops(left_forced)];
         start_stop_struct.study_r = [forced_starts(right_forced), forced_stops(right_forced)];
         start_stop_struct.test_l = [free_starts(left_free), free_stops(left_free)];

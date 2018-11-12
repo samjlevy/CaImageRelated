@@ -58,5 +58,9 @@ for mouseI = 1:numMice
     fixedEpochs = AdjustArmXboundsDNMP(daybyday);%, stemXlims
     armEpochs = fixedEpochs;
     save(fullfile(MouseRefFolder{mouseI},'ArmEpochsCorrected.mat'),'armEpochs')
+    
+    [armtrialbytrial, allfiles, sortedSessionInds, realdays] = MakeTrialByTrial2(MouseRefFolder{mouseI},'matFile',correctOnly);
+    savedir = uigetdir(cd,'Choose directory to save trialbytrial');
+    save(fullfile(savedir,'armTrialbytrial.mat'),'armtrialbytrial','allfiles','sortedSessionInds','realdays')
 end
     

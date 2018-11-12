@@ -20,6 +20,9 @@ if columnExists == 0
         case 'FreeChoiceEnter'
             columnLabel = 'Free Stem End';
             disp('Switched label')
+        case 'Enter Delay'
+            columnLabel = 'Enter delay zone';
+            disp('Switched label')
         otherwise
             disp('Not going to find this column')
     end
