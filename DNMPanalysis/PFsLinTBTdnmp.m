@@ -25,7 +25,11 @@ armAlignment = GetDoublePlusArmAlignment;
 sessions = unique(trialbytrial(1).sessID);
 numSess = length(sessions);
 numCells = length(trialbytrial(1).trialPSAbool{1,1});
-numConds = 4;
+
+if isempty(condPairs)
+    condPairs = [1:length(trialbytrial)]';
+end
+numConds = size(condPairs,1);
 
 %if isempty(trialReli)
 %    trialReli = ones(numCells,numSess,length(trialbytrial));
@@ -37,9 +41,6 @@ numConds = 4;
 saveThis = 1;
 if isempty(saveName)
     saveThis = 0;
-end
-if isempty(condPairs)
-    condPairs = [1:length(trialbytrial)]';
 end
 
 OccMap = cell(numConds, numSess);

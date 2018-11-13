@@ -114,7 +114,7 @@ for mouseI = 1:numMice
             [~, ~, ~, ~, ~, ~, ~] =...
             PFsLinTBTdnmp(cellTBTarm{mouseI}, armBinEdges, minspeed, saveName, false,condPairs);
        case 2
-            disp(['found pooled placefields for ' mice{mouseI} ', all good'])
+            disp(['found pooled placefields for arms for ' mice{mouseI} ', all good'])
     end
     
     load(saveName,'TMap_unsmoothed','TMap_zRates')
@@ -124,7 +124,7 @@ end
 
 
 for mouseI = 1:numMice
-     numTrialCells{mouseI} = CellsActiveEachTrial(cellTBT{mouseI};
+     numTrialCells{mouseI} = CellsActiveEachTrial(cellTBT{mouseI});
      for condI = 1:4
      numTrialCellsPctTotal{mouseI}{condI} = numTrialCells{mouseI}{condI}/numCells(mouseI);
      numTrialCellsPctDay{mouseI}{condI} = numTrialCells{mouseI}{condI}./sum(cellSSI{mouseI}>0,1);
@@ -149,42 +149,48 @@ numShuffles = 1000;
 %numShuffles = 100;
 shuffThresh = 1 - pThresh;
 binsMin = 1;
-shuffleDirLR = 'shuffleLR2';
-shuffleDirST = 'shuffleST2';
+shuffleDirLR = 'splitters';
+shuffleDir = 'splitters';
+shuffleDirST = 'splitters';
 
 %Get left/right splitting
 for mouseI = 1:numMice
     condPairsLR = [1 2];
-    shuffDirFullLR = fullfile(mainFolder,mice{mouseI},shuffleDirLR);
+    shuffleDirLR = fullfile(mainFolder,mice{mouseI},shuffleDir);
     [rateDiffLR{mouseI}, rateSplitLR{mouseI}, meanRateDiffLR{mouseI}, DIeachLR{mouseI}, DImeanLR{mouseI}, DIallLR{mouseI}] =...
         LookAtSplitters4(cellPooledTMap_unsmoothed{mouseI}, condPairsLR, []);
-    splitterFileLR = fullfile(shuffDirFullLR,'splittersLR.mat');
-    if exist(splitterFileLR,'file')==2
-        load(splitterFileLR)
-    else
+    splitterFileLR = fullfile(shuffleDirLR,'splittersLR.mat');
+    if exist(splitterFileLR,'file')==0
         disp(['did not find LR splitting for mouse ' num2str(mouseI) ', making now'])
-        [~, binsAboveShuffleLR, thisCellSplitsLR] = SplitterWrapper3(cellTBT{mouseI},'leftright',...
-             'pooled', numShuffles, shuffDirFullLR, xlims, cmperbin, minspeed, [], shuffThresh, binsMin);
+        %[~, binsAboveShuffleLR, thisCellSplitsLR] = SplitterWrapper4(cellTBT{mouseI},'leftright',...
+        %     'pooled', numShuffles, shuffDirFullLR, xlims, cmperbin, minspeed, [], shuffThresh, binsMin);
+        tic
+        [binsAboveShuffleLR, thisCellSplitsLR] = SplitterWrapper4(cellTBT{mouseI}, cellPooledTMap_unsmoothed{mouseI}, 'leftright',...
+            'pooled', numShuffles, stemBinEdges, minspeed, shuffThresh, binsMin);
         save(splitterFileLR,'binsAboveShuffleLR','thisCellSplitsLR')
+        toc
     end
+    load(splitterFileLR)
+    
     LRbinsAboveShuffle{mouseI} = binsAboveShuffleLR; 
     LRthisCellSplits{mouseI} = thisCellSplitsLR;
+    
     disp(['done Left/Right splitters mouse ' num2str(mouseI)])
 end
 
 %Get study/test splitting
 for mouseI = 1:numMice
     condPairsST = [3 4];
-    shuffDirFullST = fullfile(mainFolder,mice{mouseI},shuffleDirST);
+    shuffDirST = fullfile(mainFolder,mice{mouseI},shuffleDirST);
     [rateDiffST{mouseI}, rateSplitST{mouseI}, meanRateDiffST{mouseI}, DIeachST{mouseI}, DImeanST{mouseI}, DIallST{mouseI}] =...
         LookAtSplitters4(cellPooledTMap_unsmoothed{mouseI}, condPairsST, []);
-    splitterFileST = fullfile(shuffDirFullST,'splittersST.mat');
+    splitterFileST = fullfile(shuffDirST,'splittersST.mat');
     if exist(splitterFileST,'file')==2
         load(splitterFileST)
     else
         disp(['did not find ST splitting for ' num2str(mouseI) ', making now'])
         [~, binsAboveShuffleST, thisCellSplitsST] = SplitterWrapper3(cellTBT{mouseI},'studytest',...
-             'pooled', numShuffles, shuffDirFullST, xlims, cmperbin, minspeed, [], shuffThresh, binsMin);
+             'pooled', numShuffles, shuffDirST, xlims, cmperbin, minspeed, [], shuffThresh, binsMin);
         save(splitterFileST,'binsAboveShuffleST','thisCellSplitsST')
     end
     STbinsAboveShuffle{mouseI} = binsAboveShuffleST; 

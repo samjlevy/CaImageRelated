@@ -21,7 +21,7 @@ for sessI = 1:length(sessions)
         whichTrials{aa} = find(trialbytrial(aa).sessID==sessions(sessI));
     end
     moreTrials = max(howManyTrials);
-    if length(dimShuffle)==1
+    if size(dimShuffle,1)==1
         switch dimShuffle
             case {'direction','leftright'}
                 useSess = [lStudy rStudy lTest rTest];
@@ -112,7 +112,7 @@ for sessJ = 1:length(sessions)
     end
 end
 
-if length(dimShuffle)>1
+if size(dimShuffle,1)>1
     condShuffles = mat2cell(shuffTBTassign,size(shuffTBTassign,1),ones(1,4));
     shuffConds = [];
     allNamesHere = {trialbytrial(:).name};
