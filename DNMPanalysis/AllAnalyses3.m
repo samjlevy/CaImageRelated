@@ -179,6 +179,31 @@ for mouseI = 1:numMice
 end
 
 %Get study/test splitting
+%Get left/right splitting
+for mouseI = 1:numMice
+    condPairsST = [3 4];
+    shuffleDirST = fullfile(mainFolder,mice{mouseI},shuffleDir);
+    [rateDiffST{mouseI}, rateSplitST{mouseI}, meanRateDiffST{mouseI}, DIeachST{mouseI}, DImeanST{mouseI}, DIallST{mouseI}] =...
+        LookAtSplitters4(cellPooledTMap_unsmoothed{mouseI}, condPairsST, []);
+    splitterFileST = fullfile(shuffleDirST,'splittersST.mat');
+    if exist(splitterFileST,'file')==0
+        disp(['did not find ST splitting for mouse ' num2str(mouseI) ', making now'])
+        %[~, binsAboveShuffleLR, thisCellSplitsLR] = SplitterWrapper4(cellTBT{mouseI},'leftright',...
+        %     'pooled', numShuffles, shuffDirFullLR, xlims, cmperbin, minspeed, [], shuffThresh, binsMin);
+        tic
+        [binsAboveShuffleST, thisCellSplitsST] = SplitterWrapper4(cellTBT{mouseI}, cellPooledTMap_unsmoothed{mouseI}, 'studytest',...
+            'pooled', numShuffles, stemBinEdges, minspeed, shuffThresh, binsMin);
+        save(splitterFileST,'binsAboveShuffleST','thisCellSplitsST')
+        toc
+    end
+    load(splitterFileST)
+    
+    STbinsAboveShuffle{mouseI} = binsAboveShuffleST; 
+    STthisCellSplits{mouseI} = thisCellSplitsST;
+    
+    disp(['done Study/Test splitters mouse ' num2str(mouseI)])
+end
+
 for mouseI = 1:numMice
     condPairsST = [3 4];
     shuffDirST = fullfile(mainFolder,mice{mouseI},shuffleDirST);
@@ -224,16 +249,16 @@ end
 
 purp = [0.4902    0.1804    0.5608]; % uisetcolor
 orng = [0.8510    0.3294    0.1020];
-colorAssc = {'r'            'b'     'g'             'm'         'c'              purp     orng         'k'  };
-colorAssc = { [1 0 0]     [0 0 1]    [0 1 0]       [1 0 1]       [0 1 1]         purp     orng        [0 0 0]};
-traitLabels = {'splitLR' 'splitST' 'splitEITHER' 'splitLRonly' 'splitSTonly' 'splitBOTH' 'splitONE' 'dontSplit'};
+colorAssc = {'r'            'b'        'm'         'c'              purp     orng    'g'      'k'  };
+colorAssc = { [1 0 0]     [0 0 1]    [1 0 1]       [0 1 1]         purp     orng        [0 1 0]       [0 0 0]};
+traitLabels = {'splitLR' 'splitST'  'splitLRonly' 'splitSTonly' 'splitBOTH' 'splitONE' 'splitEITHER' 'dontSplit'};
 
 for mouseI = 1:numMice
     traitGroups{mouseI} = {splittersLR{mouseI}; splittersST{mouseI};... 
-                           splittersANY{mouseI}; ...
                            splittersLRonly{mouseI}; splittersSTonly{mouseI}; ...
                            splittersBOTH{mouseI}; ...
                            splittersOne{mouseI};... 
+                           splittersANY{mouseI}; ...
                            splittersNone{mouseI}};
                    
     traitGroupsREV{mouseI} = cellfun(@fliplr,traitGroups{mouseI},'UniformOutput',false);
@@ -248,6 +273,7 @@ pairsCompare = {'splitLR' 'splitST';...
                 'splitBOTH' 'splitONE';...
                 'splitEITHER' 'dontSplit'};
 pairsCompareInd = cell2mat(cellfun(@(x) find(strcmpi(traitLabels,x)),pairsCompare,'UniformOutput',false));
+numPairsCompare = size(pairsCompare,1);
 
 %% How many each type per day? 
 pooledSplitProp = cell(1,length(traitGroups{1}));
@@ -263,7 +289,19 @@ end
 splitPropMeans = cell2mat(cellfun(@mean,pooledSplitProp,'UniformOutput',false));
 splitPropSEMs = cell2mat(cellfun(@standarderrorSL,pooledSplitProp,'UniformOutput',false));
 
-
+% Is there a difference in the proportions each day?
+splitPropDiffsPooled = cell(numPairsCompare,1);
+for mouseI = 1:numMice
+    for pcI = 1:numPairsCompare
+        splitPropDiffs{mouseI}{pcI} = splitPropEachDay{mouseI}{pairsCompareInd(pcI,1)} - splitPropEachDay{mouseI}{pairsCompareInd(pcI,2)};
+        splitPropDiffsPooled{pcI} = [splitPropDiffsPooled{pcI} splitPropDiffs{mouseI}{pcI}];
+    end
+end
+    
+for pcJ = 1:numPairsCompare
+    [pSplitterPropDiffs(pcJ),hSplitterPropDiffs(pcJ)] = signtest(splitPropDiffsPooled{pcJ}); %h = 1 reject (different)
+end
+  
 
 %% Get changes in number of splitters over time
 %Packaging for running neatly in a big group
