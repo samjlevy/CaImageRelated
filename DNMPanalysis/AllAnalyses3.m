@@ -133,6 +133,9 @@ for mouseI = 1:numMice
 end
 
 Conds = GetTBTconds(cellTBT{1});
+
+useRealDays=1;
+
 disp('Done all setup stuff')
 %% Plot rasters for all good cells
 %Works, but probably don't accidentally run this
@@ -268,9 +271,9 @@ dayUseREV = cellfun(@fliplr,dayUse,'UniformOutput',false);
 
 disp('done splitter logicals')
 
-pairsCompare = {'splitLR' 'splitST';...
-                'splitLRonly' 'splitSTonly';...
-                'splitBOTH' 'splitONE';...
+pairsCompare = {'splitLR' 'splitST'...
+                'splitLRonly' 'splitSTonly'...
+                'splitBOTH' 'splitONE'...
                 'splitEITHER' 'dontSplit'};
 pairsCompareInd = cell2mat(cellfun(@(x) find(strcmpi(traitLabels,x)),pairsCompare,'UniformOutput',false));
 numPairsCompare = size(pairsCompare,1);
@@ -312,6 +315,15 @@ for mouseI = 1:numMice
     [splitterPctDayChangesFWD{mouseI}] = RunGroupFunction('NNplusKChange',traitGroups{mouseI},dayUse{mouseI});
     [splitterPctDayChangesREV{mouseI}] = RunGroupFunction('NNplusKChange',traitGroupsREV{mouseI},dayUseREV{mouseI});
 
+    if useRealDays==1
+        if mouseI==1; disp('Using real days'); end
+        splitterPctDayChangesFWD{mouseI}(1).dayPairs = ...
+            cellRealDays{mouseI}(splitterPctDayChangesFWD{mouseI}(1).dayPairs);
+        splitterPctDayChangesREV{mouseI}(1).dayPairs = ...
+            cellRealDays{mouseI}(splitterPctDayChangesREV{mouseI}(1).dayPairs);
+        
+    end
+        
     daysApartFWD{mouseI} = diff(splitterPctDayChangesFWD{mouseI}(1).dayPairs,1,2);
     daysApartREV{mouseI} = -1*daysApartFWD{mouseI};
     
@@ -327,19 +339,19 @@ end
 
 
 % Compare the slops of these lines to each other and zero
-splitterFitPlotDays = unique(splitterFitLine{1}(:,1));
 numPerms = 1000;
 for tgI = 1:length(traitGroups{mouseI})
     %Here's the slope of each line
     [splitterSlope(tgI,1), splitterIntercept(tgI,1), splitterFitLine{tgI}, splitterRR{tgI}] = fitLinRegSL(pooledSplitPctChangeFWD{tgI}, pooledDaysApartFWD);
     [splitterSlopeREV(tgI,1), ~, ~, splitterRR{tgI}] = fitLinRegSL(pooledSplitPctChangeREV{tgI}, pooledDaysApartREV);
+    splitterFitPlotDays = unique(splitterFitLine{1}(:,1));
     for sfpI = 1:length(splitterFitPlotDays)
         splitterFitPlotPct{tgI}(sfpI,1) = splitterFitLine{tgI}(find(splitterFitLine{tgI}==splitterFitPlotDays(sfpI),1,'first'),2);
     end
     %sameSlope = splitterSlope == splitterSlopeREV; %Rounding error a problem here
     
     %Is that slope different from a shuffle?
-    [splitterSlopeRank(tgI,1), splitterRRrank(tgI,1)] = slopeRankWrapper2(pooledSplitPctChangeFWD{tgI}, pooledDaysApartFWD, numPerms, pThresh);
+    %[splitterSlopeRank(tgI,1), splitterRRrank(tgI,1)] = slopeRankWrapper2(pooledSplitPctChangeFWD{tgI}, pooledDaysApartFWD, numPerms, pThresh);
 end
 
 
@@ -410,6 +422,7 @@ for pcI = 1:size(pairsCompareInd,1)
                                        [pooledDaysApartFWD; pooledDaysApartREV]);    
 end
 
+%% This again for Return arms
 
 
 %% Pop vector corrs

@@ -54,14 +54,14 @@ if kstest(zscore(errorA)) ==1
     disp('Error: found that residuals A not normally distributed') 
 end
 if kstest(zscore(errorB)) ==1
-    disp('Error: found that residuals A not normally distributed') 
+    disp('Error: found that residuals B not normally distributed') 
 end
 for permI = 1:1000
     [shCorr(permI),~] = corr(errorA(randperm(length(errorA))),errorB(randperm(length(errorB))),'Type','Spearman');
 end
 [eCorr,~] = corr(errorA,errorB,'Type','Spearman');
 if sum(eCorr > shCorr) > 950
-    disp('Error: found that residuals are correlated')
+    disp('Error: found that residuals A and B are correlated')
 end
 
 
