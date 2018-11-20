@@ -465,13 +465,15 @@ for pcI = 1:size(pairsCompareInd,1)
     
 end
 
-%Rank sum group as a whole
+%Rank sum group as a whole; 
 for tgI = 1:length(traitGroups{1})
-    [pValSCBall{tgI}, hValSCBall{tgI}] = ranksum(pooledSplitterComesBackFWD{tgI},pooledSplitterComesBackREV{tgI});
+    [pValSCBall{tgI}, hValSCBall{tgI}] = ranksum(pooledSplitterComesBackFWD{tgI}, pooledSplitterComesBackREV{tgI});
     [~,whichWonSCBall{tgI}] = max([mean(pooledSplitterComesBackFWD{tgI}) mean(pooledSplitterComesBackREV{tgI})]);
     %[mean(pooledSplitterComesBackFWD{tgI}) mean(pooledSplitterComesBackREV{tgI})]
     [pValSSSall{tgI}, hValSSSall{tgI}] = ranksum(pooledSplitterStillSplitterFWD{tgI},pooledSplitterStillSplitterREV{tgI});
     [~,whichWonSSSall{tgI}] = max([mean(pooledSplitterStillSplitterFWD{tgI}) mean(pooledSplitterStillSplitterREV{tgI})]);
+    
+    %Signtest on same day pair? Does that make sense?
 end
 
 %F test, slopes, etc. 
