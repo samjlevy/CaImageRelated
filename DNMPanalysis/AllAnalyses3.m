@@ -1,7 +1,7 @@
 %% Process all data
 
-mainFolder = 'C:\Users\Sam\Desktop\DNMPfinalData';
-%mainFolder = 'E:\DNMPfinalData';
+%mainFolder = 'C:\Users\Sam\Desktop\DNMPfinalData';
+mainFolder = 'E:\DNMPfinalData';
 mice = {'Bellatrix', 'Polaris', 'Calisto', 'Nix'}; %'Europa'
 numMice = length(mice);
 
@@ -207,23 +207,54 @@ for mouseI = 1:numMice
     disp(['done Study/Test splitters mouse ' num2str(mouseI)])
 end
 
+%Left/Right splitters Arms
 for mouseI = 1:numMice
-    condPairsST = [3 4];
-    shuffDirST = fullfile(mainFolder,mice{mouseI},shuffleDirST);
+    condPairsLR = [1 2];
+    ARMshuffDirLR = fullfile(mainFolder,mice{mouseI},shuffleDir);
+    ARMsplitterFileLR = fullfile(ARMshuffDirLR,'ARMsplittersLR.mat');
+    %{
     [rateDiffST{mouseI}, rateSplitST{mouseI}, meanRateDiffST{mouseI}, DIeachST{mouseI}, DImeanST{mouseI}, DIallST{mouseI}] =...
         LookAtSplitters4(cellPooledTMap_unsmoothed{mouseI}, condPairsST, []);
-    splitterFileST = fullfile(shuffDirST,'splittersST.mat');
+    
     if exist(splitterFileST,'file')==2
-        load(splitterFileST)
+    %}
+        load(ARMsplitterFileLR)
+        %{
     else
         disp(['did not find ST splitting for ' num2str(mouseI) ', making now'])
         [~, binsAboveShuffleST, thisCellSplitsST] = SplitterWrapper3(cellTBT{mouseI},'studytest',...
              'pooled', numShuffles, shuffDirST, xlims, cmperbin, minspeed, [], shuffThresh, binsMin);
         save(splitterFileST,'binsAboveShuffleST','thisCellSplitsST')
     end
-    STbinsAboveShuffle{mouseI} = binsAboveShuffleST; 
-    STthisCellSplits{mouseI} = thisCellSplitsST;
-    disp(['done Study/Test splitters mouse ' num2str(mouseI)])
+        %}
+    LRbinsAboveShuffleARM{mouseI} = binsAboveShuffleLR; 
+    LRthisCellSplitsARM{mouseI} = thisCellSplitsLR;
+    disp(['done ARM Left/Right splitters mouse ' num2str(mouseI)])
+end
+
+%Study/Test splitters Arms
+for mouseI = 1:numMice
+    condPairsST = [3 4];
+    ARMshuffDirST = fullfile(mainFolder,mice{mouseI},shuffleDir);
+    ARMsplitterFileST = fullfile(ARMshuffDirST,'ARMsplittersST.mat');
+    %{
+    [rateDiffST{mouseI}, rateSplitST{mouseI}, meanRateDiffST{mouseI}, DIeachST{mouseI}, DImeanST{mouseI}, DIallST{mouseI}] =...
+        LookAtSplitters4(cellPooledTMap_unsmoothed{mouseI}, condPairsST, []);
+    
+    if exist(splitterFileST,'file')==2
+    %}
+        load(ARMsplitterFileST)
+        %{
+    else
+        disp(['did not find ST splitting for ' num2str(mouseI) ', making now'])
+        [~, binsAboveShuffleST, thisCellSplitsST] = SplitterWrapper3(cellTBT{mouseI},'studytest',...
+             'pooled', numShuffles, shuffDirST, xlims, cmperbin, minspeed, [], shuffThresh, binsMin);
+        save(splitterFileST,'binsAboveShuffleST','thisCellSplitsST')
+    end
+        %}
+    STbinsAboveShuffleARM{mouseI} = binsAboveShuffleST; 
+    STthisCellSplitsARM{mouseI} = thisCellSplitsST;
+    disp(['done ARM Study/Test splitters mouse ' num2str(mouseI)])
 end
 
 
@@ -236,6 +267,7 @@ for mouseI = 1:numMice
     [splittersLRonly{mouseI}, splittersSTonly{mouseI}, splittersBOTH{mouseI},...
         splittersOne{mouseI}, splittersNone{mouseI}] = ...
         GetSplittingTypes(splittersLR{mouseI}, splittersST{mouseI}, dayUse{mouseI});
+    %splittersOne{mouseI} = splittersOne{mouseI}.*dayUse{mouseI};
     nonLRsplitters{mouseI} = ((LRthisCellSplits{mouseI} == 0) + dayUse{mouseI}) ==2;
     nonSTsplitters{mouseI} = ((STthisCellSplits{mouseI} == 0) + dayUse{mouseI}) ==2;
     
@@ -267,6 +299,8 @@ for mouseI = 1:numMice
     traitGroupsREV{mouseI} = cellfun(@fliplr,traitGroups{mouseI},'UniformOutput',false);
     
 end
+numTraitGroups = length(traitGroups{1});
+
 dayUseREV = cellfun(@fliplr,dayUse,'UniformOutput',false);
 
 sessionsIndREV = cellfun(@(x) fliplr(1:length(x)),cellRealDays,'UniformOutput',false);
@@ -389,10 +423,10 @@ pooledSplitterComesBackREV = cell(length(traitGroups{1}),1); pooledSplitterStill
 for mouseI = 1:numMice
     %Splitter active at all
     [splitterComesBack{mouseI}] = RunGroupFunction('GetCellsOverlap',traitGroups{mouseI},dayUse{mouseI},splitterPctDayChangesFWD{mouseI}(1).dayPairs);
-    [splitterComesBackREV{mouseI}] = RunGroupFunction('GetCellsOverlap',traitGroupsREV{mouseI},dayUseREV{mouseI},splitterPctDayChangesFWD{mouseI}(1).dayPairs);
+    [splitterComesBackREV{mouseI}] = RunGroupFunction('GetCellsOverlap',traitGroupsREV{mouseI},dayUseREV{mouseI},splitterPctDayChangesREV{mouseI}(1).dayPairs);
     %Splitter splitter again
     [splitterStillSplitter{mouseI}] = RunGroupFunction('GetCellsOverlap',traitGroups{mouseI},traitGroups{mouseI},splitterPctDayChangesFWD{mouseI}(1).dayPairs);
-    [splitterStillSplitterREV{mouseI}] = RunGroupFunction('GetCellsOverlap',traitGroupsREV{mouseI},traitGroupsREV{mouseI},splitterPctDayChangesFWD{mouseI}(1).dayPairs);
+    [splitterStillSplitterREV{mouseI}] = RunGroupFunction('GetCellsOverlap',traitGroupsREV{mouseI},traitGroupsREV{mouseI},splitterPctDayChangesREV{mouseI}(1).dayPairs);
     
     for tgI = 1:length(traitGroups{1})
          pooledSplitterComesBackFWD{tgI} = [pooledSplitterComesBackFWD{tgI}; splitterComesBack{mouseI}(tgI).overlapWithModel];

@@ -116,8 +116,8 @@ for pcI = 1:length(cpsPlot)
     %switch slopeDiffRank(pcI)>=(1*numPerms-numPerms*pThresh); case 1; diffTxt='ARE'; case 0; diffTxt ='ARE NOT'; end
     %title([pairsCompare{pcI,1} ' vs ' pairsCompare{pcI,2} ', slopes ' diffTxt ' diff at p = ' num2str(1-slopeDiffRank(pcI)/1000)])
     switch pVal(cpsPlot(pcI))<pThresh; case 1; diffTxt='ARE'; case 0; diffTxt ='are NOT'; end
-    title([pairsCompare{pcIndsHere(1)} ' vs ' pairsCompare{pcIndsHere(2)} ', slopes ' diffTxt ' diff at p = ' num2str(pVal(cpsPlot(pcI)))])
-    legend(pairsCompare{pcIndsHere(1)},pairsCompare{pcIndsHere(2)})
+    title([traitLabels{pcIndsHere(1)} ' vs ' traitLabels{pcIndsHere(2)} ', slopes ' diffTxt ' diff at p = ' num2str(pVal(cpsPlot(pcI)))])
+    legend(traitLabels{pcIndsHere(1)},traitLabels{pcIndsHere(2)})
 end
 suptitleSL('Changes by days apart in proportion of splitting type')
 

@@ -18,6 +18,10 @@ for dpI = 1:numDayPairs
     numChange(dpI) = numEachDay(dayPairs(dpI,2)) - numEachDay(dayPairs(dpI,1));
     pctChange(dpI) = pctEachDay(dayPairs(dpI,2)) - pctEachDay(dayPairs(dpI,1));
     
+    if isnan(pctChange(dpI))
+        keyboard
+    end
+    
     if pctChange(dpI) < -1
         keyboard
     end
