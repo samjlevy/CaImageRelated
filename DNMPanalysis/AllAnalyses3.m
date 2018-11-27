@@ -1,7 +1,7 @@
 %% Process all data
 
-%mainFolder = 'C:\Users\Sam\Desktop\DNMPfinalData';
-mainFolder = 'E:\DNMPfinalData';
+mainFolder = 'C:\Users\Sam\Desktop\DNMPfinalData';
+%mainFolder = 'E:\DNMPfinalData';
 mice = {'Bellatrix', 'Polaris', 'Calisto', 'Nix'}; %'Europa'
 numMice = length(mice);
 
@@ -135,6 +135,7 @@ end
 Conds = GetTBTconds(cellTBT{1});
 
 useRealDays=1;
+alignDayPairsREV=1;
 
 disp('Done all setup stuff')
 %% Plot rasters for all good cells
@@ -356,6 +357,27 @@ for mouseI = 1:numMice
         splitterPctDayChangesREV{mouseI}(tgI).dayPairs = sessionsIndREV{mouseI}(splitterPctDayChangesREV{mouseI}(tgI).dayPairs);
     end
     
+    tt = fieldnames(splitterPctDayChangesREV{mouseI}(tgI));
+    if alignDayPairsREV==1
+        if mouseI==1; disp('Aligning forward and reverse day pairs'); end 
+        for tgI = 1:length(traitGroups{mouseI})
+            if sum(splitterPctDayChangesFWD{mouseI}(tgI).dayPairs(1,:)' == fliplr(splitterPctDayChangesREV{mouseI}(tgI).dayPairs(1,:))')~=2
+            pairsFWD = splitterPctDayChangesFWD{mouseI}(tgI).dayPairs;
+            pairsREV = splitterPctDayChangesREV{mouseI}(tgI).dayPairs;
+            pairsREVcell = mat2cell(pairsREV,ones(size(splitterPctDayChangesFWD{mouseI}(tgI).dayPairs,1),1),2);
+            pairsREVflip = cellfun(@fliplr,pairsREVcell,'UniformOutput',false);
+            for dpF = 1:size(splitterPctDayChangesFWD{mouseI}(tgI).dayPairs,1)
+                REVorder(dpF) = find(cell2mat(cellfun(@(x) sum(pairsFWD(dpF,:)'==x')==2,pairsREVflip,'UniformOutput',false)));
+            end
+                
+            for ttI = 1:length(tt)
+            %    splitterPctDayChangesREV{mouseI}(tgI).(tt{ttI}) = flipud(splitterPctDayChangesREV{mouseI}(tgI).(tt{ttI}));
+                splitterPctDayChangesREV{mouseI}(tgI).(tt{ttI}) = splitterPctDayChangesREV{mouseI}(tgI).(tt{ttI})(REVorder,:);
+            end
+            end
+        end
+    end
+    
     if useRealDays==1    
         if mouseI==1; disp('Using real days'); end 
         for tgI = 1:length(traitGroups{mouseI})
@@ -381,7 +403,7 @@ numPerms = 1000;
 for tgI = 1:length(traitGroups{mouseI})
     %Here's the slope of each line
     [splitterSlope(tgI,1), splitterIntercept(tgI,1), splitterFitLine{tgI}, splitterRR{tgI}] = fitLinRegSL(pooledSplitPctChangeFWD{tgI}, pooledDaysApartFWD);
-    [splitterSlopeREV(tgI,1), ~, splitterFitLineREV{tgI}, splitterRR{tgI}] = fitLinRegSL(pooledSplitPctChangeREV{tgI}, pooledDaysApartREV);
+    [splitterSlopeREV(tgI,1), ~, splitterFitLineREV{tgI}, splitterRRrev{tgI}] = fitLinRegSL(pooledSplitPctChangeREV{tgI}, pooledDaysApartREV);
     splitterFitPlotDays = unique(splitterFitLine{1}(:,1));
     splitterFitPlotDaysREV = unique(splitterFitLineREV{1}(:,1));
     for sfpI = 1:length(splitterFitPlotDays)
@@ -442,14 +464,6 @@ end
 
 %cellfun(@(x) x./pooledSplitterComesBackFWD,pooledSplitterComesBackFWD,'UniformOutput',false) ????
 
-%Rank sum each self vs. negative day pairs
-for tgI = 1:length(traitGroups{1})
-    [pValSplitCBpvn{tgI},hValCBpvn{tgI},whichWonCBpvn{tgI},dayPairsCBpvn{tgI}] = ...
-                    RankSumAllDaypairs(pooledSplitterComesBackFWD{tgI}, pooledSplitterComesBackREV{tgI},pooledDaysApartFWD);
-    [pValSplitSSpvn{tgI},hValSSpvn{tgI},whichWonSSpvn{tgI},dayPairsSSpvn{tgI}] = ...
-                    RankSumAllDaypairs(pooledSplitterStillSplitterFWD{tgI}, pooledSplitterStillSplitterREV{tgI},pooledDaysApartFWD);
-end
-
 %Rank sum each day pair for comparison
 for pcI = 1:size(pairsCompareInd,1)  
     [pValSplitterComesBack{pcI},hValSplitterComesBack{pcI},whichWonSplitterComesBack{pcI},dayPairsSCB{pcI}] =...
@@ -460,12 +474,54 @@ for pcI = 1:size(pairsCompareInd,1)
     [pValSplitterStillSplitter{pcI},hValSplitterStillSplitter{pcI},whichWonSplitterStillSplitter{pcI},dayPairsSSS{pcI}] =...
                     RankSumAllDaypairs([pooledSplitterStillSplitterFWD{pairsCompareInd(pcI,1)}; pooledSplitterStillSplitterREV{pairsCompareInd(pcI,1)}],...
                                        [pooledSplitterStillSplitterFWD{pairsCompareInd(pcI,2)}; pooledSplitterStillSplitterREV{pairsCompareInd(pcI,2)}],...
-                                       [pooledDaysApartFWD; pooledDaysApartREV]);    
-                                   
-    
+                                       [pooledDaysApartFWD; pooledDaysApartREV]);                                       
 end
 
-%Rank sum group as a whole; 
+%Rank sum as a whole
+for pcI = 1:size(pairsCompareInd,1)  
+    [pValSplitterComesBackAll{pcI},hValSplitterComesBackAll{pcI}] = ...
+                    ranksum([pooledSplitterComesBackFWD{pairsCompareInd(pcI,1)}; pooledSplitterComesBackREV{pairsCompareInd(pcI,1)}],...
+                            [pooledSplitterComesBackFWD{pairsCompareInd(pcI,2)}; pooledSplitterComesBackREV{pairsCompareInd(pcI,2)}]);
+    whichWonSplitterComesBackAll{pcI} =...
+                    WhichWonRanks([pooledSplitterComesBackFWD{pairsCompareInd(pcI,1)}; pooledSplitterComesBackREV{pairsCompareInd(pcI,1)}],...
+                                  [pooledSplitterComesBackFWD{pairsCompareInd(pcI,2)}; pooledSplitterComesBackREV{pairsCompareInd(pcI,2)}]);
+    
+    [pValSplitterStillSplitterAll{pcI},hValSplitterStillSplitterAll{pcI}] = ...
+                    ranksum([pooledSplitterStillSplitterFWD{pairsCompareInd(pcI,1)}; pooledSplitterStillSplitterREV{pairsCompareInd(pcI,1)}],...
+                           [pooledSplitterStillSplitterFWD{pairsCompareInd(pcI,2)}; pooledSplitterStillSplitterREV{pairsCompareInd(pcI,2)}]);
+    whichWonSplitterStillSplitterAll{pcI} =...
+                    WhichWonRanks([pooledSplitterStillSplitterFWD{pairsCompareInd(pcI,1)}; pooledSplitterStillSplitterREV{pairsCompareInd(pcI,1)}],...
+                                  [pooledSplitterStillSplitterFWD{pairsCompareInd(pcI,2)}; pooledSplitterStillSplitterREV{pairsCompareInd(pcI,2)}]);
+                              
+    %FWD and REV separately
+    [pValSplitterComesBackAllFWD{pcI},hValSplitterComesBackAllFWD{pcI}] = ...
+                    ranksum(pooledSplitterComesBackFWD{pairsCompareInd(pcI,1)}, pooledSplitterComesBackFWD{pairsCompareInd(pcI,2)});
+    whichWonSplitterComesBackAllFWD{pcI} =...
+                    WhichWonRanks(pooledSplitterComesBackFWD{pairsCompareInd(pcI,1)}, pooledSplitterComesBackFWD{pairsCompareInd(pcI,2)});
+    [pValSplitterComesBackAllREV{pcI},hValSplitterComesBackAllREV{pcI}] = ...
+                    ranksum(pooledSplitterComesBackREV{pairsCompareInd(pcI,1)}, pooledSplitterComesBackREV{pairsCompareInd(pcI,2)});
+    whichWonSplitterComesBackAllREV{pcI} =...
+                    WhichWonRanks(pooledSplitterComesBackREV{pairsCompareInd(pcI,1)}, pooledSplitterComesBackREV{pairsCompareInd(pcI,2)});
+                              
+    [pValSplitterStillSplitterAllFWD{pcI},hValSplitterStillSplitterAllFWD{pcI}] = ...
+                    ranksum(pooledSplitterStillSplitterFWD{pairsCompareInd(pcI,1)}, pooledSplitterStillSplitterFWD{pairsCompareInd(pcI,2)});
+    whichWonSplitterStillSplitterAllFWD{pcI} =...
+                    WhichWonRanks(pooledSplitterStillSplitterFWD{pairsCompareInd(pcI,1)}, pooledSplitterStillSplitterFWD{pairsCompareInd(pcI,2)});
+    [pValSplitterStillSplitterAllREV{pcI},hValSplitterStillSplitterAllREV{pcI}] = ...
+                    ranksum(pooledSplitterStillSplitterREV{pairsCompareInd(pcI,1)}, pooledSplitterStillSplitterREV{pairsCompareInd(pcI,2)});
+    whichWonSplitterStillSplitterAllREV{pcI} =...
+                    WhichWonRanks(pooledSplitterStillSplitterREV{pairsCompareInd(pcI,1)}, pooledSplitterStillSplitterREV{pairsCompareInd(pcI,2)});
+end
+
+%Rank sum each self vs. negative day pairs
+for tgI = 1:length(traitGroups{1})
+    [pValSplitCBpvn{tgI},hValCBpvn{tgI},whichWonCBpvn{tgI},dayPairsCBpvn{tgI}] = ...
+                    RankSumAllDaypairs(pooledSplitterComesBackFWD{tgI}, pooledSplitterComesBackREV{tgI},pooledDaysApartFWD);
+    [pValSplitSSpvn{tgI},hValSSpvn{tgI},whichWonSSpvn{tgI},dayPairsSSpvn{tgI}] = ...
+                    RankSumAllDaypairs(pooledSplitterStillSplitterFWD{tgI}, pooledSplitterStillSplitterREV{tgI},pooledDaysApartFWD);
+end
+
+%Rank sum self vs. negative group as a whole; 
 for tgI = 1:length(traitGroups{1})
     [pValSCBall{tgI}, hValSCBall{tgI}] = ranksum(pooledSplitterComesBackFWD{tgI}, pooledSplitterComesBackREV{tgI});
     [~,whichWonSCBall{tgI}] = max([mean(pooledSplitterComesBackFWD{tgI}) mean(pooledSplitterComesBackREV{tgI})]);
@@ -482,6 +538,9 @@ end
 
 disp('Done splitter reactivation')
 %% This again for Return arms splitters
+
+
+%% Center of mass, does center of mass change over time
 
 
 %% Pop vector corrs
@@ -583,11 +642,6 @@ save(fullfile(mainFolder,'dayAndDimCorrs.mat'),'pvCorrs','meanCorr','numCellsUse
           pooledMeanPVcorrsOutShuff,pooledNumPVcorrsOutShuff,pooledCorrsOutCOM,pooledPVdayDiffs] =...
           PoolProcessedPVcorrs(pooledCompPairs,meanCorr,meanCorrOutOfShuff,pvCorrs,pvCorrsOutOfShuff,...
           meanCorrsOutShuff,numCorrsOutShuff,corrsOutCOM,PVdayPairs);
-
-
-
-
-
 
 
 

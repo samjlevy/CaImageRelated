@@ -142,6 +142,14 @@ for pcI = 1:length(cpsPlot)
     xlabel('Days Apart')
     ylabel('% of cells in model')
     
+    if hValSplitterComesBackAll{pcI} == 1
+        titleText = [pairsCompare{pcI,whichWonSplitterComesBackAll{pcI}} ' more stable, p = ' num2str(pValSplitterComesBackAll{pcI}) ];
+    else 
+        titleText = ['NOT diff at p = ' num2str(pValSplitterComesBackAll{pcI}) ];
+    end
+    title(titleText)
+    
+    %{
     yHeight = 0.8;
     for dpI = 1:length(dayPairsSCB{pcI})
         if hValSplitterComesBack{pcI}(dpI)==1
@@ -149,7 +157,8 @@ for pcI = 1:length(cpsPlot)
         end
         %pValSplitterComesBack{pcI}
     end
-       
+       %}
+    
     % legend([p1; p2],[pairsCompare{pcI,1}; pairsCompare{pcI,2}],'location','NW')  
     legend([p1; p2],'location','NW') 
 end
@@ -175,6 +184,14 @@ for pcI = 1:length(cpsPlot)
     xlabel('Days Apart')
     ylabel('% of cells in model day')
     
+    if hValSplitterStillSplitterAll{pcI} == 1
+        titleText = [pairsCompare{pcI,whichWonSplitterStillSplitterAll{pcI}} ' more stable, p = ' num2str(pValSplitterStillSplitterAll{pcI}) ];
+    else 
+        titleText = ['NOT diff at p = ' num2str(pValSplitterStillSplitterAll{pcI}) ];
+    end
+    title(titleText)
+    
+    %{
     yHeight = 0.8;
     for dpI = 1:length(dayPairsSSS{pcI})
         if hValSplitterStillSplitter{pcI}(dpI)==1
@@ -182,7 +199,8 @@ for pcI = 1:length(cpsPlot)
         end
         %pValSplitterComesBack{pcI}
     end
-       
+     %}
+    
     % legend([p1; p2],[pairsCompare{pcI,1}; pairsCompare{pcI,2}],'location','NW')  
     legend([p1; p2],'location','NW') 
 end

@@ -1,29 +1,34 @@
-function [pVal,hVal,whichWon,eachDayPair] = RankSumAllDaypairs(dataVecA,dataVecB,dayPairs)
+function [pVal,hVal,whichWon,eachDayPair] = RankSumAllDaypairs(dataVecA,dataVecB,dayDiffs)
+%This actually does day differences, not equipped for day pairs
 
-eachDayPair = unique(dayPairs);
+%{
+switch length(varargin)
+    case 3
+        dataVecA = varargin{1};
+        dataVecB = varargin{2};
+        dayPairsA = varargin{3};
+        dayPairsB = varargin{3};
+    case 4
+        dataVecA = varargin{1};
+        dataVecB = varargin{3};
+        dayPairsA = varargin{2};
+        dayPairsB = varargin{4};
+end
+
+
+%}
+
+eachDayPair = unique(dayDiffs);
 
 for dpI = 1:length(eachDayPair)
-    datA = dataVecA(dayPairs==eachDayPair(dpI));
-    datB = dataVecB(dayPairs==eachDayPair(dpI));
+    datA = dataVecA(dayDiffs==eachDayPair(dpI));
+    datB = dataVecB(dayDiffs==eachDayPair(dpI));
     
     %Do the stat
     [pVal(dpI),hVal(dpI)] = ranksum(datA,datB);
     
     %Return a value for plotting
-    markerVal = [zeros(length(datA),1); ones(length(datB),1)];
-    [ranks,tiedRanks] = tiedrank([datA; datB]);
-    aRank = sum(ranks(markerVal==0));
-    bRank = sum(ranks(markerVal==1));
-    
-    if aRank > bRank
-        whichWon(dpI) = 1;
-    elseif bRank > aRank
-        whichWon(dpI) = 2;
-    else
-        whichWon(dpI) = 0;
-        %disp('Rank error?')
-        %keyboard
-    end
+    whichWon(dpI) = WhichWonRanks(datA, datB);
 end
 
 end

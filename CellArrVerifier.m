@@ -1,4 +1,4 @@
-function notSame = CellArrVerifier(cellArr1,cellArr2)
+            function notSame = CellArrVerifier(cellArr1,cellArr2)
 numBins = length(cellArr1{1});
 
 sameSize = cell2mat(cellfun(@(x,y) sum(x(:)==y(:))==numBins,cellArr1,cellArr2,'UniformOutput',false));
