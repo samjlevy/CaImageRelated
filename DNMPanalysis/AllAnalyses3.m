@@ -524,10 +524,10 @@ end
 %Rank sum self vs. negative group as a whole; 
 for tgI = 1:length(traitGroups{1})
     [pValSCBall{tgI}, hValSCBall{tgI}] = ranksum(pooledSplitterComesBackFWD{tgI}, pooledSplitterComesBackREV{tgI});
-    [~,whichWonSCBall{tgI}] = max([mean(pooledSplitterComesBackFWD{tgI}) mean(pooledSplitterComesBackREV{tgI})]);
+    whichWonSCBall{tgI} = WhichWonRanks(pooledSplitterComesBackFWD{tgI}, pooledSplitterComesBackREV{tgI});
     %[mean(pooledSplitterComesBackFWD{tgI}) mean(pooledSplitterComesBackREV{tgI})]
     [pValSSSall{tgI}, hValSSSall{tgI}] = ranksum(pooledSplitterStillSplitterFWD{tgI},pooledSplitterStillSplitterREV{tgI});
-    [~,whichWonSSSall{tgI}] = max([mean(pooledSplitterStillSplitterFWD{tgI}) mean(pooledSplitterStillSplitterREV{tgI})]);
+    whichWonSSSall{tgI} = WhichWonRanks(pooledSplitterStillSplitterFWD{tgI}, pooledSplitterStillSplitterREV{tgI});
     
     %Signtest on same day pair? Does that make sense?
 end

@@ -1,6 +1,37 @@
 %% Model fig. of time vs. experience
 
-
+%Need to add some fake data here to fill in background
+figure;
+%Just time
+subplot(1,3,1)
+xdatFWD = [1 10];
+ydatFWD = [0.7 0.4];
+xdatREV = [-1 -10];
+ydatREV = [0.7 0.4];
+plot(xdatFWD,ydatFWD,'k','LineWidth',2); hold on
+plot(xdatREV,ydatREV,'k','LineWidth',2);
+xlim([-10.5 10.5]); ylim([0 1])
+title('Effect of Time Only'); xlabel('Time Between Comparisons')
+%Just experience
+subplot(1,3,2)
+xdatFWD = [1 10];
+ydatFWD = [0.55 0.3];
+xdatREV = [-1 -10];
+ydatREV = [0.55 0.8];
+plot(xdatFWD,ydatFWD,'k','LineWidth',2); hold on
+plot(xdatREV,ydatREV,'k','LineWidth',2);
+xlim([-10.5 10.5]); ylim([0 1])
+title('Effect of Experience Only'); xlabel('Time Between Comparisons')
+%Both
+subplot(1,3,3)
+xdatFWD = [1 10];
+ydatFWD = [0.7 0.4];
+xdatREV = [-1 -10];
+ydatREV = [0.7 0.6];
+plot(xdatFWD,ydatFWD,'k','LineWidth',2); hold on
+plot(xdatREV,ydatREV,'k','LineWidth',2);
+xlim([-10.5 10.5]); ylim([0 1])
+title('Effects of Time and Experience'); xlabel('Time Between Comparisons')
 
 %%
 
@@ -213,6 +244,7 @@ sCols = 3;
 sRows = ceil(length(tgsPlot)/sCols);
 markerss = {'.' 'o'};
 %for tgI = 1:length(traitGroups{1})
+FWDREVtxt = {'FWD' 'REV'};
 for tgI = 1:length(tgsPlot)
     subplot(sRows,sCols,tgI)
     color1 = colorAssc{tgsPlot(tgI)}+0.2; color1(color1>1) = 1; color1(color1<0) = 0;
@@ -221,6 +253,7 @@ for tgI = 1:length(tgsPlot)
     hold on
     p2 = plot(-1*pooledDaysApartREV-0.15,pooledSplitterComesBackREV{tgsPlot(tgI)},markerss{2},'Color',color2,'MarkerSize',3,'DisplayName','Days Backwards');
     
+    %{
     yHeight = 0.75;
     for dpI = 1:length(dayPairsCBpvn{tgsPlot(tgI)})
         if hValCBpvn{tgsPlot(tgI)}(dpI)
@@ -229,10 +262,19 @@ for tgI = 1:length(tgsPlot)
         end
         %pValSplitCBpvn{tgI}
     end
+    %}
     
+    if hValSCBall{tgI} == 1
+        titleText = [traitLabels{tgsPlot(tgI)} ': ' FWDREVtxt{whichWonSCBall{tgI}} ' more stable, p = ' num2str(pValSCBall{tgI}) ];
+    else 
+        titleText = [traitLabels{tgsPlot(tgI)} ': NOT diff at p = ' num2str(pValSCBall{tgI}) ];
+    end
+    title(titleText)
+    
+    xlabel('Days Apart')
+    ylabel('Proportion of Model')
     ylim([-0.01 1.01])
     xlim([min(pooledDaysApartFWD)-0.5 max(pooledDaysApartFWD)+0.5])
-    title(traitLabels{tgsPlot(tgI)})
     legend([p1; p2],'location','NE')
 end
 suptitleSL('Percent cells of model day come back, Positive vs. negative time')
@@ -251,6 +293,7 @@ for tgI = 1:length(tgsPlot)
     hold on
     p2 = plot(-1*pooledDaysApartREV-0.15,pooledSplitterStillSplitterREV{tgsPlot(tgI)},markerss{2},'Color',color2,'MarkerSize',3,'DisplayName','Days Backwards');
     
+    %{
     yHeight = 0.8;
     for dpI = 1:length(dayPairsSSpvn{tgsPlot(tgI)})
         if hValSSpvn{tgsPlot(tgI)}(dpI)
@@ -259,10 +302,19 @@ for tgI = 1:length(tgsPlot)
         end
         %pValSplitSSpvn{tgI}
     end
+    %}
     
+    if hValSSSall{tgI} == 1
+        titleText = [traitLabels{tgsPlot(tgI)} ': ' FWDREVtxt{whichWonSSSall{tgI}} ' more stable, p = ' num2str(pValSSSall{tgI}) ];
+    else 
+        titleText = [traitLabels{tgsPlot(tgI)} ': NOT diff at p = ' num2str(pValSSSall{tgI}) ];
+    end
+    title(titleText)
+    
+    xlabel('Days Apart')
+    ylabel('Proportion of Model')
     ylim([-0.01 1.01])
     xlim([min(pooledDaysApartFWD)-0.5 max(pooledDaysApartFWD)+0.5])
-    title(traitLabels{tgsPlot(tgI)})
     legend([p1; p2],'location','NE')
 end
 suptitleSL('Percent cells of model day still that trait v self, Positive vs. negative time')
