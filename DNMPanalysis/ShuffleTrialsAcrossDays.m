@@ -1,5 +1,5 @@
 function shuffledTBT = ShuffleTrialsAcrossDays(trialbytrial,dayA,dayB)
-%Randomly reassigns shuffles over days, independently for each condition
+%Randomly reassigns shuffles over only the two days indicated, independently for each condition
 
 shuffledTBT = trialbytrial;
 

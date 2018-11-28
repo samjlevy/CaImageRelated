@@ -1,4 +1,8 @@
 function tbtPooled = PoolTBTacrossConds(trialbytrial,condsPool,newLabels)
+%This makes a new trialbytrial which copies all the information (xpos,
+%ypos, etc.) from every lap for each day across the condsPool. So if
+%condsPool row 1 is [1 2], all laps from 1 2 will be put into level 1 of
+%the pooled struct
 
 daysHere = unique(trialbytrial(1).sessID);
 for cpI = 1:size(condsPool,1)

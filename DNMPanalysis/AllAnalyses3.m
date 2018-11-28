@@ -552,6 +552,7 @@ traitLogical = threshAndConsec;
 pooledTraitLogical = [];
 for mouseI = 1:numMice
     for cc = 1:size(pooledCondPairs,1)
+        %Each dim3 entry is conpairs pooled like for place fields
         pooledTraitLogical{mouseI}(:,:,cc) = sum(traitLogical{mouseI}(:,:,pooledCondPairs(cc,:)),3) > 0;
     end
 end
@@ -567,18 +568,26 @@ PVdayPairs = [];
 
 %First shuffle dimensions only
 tic
-pooledCompPairs = [1 2; 2 1; 3 4; 4 3]; 
-pooledShuffleDim = {'leftright', 'leftright', 'studytest','studytest'};
-pvCorrs = cell(numMice,1); numCellsUsed = cell(numMice,1); numNans = cell(numMice,1); meanCorr = cell(numMice,1);
+pooledCompPairs = {[1 2], [2 1]; [3 4], [4 3]}; 
+pooledShuffleDim = {'leftright'; 'studytest'};
+%pvCorrs = cell(numMice,1); numCellsUsed = cell(numMice,1); numNans = cell(numMice,1); meanCorr = cell(numMice,1);
 parfor mouseI = 1:numMice
     shuffleWhat = 'dimOnly';
-    %Make the pv corrs
-    [pvCorrs{mouseI}, meanCorr{mouseI}, numCellsUsed{mouseI}, numNans{mouseI}, shuffPVcorrs{mouseI}, shuffMeanCorr{mouseI}, PVdayPairs{mouseI}]=...
-    MakePVcorrsWrapper(cellTBT{mouseI}, shuffleWhat, numPerms, pooledCompPairs, pooledShuffleDim,...
-                       pooledCondPairs, poolLabels, pooledTraitLogical{mouseI}, xlims, cmperbin, minspeed);
+    %shuffleWhat = 'dayOnly';
+    for sdI = 1:length(pooledShuffleDim)
+        %Make the pv corrs
+        compPairsHere = pooledCompPairs(sdI,:);
+        shuffleDimHere = pooledShuffleDim{sdI};
+        [pvCorrs, meanCorr, numCellsUsed, numNans, shuffPVcorrs, shuffMeanCorr, PVdayPairs]=...
+        MakePVcorrsWrapper2(cellTBT{mouseI}, shuffleWhat, shuffleDimHere, numPerms, compPairsHere,...
+                           pooledCondPairs, poolLabels, pooledTraitLogical{mouseI}, stemBinEdges, minspeed);
+            save(fullfile(mainFolder,mice{mouseI},[pooledShuffleDim{sdI} '_corrs.mat']),'pvCorrs','meanCorr',...
+                'numCellsUsed','numNans','shuffPVcorrs','shuffMeanCorr','PVdayPairs','compPairsHere','shuffleDimHere')
+    
     %Do some processing
     [meanCorrOutOfShuff{mouseI},pvCorrsOutOfShuff{mouseI},meanCorrsOutShuff{mouseI},numCorrsOutShuff{mouseI},corrsOutCOM{mouseI},lims95] =...
           ProcessPVcorrs(numPerms,pThresh,shuffMeanCorr{mouseI},meanCorr{mouseI},shuffPVcorrs{mouseI},pvCorrs{mouseI});
+    end
 end
 toc
 save(fullfile(mainFolder,'dimCorrs.mat'),'pvCorrs','meanCorr','numCellsUsed','numNans','shuffPVcorrs','shuffMeanCorr','PVdayPairs',...

@@ -112,7 +112,6 @@ for condPairI = 1:numConds
         if smth
             Tsum = cellfun(@sum,spikeCounts,'UniformOutput',false);
 
-
             %Make smoothing kernel.
             gauss_std = 2.5;
             gauss_std = gauss_std/cmperbin; 
