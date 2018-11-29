@@ -1,4 +1,4 @@
-slopDiffFromZeroFtest(dataVec,days)
+function [Fval,dfNum,dfDen,pVal] = slopeDiffFromZeroFtest(dataVec,days)
 
 [slope, intercept, ~, ~] = fitLinRegSL(dataVec, days);
 
@@ -22,3 +22,5 @@ dfNum = 2 - 1; %Num groups  - 1
 dfDen = nPts - 2; %Num data pts. - num groups
 
 pVal = fcdf(Fval,dfNum,dfDen,'upper');
+
+end

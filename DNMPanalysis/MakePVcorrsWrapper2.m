@@ -139,10 +139,9 @@ switch shuffleWhat
                 alignedDayPairs = repmat(1:numDayPairs,2,1)';
                 
                 %Make correlations
-                tic
                 [shuffPVcorrResults,shuffMeanCorrResults,~,~] = PopVectorCorrsSlimTMaps(...
                     shuffTMapSlimA,shuffTMapSlimB,trialReliA,trialReliB,alignedDayPairs,'activeEither','Spearman');
-                toc
+                
                 %shuffPVcorrsTemp(2,:) = shuffPVcorrResults;
                 
                 for dpI = 1:numDayPairs

@@ -11,7 +11,7 @@ for mouseI = 1:numMice
     end
 end
 
-%% Splitter cells: stats and logical breakdown
+%% ARM Splitter cells: stats and logical breakdown
 %Get logical splitting type
 for mouseI = 1:numMice
     ARMsplittersLR{mouseI} = (LRthisCellSplitsARM{mouseI} + dayUseArm{mouseI}) ==2;
