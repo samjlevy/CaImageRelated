@@ -1,6 +1,7 @@
 %% Process all data
 
 mainFolder = 'C:\Users\Sam\Desktop\DNMPfinalData';
+mainFolder = 'C:\Users\samjl\Desktop\DNMPfinalData';
 %mainFolder = 'E:\DNMPfinalData';
 mice = {'Bellatrix', 'Polaris', 'Calisto', 'Nix'}; %'Europa'
 numMice = length(mice);
@@ -574,6 +575,7 @@ pooledShuffleDim = {'leftright'; 'studytest'};
 parfor mouseI = 1:numMice
     shuffleWhat = 'dimOnly';
     %shuffleWhat = 'dayOnly';
+    tic
     for sdI = 1:length(pooledShuffleDim)
         %Make the pv corrs
         compPairsHere = pooledCompPairs(sdI,:);
@@ -585,9 +587,11 @@ parfor mouseI = 1:numMice
                 'numCellsUsed','numNans','shuffPVcorrs','shuffMeanCorr','PVdayPairs','compPairsHere','shuffleDimHere')
     
     %Do some processing
-    [meanCorrOutOfShuff{mouseI},pvCorrsOutOfShuff{mouseI},meanCorrsOutShuff{mouseI},numCorrsOutShuff{mouseI},corrsOutCOM{mouseI},lims95] =...
-          ProcessPVcorrs(numPerms,pThresh,shuffMeanCorr{mouseI},meanCorr{mouseI},shuffPVcorrs{mouseI},pvCorrs{mouseI});
+    %[meanCorrOutOfShuff{mouseI},pvCorrsOutOfShuff{mouseI},meanCorrsOutShuff{mouseI},numCorrsOutShuff{mouseI},corrsOutCOM{mouseI},lims95] =...
+    %      ProcessPVcorrs(numPerms,pThresh,shuffMeanCorr{mouseI},meanCorr{mouseI},shuffPVcorrs{mouseI},pvCorrs{mouseI});
+    disp(['Done making shuffled corrs *' shuffleWhat '*, *' shuffleDimHere '*, for mouse ' num2str(mouseI)])
     end
+    toc
 end
 toc
 save(fullfile(mainFolder,'dimCorrs.mat'),'pvCorrs','meanCorr','numCellsUsed','numNans','shuffPVcorrs','shuffMeanCorr','PVdayPairs',...

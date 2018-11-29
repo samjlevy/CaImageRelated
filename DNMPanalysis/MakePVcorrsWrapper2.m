@@ -27,8 +27,8 @@ numNans = cell(numDayPairs,numCompPairs);
 for dpI = 1:numDayPairs
     for cpI = 1:size(pooledCompPairs,1)
         %Strip down to essential day and condition pair
-        minTbtA = StripTBT(tbtPooledA,pooledCompPairs(cpI,1),PVdayPairs(dpI,1));
-        minTbtB = StripTBT(tbtPooledB,pooledCompPairs(cpI,2),PVdayPairs(dpI,2));
+        minTbtA = StripTBT(tbtPooledA,pooledCompPairs{cpI}(1),PVdayPairs(dpI,1));
+        minTbtB = StripTBT(tbtPooledB,pooledCompPairs{cpI}(2),PVdayPairs(dpI,2));
         
         %Make place fields: no cond pairs, already dealt with
         %{
@@ -46,8 +46,8 @@ for dpI = 1:numDayPairs
             PFsLinTBTdnmp(minTbtB, binEdges, minspeed, [], false,[]);
         
         %Make the trialRelis
-        trialReliA = traitLogical(:,PVdayPairs(dpI,1),pooledCompPairs(cpI,1));
-        trialReliB = traitLogical(:,PVdayPairs(dpI,2),pooledCompPairs(cpI,2));
+        trialReliA = traitLogical(:,PVdayPairs(dpI,1),pooledCompPairs{cpI}(1));
+        trialReliB = traitLogical(:,PVdayPairs(dpI,2),pooledCompPairs{cpI}(2));
         
         %Run PV
         [pvCorrs{dpI,cpI},meanCorr{dpI,cpI},numCellsUsed{dpI,cpI},numNans{dpI,cpI}] = PopVectorCorrsSmallTMaps(...
@@ -56,6 +56,8 @@ for dpI = 1:numDayPairs
 end
  
 %Do all the shuffling
+disp('Shuffling now')
+p = ProgressBar(numPerms);
 shuffPVcorrs = cell(numDayPairs,numCompPairs);
 shuffMeanCorr = cell(numDayPairs,numCompPairs);
 switch shuffleWhat
@@ -95,6 +97,7 @@ switch shuffleWhat
                     shuffMeanCorr{dpI,cpI}(permI,:) = shuffMeanCorrResults{dpI};
                 end
             end
+            p.progress;
         end
         
     case 'dayOnly'
@@ -147,11 +150,12 @@ switch shuffleWhat
                     shuffMeanCorr{dpI,cpI}(permI,:) = shuffMeanCorrResults{dpI};
                 end
             end
+            p.progress;
         end 
     case 'dayAndDim'
         disp('Nope not working yet')
 end
-
+p.stop;
 
 %{
 %Do all the shuffling
