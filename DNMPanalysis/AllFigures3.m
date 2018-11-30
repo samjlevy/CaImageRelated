@@ -280,6 +280,11 @@ for pcI = 1:length(cpsPlot)
     plot(pooledDaysApartREV-0.1,pooledSplitterComesBackREV{pcIndsHere(1)},'.','Color',colorAssc{pcIndsHere(1)},'MarkerSize',8)
     plot(pooledDaysApartREV+0.1,pooledSplitterComesBackREV{pcIndsHere(2)},'.','Color',colorAssc{pcIndsHere(2)},'MarkerSize',8)
     
+    plot(splitterCBFitPlotDaysFWD{pcIndsHere(1)},splitterCBFitPlotPctFWD{pcIndsHere(1)},'Color',colorAssc{pcIndsHere(1)},'LineWidth',2)
+    plot(splitterCBFitPlotDaysFWD{pcIndsHere(2)},splitterCBFitPlotPctFWD{pcIndsHere(2)},'Color',colorAssc{pcIndsHere(2)},'LineWidth',2)
+    plot(splitterCBFitPlotDaysREV{pcIndsHere(1)},splitterCBFitPlotPctREV{pcIndsHere(1)},'Color',colorAssc{pcIndsHere(1)},'LineWidth',2)
+    plot(splitterCBFitPlotDaysREV{pcIndsHere(2)},splitterCBFitPlotPctREV{pcIndsHere(2)},'Color',colorAssc{pcIndsHere(2)},'LineWidth',2)
+    
     ylim([-0.01 1.01])
     xlim([(min(pooledDaysApartREV)-0.5) (max(pooledDaysApartFWD)-0.5)])
     xlabel('Days Apart')
@@ -351,6 +356,11 @@ for pcI = 1:length(cpsPlot)
     
     plot(pooledDaysApartREV-0.1,pooledSplitterStillSplitterREV{pcIndsHere(1)},'.','Color',colorAssc{pcIndsHere(1)},'MarkerSize',8)
     plot(pooledDaysApartREV+0.1,pooledSplitterStillSplitterREV{pcIndsHere(2)},'.','Color',colorAssc{pcIndsHere(2)},'MarkerSize',8)
+    
+    plot(splitterSSFitPlotDaysFWD{pcIndsHere(1)},splitterSSFitPlotPctFWD{pcIndsHere(1)},'Color',colorAssc{pcIndsHere(1)},'LineWidth',2)
+    plot(splitterSSFitPlotDaysFWD{pcIndsHere(2)},splitterSSFitPlotPctFWD{pcIndsHere(2)},'Color',colorAssc{pcIndsHere(2)},'LineWidth',2)
+    plot(splitterSSFitPlotDaysREV{pcIndsHere(1)},splitterSSFitPlotPctREV{pcIndsHere(1)},'Color',colorAssc{pcIndsHere(1)},'LineWidth',2)
+    plot(splitterSSFitPlotDaysREV{pcIndsHere(2)},splitterSSFitPlotPctREV{pcIndsHere(2)},'Color',colorAssc{pcIndsHere(2)},'LineWidth',2)
     
     ylim([-0.01 1.01])
     xlim([(min(pooledDaysApartREV)-0.5) (max(pooledDaysApartFWD)-0.5)])
@@ -552,4 +562,35 @@ for tgI = 1:numTraitGroups
     end
     text(mean(xMarks((tgI*2-1):tgI*2)),sHeight+0.01,txtPlot,'Color','k','HorizontalAlignment','center')
 end
+    
+
+%% Pop Vector corrs
+fitLine = 'meanLine';
+fitLine = 'regression';
+figure;
+condSetColors = {'b' 'r' 'g'};
+csMod = [-0.1 0 0.1];
+for cpI = 1:size(pooledCompPairs,1)
+    dayPairsHere = unique(abs(pooledPVdayDiffs{cpI}));
+    for dpI = 1:length(dayPairsHere)
+        pvsHere = pooledMeanCorr{cpI}(abs(pooledPVdayDiffs{cpI})==dayPairsHere(dpI));
+        plot(dayPairsHere(dpI)*ones(length(pvsHere),1)+csMod(condSetInds(cpI)),pvsHere,'.','MarkerSize',6,'Color',condSetColors{condSetInds(cpI)})
+        hold on
+        meanLine(dpI,cpI) = mean(pvsHere);
+    end
+end
+switch fitLine
+    case 'meanLine'
+        for csI = 1:length(condSet)
+            meanLinePlot = mean(meanLine(:,condSet{csI}),2);
+            plot(dayPairsHere,meanLinePlot,'LineWidth',1.5,'Color',condSetColors{csI})
+        end
+    case 'regression'
+        
+end
+xlim([-0.5 max(dayPairsHere)+0.5])
+ylabel('Mean Correlation')
+xlabel('Days Apart')
+title('Mean Population vector correlation by number of sessions apart')
+%legend
     

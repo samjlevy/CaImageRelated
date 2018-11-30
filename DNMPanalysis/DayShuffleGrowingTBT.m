@@ -1,4 +1,4 @@
-function [growingShuffTbtOne, growingShuffTbtTwo] = DayShuffleGrowingTBT(trialbytrial,dayPairs)
+function [growingShuffTbtOne, growingShuffTbtTwo] = DayShuffleGrowingTBT(trialbytrial,dayPairs,yesShuffle)
 %Shuffles trials across the pairs of days, puts the shuffled days into
 %separate TBTs, in which sessID refers to an index in day pair
 numDayPairs = size(dayPairs,1);
@@ -8,8 +8,10 @@ growingShuffTbtTwo = growingShuffTbtOne;
               
 for dpI = 1:numDayPairs
     %Shuffle trials
+    if yesShuffle==true
     condDayShuffA = ShuffleTrialsAcrossDays(trialbytrial,dayPairs(dpI,1),dayPairs(dpI,2));
-    
+    end
+        
     %Pile them into a new tbt format
     for condI = 1:length(trialbytrial) 
         %Day pair(x,1)

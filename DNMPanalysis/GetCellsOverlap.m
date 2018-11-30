@@ -18,7 +18,10 @@ for dpI = 1:size(dayPairs,1)
     activeCellsOverlap(dpI,1) = sum(sum([cellsInModel, cellsInTest],2) == 2);
     
     overlapWithModel(dpI,1) = activeCellsOverlap(dpI,1)/numInModel(dpI,1);
+    if isnan(overlapWithModel(dpI,1)); overlapWithModel(dpI,1) = 0; end
+    
     overlapWithTest(dpI,1) = activeCellsOverlap(dpI,1)/numInTest(dpI,1);
+    if isnan(overlapWithTest(dpI,1)); overlapWithTest(dpI,1) = 0; end
 end
 
 end

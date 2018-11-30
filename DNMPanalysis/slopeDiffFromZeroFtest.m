@@ -10,11 +10,13 @@ errorSlope = dataVec - slope*days - intercept*ones(size(dataVec,1),size(dataVec,
 RsquaredZero = sum(errorZero.^2);
 RsquaredSlope = sum(errorSlope.^2);
 
+%rsquaredA = sum(errorZero.^2);
+%rsquaredB = sum(errorSlope.^2);
 
 %F = ((rss1 - rss2)/(p2 - p1)) / (rss2/(n - p2))
-nPts = length(allData);
-rss1 = rsquaredAsame + rsquaredBsame;
-rss2 = rsquaredA + rsquaredB;
+nPts = length(dataVec);
+rss1 = RsquaredZero;
+rss2 = RsquaredSlope;
 
 Fval = ((rss1 - rss2)/(3 - 2)) / (rss2/(nPts - 3));
 
