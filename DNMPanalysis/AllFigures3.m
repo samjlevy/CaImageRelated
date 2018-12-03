@@ -565,32 +565,83 @@ end
     
 
 %% Pop Vector corrs
-fitLine = 'meanLine';
+fitLine = 'mean';
 fitLine = 'regression';
-figure;
+gg = figure('Position',[680 305 968 673]);
+plot([-0.5 17.5],[0 0],'k'); hold on
 condSetColors = {'b' 'r' 'g'};
 csMod = [-0.1 0 0.1];
-for cpI = 1:size(pooledCompPairs,1)
-    dayPairsHere = unique(abs(pooledPVdayDiffs{cpI}));
+for csI = 1:length(condSet)
+    dayPairsHere = unique(abs(CSpooledPVdaysApart{csI}));
+    pvsHere = CSpooledMeanPVcorrs{csI};
+    pp{csI} = plot(CSpooledPVdaysApart{csI}+csMod(csI),pvsHere,'.','MarkerSize',6,'Color',condSetColors{csI},'DisplayName',condSetLabels{csI});
+   
     for dpI = 1:length(dayPairsHere)
-        pvsHere = pooledMeanCorr{cpI}(abs(pooledPVdayDiffs{cpI})==dayPairsHere(dpI));
-        plot(dayPairsHere(dpI)*ones(length(pvsHere),1)+csMod(condSetInds(cpI)),pvsHere,'.','MarkerSize',6,'Color',condSetColors{condSetInds(cpI)})
-        hold on
-        meanLine(dpI,cpI) = mean(pvsHere);
+        meanLine(dpI,csI) = mean(pvsHere(CSpooledPVdaysApart{csI}==dayPairsHere(dpI)));
     end
 end
 switch fitLine
-    case 'meanLine'
+    case 'mean'
         for csI = 1:length(condSet)
-            meanLinePlot = mean(meanLine(:,condSet{csI}),2);
-            plot(dayPairsHere,meanLinePlot,'LineWidth',1.5,'Color',condSetColors{csI})
+            meanLinePlot = meanLine(:,csI);
+            plot(dayPairsHere,meanLinePlot,'LineWidth',2,'Color',condSetColors{csI})
         end
-    case 'regression'
+        %ranksum results
+        plotHeights = [0.8 0.7 0.6];
+        for cscI = 1:size(condSetComps,1)
+            for ddI = 1:length(allPVdayDiffs)
+                if hDDmeanPV{cscI}(ddI) ==1
+                    plot(allPVdayDiffs(ddI),plotHeights(cscI),'*k','MarkerSize',6) 
+                end
+            end
+            compStr{cscI,1} = [condSetColors{condSetComps(cscI,1)} ' vs. ' condSetColors{condSetComps(cscI,2)}];
+            text(-1.5,plotHeights(cscI),compStr{cscI})
+        end
+        xlimOne = -2;
         
+        
+    case 'regression'
+        for csI = 1:length(condSet)
+             plot(dayPairsHere,meanCSpvPlotReg{csI},'LineWidth',2,'Color',condSetColors{csI})
+             
+             plotStr{csI,1} = [condSetColors{condSetComps(csI,1)} ' vs. ' condSetColors{condSetComps(csI,2)} ': p=' num2str(meanPVcompspVal(csI))];
+        end       
+        %legend with comparison results
+        dim = [0.7 0.55 0.25 0.25];
+        qq = annotation('textbox',dim,'String',plotStr,'FitBoxToText','on');
+        xlimOne = -0.5;
 end
-xlim([-0.5 max(dayPairsHere)+0.5])
+xlim([xlimOne max(dayPairsHere)+0.5])
 ylabel('Mean Correlation')
 xlabel('Days Apart')
-title('Mean Population vector correlation by number of sessions apart')
-%legend
+title(['Mean Population vector correlation by number of sessions apart with ' fitLine ' line'])
+legend([pp{:}],'Location','ne')
+    
+%% PV corr spread by days apart
+
+figure;
+numCSC = size(condSetComps,1);
+for cscI = 1:numCSC
+    subplot(1,numCSC,cscI)
+    plot(pooledCSdiffDiffDayDiffs,pooledCSdiffDiffsMeanCorr{cscI},'.')
+    [h,p] = kstest(zscore(pooledCSdiffDiffsMeanCorr{cscI}));
+    title([condSetLabels{condSetComps(cscI,1)} ' - ' condSetLabels{condSetComps(cscI,2)} ', KS h=' num2str(h) ' p=' num2str(p)])
+    xlabel('Days Apart')
+end
+suptitleSL('Within-day differences beween correlations')
+    
+  
+figure;
+for csI = 1:length(condSet)
+    subplot(1,length(condSet),csI)
+    plot(pooledCSdiffDiffDayDiffs,pooledWithinCSdayDiffsMeanCorr{csI},'.')
+    [h,p] = kstest(zscore(pooledWithinCSdayDiffsMeanCorr{csI}));
+    %title(condSetLabels{csI})
+    title([condSetLabels{csI} ', KS h=' num2str(h) ' p=' num2str(p)])
+    xlabel('Days Apart')
+end
+suptitleSL('Within-Correlation differences across days ')
+    
+    
+    
     
