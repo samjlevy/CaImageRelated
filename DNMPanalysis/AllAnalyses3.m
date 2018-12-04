@@ -138,6 +138,15 @@ Conds = GetTBTconds(cellTBT{1});
 useRealDays=1;
 alignDayPairsREV=1;
 
+pooledRealDayDiffs = [];
+for mouseI = 1:numMice
+    dayPairs{mouseI} = combnk(1:numDays(mouseI),2);
+    realDayPairs{mouseI} = cellRealDays{mouseI}(dayPairs{mouseI});
+    realDayDiffs{mouseI} = diff(realDayPairs{mouseI},1,2);
+    pooledRealDayDiffs = [pooledRealDayDiffs; realDayDiffs{mouseI}];
+end
+
+
 disp('Done all setup stuff')
 %% Plot rasters for all good cells
 %Works, but probably don't accidentally run this
@@ -148,6 +157,57 @@ for mouseI = 1:numMice
     PlotRastersPDF(cellTBT{mouseI}, cellSSI{mouseI}, cellAllFiles{mouseI}, cellsUse, saveDir, mice{mouseI});
 end
 %}
+
+%% Change in accuracy, speed, time to run down arm
+pooledAccuracyChange = []; accuracyChange = [];
+for mouseI = 1:numMice
+    for dpI = 1:size(dayPairs{mouseI},1)
+        accuracyChange{mouseI}(dpI,1) = accuracy{mouseI}(dayPairs{mouseI}(dpI,2)) - accuracy{mouseI}(dayPairs{mouseI}(dpI,1));
+    end
+    pooledAccuracyChange = [pooledAccuracyChange; accuracyChange{mouseI}];    
+end
+
+[accuracyFval,accuracydfNum,accuracydfDen,accuracypVal] = slopeDiffFromZeroFtest(pooledAccuracyChange,pooledRealDayDiffs);
+[~, ~, accuracyFitLine, ~] = fitLinRegSL(pooledAccuracyChange, pooledRealDayDiffs);
+
+
+%% How many active cells by days?
+pooledActiveCellsChange = []; pooledRealDayDiffs = [];
+for mouseI = 1:numMice
+    cellsActiveEachDay{mouseI} = sum(dayUse{mouseI},1)/size(dayUse{mouseI},1);
+    
+    for dpI = 1:size(dayPairs{mouseI},1)
+        activeCellsChange{mouseI}(dpI,1) = cellsActiveEachDay{mouseI}(dayPairs{mouseI}(dpI,2)) - cellsActiveEachDay{mouseI}(dayPairs{mouseI}(dpI,1));
+    end
+    
+    pooledActiveCellsChange = [pooledActiveCellsChange; activeCellsChange{mouseI}]; 
+end
+
+[~, ~, cellsActiveFitLine, ~] = fitLinRegSL(pooledActiveCellsChange, pooledRealDayDiffs);
+[cellsActiveFval,cellsActivedfNum,cellsActivedfDen,cellsActivepVal] = slopeDiffFromZeroFtest(pooledActiveCellsChange,pooledRealDayDiffs);
+    
+
+pooledActiveCellsChangeARM = []; pooledRealDayDiffsARM = [];
+for mouseI = 1:numMice
+    cellsActiveEachDayARM{mouseI} = sum(dayUseArm{mouseI},1)/size(dayUseArm{mouseI},1);
+    %dayPairs{mouseI} = combnk(1:numDays(mouseI),2);
+    %realDayPairs{mouseI} = cellRealDays{mouseI}(dayPairs{mouseI});
+    for dpI = 1:size(dayPairs{mouseI},1)
+        activeCellsChangeARM{mouseI}(dpI,1) = cellsActiveEachDayARM{mouseI}(dayPairs{mouseI}(dpI,2)) - cellsActiveEachDayARM{mouseI}(dayPairs{mouseI}(dpI,1));
+    end
+    
+    %realDayDiffs{mouseI} = diff(realDayPairs{mouseI},1,2);
+    
+    pooledActiveCellsChangeARM = [pooledActiveCellsChangeARM; activeCellsChangeARM{mouseI}];
+    pooledRealDayDiffsARM = [pooledRealDayDiffsARM; realDayDiffs{mouseI}];
+    
+    
+end
+
+[~, ~, cellsActiveFitLineARM, ~] = fitLinRegSL(pooledActiveCellsChangeARM, pooledRealDayDiffs);
+[cellsActiveFvalARM,cellsActivedfNumARM,cellsActivedfDenARM,cellsActivepValARM] = slopeDiffFromZeroFtest(pooledActiveCellsChangeARM,pooledRealDayDiffs);
+    
+
 %% Splitter cells: Shuffle versions, pooled
 
 numShuffles = 1000;
@@ -417,8 +477,9 @@ disp('done how many ARM splitters')
 %% Get changes in number of splitters over time
 %Packaging for running neatly in a big group
 
-pooledDaysApartFWD = []; pooledDaysApartREV = [];
+pooledDaysApartFWD = []; pooledDaysApartREV = []; splitterDayPairsFWD = []; splitterDayPairsREV = []; 
 pooledSplitPctChangeFWD = cell(1,length(traitGroups{1})); pooledSplitPctChangeREV = cell(1,length(traitGroups{1}));
+splitterPctDayChangesFWD = []; splitterPctDayChangesREV = [];
 for mouseI = 1:numMice
     [splitterPctDayChangesFWD{mouseI}] = RunGroupFunction('NNplusKChange',traitGroups{mouseI},dayUse{mouseI});
     [splitterPctDayChangesREV{mouseI}] = RunGroupFunction('NNplusKChange',traitGroupsREV{mouseI},dayUseREV{mouseI});
@@ -427,6 +488,7 @@ for mouseI = 1:numMice
         splitterPctDayChangesREV{mouseI}(tgI).dayPairs = sessionsIndREV{mouseI}(splitterPctDayChangesREV{mouseI}(tgI).dayPairs);
     end
     
+    REVorder = [];
     tt = fieldnames(splitterPctDayChangesREV{mouseI}(tgI));
     if alignDayPairsREV==1
         if mouseI==1; disp('Aligning forward and reverse day pairs'); end 
@@ -486,7 +548,7 @@ end
 for pcI = 1:size(pairsCompareInd,1)    
     disp(['pci ' num2str(pcI)])
     [Fval(pcI),dfNum(pcI),dfDen(pcI),pVal(pcI)] = TwoSlopeFTest(pooledSplitPctChangeFWD{pairsCompareInd(pcI,1)},...
-                                                pooledSplitPctChangeFWD{pairsCompareInd(pcI,2)}, pooledDaysApartFWD);
+                                                pooledSplitPctChangeFWD{pairsCompareInd(pcI,2)},pooledDaysApartFWD,pooledDaysApartFWD);
     [rho(pcI),rsP(pcI)] = ranksum(pooledSplitPctChangeFWD{pairsCompareInd(pcI,1)},pooledSplitPctChangeFWD{pairsCompareInd(pcI,2)});
 end
 
@@ -560,7 +622,7 @@ end
 for pcI = 1:size(pairsCompareInd,1)    
     disp(['pci ' num2str(pcI)])
     [ARMFval(pcI),ARMdfNum(pcI),ARMdfDen(pcI),ARMpVal(pcI)] = TwoSlopeFTest(ARMpooledSplitPctChangeFWD{pairsCompareInd(pcI,1)},...
-                                                ARMpooledSplitPctChangeFWD{pairsCompareInd(pcI,2)}, pooledDaysApartFWD);
+                                                ARMpooledSplitPctChangeFWD{pairsCompareInd(pcI,2)}, pooledDaysApartFWD, pooledDaysApartFWD);
     [ARMrho(pcI),ARMrsP(pcI)] = ranksum(ARMpooledSplitPctChangeFWD{pairsCompareInd(pcI,1)},ARMpooledSplitPctChangeFWD{pairsCompareInd(pcI,2)});
 end
 
@@ -703,9 +765,37 @@ for tgI = 1:length(traitGroups{1})
     %Signtest on same day pair? Does that make sense?
 end
 
-%F test, slopes, etc. 
+%Cell Turning into other types
+transInds = [ 5 6; 6 5; 1 3; 1 4; 3 1; 4 1; 2 4; 2 3; 4 2; 3 2]; 
 
-%Compare LR with LR only, ST with ST only
+for mouseI = 1:numMice
+    cellTransTraits{mouseI} = {splittersBOTH{mouseI}, splittersOne{mouseI};...
+                               splittersOne{mouseI}, splittersBOTH{mouseI};...
+                               splittersLR{mouseI}, splittersLRonly{mouseI};...
+                               splittersLR{mouseI}, splittersSTonly{mouseI};...
+                               splittersLRonly{mouseI}, splittersLR{mouseI};...
+                               splittersSTonly{mouseI}, splittersLR{mouseI};...
+                               splittersST{mouseI}, splittersSTonly{mouseI};...
+                               splittersST{mouseI}, splittersLRonly{mouseI};...
+                               splittersSTonly{mouseI}, splittersST{mouseI};...
+                               splittersLRonly{mouseI}, splittersST{mouseI}};
+                           
+    cellTransTraitsREV{mouseI} = cellfun(@fliplr,cellTransTraits{mouseI},'UniformOutput',false);
+    %Need all that realignment stuff to get this in the right order
+end
+    
+pooledSplitterChanges = cell(size(cellTransTraits{mouseI},1),1);
+for mouseI = 1:numMice    
+    [splitterChanges{mouseI}] = RunGroupFunction('GetCellsOverlap',cellTransTraits{mouseI}(:,1),cellTransTraits{mouseI}(:,2),dayPairs{mouseI});    
+    for ctI = 1:size(cellTransTraits{mouseI},1)    
+        pooledSplitterChanges{ctI} = [pooledSplitterChanges{ctI}; splitterChanges{mouseI}(ctI).overlapWithModel];
+    end
+    
+    
+end
+
+
+
 
 disp('Done splitter reactivation')
 
@@ -767,21 +857,21 @@ end
 
 %Regression lines for plotting
 for tgI = 1:numTraitGroups
-    [splitterCBSlopeFWD(tgI,1), ~, splitterCBFitLineFWD{tgI}, ~] = fitLinRegSL(pooledSplitterComesBackFWD{tgI}, pooledDaysApartFWD);
-    splitterCBFitPlotDaysFWD{tgI} = unique(splitterCBFitLineFWD{1}(:,1));
-    [splitterSSSlopeFWD(tgI,1), ~, splitterSSFitLineFWD{tgI}, ~] = fitLinRegSL(pooledSplitterStillSplitterFWD{tgI}, pooledDaysApartFWD);
-    splitterSSFitPlotDaysFWD{tgI} = unique(splitterSSFitLineFWD{1}(:,1));
-    for sfpI = 1:length(splitterCBFitPlotDaysFWD{tgI})
-        splitterCBFitPlotPctFWD{tgI}(sfpI,1) = splitterCBFitLineFWD{tgI}(find(splitterCBFitLineFWD{tgI}==splitterCBFitPlotDaysFWD{tgI}(sfpI),1,'first'),2);
-        splitterSSFitPlotPctFWD{tgI}(sfpI,1) = splitterSSFitLineFWD{tgI}(find(splitterSSFitLineFWD{tgI}==splitterSSFitPlotDaysFWD{tgI}(sfpI),1,'first'),2);
+    [ARMsplitterCBSlopeFWD(tgI,1), ~, ARMsplitterCBFitLineFWD{tgI}, ~] = fitLinRegSL(ARMpooledSplitterComesBackFWD{tgI}, pooledDaysApartFWD);
+    ARMsplitterCBFitPlotDaysFWD{tgI} = unique(ARMsplitterCBFitLineFWD{1}(:,1));
+    [ARMsplitterSSSlopeFWD(tgI,1), ~, ARMsplitterSSFitLineFWD{tgI}, ~] = fitLinRegSL(ARMpooledSplitterStillSplitterFWD{tgI}, pooledDaysApartFWD);
+    ARMsplitterSSFitPlotDaysFWD{tgI} = unique(ARMsplitterSSFitLineFWD{1}(:,1));
+    for sfpI = 1:length(ARMsplitterCBFitPlotDaysFWD{tgI})
+        ARMsplitterCBFitPlotPctFWD{tgI}(sfpI,1) = ARMsplitterCBFitLineFWD{tgI}(find(ARMsplitterCBFitLineFWD{tgI}==ARMsplitterCBFitPlotDaysFWD{tgI}(sfpI),1,'first'),2);
+        ARMsplitterSSFitPlotPctFWD{tgI}(sfpI,1) = ARMsplitterSSFitLineFWD{tgI}(find(ARMsplitterSSFitLineFWD{tgI}==ARMsplitterSSFitPlotDaysFWD{tgI}(sfpI),1,'first'),2);
     end
-    [splitterCBSlopeREV(tgI,1), ~, splitterCBFitLineREV{tgI}, ~] = fitLinRegSL(pooledSplitterComesBackREV{tgI}, pooledDaysApartREV);
-    splitterCBFitPlotDaysREV{tgI} = unique(splitterCBFitLineREV{1}(:,1));
-    [splitterSSSlopeREV(tgI,1), ~, splitterSSFitLineREV{tgI}, ~] = fitLinRegSL(pooledSplitterStillSplitterREV{tgI}, pooledDaysApartREV);
-    splitterSSFitPlotDaysREV{tgI} = unique(splitterSSFitLineREV{1}(:,1)); 
+    [ARMsplitterCBSlopeREV(tgI,1), ~,ARMsplitterCBFitLineREV{tgI}, ~] = fitLinRegSL(ARMpooledSplitterComesBackREV{tgI}, pooledDaysApartREV);
+    ARMsplitterCBFitPlotDaysREV{tgI} = unique(ARMsplitterCBFitLineREV{1}(:,1));
+    [ARMsplitterSSSlopeREV(tgI,1), ~, ARMsplitterSSFitLineREV{tgI}, ~] = fitLinRegSL(ARMpooledSplitterStillSplitterREV{tgI}, pooledDaysApartREV);
+    ARMsplitterSSFitPlotDaysREV{tgI} = unique(ARMsplitterSSFitLineREV{1}(:,1)); 
     for sfpI = 1:length(splitterCBFitPlotDaysREV{tgI})
-        splitterCBFitPlotPctREV{tgI}(sfpI,1) = splitterCBFitLineREV{tgI}(find(splitterCBFitLineREV{tgI}==splitterCBFitPlotDaysREV{tgI}(sfpI),1,'first'),2);
-        splitterSSFitPlotPctREV{tgI}(sfpI,1) = splitterSSFitLineREV{tgI}(find(splitterSSFitLineREV{tgI}==splitterSSFitPlotDaysREV{tgI}(sfpI),1,'first'),2);
+        ARMsplitterCBFitPlotPctREV{tgI}(sfpI,1) = ARMsplitterCBFitLineREV{tgI}(find(ARMsplitterCBFitLineREV{tgI}==ARMsplitterCBFitPlotDaysREV{tgI}(sfpI),1,'first'),2);
+        ARMsplitterSSFitPlotPctREV{tgI}(sfpI,1) = ARMsplitterSSFitLineREV{tgI}(find(ARMsplitterSSFitLineREV{tgI}==ARMsplitterSSFitPlotDaysREV{tgI}(sfpI),1,'first'),2);
     end
 end
 
@@ -890,6 +980,7 @@ end
 
 
 
+
 %% Pop vector corrs
 
 numPerms = 1000;
@@ -982,8 +1073,8 @@ for csI = 1:length(condSet)
     dayDiffsUnique{csI} = unique(meanPVcsFitLine{csI}(:,1));
     for ddI = 1:length(dayDiffsUnique{csI})
         meanCSpvPlotReg{csI}(ddI) = meanPVcsFitLine{csI}(find(CSpooledPVdaysApart{csI}==dayDiffsUnique{csI}(ddI),1,'first'),2);
-        meanCSpvPlotRegHalfFirst{csI}(ddI) = meanPVcsFitLine{csI}(find(CSpooledPVdaysApartHalfFirst{csI}==dayDiffsUnique{csI}(ddI),1,'first'),2);
-        meanCSpvPlotRegHalfSecond{csI}(ddI) = meanPVcsFitLine{csI}(find(CSpooledPVdaysApartHalfSecond{csI}==dayDiffsUnique{csI}(ddI),1,'first'),2);
+        meanCSpvPlotRegHalfFirst{csI}(ddI) = meanPVcsFitLine{csI}(find(CSpooledPVdaysApart{csI}==dayDiffsUnique{csI}(ddI),1,'first'),2);
+        meanCSpvPlotRegHalfSecond{csI}(ddI) = meanPVcsFitLine{csI}(find(CSpooledPVdaysApart{csI}==dayDiffsUnique{csI}(ddI),1,'first'),2);
     end
 end
 
@@ -992,7 +1083,14 @@ for cscI = 1:size(condSetComps,1)
     [meanPVcompsFval(cscI),meanPVcompsdfNum(cscI),meanPVcompsdfDen(cscI),meanPVcompspVal(cscI)] = TwoSlopeFTest(CSpooledMeanPVcorrs{condSetComps(cscI,1)},...
         CSpooledMeanPVcorrs{condSetComps(cscI,2)}, CSpooledPVdaysApart{condSetComps(cscI,1)}, CSpooledPVdaysApart{condSetComps(cscI,2)});
     %First half
+    [meanPVcompsFvalHalfFirst(cscI),meanPVcompsdfNumHalfFirst(cscI),meanPVcompsdfDenHalfFirst(cscI),meanPVcompspValHalfFirst(cscI)] = ...
+        TwoSlopeFTest(CSpooledMeanPVcorrsHalfFirst{condSetComps(cscI,1)},CSpooledMeanPVcorrsHalfFirst{condSetComps(cscI,2)},...
+        CSpooledPVdaysApart{condSetComps(cscI,1)}, CSpooledPVdaysApart{condSetComps(cscI,2)});
     %Second half
+    [meanPVcompsFvalHalfSecond(cscI),meanPVcompsdfNumHalfSecond(cscI),meanPVcompsdfDenHalfSecond(cscI),meanPVcompspValHalfSecond(cscI)] = ...
+        TwoSlopeFTest(CSpooledMeanPVcorrsHalfSecond{condSetComps(cscI,1)},CSpooledMeanPVcorrsHalfSecond{condSetComps(cscI,2)},...
+        CSpooledPVdaysApart{condSetComps(cscI,1)}, CSpooledPVdaysApart{condSetComps(cscI,2)});
+    
     allPVdayDiffs = unique([CSpooledPVdaysApart{condSetComps(cscI,1)}; CSpooledPVdaysApart{condSetComps(cscI,2)}]);
     for ddI = 1:length(allPVdayDiffs)
         dataA = CSpooledMeanPVcorrs{condSetComps(cscI,1)}(CSpooledPVdaysApart{condSetComps(cscI,1)}==allPVdayDiffs(ddI));
@@ -1000,10 +1098,25 @@ for cscI = 1:size(condSetComps,1)
         [pDDmeanPV{cscI}(ddI),hDDmeanPV{cscI}(ddI)] = ranksum(dataA,dataB);
         
         %First half
+        dataA = CSpooledMeanPVcorrsHalfFirst{condSetComps(cscI,1)}(CSpooledPVdaysApart{condSetComps(cscI,1)}==allPVdayDiffs(ddI));
+        dataB = CSpooledMeanPVcorrsHalfFirst{condSetComps(cscI,2)}(CSpooledPVdaysApart{condSetComps(cscI,2)}==allPVdayDiffs(ddI));
+        [pDDmeanPVHalfFirst{cscI}(ddI),hDDmeanPVHalfFirst{cscI}(ddI)] = ranksum(dataA,dataB);
         %Second half
+        dataA = CSpooledMeanPVcorrsHalfSecond{condSetComps(cscI,1)}(CSpooledPVdaysApart{condSetComps(cscI,1)}==allPVdayDiffs(ddI));
+        dataB = CSpooledMeanPVcorrsHalfSecond{condSetComps(cscI,2)}(CSpooledPVdaysApart{condSetComps(cscI,2)}==allPVdayDiffs(ddI));
+        [pDDmeanPVHalfSecond{cscI}(ddI),hDDmeanPVHalfSecond{cscI}(ddI)] = ranksum(dataA,dataB);
     end
 end
 
+%Compare first half with second half
+for csI = 1:length(condSet)
+    allPVdayDiffs = unique(CSpooledPVdaysApart{csI});
+    for ddI = 1:length(allPVdayDiffs)
+       dataA = CSpooledMeanPVcorrsHalfFirst{csI}(CSpooledPVdaysApart{csI}==allPVdayDiffs(ddI));
+       dataB = CSpooledMeanPVcorrsHalfSecond{csI}(CSpooledPVdaysApart{csI}==allPVdayDiffs(ddI));
+       [pFirstVSecondHalfPVcorrs{csI}(ddI,1),hFirstVSecondHalfPVcorrs{csI}(ddI,1)] = ranksum(dataA,dataB);
+    end
+end
 
 %Look at difference in each corr type of each day, diff of diffs by days apart
 %(How is within-day correlation changing over time)
@@ -1036,6 +1149,7 @@ for mouseI = 1:numMice
     realDaysSameDayDayPairs{mouseI} = cellRealDays{mouseI}(sameDayDayPairs{mouseI});
     CSdiffDiffDayDiffs{mouseI} = diff(realDaysSameDayDayPairs{mouseI},1,2);
     
+    %Within corr change over time?
     withinCSdayDiffsMeanCorr = []; withinCSdayDiffsMeanCorrHalfFirst = []; withinCSdayDiffsMeanCorrHalfSecond = [];
     for csI = 1:length(condSet)
         for dpI = 1:size(sameDayDayPairs{mouseI},1)
@@ -1048,7 +1162,6 @@ for mouseI = 1:numMice
         pooledWithinCSdayDiffsMeanCorrHalfFirst{csI} = [pooledWithinCSdayDiffsMeanCorrHalfFirst{csI}; withinCSdayDiffsMeanCorrHalfFirst{csI}];
         pooledWithinCSdayDiffsMeanCorrHalfSecond{csI} = [pooledWithinCSdayDiffsMeanCorrHalfSecond{csI}; withinCSdayDiffsMeanCorrHalfSecond{csI}];
     end
-    
     
     %Now get the condSet comparison differences
     CSdiffDiffsMeanCorr = []; CSdiffDiffsMeanCorrHalfFirst = []; CSdiffDiffsMeanCorrHalfSecond = [];
@@ -1068,13 +1181,33 @@ for mouseI = 1:numMice
         pooledCSdiffDiffsMeanCorr{cscI} = [pooledCSdiffDiffsMeanCorr{cscI}; CSdiffDiffsMeanCorr{cscI}];
         pooledCSdiffDiffsMeanCorrHalfFirst{cscI} = [pooledCSdiffDiffsMeanCorrHalfFirst{cscI}; CSdiffDiffsMeanCorrHalfFirst{cscI}];
         pooledCSdiffDiffsMeanCorrHalfSecond{cscI} = [pooledCSdiffDiffsMeanCorrHalfSecond{cscI}; CSdiffDiffsMeanCorrHalfSecond{cscI}];
+        
     end
     pooledCSdiffDiffDayDiffs = [pooledCSdiffDiffDayDiffs; CSdiffDiffDayDiffs{mouseI}];
 end
 
-    %F-test to compare slopes
-
-        %Are slopes different from zero
+for csI = 1:length(condSet)
+    %Slope diff from zero?
+    %Cond differences
+    [diffMeanFval{csI},diffMeandfNum{csI},diffMeandfDen{csI},diffMeanpVal{csI}] =...
+        slopeDiffFromZeroFtest(pooledCSdiffDiffsMeanCorr{csI},pooledCSdiffDiffDayDiffs);
+    [diffMeanFvalHalfFirst{csI},diffMeandfNumHalfFirst{csI},diffMeandfDenHalfFirst{csI},diffMeanpValHalfFirst{csI}] =...
+        slopeDiffFromZeroFtest(pooledCSdiffDiffsMeanCorrHalfFirst{csI},pooledCSdiffDiffDayDiffs);
+    [diffMeanFvalHalfSecond{csI},diffMeandfNumHalfSecond{csI},diffMeandfDenHalfSecond{csI},diffMeanpValHalfSecond{csI}] =...
+        slopeDiffFromZeroFtest(pooledCSdiffDiffsMeanCorrHalfSecond{csI},pooledCSdiffDiffDayDiffs);
+    
+    %Within condition change
+    [diffWithinFval{csI},diffWithindfNum{csI},diffWithindfDen{csI},diffWithinpVal{csI}] =...
+        slopeDiffFromZeroFtest(pooledWithinCSdayDiffsMeanCorr{csI},pooledCSdiffDiffDayDiffs);
+    [diffWithinFvalHalfFirst{csI},diffWithindfNumHalfFirst{csI},diffWithindfDenHalfFirst{csI},diffWithinpValHalfFirst{csI}] =...
+        slopeDiffFromZeroFtest(pooledWithinCSdayDiffsMeanCorrHalfFirst{csI},pooledCSdiffDiffDayDiffs);
+    [diffWithinFvalHalfSecond{csI},diffWithindfNumHalfSecond{csI},diffWithindfDenHalfSecond{csI},diffWithinpValHalfSecond{csI}] =...
+        slopeDiffFromZeroFtest(pooledWithinCSdayDiffsMeanCorrHalfSecond{csI},pooledCSdiffDiffDayDiffs);
+    
+    [~, ~, meanWithinPVdiffFitLine{csI}, ~] = fitLinRegSL(pooledWithinCSdayDiffsMeanCorr{csI}, pooledCSdiffDiffDayDiffs);
+    [~, ~, meanWithinPVdiffFitLineHalfFirst{csI}, ~] = fitLinRegSL(pooledWithinCSdayDiffsMeanCorrHalfFirst{csI}, pooledCSdiffDiffDayDiffs);
+    [~, ~, meanWithinPVdiffFitLineHalfSecond{csI}, ~] = fitLinRegSL(pooledWithinCSdayDiffsMeanCorrHalfSecond{csI}, pooledCSdiffDiffDayDiffs);
+end
     
     
     

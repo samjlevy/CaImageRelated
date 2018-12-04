@@ -17,7 +17,7 @@ for cellI = 1:numCells
     splitterDays = logical(splittersLogical(cellI,:));
     numSplitterDays = sum(splittersLogical(cellI,:),2);
     if numDaysPresent > 1
-        daysPresent = dayUse(cellI,:);
+        daysPresent = logical(dayUse(cellI,:));
         dayV = 1:numDaysPresent; dayAlign = zeros(1,length(daysPresent));
         dayAlign(daysPresent) = dayV;
         daysActiveCOM = sum(dayAlign)/numDaysPresent;
@@ -38,7 +38,7 @@ for cellI = 1:numCells
 end
 
 % Only includes cells that show up more than 1 day and split at least 1 day; won't equal some number of splitters or active cells
-% early bias, no bias didn't split all days, late bias, split all days
+% early bias, didn't split all days, late bias, no bias,  split all days
 splitterDayBias(1,[1 3]) = [sum(splitterCOM<0) sum(splitterCOM>0)];
 splitterDayBias(1, 2) = sum((splitterCOM==0).*(numDaysSplitter~=daysEachCellActive));
 splitterDayBias(1, 4) = sum((splitterCOM==0).*(numDaysSplitter==daysEachCellActive));
