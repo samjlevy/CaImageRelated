@@ -1,4 +1,5 @@
 function traitChange = TraitChangeDayPairs(traitPcts,dayPairs)
+%Could be pcts, or a difference between some other traits or correlations
 
 for dpI = 1:size(dayPairs)
     traitChange(dpI,1) = traitPcts(dayPairs(dpI,2)) - traitPcts(dayPairs(dpI,1));
