@@ -15,6 +15,8 @@ for ngI = 1:length(traitGroup)
                 [groupout(ngI).activeCellsOverlap, groupout(ngI).overlapWithModel, groupout(ngI).overlapWithTest] =...
                     GetCellsOverlap(traitGroup{ngI},dayUse,varargin{1});
             end
+        case 'GetFirstDayTrait'
+            [groupout(ngI).firstDay] = GetFirstDayTrait(traitGroup{ngI});
         otherwise
             disp('not a recognized option')
     end

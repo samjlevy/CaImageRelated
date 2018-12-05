@@ -35,7 +35,7 @@ title('Effects of Time and Experience'); xlabel('Time Between Comparisons')
 
 %%
 
-cpsPlot = [1 2 3 4];
+cpsPlot = [1 2 3];
 tgsPlot = pairsCompareInd(cpsPlot,:)'; tgsPlot = tgsPlot(:);
 
 %% How many cells active?
@@ -476,6 +476,8 @@ for tgI = 1:length(tgsPlot)
     hold on
     p2 = plot(-1*pooledDaysApartREV-0.15,pooledSplitterComesBackREV{tgsPlot(tgI)},markerss{2},'Color',color2,'MarkerSize',3,'DisplayName','Days Backwards');
     
+    plot(splitterCBFitLineFWD{tgI}(:,1),splitterCBFitLineFWD{tgI}(:,2),'LineWidth',2)
+    plot(-1*splitterCBFitLineREV{tgI}(:,1),splitterCBFitLineREV{tgI}(:,2),'LineWidth',2)
     %{
     yHeight = 0.75;
     for dpI = 1:length(dayPairsCBpvn{tgsPlot(tgI)})
@@ -486,6 +488,7 @@ for tgI = 1:length(tgsPlot)
         %pValSplitCBpvn{tgI}
     end
     %}
+    
     
     if hValSCBall{tgI} == 1
         titleText = [traitLabels{tgsPlot(tgI)} ': ' FWDREVtxt{whichWonSCBall{tgI}} ' more stable, p = ' num2str(pValSCBall{tgI}) ];
@@ -526,6 +529,8 @@ for tgI = 1:length(tgsPlot)
         %pValSplitSSpvn{tgI}
     end
     %}
+    plot(splitterSSFitLineFWD{tgI}(:,1),splitterSSFitLineFWD{tgI}(:,2),'LineWidth',2)
+    plot(-1*splitterSSFitLineREV{tgI}(:,1),splitterSSFitLineREV{tgI}(:,2),'LineWidth',2)
     
     if hValSSSall{tgI} == 1
         titleText = [traitLabels{tgsPlot(tgI)} ': ' FWDREVtxt{whichWonSSSall{tgI}} ' more stable, p = ' num2str(pValSSSall{tgI}) ];
@@ -673,6 +678,25 @@ labelsHere = cell(numTraitGroups*2,1)
 
 
 pSvAsplitPropDiffs{tgI}, hSvAsplitPropDiffs{tgI}
+
+%% What are new cells?
+figure;
+for pcI = 1:length(cpsPlot)
+    subplot(1,length(cpsPlot),pcI)
+    plot(pooledDaysApartFWD,pooledNewCellPropChanges{pairsCompareInd(pcI,1)},'.','MarkerSize',6,'Color',colorAssc{pairsCompareInd(pcI,1)})
+    hold on
+    plot(pooledDaysApartFWD,pooledNewCellPropChanges{pairsCompareInd(pcI,2)},'.','MarkerSize',6,'Color',colorAssc{pairsCompareInd(pcI,2)})
+    
+    plot([0 20],[0 0],'k')
+    
+    plot(newCellFit{pairsCompareInd(pcI,1)}(:,1),newCellFit{pairsCompareInd(pcI,1)}(:,2),'Color',colorAssc{pairsCompareInd(pcI,1)},'LineWidth',2)
+    plot(newCellFit{pairsCompareInd(pcI,2)}(:,1),newCellFit{pairsCompareInd(pcI,2)}(:,2),'Color',colorAssc{pairsCompareInd(pcI,2)},'LineWidth',2)
+    
+    title(['p = ' num2str(newCellsSlopeDiffpVal{pcI})]) 
+    ylim([-0.8 0.8])
+    xlabel('Days apart') 
+end
+suptitleSL('Comparisons of change in proportion of new cells')
 
 
 

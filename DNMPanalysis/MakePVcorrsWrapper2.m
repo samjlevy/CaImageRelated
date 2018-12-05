@@ -1,9 +1,10 @@
 function [pvCorrs, meanCorr, numCellsUsed, numNans, shuffPVcorrs, shuffMeanCorr, PVdayPairs ]=...
     MakePVcorrsWrapper2(trialbytrial, shuffleWhat, shuffleDim, numPerms, pooledCompPairs,...
-                       pooledCondPairs, poolLabels, traitLogical, binEdges, minspeed)
+                       pooledCondPairs, poolLabels, traitLogical, binEdges, minspeed,cellsUse)
 %pooledCondPairs is how to pool placefields across dimensions
 %pooledCompPairs is the pairs of condition comparisons to make after pooling placefields
 %pooledShuffleDim is what dimension to shuffle across, should be same length as pooledCompPairs
+%Cells use is how to pick cells to use in correlations: 'activeEither', 'activeBoth', 'includeSilent'
 
 
 numDays = length(unique(trialbytrial(1).sessID));
@@ -51,7 +52,7 @@ for dpI = 1:numDayPairs
         
         %Run PV
         [pvCorrs{dpI,cpI},meanCorr{dpI,cpI},numCellsUsed{dpI,cpI},numNans{dpI,cpI}] = PopVectorCorrsSmallTMaps(...
-            TMapMinA,TMapMinB,trialReliA,trialReliB,'activeEither','Spearman');
+            TMapMinA,TMapMinB,trialReliA,trialReliB,cellsUse,'Spearman');
         %{
         for cpI = 1:length(pooledCompPairs)
                 %Shuffle days, and pool into long tbts
@@ -107,6 +108,7 @@ end
 %Do all the shuffling
 shuffPVcorrs = cell(numDayPairs,numCompPairs);
 shuffMeanCorr = cell(numDayPairs,numCompPairs);
+
 if numPerms > 0
 
 disp('Shuffling now')

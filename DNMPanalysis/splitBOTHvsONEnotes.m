@@ -43,3 +43,7 @@ for mouseI = 1:4; [~, splitterDayBiasBoth(mouseI,:)] = LogicalTraitCenterofMass(
 numBoth = 0; for mouseI = 1:4; numBoth = numBoth + sum(sum(splittersBOTH{mouseI},2)>0); end
 sdbb = sum(splitterDayBiasBoth,1);
 [sdbb(1) sdbb(3)]/numBoth
+
+
+first day it's both vs. first day it's one?ff
+qq
