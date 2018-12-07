@@ -1,4 +1,5 @@
 function pooledCorrs = PoolCorrsAcrossMice(corrs)
+%Expects mouseI to be the lowest cell array
 
 numMice = length(corrs);
 numComparisons = size(corrs{1},2);
