@@ -1,12 +1,16 @@
-function [figHand, statsOut] = PlotMeanPVcorrsDaysApart(meanPVcorrs, daysApart, fitLineType, condSetColors, condSetLabels) 
+function [figHandOut, statsOut] = PlotMeanPVcorrsDaysApart(meanPVcorrs, daysApart, fitLineType, condSetColors, condSetLabels,figHand) 
 %fitLineType = 'mean';
 %fitLineType = 'regression';
 
+titleText = {['Mean correlation change by days with ' fitLineType ' line']};
 numConds = length(meanPVcorrs);
 condSetComps = combnk(1:numConds,2);
 maxDay = max(cell2mat(cellfun(@max,daysApart,'UniformOutput',false)));
-
-figHand = figure('Position',[680 305 968 673]);
+if isempty(figHand)
+    figHandOut = figure('Position',[680 305 968 673]);
+else
+    figHandOut = figHand;
+end
 plot([-0.5 maxDay+0.75],[0 0],'k'); hold on
 %condSetColors = {'b' 'r' 'g'};
 %csMod = [-0.1 0 0.1];
@@ -57,14 +61,22 @@ switch fitLineType
             plotStr{csI,1} = [condSetColors{condSetComps(csI,1)} ' vs. ' condSetColors{condSetComps(csI,2)} ': p=' num2str(statsOut.pVal(csI))];
         end       
         %legend with comparison results
-        dim = [0.7 0.55 0.25 0.25];
-        qq = annotation('textbox',dim,'String',plotStr,'FitBoxToText','on');
+        if isempty(figHand)
+            dim = [0.7 0.55 0.25 0.25];
+            qq = annotation('textbox',dim,'String',plotStr,'FitBoxToText','on');
+        else
+            titleText = [titleText; plotStr];
+        end
         xlim([ -0.5 maxDay])
 end
-figHand.Children(2).YLim(2) = 1;
+if isempty(figHand)
+    figHandOut.Children(2).YLim(2) = 1;
+else
+    figHandOut.YLim(2) = 1;
+end
 ylabel('Mean Correlation')
 xlabel('Days Apart')
-title(['Mean Population vector correlation by number of days apart with ' fitLineType ' line'])
-legend([pp{:}],'Location','ne')
+title(titleText)
+legend([pp{:}],'Location','sw')
 
 end

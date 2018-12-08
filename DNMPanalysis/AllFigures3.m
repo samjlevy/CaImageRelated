@@ -701,28 +701,74 @@ suptitleSL('Comparisons of change in proportion of new cells')
 
     
 %% Pop Vector corrs by days apart
-figHand = [];
+gg = figure('Position',[288 37 1521 849]); 
+hht = [];
 for pvtI = 1:length(pvNames)
-[figHand{pvtI}, statsOut] = PlotMeanPVcorrsDaysApart(CSpooledMeanPVcorrs{pvtI}, CSpooledPVdaysApart{pvtI}, 'mean', condSetColors, condSetLabels);
-figHand{pvtI}.Children(2).Title.String = [pvNames{pvtI} ', ' figHand{pvtI}.Children(2).Title.String];
+    hht{pvtI} = subplot(2,3,pvtI);
+[hht{pvtI}, statsOut] = PlotMeanPVcorrsDaysApart(CSpooledMeanPVcorrs{pvtI}, CSpooledPVdaysApart{pvtI}, 'mean', condSetColors, condSetLabels, hht{pvtI});
+hht{pvtI}.Title.String = [pvNames{pvtI}; hht{pvtI}.Title.String];
 end
 
-%% PV corr diffs by days apart
+
+%% PV corr self change by days apart
+
+make this a function
+
+figure;
+offset = [-0.1 0 0.1];
+for pvtI = 1:length(pvNames)
+    gg{pvtI} = subplot(2,3,pvtI);
+    for csI = 1:length(condSet)
+        [~,~,~,pVal(pvtI,csI)] = slopeDiffFromZeroFtest(withinCSdayChangeMean{pvtI}{csI},sameDayDayDiffsPooled{pvtI});
+        plot(sameDayDayDiffsPooled{pvtI}+offset(csI),withinCSdayChangeMean{pvtI}{csI},'.','Color',condSetColors{csI});
+        hold on
+    end
+    for csI = 1:length(condSet)
+        [plotReg,daysPlot] = FitLineForPlotting(withinCSdayChangeMean{pvtI}{csI},sameDayDayDiffsPooled{pvtI});
+        pp{csI} = plot(daysPlot,plotReg,'Color',condSetColors{csI},'LineWidth',2,...
+            'DisplayName',[condSetLabels{csI} ', p = ' num2str(pVal(pvtI,csI))]);
+    end
+    titleText = {pvNames{pvtI}};
+    for cscI = 1:size(condSetComps,1)
+        [~,~,~,pVal(pvtI,cscI)] = TwoSlopeFTest(withinCSdayChangeMean{pvtI}{condSetComps(cscI,1)}, withinCSdayChangeMean{pvtI}{condSetComps(cscI,2)},...
+            sameDayDayDiffsPooled{pvtI}, sameDayDayDiffsPooled{pvtI});
+        titleText{cscI+1,1} = [condSetColors{condSetComps(cscI,1)} ' vs ' condSetColors{condSetComps(cscI,2)} ': p = ' num2str(pVal(pvtI,cscI))];
+    end
+    %ylim([-0.5 0.5])
+    %dim = [0.5 0.1 0.3 0.2];
+    %annotation(gg{pvtI},'textbox',dim,'String',texttt,'FitBoxToText','on');
+        
+    legend([pp{:}],'Location','ne')
+    title(titleText)
+end
+suptitleSL('Chance in Each Correlation over Experience')
+
+
+%% PV corr separation by days apart
+make this a function; same as above?
+
 figure;
 cscColors = {'m'; 'c'; [0.8 0.2 0]};
 offset = [-0.1 0 0.1];
 for pvtI = 1:length(pvNames)
     subplot(2,3,pvtI)
     for cscI = 1:size(condSetComps,1)
-        plot(sameDayDayDiffsPooled{pvtI}+offset(cscI),cscDiffsChangeMeanPooled{pvtI}{cscI},'.','Color',cscColors{cscI})
+        [~,~,~,pVal(pvtI,cscI)] = slopeDiffFromZeroFtest(cscDiffsChangeMeanPooled{pvtI}{cscI},sameDayDayDiffsPooled{pvtI});
+        plot(sameDayDayDiffsPooled{pvtI}+offset(cscI),cscDiffsChangeMeanPooled{pvtI}{cscI},'.','Color',cscColors{cscI});
         hold on
     end
     for cscI = 1:size(condSetComps,1)
         [plotReg,daysPlot] = FitLineForPlotting(cscDiffsChangeMeanPooled{pvtI}{cscI},sameDayDayDiffsPooled{pvtI});
-        plot(daysPlot,plotReg,'Color',cscColors{cscI},'LineWidth',2)
+        pp{cscI} = plot(daysPlot,plotReg,'Color',cscColors{cscI},'LineWidth',2,...
+            'DisplayName',[csLabelsShort{condSetComps(cscI,1)} ' - ' csLabelsShort{condSetComps(cscI,2)} ', p = ' num2str(pVal(pvtI,cscI))]);
     end
+    legend([pp{:}],'Location','ne')
     title(pvNames{pvtI})
 end
+suptitleSL('Change in Separation between Correlations')
+
+
+
 
 
 

@@ -1040,7 +1040,7 @@ for mouseI = 1:numMice
         traitFirstNums{mouseI}{tgI} = sum(traitFirst{mouseI}{tgI},1);
         
         traitFirstPcts{mouseI}{tgI} = traitFirstNums{mouseI}{tgI}./ firstDayNums{mouseI};
-        newCellChanges{mouseI}{tgI} = TraitChangeDayPairs(traitFirstPcts{mouseI}{tgI},compDayPairsFWD{mouseI});
+        [newCellChanges{mouseI}{tgI},~] = TraitChangeDayPairs(traitFirstPcts{mouseI}{tgI},compDayPairsFWD{mouseI});
         
         pooledNewCellPropChanges{tgI} = [pooledNewCellPropChanges{tgI}; newCellChanges{mouseI}{tgI}(:)];
         fitLinRegSL(pooledNewCellPropChanges{tgI},pooledDaysApartFWD);
@@ -1059,7 +1059,7 @@ for mouseI = 1:numMice
     %}
     for pcI = 1:size(pairsCompareInd,1)
         traitFirstDiffs{mouseI}{pcI} = traitFirstPcts{mouseI}{pairsCompareInd(pcI,2)} - traitFirstPcts{mouseI}{pairsCompareInd(pcI,1)};
-        traitFirstDiffsChanges{mouseI}{pcI} = TraitChangeDayPairs(traitFirstDiffs{mouseI}{pcI},compDayPairsFWD{mouseI});
+        [traitFirstDiffsChanges{mouseI}{pcI},~] = TraitChangeDayPairs(traitFirstDiffs{mouseI}{pcI},compDayPairsFWD{mouseI});
         
         traitFirstDiffsPooled{pcI} = [traitFirstDiffsPooled{pcI}; traitFirstDiffs{mouseI}{pcI}(:)];
         traitFirstDiffsPooledChanges{pcI} = [traitFirstDiffsPooledChanges{pcI}; traitFirstDiffsChanges{mouseI}{pcI}(:)];
@@ -1213,12 +1213,11 @@ for pvtI = 1:length(pvNames)
         CSpooledSameDaymeanCorrHalfSecond{pvtI}{mouseI} = PoolDouble(sameDaymeanCorrHalfSecond{pvtI}{mouseI},condSet);
         
         %Change of within condset over time
-        csPooledChangeMean{pvtI}{mouseI} = cellfun(@(x) TraitChangeDayPairs(x,dayPairs{mouseI}),CSpooledSameDaymeanCorr{pvtI}{mouseI},'UniformOutput',false);
-        csPooledChangeMeanHalfFirst{pvtI}{mouseI} = cellfun(@(x) TraitChangeDayPairs(x,dayPairs{mouseI}),CSpooledSameDaymeanCorrHalfFirst{pvtI}{mouseI},'UniformOutput',false);
-        csPooledChangeMeanHalfSecond{pvtI}{mouseI} = cellfun(@(x) TraitChangeDayPairs(x,dayPairs{mouseI}),CSpooledSameDaymeanCorrHalfSecond{pvtI}{mouseI},'UniformOutput',false);
+        [csPooledChangeMean{pvtI}{mouseI},~] = cellfun(@(x) TraitChangeDayPairs(x,dayPairs{mouseI}),CSpooledSameDaymeanCorr{pvtI}{mouseI},'UniformOutput',false);
+        [csPooledChangeMeanHalfFirst{pvtI}{mouseI},~] = cellfun(@(x) TraitChangeDayPairs(x,dayPairs{mouseI}),CSpooledSameDaymeanCorrHalfFirst{pvtI}{mouseI},'UniformOutput',false);
+        [csPooledChangeMeanHalfSecond{pvtI}{mouseI},~] = cellfun(@(x) TraitChangeDayPairs(x,dayPairs{mouseI}),CSpooledSameDaymeanCorrHalfSecond{pvtI}{mouseI},'UniformOutput',false);
         
         %pool across mice
-        withinCSdayChangeMean{pvtI}{csI} = cell(length(condSet),1);
         for csI = 1:length(condSet)
             withinCSdayChangeMean{pvtI}{csI} = [withinCSdayChangeMean{pvtI}{csI}; csPooledChangeMean{pvtI}{mouseI}{csI}];
             withinCSdayChangeMeanHalfFirst{pvtI}{csI} = [withinCSdayChangeMeanHalfFirst{pvtI}{csI}; csPooledChangeMeanHalfFirst{pvtI}{mouseI}{csI}];
@@ -1231,9 +1230,9 @@ for pvtI = 1:length(pvNames)
         cscDiffsMeanHalfSecond{pvtI}{mouseI} = cellfun(@(x) CSpooledSameDaymeanCorrHalfSecond{pvtI}{mouseI}{x(1)} - CSpooledSameDaymeanCorrHalfSecond{pvtI}{mouseI}{x(2)},cscCell,'UniformOutput',false);
         
         %Change of separation over time
-        cscDiffsChangeMean{pvtI}{mouseI} = cellfun(@(x) TraitChangeDayPairs(x,dayPairs{mouseI}),cscDiffsMean{pvtI}{mouseI},'UniformOutput',false);
-        cscDiffsChangeMeanHalfFirst{pvtI}{mouseI} = cellfun(@(x) TraitChangeDayPairs(x,dayPairs{mouseI}),cscDiffsMeanHalfFirst{pvtI}{mouseI},'UniformOutput',false);
-        cscDiffsChangeMeanHalfSecond{pvtI}{mouseI} = cellfun(@(x) TraitChangeDayPairs(x,dayPairs{mouseI}),cscDiffsMeanHalfSecond{pvtI}{mouseI},'UniformOutput',false);
+        [cscDiffsChangeMean{pvtI}{mouseI},~] = cellfun(@(x) TraitChangeDayPairs(x,dayPairs{mouseI}),cscDiffsMean{pvtI}{mouseI},'UniformOutput',false);
+        [cscDiffsChangeMeanHalfFirst{pvtI}{mouseI},~] = cellfun(@(x) TraitChangeDayPairs(x,dayPairs{mouseI}),cscDiffsMeanHalfFirst{pvtI}{mouseI},'UniformOutput',false);
+        [cscDiffsChangeMeanHalfSecond{pvtI}{mouseI},~] = cellfun(@(x) TraitChangeDayPairs(x,dayPairs{mouseI}),cscDiffsMeanHalfSecond{pvtI}{mouseI},'UniformOutput',false);
         
         %pool across mice
         for cscI = 1:size(condSetComps,1)
