@@ -251,4 +251,60 @@ end
     splitAllDaysNone{mouseI} = splitterDayBiasNone{mouseI}/sum(sum(dayUse{mouseI},2) > 1); 
     %}
 
+
+cscCell = mat2cell(condSetComps,ones(size(condSetComps,1),1),size(condSetComps,2));
+sameDayDayDiffsPooled = cell(length(pvNames),1);
+for pvtI = 1:length(pvNames)
+    withinCSdayChangeMean{pvtI} = cell(length(condSet),1);
+    withinCSdayChangeMeanHalfFirst{pvtI} = cell(length(condSet),1);
+    withinCSdayChangeMeanHalfSecond{pvtI} = cell(length(condSet),1);
+    cscDiffsChangeMeanPooled{pvtI} = cell(size(condSetComps,1),1);
+    cscDiffsChangeMeanHalfFirstPooled{pvtI} = cell(size(condSetComps,1),1);
+    cscDiffsChangeMeanHalfSecondPooled{pvtI} = cell(size(condSetComps,1),1);
+    for mouseI = 1:numMice
+        %Get only within day PVcorrs
+        sameDayPairs{pvtI}{mouseI} = find(PVdayPairs{pvtI}{mouseI}(:,1)==PVdayPairs{pvtI}{mouseI}(:,2)); %These are in real days
+        %sameDayDayDiffs{pvtI}{mouseI} = realDayDiffs{mouseI}(sameDayPairs{pvtI}{mouseI});
+        sameDayDayDiffsPooled{pvtI} = [sameDayDayDiffsPooled{pvtI}; realDayDiffs{mouseI}];
+        
+        %sameDaypvCorrs{pvtI}{mouseI} = tpvCorrs; need this? how to do it right?
+        sameDaymeanCorr{pvtI}{mouseI} = meanCorr{pvtI}{mouseI}(sameDayPairs{pvtI}{mouseI},:);
+        sameDaymeanCorrHalfFirst{pvtI}{mouseI} = meanCorrHalfFirst{pvtI}{mouseI}(sameDayPairs{pvtI}{mouseI},:);
+        sameDaymeanCorrHalfSecond{pvtI}{mouseI} = meanCorrHalfSecond{pvtI}{mouseI}(sameDayPairs{pvtI}{mouseI},:);
+        
+        CSpooledSameDaymeanCorr{pvtI}{mouseI} = PoolDouble(sameDaymeanCorr{pvtI}{mouseI},condSet);
+        CSpooledSameDaymeanCorrHalfFirst{pvtI}{mouseI} = PoolDouble(sameDaymeanCorrHalfFirst{pvtI}{mouseI},condSet);
+        CSpooledSameDaymeanCorrHalfSecond{pvtI}{mouseI} = PoolDouble(sameDaymeanCorrHalfSecond{pvtI}{mouseI},condSet);
+        
+        %Change of within condset over time
+        [csPooledChangeMean{pvtI}{mouseI},~] = cellfun(@(x) TraitChangeDayPairs(x,dayPairs{mouseI}),CSpooledSameDaymeanCorr{pvtI}{mouseI},'UniformOutput',false);
+        [csPooledChangeMeanHalfFirst{pvtI}{mouseI},~] = cellfun(@(x) TraitChangeDayPairs(x,dayPairs{mouseI}),CSpooledSameDaymeanCorrHalfFirst{pvtI}{mouseI},'UniformOutput',false);
+        [csPooledChangeMeanHalfSecond{pvtI}{mouseI},~] = cellfun(@(x) TraitChangeDayPairs(x,dayPairs{mouseI}),CSpooledSameDaymeanCorrHalfSecond{pvtI}{mouseI},'UniformOutput',false);
+        
+        %pool across mice
+        for csI = 1:length(condSet)
+            withinCSdayChangeMean{pvtI}{csI} = [withinCSdayChangeMean{pvtI}{csI}; csPooledChangeMean{pvtI}{mouseI}{csI}];
+            withinCSdayChangeMeanHalfFirst{pvtI}{csI} = [withinCSdayChangeMeanHalfFirst{pvtI}{csI}; csPooledChangeMeanHalfFirst{pvtI}{mouseI}{csI}];
+            withinCSdayChangeMeanHalfSecond{pvtI}{csI} = [withinCSdayChangeMeanHalfSecond{pvtI}{csI}; csPooledChangeMeanHalfSecond{pvtI}{mouseI}{csI}];
+        end
+            
+        %Separation between condsets
+        cscDiffsMean{pvtI}{mouseI} = cellfun(@(x) CSpooledSameDaymeanCorr{pvtI}{mouseI}{x(1)} - CSpooledSameDaymeanCorr{pvtI}{mouseI}{x(2)},cscCell,'UniformOutput',false);
+        cscDiffsMeanHalfFirst{pvtI}{mouseI} = cellfun(@(x) CSpooledSameDaymeanCorrHalfFirst{pvtI}{mouseI}{x(1)} - CSpooledSameDaymeanCorrHalfFirst{pvtI}{mouseI}{x(2)},cscCell,'UniformOutput',false);
+        cscDiffsMeanHalfSecond{pvtI}{mouseI} = cellfun(@(x) CSpooledSameDaymeanCorrHalfSecond{pvtI}{mouseI}{x(1)} - CSpooledSameDaymeanCorrHalfSecond{pvtI}{mouseI}{x(2)},cscCell,'UniformOutput',false);
+        
+        %Change of separation over time
+        [cscDiffsChangeMean{pvtI}{mouseI},~] = cellfun(@(x) TraitChangeDayPairs(x,dayPairs{mouseI}),cscDiffsMean{pvtI}{mouseI},'UniformOutput',false);
+        [cscDiffsChangeMeanHalfFirst{pvtI}{mouseI},~] = cellfun(@(x) TraitChangeDayPairs(x,dayPairs{mouseI}),cscDiffsMeanHalfFirst{pvtI}{mouseI},'UniformOutput',false);
+        [cscDiffsChangeMeanHalfSecond{pvtI}{mouseI},~] = cellfun(@(x) TraitChangeDayPairs(x,dayPairs{mouseI}),cscDiffsMeanHalfSecond{pvtI}{mouseI},'UniformOutput',false);
+        
+        %pool across mice
+        for cscI = 1:size(condSetComps,1)
+            cscDiffsChangeMeanPooled{pvtI}{cscI} = [cscDiffsChangeMeanPooled{pvtI}{cscI}; cscDiffsChangeMean{pvtI}{mouseI}{cscI}];
+            cscDiffsChangeMeanHalfFirstPooled{pvtI}{cscI} = [cscDiffsChangeMeanPooled{pvtI}{cscI}; cscDiffsChangeMeanHalfFirst{pvtI}{mouseI}{cscI}];
+            cscDiffsChangeMeanHalfSecondPooled{pvtI}{cscI} = [cscDiffsChangeMeanPooled{pvtI}{cscI}; cscDiffsChangeMeanHalfSecond{pvtI}{mouseI}{cscI}];
+        end
+    end
+    
+end
                 

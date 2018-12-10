@@ -22,9 +22,9 @@ for dpI = 1:numDayPairs
         keyboard
     end
     
-    if pctChange(dpI) < -1
-        keyboard
-    end
+    %if pctChange(dpI) < -1
+    %    keyboard
+    %end
 end
 
 end

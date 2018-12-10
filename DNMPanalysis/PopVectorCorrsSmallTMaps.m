@@ -34,12 +34,17 @@ if sum(cellsUse) > 1
         
         if any(isnan(Corrs(1,binI)))
             numNans = numNans + 1;
+            Corrs(1,binI) = 0;
         end
     end
-    meanCorr = nanmean(Corrs);
-    if isnan(meanCorr)
-        keyboard
+    if sum(sum(TRatesA))==0 || sum(sum(TRatesB))==0
+        numNans = 100;
     end
+    
+    meanCorr = nanmean(Corrs);
+    %if isnan(meanCorr)
+    %    keyboard
+    %end
 else
     keyboard
 end

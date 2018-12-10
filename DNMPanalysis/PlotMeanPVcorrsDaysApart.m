@@ -33,7 +33,7 @@ switch fitLineType
             plot(dayPairsHere,meanLinePlot,'LineWidth',2,'Color',condSetColors{csI})
         end
         %ranksum results
-        plotHeights = 0.6:0.1:(0.5+0.1*size(condSetComps,1));%[0.8 0.7 0.6];
+        plotHeights = -0.8:0.1:(0.5+0.1*size(condSetComps,1));%[0.8 0.7 0.6];
         for cscI = 1:size(condSetComps,1)
             allPVdayDiffs = unique([daysApart{condSetComps(cscI,1)}; daysApart{condSetComps(cscI,2)}]);
             for ddI = 1:length(allPVdayDiffs)
@@ -67,7 +67,7 @@ switch fitLineType
         else
             titleText = [titleText; plotStr];
         end
-        xlim([ -0.5 maxDay])
+        xlim([-0.5 maxDay])
 end
 if isempty(figHand)
     figHandOut.Children(2).YLim(2) = 1;
@@ -77,6 +77,6 @@ end
 ylabel('Mean Correlation')
 xlabel('Days Apart')
 title(titleText)
-legend([pp{:}],'Location','sw')
+legend([pp{:}],'Location','ne')
 
 end

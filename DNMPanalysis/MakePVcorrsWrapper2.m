@@ -53,6 +53,15 @@ for dpI = 1:numDayPairs
         %Run PV
         [pvCorrs{dpI,cpI},meanCorr{dpI,cpI},numCellsUsed{dpI,cpI},numNans{dpI,cpI}] = PopVectorCorrsSmallTMaps(...
             TMapMinA,TMapMinB,trialReliA,trialReliB,cellsUse,'Spearman');
+
+        %if numNans{dpI,cpI} > 0
+        if sum(isnan(pvCorrs{dpI,cpI})) > 0
+            keyboard
+        end
+        if numNans{dpI,cpI} == 100
+            disp('Found a zero rates issue')
+            keyboard 
+        end
         %{
         for cpI = 1:length(pooledCompPairs)
                 %Shuffle days, and pool into long tbts
