@@ -37,6 +37,10 @@ for condI = 1:numConds
             transientDur{condI}(lapI,cellI) = sum(thisCellActivity);
             transLength{condI}(lapI,cellI) = maximumX{condI}(lapI,cellI) - minimumX{condI}(lapI,cellI);
             transLengthPosNorm{condI}(lapI,cellI) = transLength{condI}(lapI,cellI) / transientDur{condI}(lapI,cellI);
+            
+            thisFluor = trialbytrial(condI).trialRawTrace{lapI}(cellI,:);
+            fluorSum{condI}(lapI,cellI) = sum(thisFluor);
+            fluorAvg{condI}(lapI,cellI) = mean(thisFluor);
         end
     end
     
@@ -51,5 +55,7 @@ tbtActivity.midX = midX;
 tbtActivity.transientDur = transientDur;
 tbtActivity.transLength = transLength;
 tbtActivity.transLengthPosNorm = transLengthPosNorm;
+tbtActivity.fluorSum = fluorSum;
+tbtActivity.fluorAvg = fluorAvg;
 
 end

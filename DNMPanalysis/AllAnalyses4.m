@@ -58,6 +58,14 @@ for mouseI = 1:numMice
     accuracyRange(mouseI, 1:2) = [mean(accuracy{mouseI}),...
         std(accuracy{mouseI})/sqrt(length(accuracy{mouseI}))];
 end
+%{
+%Pooled Reliability
+for mouseI = 1:numMice
+    cellTBTpooled{mouseI} = PoolTBTacrossConds(cellTBT{mouseI},condPairs,{'Left','Right','Study','Test'});
+    [dayUsePooled{mouseI},threshAndConsecPooled{mouseI}] = GetUseCells(cellTBTpooled{mouseI}, lapPctThresh, consecLapThresh);
+        [trialReliPooled{mouseI},aboveThreshPooled{mouseI},~,~] = TrialReliability(cellTBTpooled{mouseI}, lapPctThresh);
+end
+%}
 
 disp('Getting reliability')
 dayUse = cell(1,numMice); threshAndConsec = cell(1,numMice);
@@ -110,8 +118,8 @@ for mouseI = 1:numMice
     end
     
     load(fullfile(mainFolder,mice{mouseI},'PFsLinPooled.mat'),'TMap_unsmoothed','TMap_zRates')
-    cellPooledTMap_unsmoothed{mouseI} = TMap_unsmoothed;
-    cellPooledTMap_zRates{mouseI} = TMap_unsmoothed; 
+    cellPooledTMap_unsmoothed{1}{mouseI} = TMap_unsmoothed;
+    cellPooledTMap_zRates{1}{mouseI} = TMap_unsmoothed; 
 end
 
 for mouseI = 1:numMice
@@ -126,8 +134,8 @@ for mouseI = 1:numMice
     end
     
     load(saveName,'TMap_unsmoothed','TMap_zRates')
-    cellPooledTMap_unsmoothedArm{mouseI} = TMap_unsmoothed;
-    cellPooledTMap_zRatesArm{mouseI} = TMap_unsmoothed; 
+    cellPooledTMap_unsmoothedArm{1}{mouseI} = TMap_unsmoothed;
+    cellPooledTMap_zRatesArm{1}{mouseI} = TMap_unsmoothed; 
 end
 
 
@@ -264,9 +272,7 @@ numShuffles = 1000;
 %numShuffles = 100;
 shuffThresh = 1 - pThresh;
 binsMin = 1;
-shuffleDirLR = 'splitters';
 shuffleDir = 'splitters';
-shuffleDirST = 'splitters';
 
 %Get left/right splitting
 for mouseI = 1:numMice
@@ -1619,6 +1625,10 @@ save(fullfile(mainFolder,'dayAndDimCorrs.mat'),'pvCorrs','meanCorr','numCellsUse
 numShuffles = 100;
 %numShuffles = 20;
 activityType = [];
+
+[decodingResults, shuffledResults, testConds, titles, sessPairs] =...
+    DecoderWrapper3(cellTBT{1},ones(size(cellSSI{1})),3,'transientDur','pooled','bayes');
+
 
 
 folderName = 'decoding180611';
