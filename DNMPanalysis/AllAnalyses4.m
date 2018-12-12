@@ -1626,9 +1626,14 @@ numShuffles = 100;
 %numShuffles = 20;
 activityType = [];
 
-[decodingResults, shuffledResults, testConds, titles, sessPairs] =...
-    DecoderWrapper3(cellTBT{1},ones(size(cellSSI{1})),3,'transientDur','pooled','bayes');
-
+decodingResults = cell(numMice,1); shuffledResults = cell(numMice,1); sessPairs = cell(numMice,1);
+for mouseI = 1:numMice
+    tic
+    [decodingResults, shuffledResults, testConds, titles, sessPairs] =...
+        DecoderWrapper3(cellTBT{1},ones(size(cellSSI{mouseI})),100,'transientDur','pooled','bayes');
+    toc
+    save(fullfile(mainFolder,mice{mouseI},'decodingAll.mat'),'decodingResults', 'shuffledResults', 'testConds', 'titles', 'sessPairs')
+end
 
 
 folderName = 'decoding180611';

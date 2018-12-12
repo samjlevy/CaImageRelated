@@ -46,6 +46,9 @@ switch activityType
 end      
 
 %Repackage laps, etc. into cell arrays
+if numShuffles>0
+    p = ProgressBar(numShuffles);
+end
 for permI = 1:numShuffles+1
 testingActivity = cell(numSessPairs,size(testConds,2));
 testingAnswers =  cell(numSessPairs,size(testConds,2));
@@ -132,5 +135,15 @@ for testI = 1:size(testConds,1)
         shuffledResults.miscodedLapNums{permI-1,testI} = miscodedLapNums;  
     end
 end 
+
+if numShuffles>0 
+    p.progress;
+end
+
+end
+
+if numShuffles>0
+    p.stop;
+end
 
 end
