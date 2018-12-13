@@ -1302,6 +1302,60 @@ for pvtI = 1:length(pvNames)
 end
 
 
+%% Decoder analysis
+numShuffles = 100;
+numDownSamples
+%numShuffles = 20;
+activityType = [];
+
+decodingType = {'allCells', 'threshCells'};
+fileName = {'All','Thresh'};
+traitLogUse = {cellfun(@(x) x>0,cellSSI,'UniformOutput',false), dayUse};
+
+%decodingResults = cell(numMice,1); shuffledResults = cell(numMice,1); sessPairs = cell(numMice,1);
+for dtI = 1:length(decodingType)
+for mouseI = 1:numMice
+    dcFileName = fullfile(mainFolder,mice{mouseI},['decoding' fileName{dtI} '.mat']);
+    if exist(dcFileName,'file'==0)
+        disp(['Running decoding ' decodingType{dtI} ' for mouse ' num2str(mouseI)])
+    tic
+    [decodingResults, shuffledResults, testConds, titles, sessPairs] =...
+        DecoderWrapper3(cellTBT{mouseI},traitLogUse{dtI}{mouseI},numShuffles,'transientDur','pooled','bayes');
+    toc
+    save(dcFileName,'decodingResults', 'shuffledResults', 'testConds', 'titles', 'sessPairs')
+    end
+    
+    regDecoding{dtI}{mouseI} = load(dcFileName);
+    
+    dsdcFileName = fullfile(mainFolder,mice{mouseI},['DSdecoding' fileName{dtI} '.mat']);
+    if exist(dsdcFileName,'file'==0)
+        disp(['Running downsampled decoding ' decodingType{dtI} ' for mouse ' num2str(mouseI)])
+    tic
+    [DSdecodingResults, DSdownsampledResults, DStestConds, DStitles, DSsessPairs] =...
+        DecoderWrapper3downsampling(cellTBT{mouseI},traitLogUse{dtI}{mouseI},numDownSamples,'transientDur','pooled','bayes');
+    toc
+    save(dsdcFileName,'DSdecodingResults', 'DSdownsampledResults', 'DStestConds', 'DStitles', 'DSsessPairs')
+    end
+    
+    DSdecoding{mouseI} = load(dsdcFileName);
+end
+end
+
+
+
+for dtI = 1:length(decodingType)
+    for mouseI = 1:numMice
+        %Process results relative to change
+        
+        %Pool across mice
+        
+    end
+end
+
+
+
+
+
 %% Pop vector corrs
 
 %Cells coming back at all
@@ -1621,20 +1675,7 @@ save(fullfile(mainFolder,'dayAndDimCorrs.mat'),'pvCorrs','meanCorr','numCellsUse
 [b,r,stats, MSE] = GetCellVarianceSource(trialbytrial,pooledUnpooled)
 
 
-%% Decoder analysis
-numShuffles = 100;
-%numShuffles = 20;
-activityType = [];
-
-decodingResults = cell(numMice,1); shuffledResults = cell(numMice,1); sessPairs = cell(numMice,1);
-for mouseI = 1:numMice
-    tic
-    [decodingResults, shuffledResults, testConds, titles, sessPairs] =...
-        DecoderWrapper3(cellTBT{1},ones(size(cellSSI{mouseI})),100,'transientDur','pooled','bayes');
-    toc
-    save(fullfile(mainFolder,mice{mouseI},'decodingAll.mat'),'decodingResults', 'shuffledResults', 'testConds', 'titles', 'sessPairs')
-end
-
+%%
 
 folderName = 'decoding180611';
 decodeFileName = {'decoderAllPooled', 'decoderLRsplittersPooled', 'decoderSTsplittersPooled',...
