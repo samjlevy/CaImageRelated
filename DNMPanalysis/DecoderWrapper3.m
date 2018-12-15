@@ -19,10 +19,11 @@ switch pooledUnpooled
         %titles = {'StudyLvR', 'TestLvR', 'LeftSvT', 'RightSvT'}; 
         %typePredict = {'leftright', 'leftright', 'studytest', 'studytest'}; 
     case 'pooled'
-        titles = {'Left vs. Right'; 'Study vs. Test'};
+        titles = {'Left/Right'; 'Study/Test'};
         testConds = [1 2; 3 4];
         condsPool = [Conds.Left; Conds.Right; Conds.Study; Conds.Test];
-        trialbytrial = PoolTBTacrossConds(trialbytrial,condsPool,{'Left','Right','Study','Test'});
+        condLabels = {'Left','Right','Study','Test'};
+        trialbytrial = PoolTBTacrossConds(trialbytrial,condsPool,condLabels);
 end
 
 randomizeNow = [0; ones(numShuffles,1)];
@@ -47,14 +48,16 @@ end
 
 %Repackage laps, etc. into cell arrays
 if numShuffles>0
-    p = ProgressBar(numShuffles);
+    h = waitbar(0,'Starting');
 end
 for permI = 1:numShuffles+1
-testingActivity = cell(numSessPairs,size(testConds,2));
-testingAnswers =  cell(numSessPairs,size(testConds,2));
-trainingActivity = cell(numSessPairs,size(testConds,2));
-trainingAnswers =  cell(numSessPairs,size(testConds,2));
+
 for testI = 1:size(testConds,1)
+    testingActivity = cell(numSessPairs,size(testConds,2));
+    testingAnswers =  cell(numSessPairs,size(testConds,2));
+    trainingActivity = cell(numSessPairs,size(testConds,2));
+    trainingAnswers =  cell(numSessPairs,size(testConds,2));
+
     numCondsHere = length(testConds(testI,:));
     for tcJ = 1:numCondsHere
         testCond = testConds(testI,tcJ);
@@ -70,8 +73,11 @@ for testI = 1:size(testConds,1)
             numTestLaps = length(testingLaps(testCond).lapNums{testSess});
             trainingActivity{sessPairI,tcJ} = cell(numTestLaps,1);
             trainingAnswers{sessPairI,tcJ} = cell(numTestLaps,1);
+            testingActivity{sessPairI,tcJ} = cell(numTestLaps,1);
+            testingAnswers{sessPairI,tcJ} = cell(numTestLaps,1);
             for lapI = 1:numTestLaps
-                testingActivity{sessPairI,tcJ}{lapI,1} = lblActivity{testCond}(testingLaps(testCond).lapNums{testSess}{lapI},testingCells);
+                lapsGet = testingLaps(testCond).lapNums{testSess}{lapI};
+                testingActivity{sessPairI,tcJ}{lapI,1} = lblActivity{testCond}(lapsGet,testingCells);
                 testingAnswers{sessPairI,tcJ}{lapI,1} = testCond;
                 
                 for trainI = 1:length(testConds(testI,:))
@@ -119,14 +125,16 @@ for testI = 1:size(testConds,1)
                 miscodedLapNums{sessPairI,testJ} = missLNs;
             end
         end
+        condDecoding{testI,testJ} = condLabels{testConds(testI,testJ)};
     end
     
     if randomizeNow(permI)==0
         decodingResults.decodedTrial{testI} = decodedTrial;
         decodingResults.postProb{testI} = postProb;
         decodingResults.correctIndiv{testI} = correctIndiv;
-        decodingResults.correctPct{testI} = cell2mat(correctPct);
+        decodingResults.correctPct{testI} = cell2mat(correctPct); %sessPair x testCond 
         decodingResults.miscodedLapNums{testI} = miscodedLapNums;  
+        decodingResults.whatDecoding = condDecoding;
     else
         shuffledResults.decodedTrial{permI-1,testI} = decodedTrial;
         shuffledResults.postProb{permI-1,testI} = postProb;
@@ -136,14 +144,14 @@ for testI = 1:size(testConds,1)
     end
 end 
 
-if numShuffles>0 
-    p.progress;
+if numShuffles>0
+    waitbar(permI/numShuffles,h,'done so far')
 end
 
 end
 
 if numShuffles>0
-    p.stop;
+    close(h)
 end
 
 end

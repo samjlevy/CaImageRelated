@@ -768,7 +768,7 @@ for pvtI = 1:length(pvNames)
 end
 suptitleSL('Chance in Each Correlation over Experience')
 
-%% PV corr self change by days apart FIRST HALF
+% PV corr self change by days apart FIRST HALF
 figure('Position',[288 37 1521 849]);
 for pvtI = 1:length(pvNames)
     ggt{pvtI} = subplot(2,3,pvtI);
@@ -777,7 +777,7 @@ for pvtI = 1:length(pvNames)
 end
 suptitleSL('Chance in Each Correlation over Experience First Half')
 
-%% PV corr self change by days apart SECOND HALF
+% PV corr self change by days apart SECOND HALF
 figure('Position',[288 37 1521 849]);
 for pvtI = 1:length(pvNames)
     ggt{pvtI} = subplot(2,3,pvtI);
@@ -849,6 +849,65 @@ for pvtI = 1:length(pvNames)
     ggt{pvtI}.Title.String = [pvNames{pvtI}; ggt{pvtI}.Title.String];
 end
 suptitleSL('Change in Separation between Correlations ARMS')
+
+%% Decoder results 
+%Could and should make this a wrapper function... 
+for dtI = 1:length(decodingType)
+    figure('Position',[403 461 771 496]);
+    dimsDecoded = regDecoding{dtI}{1}.titles;
+    for ddI = 1:length(dimsDecoded)
+        axH(ddI) = subplot(length(dimsDecoded),1,ddI);
+        [axH(ddI), statsOut{ddI}] = PlotDecodingResults(decodingResultsPooled{dtI}{ddI},decodedWellPooled{dtI}{ddI},shuffledResultsPooled{dtI}{ddI},sessDayDiffs{dtI}{ddI},'mean',axH(ddI));
+        axH(ddI).Title.String = [dimsDecoded{ddI}];
+        axH(ddI).YLim = [-0.05 1.05];
+        axH(ddI).XLim = [min(sessDayDiffs{dtI}{ddI})-0.5 max(sessDayDiffs{dtI}{ddI})+0.5];
+        axH(ddI).YLabel.String = 'PCT Laps Decoded Correctly';
+        axH(ddI).XLabel.String = 'Days Between Model and Test';
+    end
+    suptitleSL(['Decoding Across Dimensions, ' decodingType{dtI}])
+    
+    
+end
+
+%Decoder FWD vs REV self
+for dtI = 1:length(decodingType)
+    dimsDecoded = regDecoding{dtI}{1}.titles;
+    figure('Position',[403 461 771 496]);
+    for ddI = 1:length(dimsDecoded)
+        axH(ddI) = subplot(length(dimsDecoded),1,ddI);
+        [axH(ddI),statsOut{dtI,ddI}] = PlotDecodingFWDvsREVwrapper(decodingResultsPooled{dtI}{ddI},decodedWellPooled{dtI}{ddI},sessDayDiffs{dtI}{ddI},axH(ddI));
+        title(['Decoding ' dimsDecoded{ddI} ' ' fileName{dtI} ' cells'])
+    end
+end
+       
+%LvR vs. SvT comparison
+
+
+
+% Decoder relative to downsampled
+for dtI = 1:length(decodingType)
+    figure('Position',[403 461 771 496]);
+    dimsDecoded = regDecoding{dtI}{1}.titles;
+    for ddI = 1:length(dimsDecoded)
+        axH(ddI) = subplot(length(dimsDecoded),1,ddI);
+        [axH(ddI), statsOut{ddI}] = PlotDecodingResults(decodingResultsPooled{dtI}{ddI},decodeOutofDSpooled{dtI}{ddI},downsampledResultsPooled{dtI}{ddI},sessPairsPooled{dtI}{ddI},'mean',axH(ddI));
+        axH(ddI).Title.String = [dimsDecoded{ddI}];
+        axH(ddI).YLim = [-0.05 1.05];
+        axH(ddI).XLim = [min(pooledAllRealDayDiffs)-0.5 max(pooledAllRealDayDiffs)+0.5];
+        axH(ddI).YLabel.String = 'PCT Laps Decoded Correctly';
+        axH(ddI).XLabel.String = 'Days Between Model and Test';
+    end
+    suptitleSL(['DOWNSAMPLED Decoding Across Dimensions, ' decodingType{dtI}])
+    
+    %Stats
+    %Indiv. day sign test
+    [indivLvRvsSvTp{dtI},indivLvRvsSvTh{dtI},indivLvRvsSvTstats{dtI}] =...
+        signtest(decodingResultsPooled{dtI}{1},decodingResultsPooled{dtI}{2});
+    %Ranksum all day pairs
+    [dimsDayComppVal{dtI},dimsDayComphVal{dtI},dimsDayCompwhichWon{dtI},dimsDayCompeachDayPair{dtI}] =...
+        RankSumAllDaypairs(decodingResultsPooled{dtI}{1},decodingResultsPooled{dtI}{2},diff(sessPairsPooled{dtI}{1},1,2));
+end
+
 
 %% PV condset each mouse
 

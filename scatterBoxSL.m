@@ -89,7 +89,8 @@ function scatterBoxSL(x,grps,varargin)
         nInGrp = sum(grps==g);
         
         %Jitter!
-        jitters(c:c+nInGrp-1) = g - (sf*randn(nInGrp,1));
+        %jitters(c:c+nInGrp-1) = g - (sf*randn(nInGrp,1));
+        jitters(grps == g) = g - (sf*randn(nInGrp,1));
         
         %Step. 
         c = c+nInGrp; 

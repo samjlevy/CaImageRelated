@@ -1,0 +1,19 @@
+function [axHand,statsOut] = PlotDecodingFWDvsREVwrapper(decodingResults,decodedRight,dayDiffs,axHand)
+
+[axHand, ~] = PlotDecodingResults(decodingResults(dayDiffs>-1),decodedRight(dayDiffs>-1),...
+    [],dayDiffs(dayDiffs>-1),'mean',axHand,[0 1 0; 0.4706    0.6706    0.1882]);
+[axHand, ~] = PlotDecodingResults(decodingResults(dayDiffs<1),decodedRight(dayDiffs<1),...
+    [],abs(dayDiffs(dayDiffs<1)),'mean',axHand,[1 0 0;0.6392    0.0784    0.1804]);
+
+%Comparison of the two slopes
+[statsOut.comp.Fval,statsOut.comp.dfNum,statsOut.comp.dfDen,statsOut.comp.pVal] =...
+    TwoSlopeFTest(decodingResults(dayDiffs>-1), decodingResults(dayDiffs<1),...
+            dayDiffs(dayDiffs>-1), abs(dayDiffs(dayDiffs<1)));
+        
+%Is each slope different from zero
+[statsOut.fwdSlope.Fval,statsOut.fwdSlope.dfNum,statsOut.fwdSlope.dfDen,statsOut.fwdSlope.pVal] =...
+    slopeDiffFromZeroFtest(decodingResults(dayDiffs>-1),dayDiffs(dayDiffs>-1));
+[statsOut.revSlope.Fval,statsOut.revSlope.dfNum,statsOut.revSlope.dfDen,statsOut.revSlope.pVal] =...
+    slopeDiffFromZeroFtest(decodingResults(dayDiffs<1),dayDiffs(dayDiffs<1));
+
+end

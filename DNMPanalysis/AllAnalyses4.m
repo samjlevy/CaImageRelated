@@ -154,11 +154,17 @@ useRealDays=1;
 alignDayPairsREV=1;
 
 pooledRealDayDiffs = [];
+pooledAllRealDayDiffs = [];
 for mouseI = 1:numMice
     dayPairs{mouseI} = combnk(1:numDays(mouseI),2);
     realDayPairs{mouseI} = cellRealDays{mouseI}(dayPairs{mouseI});
     realDayDiffs{mouseI} = diff(realDayPairs{mouseI},1,2);
     pooledRealDayDiffs = [pooledRealDayDiffs; realDayDiffs{mouseI}];
+    
+    allDayPairs{mouseI} = GetAllCombs(1:numDays(mouseI),1:numDays(mouseI));
+    allRealDayPairs{mouseI} = cellRealDays{mouseI}(allDayPairs{mouseI});
+    allRealDayDiffs{mouseI} = diff(allRealDayPairs{mouseI},1,2);
+    pooledAllRealDayDiffs = [pooledAllRealDayDiffs; allRealDayDiffs{mouseI}];
 end
 
 
@@ -1304,58 +1310,83 @@ end
 
 %% Decoder analysis
 numShuffles = 100;
-numDownSamples
-%numShuffles = 20;
-activityType = [];
+numDownSamples = 100;
 
 decodingType = {'allCells', 'threshCells'};
 fileName = {'All','Thresh'};
 traitLogUse = {cellfun(@(x) x>0,cellSSI,'UniformOutput',false), dayUse};
 
+regDecoding = []; DSdecoding = [];
 %decodingResults = cell(numMice,1); shuffledResults = cell(numMice,1); sessPairs = cell(numMice,1);
 for dtI = 1:length(decodingType)
 for mouseI = 1:numMice
-    dcFileName = fullfile(mainFolder,mice{mouseI},['decoding' fileName{dtI} '.mat']);
-    if exist(dcFileName,'file'==0)
+    dcFileName = fullfile(mainFolder,mice{mouseI},'decoding',['decoding' fileName{dtI} '.mat']);
+    if exist(dcFileName,'file')==0
         disp(['Running decoding ' decodingType{dtI} ' for mouse ' num2str(mouseI)])
     tic
     [decodingResults, shuffledResults, testConds, titles, sessPairs] =...
-        DecoderWrapper3(cellTBT{mouseI},traitLogUse{dtI}{mouseI},numShuffles,'transientDur','pooled','bayes');
+        DecoderWrapper3(cellTBT{mouseI},traitLogUse{dtI}{mouseI},numShuffles,'transientDur','pooled','bayes'); %#ok<ASGLU>
     toc
     save(dcFileName,'decodingResults', 'shuffledResults', 'testConds', 'titles', 'sessPairs')
+    clear('decodingResults', 'shuffledResults', 'testConds', 'titles', 'sessPairs')
     end
     
     regDecoding{dtI}{mouseI} = load(dcFileName);
-    
-    dsdcFileName = fullfile(mainFolder,mice{mouseI},['DSdecoding' fileName{dtI} '.mat']);
-    if exist(dsdcFileName,'file'==0)
+  
+    dsdcFileName = fullfile(mainFolder,mice{mouseI},'decoding',['DSdecoding' fileName{dtI} '.mat']);
+    if exist(dsdcFileName,'file')==0
         disp(['Running downsampled decoding ' decodingType{dtI} ' for mouse ' num2str(mouseI)])
     tic
     [DSdecodingResults, DSdownsampledResults, DStestConds, DStitles, DSsessPairs] =...
         DecoderWrapper3downsampling(cellTBT{mouseI},traitLogUse{dtI}{mouseI},numDownSamples,'transientDur','pooled','bayes');
     toc
     save(dsdcFileName,'DSdecodingResults', 'DSdownsampledResults', 'DStestConds', 'DStitles', 'DSsessPairs')
+    clear('DSdecodingResults', 'DSdownsampledResults', 'DStestConds', 'DStitles', 'DSsessPairs')
     end
     
-    DSdecoding{mouseI} = load(dsdcFileName);
+    DSdecoding{dtI}{mouseI} = load(dsdcFileName);
+    
+    disp(['Done getting/loading decoding for mouse ' num2str(mouseI)])
 end
 end
 
 
+%Layout:
+%decodingResults{decodingType}{mouse}.decodingResults.correctPct{1,dimDecoded}(sessPairI,condDecoding)
+
+decodingResults = []; shuffledResults = []; decodedWell = [];
+downsampledResults = []; DSshuffledResults = []; decodeOutofDS = [];
 
 for dtI = 1:length(decodingType)
-    for mouseI = 1:numMice
-        %Process results relative to change
-        
+    dimsDecoded = regDecoding{dtI}{1}.titles;
+    for ddI = 1:length(dimsDecoded)
+        for mouseI = 1:numMice
+            %Pool wihtin sesspairs
+            decodingResults{dtI}{ddI}{mouseI} = PoolCorrectIndivDecoding(regDecoding{dtI}{mouseI}.decodingResults.correctIndiv{ddI});
+            shuffledResults{dtI}{ddI}{mouseI} = PoolCorrectIndivDecodingShuffles(regDecoding{dtI}{mouseI}.shuffledResults.correctIndiv(:,ddI));
+            %DSdecodingResults
+            downsampledResults{dtI}{ddI}{mouseI} = PoolCorrectIndivDecodingShuffles(DSdecoding{dtI}{mouseI}.DSdownsampledResults.correctIndiv(:,ddI));
+            
+            %Process results relative to change
+            decodedWell{dtI}{ddI}{mouseI} = EvaluateDecodingPerformance(decodingResults{dtI}{ddI}{mouseI},shuffledResults{dtI}{ddI}{mouseI},pThresh);
+            sessPairs{dtI}{ddI}{mouseI} = cellRealDays{mouseI}(regDecoding{dtI}{mouseI}.sessPairs);
+            decodeOutofDS{dtI}{ddI}{mouseI} = EvaluateDecodingPerformance(decodingResults{dtI}{ddI}{mouseI},downsampledResults{dtI}{ddI}{mouseI},pThresh);
+            
+        end
+
         %Pool across mice
-        
+        decodingResultsPooled{dtI}{ddI} = PoolCellArrAcrossMice(decodingResults{dtI}{ddI});
+        shuffledResultsPooled{dtI}{ddI} = PoolCellArrAcrossMice(shuffledResults{dtI}{ddI});
+        downsampledResultsPooled{dtI}{ddI} = PoolCellArrAcrossMice(downsampledResults{dtI}{ddI});
+        decodedWellPooled{dtI}{ddI} = PoolCellArrAcrossMice(decodedWell{dtI}{ddI});
+        decodeOutofDSpooled{dtI}{ddI} = PoolCellArrAcrossMice(decodeOutofDS{dtI}{ddI});
+        sessPairsPooled{dtI}{ddI} = PoolCellArrAcrossMice(sessPairs{dtI}{ddI});
+        sessDayDiffs{dtI}{ddI} = diff(sessPairsPooled{dtI}{ddI},1,2);
     end
 end
 
-
-
-
-
+%Within comparison  REG vs DOWNSAMPLED
+    %do this as a figure
 %% Pop vector corrs
 
 %Cells coming back at all
