@@ -23,7 +23,15 @@ for sessPairI = 1:numSessPairs
     
     %Get downsamples of the shared cells
     if numSharedCells == minSharedCells
-        downsamples = sharedCells;
+        if iscolumn(sharedCells)
+            sharedCells = sharedCells';
+        end
+        if isrow(sharedCells)
+            downsamples = sharedCells;
+        else
+            disp('Can not get the cells in the right shape (should be a row)')
+            keyboard
+        end
     else
     numPossibleCombs = nchoosek(numSharedCells,minSharedCells);
     switch numPossibleCombs > 100000

@@ -1310,7 +1310,7 @@ end
 
 %% Decoder analysis
 numShuffles = 100;
-numDownSamples = 100;
+numDownsamples = 100;
 
 decodingType = {'allCells', 'threshCells'};
 fileName = {'All','Thresh'};
@@ -1320,6 +1320,7 @@ regDecoding = []; DSdecoding = [];
 %decodingResults = cell(numMice,1); shuffledResults = cell(numMice,1); sessPairs = cell(numMice,1);
 for dtI = 1:length(decodingType)
 for mouseI = 1:numMice
+    %{
     dcFileName = fullfile(mainFolder,mice{mouseI},'decoding',['decoding' fileName{dtI} '.mat']);
     if exist(dcFileName,'file')==0
         disp(['Running decoding ' decodingType{dtI} ' for mouse ' num2str(mouseI)])
@@ -1332,17 +1333,17 @@ for mouseI = 1:numMice
     end
     
     regDecoding{dtI}{mouseI} = load(dcFileName);
-  
+  %}
     dsdcFileName = fullfile(mainFolder,mice{mouseI},'decoding',['DSdecoding' fileName{dtI} '.mat']);
-    if exist(dsdcFileName,'file')==0
+    %if exist(dsdcFileName,'file')==0
         disp(['Running downsampled decoding ' decodingType{dtI} ' for mouse ' num2str(mouseI)])
     tic
-    [DSdecodingResults, DSdownsampledResults, DStestConds, DStitles, DSsessPairs] =...
-        DecoderWrapper3downsampling(cellTBT{mouseI},traitLogUse{dtI}{mouseI},numDownSamples,'transientDur','pooled','bayes');
+    [DSdecodingResults, DSdownsampledResults, DStestConds, DStitles, DSsessPairs, cellDownsamples] =...
+        DecoderWrapper3downsampling(cellTBT{mouseI},traitLogUse{dtI}{mouseI},numDownsamples,'transientDur','pooled','bayes');
     toc
-    save(dsdcFileName,'DSdecodingResults', 'DSdownsampledResults', 'DStestConds', 'DStitles', 'DSsessPairs')
-    clear('DSdecodingResults', 'DSdownsampledResults', 'DStestConds', 'DStitles', 'DSsessPairs')
-    end
+    save(dsdcFileName,'DSdecodingResults', 'DSdownsampledResults', 'DStestConds', 'DStitles', 'DSsessPairs', 'cellDownsamples')
+    clear('DSdecodingResults', 'DSdownsampledResults', 'DStestConds', 'DStitles', 'DSsessPairs', 'cellDownsamples')
+    %end
     
     DSdecoding{dtI}{mouseI} = load(dsdcFileName);
     
@@ -1350,6 +1351,7 @@ for mouseI = 1:numMice
 end
 end
 
+cellDownsamples{dtI}{mouseI} = GetDownsampleCellCombs(traitLogUse{dtI}{mouseI},regDecoding{dtI}{mouseI}.sessPairs,numDownsamples);
 
 %Layout:
 %decodingResults{decodingType}{mouse}.decodingResults.correctPct{1,dimDecoded}(sessPairI,condDecoding)
@@ -1367,10 +1369,14 @@ for dtI = 1:length(decodingType)
             %DSdecodingResults
             downsampledResults{dtI}{ddI}{mouseI} = PoolCorrectIndivDecodingShuffles(DSdecoding{dtI}{mouseI}.DSdownsampledResults.correctIndiv(:,ddI));
             
-            %Process results relative to change
+            %Process results relative to chance
             decodedWell{dtI}{ddI}{mouseI} = EvaluateDecodingPerformance(decodingResults{dtI}{ddI}{mouseI},shuffledResults{dtI}{ddI}{mouseI},pThresh);
             sessPairs{dtI}{ddI}{mouseI} = cellRealDays{mouseI}(regDecoding{dtI}{mouseI}.sessPairs);
+            
+            %Downsampled evaluation
             decodeOutofDS{dtI}{ddI}{mouseI} = EvaluateDecodingPerformance(decodingResults{dtI}{ddI}{mouseI},downsampledResults{dtI}{ddI}{mouseI},pThresh);
+            [decodingAboveDSrate{dtI}{ddI}{mouseI}, DSbetterThanShuff{dtI}{ddI}{mouseI}, DSaboveShuffP{dtI}{ddI}{mouseI}] = EvaluateDownsampledDecodingPerformance(...
+                decodingResults{dtI}{ddI}{mouseI},downsampledResults{dtI}{ddI}{mouseI},shuffledResults{dtI}{ddI}{mouseI},cellDownsamples{dtI}{mouseI},pThresh);
             
         end
 
@@ -1379,9 +1385,17 @@ for dtI = 1:length(decodingType)
         shuffledResultsPooled{dtI}{ddI} = PoolCellArrAcrossMice(shuffledResults{dtI}{ddI});
         downsampledResultsPooled{dtI}{ddI} = PoolCellArrAcrossMice(downsampledResults{dtI}{ddI});
         decodedWellPooled{dtI}{ddI} = PoolCellArrAcrossMice(decodedWell{dtI}{ddI});
+        
         decodeOutofDSpooled{dtI}{ddI} = PoolCellArrAcrossMice(decodeOutofDS{dtI}{ddI});
+        
+        decodeAboveDSpooled{dtI}{ddI} = PoolCellArrAcrossMice(decodingAboveDSrate{dtI}{ddI});
+        
         sessPairsPooled{dtI}{ddI} = PoolCellArrAcrossMice(sessPairs{dtI}{ddI});
         sessDayDiffs{dtI}{ddI} = diff(sessPairsPooled{dtI}{ddI},1,2);
+        
+        %These work a little bit differently, need to work on them
+        %DSdecodeAboveShuff{dtI}{ddI} = PoolCellArrAcrossMice(DSbetterThanShuff{dtI}{ddI});
+        %DSaboveShuffP{dtI}{dtI} = PoolCellArrAcrossMice(DSaboveShuffP{dtI}{ddI});
     end
 end
 

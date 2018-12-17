@@ -881,9 +881,29 @@ for dtI = 1:length(decodingType)
 end
        
 %LvR vs. SvT comparison
+for dtI = 1:length(decodingType)
+    [axH, statsOut] = PlotDecodingOneVSother(decodingResultsPooled{dtI},shuffledResultsPooled{dtI},decodedWellPooled{dtI},sessDayDiffs{dtI}{1},{'Turn Direction','Task Phase'});
+    suptitleSL(['Decoding Comparison, ' fileName{dtI} ' cells'])
+end
 
+%Within dimension, which cell inclusion is better?
+dimsDecoded = regDecoding{1}{1}.titles;
+for dwI = 1:length(dimsDecoded)
+[axH, statsOut] = PlotDecodingOneVSother({decodingResultsPooled{1}{dwI} decodingResultsPooled{2}{dwI}},...
+                                         {shuffledResultsPooled{1}{dwI} shuffledResultsPooled{2}{dwI}},...
+                                         {decodedWellPooled{1}{dwI} decodedWellPooled{2}{dwI}},sessDayDiffs{1}{dwI},decodingType);
+      suptitleSL(['Decoding Cell Inclusion Comparison, ' dimsDecoded{dwI}])
+end
 
+%Downsampling
+dimsDecoded = regDecoding{1}{1}.titles;
+for dtI = 1:length(decodingType)
+    [axH, statsOut] = PlotDecodingOneVSother(decodingResultsPooled{dtI},...
+           downsampledResultsPooled{dtI},decodeOutofDSpooled{dtI},sessDayDiffs{dtI}{1},{'Turn Direction','Task Phase'});
+    suptitleSL(['Downsampled Decoding Comparison, ' fileName{dtI} ' cells'])
+end
 
+decodeOutofDSpooled{dtI}{ddI}
 % Decoder relative to downsampled
 for dtI = 1:length(decodingType)
     figure('Position',[403 461 771 496]);

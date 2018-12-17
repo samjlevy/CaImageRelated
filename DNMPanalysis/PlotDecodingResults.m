@@ -51,15 +51,17 @@ switch fitType
         
         errorbar(eachDayDiffs,statsOut.meanLine,statsOut.errorLine,'Color',useColors(1,:));
     case 'regress'
-        [statsOut.plotRegFWD,statsOut.daysPlotFWD] = FitLineForPlotting(dcRes(deResDays>-1),dcResDays(deResDays>-1));
+        [statsOut.plotRegFWD,statsOut.daysPlotFWD] = FitLineForPlotting(dcRes(dcResDays>-1),dcResDays(dcResDays>-1));
         
-        [statsOut.plotRegREV,statsOut.daysPlotREV] = FitLineForPlotting(dcRes(deResDays<1),dcResDays(deResDays<1));
+        [statsOut.plotRegREV,statsOut.daysPlotREV] = FitLineForPlotting(dcRes(dcResDays<1),dcResDays(dcResDays<1));
         
-        disp('regress plotting not finished')
+        if length(statsOut.daysPlotREV) > 1
+           plot(statsOut.daysPlotREV,statsOut.plotRegREV,'Color',useColors(1,:))
+        end
+        if length(statsOut.daysPlotFWD) > 1
+            plot(statsOut.daysPlotFWD,statsOut.plotRegFWD,'Color',useColors(1,:))
+        end
 end
 
-statsOut = [];
+
 end
-
-
-

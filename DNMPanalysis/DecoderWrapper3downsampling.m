@@ -1,4 +1,4 @@
-function [decodingResults, downsampledResults, testConds, titles, sessPairs] =...
+function [decodingResults, downsampledResults, testConds, titles, sessPairs, cellDownsamples] =...
     DecoderWrapper3downsampling(trialbytrial,traitLogical,numDownsamples,activityType,pooledUnpooled,discType)
 %This function is built as a wrapper for looking at decoding results by
 %splitting. Pretty much the only thing that needs to be given is basic
@@ -48,7 +48,9 @@ cellDownsamples = GetDownsampleCellCombs(traitLogical,sessPairs,numDownsamples);
 
 %Repackage laps, etc. into cell arrays
 if numDownsamples>0
-    p = ProgressBar(numDownsamples);
+    try
+        h = waitbar(0,'Starting');
+    end
 end
 
 for dsI = 1:numDownsamples+1
@@ -146,14 +148,19 @@ for testI = 1:size(testConds,1)
     end
 end 
 
-if numDownsamples>0 
-    p.progress;
+
+if numDownsamples>0
+    try
+    waitbar(permI/numShuffles,h,'done so far')
+    end
 end
 
 end
 
 if numDownsamples>0
-    p.stop;
+    try
+    close(h)
+    end
 end
 
 end
