@@ -1320,7 +1320,7 @@ regDecoding = []; DSdecoding = [];
 %decodingResults = cell(numMice,1); shuffledResults = cell(numMice,1); sessPairs = cell(numMice,1);
 for dtI = 1:length(decodingType)
 for mouseI = 1:numMice
-    %{
+    
     dcFileName = fullfile(mainFolder,mice{mouseI},'decoding',['decoding' fileName{dtI} '.mat']);
     if exist(dcFileName,'file')==0
         disp(['Running decoding ' decodingType{dtI} ' for mouse ' num2str(mouseI)])
@@ -1335,7 +1335,7 @@ for mouseI = 1:numMice
     regDecoding{dtI}{mouseI} = load(dcFileName);
   %}
     dsdcFileName = fullfile(mainFolder,mice{mouseI},'decoding',['DSdecoding' fileName{dtI} '.mat']);
-    %if exist(dsdcFileName,'file')==0
+    if exist(dsdcFileName,'file')==0
         disp(['Running downsampled decoding ' decodingType{dtI} ' for mouse ' num2str(mouseI)])
     tic
     [DSdecodingResults, DSdownsampledResults, DStestConds, DStitles, DSsessPairs, cellDownsamples] =...
@@ -1343,15 +1343,15 @@ for mouseI = 1:numMice
     toc
     save(dsdcFileName,'DSdecodingResults', 'DSdownsampledResults', 'DStestConds', 'DStitles', 'DSsessPairs', 'cellDownsamples')
     clear('DSdecodingResults', 'DSdownsampledResults', 'DStestConds', 'DStitles', 'DSsessPairs', 'cellDownsamples')
-    %end
+    end
     
     DSdecoding{dtI}{mouseI} = load(dsdcFileName);
     
-    disp(['Done getting/loading decoding for mouse ' num2str(mouseI)])
+    disp(['Done getting/loading ' decodingType{dtI} ' decoding for mouse ' num2str(mouseI)])
 end
 end
 
-cellDownsamples{dtI}{mouseI} = GetDownsampleCellCombs(traitLogUse{dtI}{mouseI},regDecoding{dtI}{mouseI}.sessPairs,numDownsamples);
+%cellDownsamples{dtI}{mouseI} = GetDownsampleCellCombs(traitLogUse{dtI}{mouseI},regDecoding{dtI}{mouseI}.sessPairs,numDownsamples);
 
 %Layout:
 %decodingResults{decodingType}{mouse}.decodingResults.correctPct{1,dimDecoded}(sessPairI,condDecoding)
@@ -1375,9 +1375,11 @@ for dtI = 1:length(decodingType)
             
             %Downsampled evaluation
             decodeOutofDS{dtI}{ddI}{mouseI} = EvaluateDecodingPerformance(decodingResults{dtI}{ddI}{mouseI},downsampledResults{dtI}{ddI}{mouseI},pThresh);
-            [decodingAboveDSrate{dtI}{ddI}{mouseI}, DSbetterThanShuff{dtI}{ddI}{mouseI}, DSaboveShuffP{dtI}{ddI}{mouseI}] = EvaluateDownsampledDecodingPerformance(...
-                decodingResults{dtI}{ddI}{mouseI},downsampledResults{dtI}{ddI}{mouseI},shuffledResults{dtI}{ddI}{mouseI},cellDownsamples{dtI}{mouseI},pThresh);
-            
+            [decodingAboveDSrate{dtI}{ddI}{mouseI}, DSbetterThanShuff{dtI}{ddI}{mouseI}, DSaboveShuffP{dtI}{ddI}{mouseI}, meanDSperformance{dtI}{ddI}{mouseI}] =...
+                EvaluateDownsampledDecodingPerformance(decodingResults{dtI}{ddI}{mouseI},downsampledResults{dtI}{ddI}{mouseI},...
+                shuffledResults{dtI}{ddI}{mouseI},DSdecoding{dtI}{mouseI}.cellDownsamples,pThresh);
+       
+
         end
 
         %Pool across mice
@@ -1385,10 +1387,11 @@ for dtI = 1:length(decodingType)
         shuffledResultsPooled{dtI}{ddI} = PoolCellArrAcrossMice(shuffledResults{dtI}{ddI});
         downsampledResultsPooled{dtI}{ddI} = PoolCellArrAcrossMice(downsampledResults{dtI}{ddI});
         decodedWellPooled{dtI}{ddI} = PoolCellArrAcrossMice(decodedWell{dtI}{ddI});
-        
         decodeOutofDSpooled{dtI}{ddI} = PoolCellArrAcrossMice(decodeOutofDS{dtI}{ddI});
-        
-        decodeAboveDSpooled{dtI}{ddI} = PoolCellArrAcrossMice(decodingAboveDSrate{dtI}{ddI});
+        decodeAboveDSratePooled{dtI}{ddI} = PoolCellArrAcrossMice(decodingAboveDSrate{dtI}{ddI});
+        DSmeanDayPairPerfPooled{dtI}{ddI} = PoolCellArrAcrossMice(meanDSperformance{dtI}{ddI});      
+        DSbetterThanShuffPooled{dtI}{ddI} = PoolCellArrAcrossMice(DSbetterThanShuff{dtI}{ddI});
+        DSaboveShuffPpooled{dtI}{ddI} = PoolCellArrAcrossMice(DSaboveShuffP{dtI}{ddI});
         
         sessPairsPooled{dtI}{ddI} = PoolCellArrAcrossMice(sessPairs{dtI}{ddI});
         sessDayDiffs{dtI}{ddI} = diff(sessPairsPooled{dtI}{ddI},1,2);
@@ -1399,8 +1402,7 @@ for dtI = 1:length(decodingType)
     end
 end
 
-%Within comparison  REG vs DOWNSAMPLED
-    %do this as a figure
+
 %% Pop vector corrs
 
 %Cells coming back at all

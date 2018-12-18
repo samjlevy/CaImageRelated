@@ -1,6 +1,11 @@
-function [decodingAboveDSrate, DSbetterThanShuff, DSaboveShuffP] = EvaluateDownsampledDecodingPerformance(...
+function [decodingAboveDSrate, DSbetterThanShuff, DSaboveShuffP, meanDSperformance] = EvaluateDownsampledDecodingPerformance(...
     decodingResults,downsampledResults,shuffledResults,cellDownsamples,pThresh)
 %This should probably happen within a mouse... (or pooled)
+%DSbetter than shuff is number of shuffles that instance of downsampled
+%decoding is better than. 
+%DSaboveP is is that rate above the pThresh
+%Mean: what's the rate of decoding above shuffle across all downsamples
+
 numShuffles = size(shuffledResults,3);
 pPct = 1 - pThresh;
 
@@ -14,12 +19,12 @@ for sessPairI = 1:numSessPairs
         sum(decodingResults(sessPairI) > squeeze(downsampledResults(sessPairI,1,1:numShuffHere))) / numShuffHere;
     
     for shuffI = 1:numShuffHere
-        DSbetterThanShuff{sessPairI}(shuffI,1) =...
+        DSbetterThanShuff{sessPairI,1}(shuffI,1) =...
             sum(downsampledResults(sessPairI,1,shuffI) > squeeze(shuffledResults(sessPairI,1,:)))/numShuffles;
     end
-    DSaboveShuffP{sessPairI} = DSbetterThanShuff{sessPairI} > pPct;
+    DSaboveShuffP{sessPairI,1} = DSbetterThanShuff{sessPairI} > pPct;
     
-    %mean within sess pair?
+    meanDSperformance(sessPairI,1) = mean(DSbetterThanShuff{sessPairI});
 end
  
 

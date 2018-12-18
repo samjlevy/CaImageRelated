@@ -851,81 +851,61 @@ end
 suptitleSL('Change in Separation between Correlations ARMS')
 
 %% Decoder results 
-%Could and should make this a wrapper function... 
-for dtI = 1:length(decodingType)
-    figure('Position',[403 461 771 496]);
-    dimsDecoded = regDecoding{dtI}{1}.titles;
-    for ddI = 1:length(dimsDecoded)
-        axH(ddI) = subplot(length(dimsDecoded),1,ddI);
-        [axH(ddI), statsOut{ddI}] = PlotDecodingResults(decodingResultsPooled{dtI}{ddI},decodedWellPooled{dtI}{ddI},shuffledResultsPooled{dtI}{ddI},sessDayDiffs{dtI}{ddI},'mean',axH(ddI));
-        axH(ddI).Title.String = [dimsDecoded{ddI}];
-        axH(ddI).YLim = [-0.05 1.05];
-        axH(ddI).XLim = [min(sessDayDiffs{dtI}{ddI})-0.5 max(sessDayDiffs{dtI}{ddI})+0.5];
-        axH(ddI).YLabel.String = 'PCT Laps Decoded Correctly';
-        axH(ddI).XLabel.String = 'Days Between Model and Test';
-    end
-    suptitleSL(['Decoding Across Dimensions, ' decodingType{dtI}])
-    
-    
-end
 
-%Decoder FWD vs REV self
+%Decoder FWD vs REV self.
+statsOut = [];
 for dtI = 1:length(decodingType)
     dimsDecoded = regDecoding{dtI}{1}.titles;
     figure('Position',[403 461 771 496]);
     for ddI = 1:length(dimsDecoded)
         axH(ddI) = subplot(length(dimsDecoded),1,ddI);
-        [axH(ddI),statsOut{dtI,ddI}] = PlotDecodingFWDvsREVwrapper(decodingResultsPooled{dtI}{ddI},decodedWellPooled{dtI}{ddI},sessDayDiffs{dtI}{ddI},axH(ddI));
+        [axH(ddI),statsOut{dtI}{ddI}] = PlotDecodingFWDvsREVwrapper(decodingResultsPooled{dtI}{ddI},decodedWellPooled{dtI}{ddI},sessDayDiffs{dtI}{ddI},axH(ddI));
         title(['Decoding ' dimsDecoded{ddI} ' ' fileName{dtI} ' cells'])
     end
 end
        
 %LvR vs. SvT comparison
+statsOut = [];
 for dtI = 1:length(decodingType)
-    [axH, statsOut] = PlotDecodingOneVSother(decodingResultsPooled{dtI},shuffledResultsPooled{dtI},decodedWellPooled{dtI},sessDayDiffs{dtI}{1},{'Turn Direction','Task Phase'});
+    [axH, statsOut{dtI}] = PlotDecodingOneVSother(decodingResultsPooled{dtI},shuffledResultsPooled{dtI},decodedWellPooled{dtI},...
+                                                sessDayDiffs{dtI}{1},sessDayDiffs{dtI}{1},{'Turn Direction','Task Phase'});
     suptitleSL(['Decoding Comparison, ' fileName{dtI} ' cells'])
 end
 
 %Within dimension, which cell inclusion is better?
 dimsDecoded = regDecoding{1}{1}.titles;
+statsOut = [];
 for dwI = 1:length(dimsDecoded)
-[axH, statsOut] = PlotDecodingOneVSother({decodingResultsPooled{1}{dwI} decodingResultsPooled{2}{dwI}},...
+[axH, statsOut{dwI}] = PlotDecodingOneVSother({decodingResultsPooled{1}{dwI} decodingResultsPooled{2}{dwI}},...
                                          {shuffledResultsPooled{1}{dwI} shuffledResultsPooled{2}{dwI}},...
                                          {decodedWellPooled{1}{dwI} decodedWellPooled{2}{dwI}},sessDayDiffs{1}{dwI},decodingType);
       suptitleSL(['Decoding Cell Inclusion Comparison, ' dimsDecoded{dwI}])
 end
 
-%Downsampling
+%Regular vs Downsampling
 dimsDecoded = regDecoding{1}{1}.titles;
+statsOut = [];
 for dtI = 1:length(decodingType)
-    [axH, statsOut] = PlotDecodingOneVSother(decodingResultsPooled{dtI},...
-           downsampledResultsPooled{dtI},decodeOutofDSpooled{dtI},sessDayDiffs{dtI}{1},{'Turn Direction','Task Phase'});
-    suptitleSL(['Downsampled Decoding Comparison, ' fileName{dtI} ' cells'])
+    [axH, statsOut{dtI}] = PlotDecodingOneVSother(decodingResultsPooled{dtI},...
+           downsampledResultsPooled{dtI},decodeOutofDSpooled{dtI},sessDayDiffs{dtI}{1},sessDayDiffs{dtI}{1},{'Turn Direction','Task Phase'});
+    suptitleSL(['Reg vs. downsampled distribution, ' fileName{dtI} ' cells'])
 end
 
-decodeOutofDSpooled{dtI}{ddI}
-% Decoder relative to downsampled
+%Downsampled inclusion comparison
+%Is each downsample above 95% of shuffles?
+statsOut = [];
 for dtI = 1:length(decodingType)
-    figure('Position',[403 461 771 496]);
-    dimsDecoded = regDecoding{dtI}{1}.titles;
-    for ddI = 1:length(dimsDecoded)
-        axH(ddI) = subplot(length(dimsDecoded),1,ddI);
-        [axH(ddI), statsOut{ddI}] = PlotDecodingResults(decodingResultsPooled{dtI}{ddI},decodeOutofDSpooled{dtI}{ddI},downsampledResultsPooled{dtI}{ddI},sessPairsPooled{dtI}{ddI},'mean',axH(ddI));
-        axH(ddI).Title.String = [dimsDecoded{ddI}];
-        axH(ddI).YLim = [-0.05 1.05];
-        axH(ddI).XLim = [min(pooledAllRealDayDiffs)-0.5 max(pooledAllRealDayDiffs)+0.5];
-        axH(ddI).YLabel.String = 'PCT Laps Decoded Correctly';
-        axH(ddI).XLabel.String = 'Days Between Model and Test';
-    end
-    suptitleSL(['DOWNSAMPLED Decoding Across Dimensions, ' decodingType{dtI}])
-    
-    %Stats
-    %Indiv. day sign test
-    [indivLvRvsSvTp{dtI},indivLvRvsSvTh{dtI},indivLvRvsSvTstats{dtI}] =...
-        signtest(decodingResultsPooled{dtI}{1},decodingResultsPooled{dtI}{2});
-    %Ranksum all day pairs
-    [dimsDayComppVal{dtI},dimsDayComphVal{dtI},dimsDayCompwhichWon{dtI},dimsDayCompeachDayPair{dtI}] =...
-        RankSumAllDaypairs(decodingResultsPooled{dtI}{1},decodingResultsPooled{dtI}{2},diff(sessPairsPooled{dtI}{1},1,2));
+    [axH, statsOut{dtI}] = PlotDecodingOneVSother(downsampledResultsPooled{dtI},shuffledResultsPooled{dtI},DSaboveShuffPpooled{dtI},...
+                    sessDayDiffs{dtI}{1},sessDayDiffs{dtI}{1},dimsDecoded);
+    suptitleSL(['Downsampled Decoding vs. Original Shuffle, ' fileName{dtI} ' cells'])
+end
+
+?????
+statsOut = [];
+for dtI = 1:length(decodingType)
+    [axH, statsOut{dtI}] = PlotDecodingOneVSother(DSmeanDayPairPerfPooled{dtI},...
+           downsampledResultsPooled{dtI},cellfun(@(x) ones(size(x)),DSmeanDayPairPerfPooled{dtI},'UniformOutput',false),sessDayDiffs{dtI}{1},{'Turn Direction','Task Phase'});
+    suptitleSL(['Downsampled Decoding Dimension Comparison, ' fileName{dtI} ' cells'])
 end
 
 

@@ -151,7 +151,7 @@ end
 
 if numDownsamples>0
     try
-    waitbar(permI/numShuffles,h,'done so far')
+    waitbar(permI/numDownsamples,h,'done so far')
     end
 end
 

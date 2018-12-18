@@ -1,66 +1,37 @@
-function [axHand, statsOut] = PlotDecodingResults(decodingResults,decodedWell,...
-    shuffledResults,dayDiffsDecoding,dayDiffsShuffled,fitType,axHand,useColors)
-
-dealCell = 1;
-dealDouble = 1;
-if iscell(decodingResults(1))
-    dealCell = 1;
-    dealDouble = 0;
-elseif isnumeric(decodingResults(1))
-    if iscell(decodedWell)
-        dealCell = 1;
-        dealDouble = 1;
-    else
-        dealCell = 0;
-        dealDouble = 0;
-    end
-end
-
-
+function [axHand, statsOut] = PlotDecodingResultsCellArr(decodingResults,decodedWell,shuffledResults,dayDiffs,fitType,axHand,useColors)
+%This is intended to work the same as the original decoding results, 
+%but instead of each entry in decoding results being a value its a cell array
+%day diffs is the same as usual
+%shuffled results same as usual, 
+%decoded well needs to match the size of decoding results
 if isempty(axHand)
     figure; axHand = axes;
 end
 
-numDayPairs = size(dayDiffsShuffled,1);
+numDayPairs = size(dayDiffs,1);
 numShuffles = size(shuffledResults,3);
 
-%if size(dayDiffs,2)==2
-%dayDiffs = diff(dayDiffs,1,2);
-%end
-eachDayDiffs = unique([dayDiffsDecoding; dayDiffsShuffled]);
+if size(dayDiffs,2)==2
+dayDiffs = diff(dayDiffs,1,2);
+end
+eachDayDiffs = unique(dayDiffs);
 
 daylabels = cellfun(@num2str,mat2cell(eachDayDiffs,ones(length(eachDayDiffs),1),1),'UniformOutput',false)';
 
+if any(shuffledResults)
 allShuffledData = [];
 shuffledDataDays = [];
 dcRes = [];
-dcCorrect = [];
-dcResDays = [];
 for ddI = 1:numDayPairs
-    if any(shuffledResults)
-        for eeI = 1:size(shuffledResults,2)
-            allShuffledData = [allShuffledData; squeeze(shuffledResults(ddI,eeI,:))];
-            shuffledDataDays = [shuffledDataDays; dayDiffsShuffled(ddI)*ones(numShuffles,1)];
-        end
+    for eeI = 1:size(shuffledResults,2)
+        allShuffledData = [allShuffledData; squeeze(shuffledResults(ddI,eeI,:))];
+        shuffledDataDays = [shuffledDataDays; dayDiffs(ddI)*ones(numShuffles,1)];
     end
     
-    if dealCell==1
-        if dealDouble==1
-            dcRes = [dcRes; squeeze(decodingResults(ddI,1,1:length(decodedWell{ddI})))];
-        else
-            dcRes = [dcRes; decodingResults{ddI}]; 
-        end
-            
-        dcCorrect = [dcCorrect; decodedWell{ddI}];
-        dcResDays = [dcResDays; dayDiffsDecoding(ddI)*ones(length(decodedWell{ddI}),1)];
-    end
+    dcRes = [dcRes; decodingResults{ddI}];
+    dcCorrect = [dcCorrect; decodedWell{ddI}];
+    dcResDays = [dcResDays; dayDiffs(ddI)*ones(length(decodingResults{ddI}),1)];
 end
-
-
-if dealCell==0
-    dcRes = decodingResults(:);
-    dcResDays = repmat(dayDiffsDecoding,size(decodingResults,2),1);
-    dcCorrect = decodedWell(:);
 end
 
 if isempty(useColors)
