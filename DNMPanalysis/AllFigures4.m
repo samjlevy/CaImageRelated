@@ -703,33 +703,30 @@ suptitleSL('Comparisons of change in proportion of new cells')
 
 %mean =/- sem corr each bin, corr to decorr, decorr to corr, flat
 
-figure('Position',[680 147 1088 831]); qq = [];
-for pvtI = 1:length(pvNames)
-    qq{pvtI} = subplot(2,3,pvtI);
-    for csI = 1:length(condSet)
-        errorHere = [];
-        withinDay = CSpooledPVdaysApart{pvtI}{csI}==0;
-        for binI = 1:numBins
-            errorHere(binI) = standarderrorSL(CSpooledPVcorrs{pvtI}{csI}(withinDay,binI)); hold on
-        end
-        errorbar(1:numBins,nanmean(CSpooledPVcorrs{pvtI}{csI},1),errorHere,'Color',condSetColors{csI},'LineWidth',2)
-    end
-    title(pvNames{pvtI})
-    xlim([0.5 numBins+0.5])
-    xlabel('Spatial Bin')
-    ylabel('Correlation')
-    %{
-    switch mean(qq{pvtI}.YLim)>0
-        case 1
-            qq{pvtI}.YLim = [0 0.5];
-        case 0
-            qq{pvtI}.YLim = [-0.5 0];
-    end
-    %}
-end
+hh = PlotAllPVcorrsCurves(CSpooledPVcorrs,CSpooledPVdaysApart,pvNames,condSetColors);
 suptitleSL({'Mean PV curves, all mice All Days'; 'B - VS Self,   G - Study vs. Test,   R - Left vs. Right'})
-        
+
+ii = PlotAllPVcorrsCurves(CSpooledPVcorrsARM,CSpooledPVdaysApart,pvNames,condSetColors);
+suptitleSL({'ARM Mean PV curves, all mice All Days'; 'B - VS Self,   G - Study vs. Test,   R - Left vs. Right'})
+%
+
+%% First two bins vs. last two bins
+csColorNums = {[0 0 1]; [0 1 0]; [1 0 0]};
+[figHand,statsOut] = FirstHalfVsSecondHaldf(CSpooledPVcorrs,CSpooledPVdaysApart,pvNames,csColorNums,4);
+suptitleSL('1st Half vs 2nd half Stem Correlations')
     
+csColorNums = {[0 0 1]; [0 1 0]; [1 0 0]};
+[figHand,statsOut] = FirstHalfVsSecondHaldf(CSpooledPVcorrs,CSpooledPVdaysApart,pvNames,csColorNums,2);
+suptitleSL('1st 2 bins vs Last 2 bins Stem Correlations')
+    
+csColorNums = {[0 0 1]; [0 1 0]; [1 0 0]};
+[figHand,statsOut] = FirstHalfVsSecondHaldf(CSpooledPVcorrsARM,CSpooledPVdaysApart,pvNames,csColorNums,4);
+suptitleSL('1st Half vs 2nd half ARM Correlations')
+    
+csColorNums = {[0 0 1]; [0 1 0]; [1 0 0]};
+[figHand,statsOut] = FirstHalfVsSecondHaldf(CSpooledPVcorrsARM,CSpooledPVdaysApart,pvNames,csColorNums,2);
+suptitleSL('1st 2 bins vs Last 2 bins ARM Correlations')
+
 %% Pop Vector corrs by days apart
 gg = figure('Position',[288 37 1521 849]); 
 hht = [];
@@ -797,7 +794,23 @@ for pvtI = 1:length(pvNames)
 end
 suptitleSL('Change in Separation between Correlations')
 
+% PV corr separation by days apart FIRST HALF
+figure('Position',[288 37 1521 849]);
+for pvtI = 1:length(pvNames)
+    ggt{pvtI} = subplot(2,3,pvtI);
+    [ggt{pvtI},statsOut] = PlotChangeByDaysApartFWDonly(cscDiffsChangeMeanHalfFirstPooled{pvtI},sameDayDayDiffsPooled{pvtI},cscColors,cscLabels,ggt{pvtI});
+    ggt{pvtI}.Title.String = [pvNames{pvtI}; ggt{pvtI}.Title.String];
+end
+suptitleSL('Change in Separation between Correlations FIRST HALF')
 
+% PV corr separation by days apart SECOND HALF
+figure('Position',[288 37 1521 849]);
+for pvtI = 1:length(pvNames)
+    ggt{pvtI} = subplot(2,3,pvtI);
+    [ggt{pvtI},statsOut] = PlotChangeByDaysApartFWDonly(cscDiffsChangeMeanHalfSecondPooled{pvtI},sameDayDayDiffsPooled{pvtI},cscColors,cscLabels,ggt{pvtI});
+    ggt{pvtI}.Title.String = [pvNames{pvtI}; ggt{pvtI}.Title.String];
+end
+suptitleSL('Change in Separation between Correlations SECOND HALF')
 %% Pop Vector corrs by days apart ARMs
 gg = figure('Position',[288 37 1521 849]); 
 hht = [];
@@ -900,14 +913,6 @@ for dtI = 1:length(decodingType)
     suptitleSL(['Downsampled Decoding vs. Original Shuffle, ' fileName{dtI} ' cells'])
 end
 
-?????
-statsOut = [];
-for dtI = 1:length(decodingType)
-    [axH, statsOut{dtI}] = PlotDecodingOneVSother(DSmeanDayPairPerfPooled{dtI},...
-           downsampledResultsPooled{dtI},cellfun(@(x) ones(size(x)),DSmeanDayPairPerfPooled{dtI},'UniformOutput',false),sessDayDiffs{dtI}{1},{'Turn Direction','Task Phase'});
-    suptitleSL(['Downsampled Decoding Dimension Comparison, ' fileName{dtI} ' cells'])
-end
-
 
 %% PV condset each mouse
 
@@ -924,74 +929,5 @@ for pvtI = 1:length(pvNames)
 end
             
 
-%% PV corrs 1st half vs. 2nd half
-condSetColors = {'b' 'r' 'g'};
-for csI = 1:length(condSet)
-    figure;
-    pvsHereFirst = CSpooledMeanPVcorrsHalfFirst{csI}; hold on;
-    pvsHereSecond = CSpooledMeanPVcorrsHalfSecond{csI};
-    plot(CSpooledPVdaysApart{csI}-0.15,pvsHereFirst,'.','Color',condSetColors{csI},'MarkerSize',8)
-    plot(CSpooledPVdaysApart{csI}+0.15,pvsHereSecond,'*','Color',condSetColors{csI})
 
-    dayPairsHere = unique(abs(CSpooledPVdaysApart{csI}));
-    meanLineFirst = [];
-    meanLineSecond = [];
-    for dpI = 1:length(dayPairsHere)
-        meanLineFirst(dpI,1) = mean(pvsHereFirst(CSpooledPVdaysApart{csI}==dayPairsHere(dpI)));
-        meanLineSecond(dpI,1) = mean(pvsHereSecond(CSpooledPVdaysApart{csI}==dayPairsHere(dpI)));
-    end
-
-    plot(dayPairsHere,meanLineFirst,'LineWidth',2,'Color',condSetColors{csI})
-    plot(dayPairsHere,meanLineSecond,'LineWidth',2,'Color',condSetColors{csI})
-    
-    for dpI = 1:length(dayPairsHere)
-        if hFirstVSecondHalfPVcorrs{csI}(dpI,1)==1
-            plot(dayPairsHere(dpI),0.7,'*k')
-        end
-    end
-end
-
-%% PV corr spread by days apart
-
-%Is the spread between pairs of correlations increasing?
-plottt = {pooledCSdiffDiffsMeanCorr; pooledCSdiffDiffsMeanCorrHalfFirst; pooledCSdiffDiffsMeanCorrHalfSecond};
-plotTitle = {'Mean Corr'; 'First Half Mean';'Second Half Mean'};
-for ppI = 1:length(plottt)
-figure;
-numCSC = size(condSetComps,1);
-for cscI = 1:numCSC
-    subplot(1,numCSC,cscI)
-    plot(pooledCSdiffDiffDayDiffs,plottt{ppI}{cscI},'.'); hold on
-    plot([0 18],[0 0],'k')
-    [h,p] = kstest(zscore(plottt{ppI}{cscI}));
-    title([condSetLabels{condSetComps(cscI,1)} ' - ' condSetLabels{condSetComps(cscI,2)} ', KS h=' num2str(h) ' p=' num2str(p)])
-    xlabel('Days Apart')
-    ylim([-0.8 0.8])
-end
-suptitleSL(['Within-day differences beween correlations, ' plotTitle{ppI}])
-end  
-
-%Is one of the correlations changing?
-plottt = {pooledWithinCSdayDiffsMeanCorr; pooledWithinCSdayDiffsMeanCorrHalfFirst; pooledWithinCSdayDiffsMeanCorrHalfSecond};
-fitlines = { meanWithinPVdiffFitLine;  meanWithinPVdiffFitLineHalfFirst;  meanWithinPVdiffFitLineHalfSecond};
-plotTitle = {'Mean Corr'; 'First Half Mean';'Second Half Mean'};
-for ppI = 1:length(plottt)
-figure;
-for csI = 1:length(condSet)
-    subplot(1,length(condSet),csI)
-    plot(pooledCSdiffDiffDayDiffs,plottt{ppI}{csI},'.'); hold on
-    plot([0 18],[0 0],'k')
-    plot(fitlines{ppI}{csI}(:,1),fitlines{ppI}{csI}(:,2),condSetColors{csI})
-    [h,p] = kstest(zscore(plottt{ppI}{csI}));
-    %title(condSetLabels{csI})
-    title([condSetLabels{csI} ', KS h=' num2str(h) ' p=' num2str(p)])
-    
-    xlabel('Days Apart')
-    ylim([-0.8 0.8])
-end
-suptitleSL(['Within-Correlation differences across days, ' plotTitle{ppI}])
-end
-    
-    
-    
     

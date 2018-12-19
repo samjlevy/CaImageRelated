@@ -23,13 +23,13 @@ for sessI = 1:length(sessions)
     moreTrials = max(howManyTrials);
     if size(dimShuffle,1)==1
         switch dimShuffle
-            case {'direction','leftright'}
+            case {'direction','leftright','LR'}
                 useSess = [lStudy rStudy lTest rTest];
 
                 shuffleThis = round(rand(moreTrials,2));
                 trialShuffAssign = [useSess(shuffleThis(:,1)+1)' useSess(~shuffleThis(:,1)+1)' ...
                                     useSess(shuffleThis(:,2)+3)' useSess(~shuffleThis(:,2)+3)'];
-            case {'studytest','trialtype'}
+            case {'studytest','trialtype','ST'}
                 useSess = [lStudy lTest rStudy rTest];
 
                 shuffleThis = round(rand(moreTrials,2));

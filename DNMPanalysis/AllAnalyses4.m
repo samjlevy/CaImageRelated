@@ -278,105 +278,66 @@ numShuffles = 1000;
 %numShuffles = 100;
 shuffThresh = 1 - pThresh;
 binsMin = 1;
-shuffleDir = 'splitters';
+splitDir = 'splitters';
 
-%Get left/right splitting
+splitterType = {'LR' 'ST'};
+splitterCPs = {[1 2] [3 4]};
+splitterLoc = {'stem' 'arm'};
+
+%Get/make splitting
 for mouseI = 1:numMice
-    condPairsLR = [1 2];
-    shuffleDirLR = fullfile(mainFolder,mice{mouseI},shuffleDir);
-    [rateDiffLR{mouseI}, rateSplitLR{mouseI}, meanRateDiffLR{mouseI}, DIeachLR{mouseI}, DImeanLR{mouseI}, DIallLR{mouseI}] =...
-        LookAtSplitters4(cellPooledTMap_unsmoothed{mouseI}, condPairsLR, []);
-    splitterFileLR = fullfile(shuffleDirLR,'splittersLR.mat');
-    if exist(splitterFileLR,'file')==0
-        disp(['did not find LR splitting for mouse ' num2str(mouseI) ', making now'])
-        %[~, binsAboveShuffleLR, thisCellSplitsLR] = SplitterWrapper4(cellTBT{mouseI},'leftright',...
-        %     'pooled', numShuffles, shuffDirFullLR, xlims, cmperbin, minspeed, [], shuffThresh, binsMin);
-        tic
-        [binsAboveShuffleLR, thisCellSplitsLR] = SplitterWrapper4(cellTBT{mouseI}, cellPooledTMap_unsmoothed{mouseI}, 'leftright',...
-            'pooled', numShuffles, stemBinEdges, minspeed, shuffThresh, binsMin);
-        save(splitterFileLR,'binsAboveShuffleLR','thisCellSplitsLR')
-        toc
+    shuffleDir = fullfile(mainFolder,mice{mouseI},splitDir);
+    for stI = 1:length(splitterType)
+        for slI = 1:length(splitterLoc)
+            switch splitterLoc{slI}
+                case 'stem'
+                    binEdgesHere = stemBinEdges;
+                    splitterFile = fullfile(shuffleDir,['splitters' splitterType{stI} '.mat']);
+                    cellTMap = cellPooledTMap_unsmoothed{1}{mouseI};
+                    tbtHere = cellTBT{mouseI};
+                case 'arm'
+                    splitterFile = fullfile(shuffleDir,['ARMsplitters' splitterType{stI} '.mat']);
+                    binEdgesHere = armBinEdges;
+                    cellTMap = cellPooledTMap_unsmoothedArm{1}{mouseI};
+                    tbtHere = cellTBTarm{mouseI};
+            end
+            
+            if exist(splitterFile,'file')==0
+            disp(['did not find ' splitterType{stI} ' on ' splitterLoc{slI} ' splitting for mouse ' num2str(mouseI) ', making now'])
+            tic
+            [binsAboveShuffle, thisCellSplits] = SplitterWrapper4(tbtHere, cellTMap,  splitterType{stI},...
+                'pooled', numShuffles, binEdgesHere, minspeed, shuffThresh, binsMin);
+            save(splitterFile,'binsAboveShuffle','thisCellSplits')
+            toc
+            end
+            
+            loadedSplit = load(splitterFile);
+            
+            binsAboveShuffle{slI}{stI} = loadedSplit.binsAboveShuffle;
+            thisCellSplits{slI}{stI} = loadedSplit.thisCellSplits;
+            
+            [rateDiff{slI}{stI}{mouseI}, rateSplit{slI}{stI}{mouseI}, meanRateDiff{slI}{stI}{mouseI}, DIeach{slI}{stI}{mouseI},...
+                DImean{slI}{stI}{mouseI}, DIall{slI}{stI}{mouseI}] =...
+                LookAtSplitters4(cellTMap, splitterCPs{stI}, []);
+            
+            disp(['done ' splitterType{stI} ' on ' splitterLoc{slI} ' splitting for mouse ' num2str(mouseI)])
+        end
     end
-    load(splitterFileLR)
-    
-    LRbinsAboveShuffle{mouseI} = binsAboveShuffleLR; 
-    LRthisCellSplits{mouseI} = thisCellSplitsLR;
-    
-    disp(['done Left/Right splitters mouse ' num2str(mouseI)])
 end
-
-%Get study/test splitting
-%Get left/right splitting
-for mouseI = 1:numMice
-    condPairsST = [3 4];
-    shuffleDirST = fullfile(mainFolder,mice{mouseI},shuffleDir);
-    [rateDiffST{mouseI}, rateSplitST{mouseI}, meanRateDiffST{mouseI}, DIeachST{mouseI}, DImeanST{mouseI}, DIallST{mouseI}] =...
-        LookAtSplitters4(cellPooledTMap_unsmoothed{mouseI}, condPairsST, []);
-    splitterFileST = fullfile(shuffleDirST,'splittersST.mat');
-    if exist(splitterFileST,'file')==0
-        disp(['did not find ST splitting for mouse ' num2str(mouseI) ', making now'])
-        %[~, binsAboveShuffleLR, thisCellSplitsLR] = SplitterWrapper4(cellTBT{mouseI},'leftright',...
-        %     'pooled', numShuffles, shuffDirFullLR, xlims, cmperbin, minspeed, [], shuffThresh, binsMin);
-        tic
-        [binsAboveShuffleST, thisCellSplitsST] = SplitterWrapper4(cellTBT{mouseI}, cellPooledTMap_unsmoothed{mouseI}, 'studytest',...
-            'pooled', numShuffles, stemBinEdges, minspeed, shuffThresh, binsMin);
-        save(splitterFileST,'binsAboveShuffleST','thisCellSplitsST')
-        toc
-    end
-    load(splitterFileST)
-    
-    STbinsAboveShuffle{mouseI} = binsAboveShuffleST; 
-    STthisCellSplits{mouseI} = thisCellSplitsST;
-    
-    disp(['done Study/Test splitters mouse ' num2str(mouseI)])
-end
-
-%Left/Right splitters ARMS
-for mouseI = 1:numMice
-    condPairsLR = [1 2];
-    ARMshuffDirLR = fullfile(mainFolder,mice{mouseI},shuffleDir);
-    ARMsplitterFileLR = fullfile(ARMshuffDirLR,'ARMsplittersLR.mat');
-    %[rateDiffST{mouseI}, rateSplitST{mouseI}, meanRateDiffST{mouseI}, DIeachST{mouseI}, DImeanST{mouseI}, DIallST{mouseI}] =...
-    %    LookAtSplitters4(cellPooledTMap_unsmoothed{mouseI}, condPairsST, []);
-    if exist(splitterFileST,'file')==2
-        load(ARMsplitterFileLR)
-    else
-        disp(['did not find ST splitting for ' num2str(mouseI) ', making now'])
-        [~, binsAboveShuffleST, thisCellSplitsST] = SplitterWrapper3(cellTBT{mouseI},'leftright',...
-             'pooled', numShuffles, shuffDirST, xlims, cmperbin, minspeed, [], shuffThresh, binsMin);
-        save(splitterFileST,'binsAboveShuffleST','thisCellSplitsST')
-    end
-    
-    LRbinsAboveShuffleARM{mouseI} = binsAboveShuffleLR; 
-    LRthisCellSplitsARM{mouseI} = thisCellSplitsLR;
-    disp(['done ARM Left/Right splitters mouse ' num2str(mouseI)])
-end
-
-%Study/Test splitters ARMS
-for mouseI = 1:numMice
-    condPairsST = [3 4];
-    ARMshuffDirST = fullfile(mainFolder,mice{mouseI},shuffleDir);
-    ARMsplitterFileST = fullfile(ARMshuffDirST,'ARMsplittersST.mat');
-    %[rateDiffST{mouseI}, rateSplitST{mouseI}, meanRateDiffST{mouseI}, DIeachST{mouseI}, DImeanST{mouseI}, DIallST{mouseI}] =...
-    %    LookAtSplitters4(cellPooledTMap_unsmoothed{mouseI}, condPairsST, []);
-    if exist(splitterFileST,'file')==2
-        load(ARMsplitterFileST)
-    else
-        disp(['did not find ST splitting for ' num2str(mouseI) ', making now'])
-        [~, binsAboveShuffleST, thisCellSplitsST] = SplitterWrapper3(cellTBT{mouseI},'studytest',...
-             'pooled', numShuffles, shuffDirST, xlims, cmperbin, minspeed, [], shuffThresh, binsMin);
-        save(splitterFileST,'binsAboveShuffleST','thisCellSplitsST')
-    end
-    STbinsAboveShuffleARM{mouseI} = binsAboveShuffleST; 
-    STthisCellSplitsARM{mouseI} = thisCellSplitsST;
-    disp(['done ARM Study/Test splitters mouse ' num2str(mouseI)])
-end
-
-
+   
 %% Splitter cells: stats and logical breakdown
 %Get logical splitting type
-for mouseI = 1:numMice
-   
+
+for slI = 1:length(splitterLoc)
+    for stI = 1:length(splitterType)
+        for mouseI = 1:numMice
+            %Get different splitting types
+            
+            %package into trait logicals
+            traitGroups{slI}{mouseI} = {   }
+        end
+    end
+end
     splittersLR{mouseI} = (LRthisCellSplits{mouseI} + dayUse{mouseI}) ==2;
     splittersST{mouseI} = (STthisCellSplits{mouseI} + dayUse{mouseI}) ==2;
      %{
@@ -403,7 +364,7 @@ for mouseI = 1:numMice
                              sum(splittersBOTH{mouseI},1)./cellsActiveToday{mouseI}]; %Both only
                          
     splittersEXany{mouseI} = (splittersLRonly{mouseI} + splittersSTonly{mouseI}) > 0;
-end
+%end
 
 purp = [0.4902    0.1804    0.5608]; % uisetcolor
 orng = [0.8510    0.3294    0.1020];
@@ -1134,6 +1095,7 @@ poolLabels = {'Left','Right','Study','Test'};
 condSet = {[1:4]; [5 6]; [7 8]};
 condSetComps = [1 2; 1 3; 2 3];
 condSetLabels = {'VS Self', 'Left vs. Right', 'Study vs. Test'}; csLabelsShort = {'VSelf','LvR','SvT'};
+condSetColors = {'b' 'r' 'g'};
 for cscI = 1:size(condSetComps,1)
     cscLabels{cscI} = [csLabelsShort{condSetComps(cscI,1)} ' - ' csLabelsShort{condSetComps(cscI,2)}];
 end
@@ -1278,7 +1240,7 @@ for pvtI = 1:length(pvNames)
 
         load(pvBasicFile)
         
-        ARMpvCorrs{pvtI}{mouseI} = tpvCorrs;
+        ARMpvCorrs{pvtI}{mouseI} = cellfun(@fliplr,tpvCorrs,'UniformOutput',false);
         ARMmeanCorr{pvtI}{mouseI} = cell2mat(tmeanCorr);
 
         ARMmeanCorrHalfFirst{pvtI}{mouseI} = cell2mat(cellfun(@(x) mean(x(:,1:numBins/2),2),ARMpvCorrs{pvtI}{mouseI},'UniformOutput',false));

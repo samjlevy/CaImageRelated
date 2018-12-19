@@ -10,11 +10,11 @@ Conds = GetTBTconds(trialbytrial);
 switch pooledunpooled
     case 'pooled'
         switch typeShuff
-            case 'leftright'
+            case {'leftright','LR'}
                 meascondPairs = [1 2]; % condpairs to test splitting along in shuffled tmaps
                 shuffPFcondpairs = [Conds.Left; Conds.Right]; %cond pairs to make placefields with
                 baseCondPairs = [1 2]; %cond pairs to test splitting along in baseTMap
-            case 'studytest'
+            case {'studytest','ST'}
                 meascondPairs = [1 2]; 
                 shuffPFcondpairs = [Conds.Study; Conds.Test];
                 baseCondPairs = [3 4];
@@ -22,10 +22,10 @@ switch pooledunpooled
     case 'unpooled'
         shuffPFcondpairs = [1;2;3;4];
         switch typeShuff
-            case 'leftright'
+            case {'leftright','LR'}
                 meascondPairs = [1 2; 3 4];
                 baseCondPairs = [1 2; 3 4];
-            case 'studytest'
+            case {'studytest','ST'}
                 baseCondPairs = [1 3; 2 4];
                 meascondPairs = [1 3; 2 4];
         end
