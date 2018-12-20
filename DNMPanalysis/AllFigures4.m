@@ -851,7 +851,21 @@ for pvtI = 1:length(pvNames)
 end
 suptitleSL('Chance in Each Correlation over Experience ARMS')
 
+figure('Position',[288 37 1521 849]);
+for pvtI = 1:length(pvNames)
+    ggt{pvtI} = subplot(2,3,pvtI);
+    [ggt{pvtI},statsOut] = PlotChangeByDaysApartFWDonly(withinCSdayChangeMeanHalfFirstARM{pvtI},sameDayDayDiffsPooled{pvtI},condSetColors,condSetLabels,ggt{pvtI});
+    ggt{pvtI}.Title.String = [pvNames{pvtI}; ggt{pvtI}.Title.String];
+end
+suptitleSL('Chance in Each Correlation over Experience ARMS first half')
 
+figure('Position',[288 37 1521 849]);
+for pvtI = 1:length(pvNames)
+    ggt{pvtI} = subplot(2,3,pvtI);
+    [ggt{pvtI},statsOut] = PlotChangeByDaysApartFWDonly(withinCSdayChangeMeanHalfSecondARM{pvtI},sameDayDayDiffsPooled{pvtI},condSetColors,condSetLabels,ggt{pvtI});
+    ggt{pvtI}.Title.String = [pvNames{pvtI}; ggt{pvtI}.Title.String];
+end
+suptitleSL('Chance in Each Correlation over Experience ARMS second half')
 %% PV corr separation by days apart ARMS
 
 cscColors = {'m'; 'c'; 'k'};%[0.8 0.2 0]
@@ -862,6 +876,33 @@ for pvtI = 1:length(pvNames)
     ggt{pvtI}.Title.String = [pvNames{pvtI}; ggt{pvtI}.Title.String];
 end
 suptitleSL('Change in Separation between Correlations ARMS')
+
+cscColors = {'m'; 'c'; 'k'};%[0.8 0.2 0]
+figure('Position',[288 37 1521 849]);
+for pvtI = 1:length(pvNames)
+    ggt{pvtI} = subplot(2,3,pvtI);
+    [ggt{pvtI},statsOut] = PlotChangeByDaysApartFWDonly(cscDiffsChangeMeanHalfFirstPooledARM{pvtI},sameDayDayDiffsPooled{pvtI},cscColors,cscLabels,ggt{pvtI});
+    ggt{pvtI}.Title.String = [pvNames{pvtI}; ggt{pvtI}.Title.String];
+end
+suptitleSL('Change in Separation between Correlations ARMS First Half')
+
+cscColors = {'m'; 'c'; 'k'};%[0.8 0.2 0]
+figure('Position',[288 37 1521 849]);
+for pvtI = 1:length(pvNames)
+    ggt{pvtI} = subplot(2,3,pvtI);
+    [ggt{pvtI},statsOut] = PlotChangeByDaysApartFWDonly(cscDiffsChangeMeanHalfSecondPooledARM{pvtI},sameDayDayDiffsPooled{pvtI},cscColors,cscLabels,ggt{pvtI});
+    ggt{pvtI}.Title.String = [pvNames{pvtI}; ggt{pvtI}.Title.String];
+end
+suptitleSL('Change in Separation between Correlations ARMS Second Half')
+
+%% Stem vs Arms
+
+statsOut = [];
+for condI = 1:length(condSet)
+[figHand, statsOut{condI}] = PVcorrCompStemVsArmDaysApart(CSpooledMeanPVcorrs,CSpooledMeanPVcorrsARM,CSpooledPVdaysApart,pvNames,condI);
+suptitleSL(['Difference between Stem (l) and ARM (r) corrs in ' condSetLabels{condI}])
+end
+
 
 %% Decoder results 
 
