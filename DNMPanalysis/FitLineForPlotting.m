@@ -1,6 +1,6 @@
 function [fitVal,daysPlot] = FitLineForPlotting(values,days)
 
-[~,~,fitLine, ~] = fitLinRegSL(values,days);
+[~,~,fitLine, ~, ~, ~] = fitLinRegSL(values,days);
 
 daysPlot = unique(fitLine(:,1));
     

@@ -1,4 +1,4 @@
-function [slope, intercept, fitLine, rr] = fitLinRegSL(data, realDays)
+function [slope, intercept, fitLine, rr, pSlope, pInt] = fitLinRegSL(data, realDays)
 
 data = data(:);
 %numDays = length(data);
@@ -21,4 +21,5 @@ rr = lm.Rsquared;
 
 fitLine = [realDays'; realDays'*slope+intercept]';
 
+%Get pvals for slope and intercept
 end

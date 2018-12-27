@@ -1,6 +1,6 @@
 function [Fval,dfNum,dfDen,pVal] = slopeDiffFromZeroFtest(dataVec,days)
 
-[slope, intercept, ~, ~] = fitLinRegSL(dataVec, days);
+[slope, intercept, ~, ~,~,~] = fitLinRegSL(dataVec, days);
 
 interceptZero = sum(dataVec - 0*days) / length(dataVec);
 
