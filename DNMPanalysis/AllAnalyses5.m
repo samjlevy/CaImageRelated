@@ -20,6 +20,7 @@ minspeed = 0;
 zeronans = 1; 
 posThresh = 3;
 cmperbin = (max(xlims)-min(xlims))/numBins;
+condPairs = [1 3; 2 4; 1 2; 3 4];
 
 disp('Loading stuff')
 for mouseI = 1:numMice
@@ -126,7 +127,6 @@ end
 %}
 
 %Place fields
-condPairs = [1 3; 2 4; 1 2; 3 4];
 for mouseI = 1:numMice
     saveName = fullfile(mainFolder,mice{mouseI},'PFsLinPooled.mat');
     switch exist(fullfile(mainFolder,mice{mouseI},'PFsLinPooled.mat'),'file')
@@ -140,6 +140,7 @@ for mouseI = 1:numMice
     
     load(fullfile(mainFolder,mice{mouseI},'PFsLinPooled.mat'),'TMap_unsmoothed','TMap_zRates')
     cellPooledTMap_unsmoothed{1}{mouseI} = TMap_unsmoothed;
+    cellPooledTMap_firesAtAll{1}{mouseI} = TMap_firesAtAll;
     cellPooledTMap_zRates{1}{mouseI} = TMap_unsmoothed; 
     
     saveName = fullfile(mainFolder,mice{mouseI},'PFsLinPooledArm.mat');
@@ -154,6 +155,7 @@ for mouseI = 1:numMice
     
     load(saveName,'TMap_unsmoothed','TMap_zRates')
     cellPooledTMap_unsmoothedArm{1}{mouseI} = TMap_unsmoothed;
+    cellPooledTMap_firesAtAllArm{1}{mouseI} = TMap_firesAtAll;
     cellPooledTMap_zRatesArm{1}{mouseI} = TMap_unsmoothed; 
 end
 
@@ -218,12 +220,14 @@ for mouseI = 1:numMice
                 case 'stem'
                     binEdgesHere = stemBinEdges;
                     splitterFile = fullfile(shuffleDir,['splitters' splitterType{stI} '.mat']);
-                    cellTMap = cellPooledTMap_unsmoothed{1}{mouseI};
+                    %cellTMap = cellPooledTMap_unsmoothed{1}{mouseI};
+                    cellTMap = cellPooledTMap_firesAtAll{1}{mouseI};
                     tbtHere = cellTBT{mouseI};
                 case 'arm'
                     splitterFile = fullfile(shuffleDir,['ARMsplitters' splitterType{stI} '.mat']);
                     binEdgesHere = armBinEdges;
-                    cellTMap = cellPooledTMap_unsmoothedArm{1}{mouseI};
+                    %cellTMap = cellPooledTMap_unsmoothedArm{1}{mouseI};
+                    cellTMap = cellPooledTMap_firesAtAllArm{1}{mouseI};
                     tbtHere = cellTBTarm{mouseI};
             end
             

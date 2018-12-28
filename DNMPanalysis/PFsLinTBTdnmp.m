@@ -1,4 +1,4 @@
-function [TMap_unsmoothed, TMap_gauss, TMap_zRates, OccMap, RunOccMap, xBin, TCounts] =...
+function [TMap_unsmoothed, TMap_firesAtAll, TMap_zRates, OccMap, RunOccMap, xBin, TCounts] =...
     PFsLinTBTdnmp(trialbytrial, binEdges, minspeed, saveName, smth,condPairs)
 %This is specialized to run with the double plus data format. 
 %All TMaps get return in bins arranged from center outwards
@@ -68,6 +68,7 @@ for condPairI = 1:numConds
         for chI = 1:numCondsHere
             lapsUse{chI} = [logical(trialbytrial(condsHere(chI)).sessID == sessions(sessI))];
         end
+        numLaps = cell2mat(cellfun(@sum,lapsUse,'UniformOutput',false));
         
         anyLaps = cell2mat(cellfun(@any,lapsUse,'UniformOutput',false));
         if any(anyLaps)
@@ -108,6 +109,31 @@ for condPairI = 1:numConds
         spikeCounts = cellfun(@(x) histcounts(x,linearEdges),spikePos,'UniformOutput',false); %counts of positions in bins
         TMap_unsmoothed(1:numCells,sessI,condPairI) = cellfun(@(x) x./RunOccMap{condPairI,sessI},spikeCounts,'UniformOutput',false); %normalize by occupancy
         
+        %Version that just asks 'did the cell fire at all in this bin
+        lapX = cell(1,sum(numLaps));
+        spks = cell(numCells,sum(numLaps));
+        numLapsPlus = [0 numLaps];
+        for chK = 1:numCondsHere
+            lapX((1:numLaps(chK))+numLapsPlus(chK)) = trialbytrial(condsHere(chK)).trialsX(lapsUse{chK});
+            for lapI = 1:numLaps(chK) 
+                spks(:,lapI+numLapsPlus(chK)) = mat2cell(trialbytrial(condsHere(chK)).trialPSAbool{lapI},ones(numCells,1),size(trialbytrial(condsHere(chK)).trialPSAbool{lapI},2));
+            end
+        end
+        
+        spikeLapPos = cell(numCells,sum(numLaps));
+        spikeLapsBinned = cell(numCells,sum(numLaps));
+        spikeLapsBinnedAny = cell(numCells,sum(numLaps));
+        for lapI = 1:sum(numLaps)
+            spikeLapPos(:,lapI) = cellfun(@(x) lapX{lapI}(x),spks(:,lapI),'UniformOutput',false);
+            spikeLapsBinned(:,lapI) = cellfun(@(x) histcounts(x,linearEdges),spikeLapPos(:,lapI),'UniformOutput',false);
+            spikeLapsBinnedAny(:,lapI) = cellfun(@(x) x>0,spikeLapsBinned(:,lapI),'UniformOutput',false);
+        end
+        
+        cellSpikesBinary = [];
+        for cellI = 1:numCells
+            cellSpikesBinary{cellI,1} = sum(cell2mat(spikeLapsBinnedAny(cellI,:)'),1);
+        end
+        TMap_firesAtAll(1:numCells,sessI,condPairI) = cellfun(@(x) x/sum(numLaps),cellSpikesBinary,'UniformOutput',false);
         
         if smth
             Tsum = cellfun(@sum,spikeCounts,'UniformOutput',false);
@@ -176,7 +202,7 @@ if saveThis==1
         saveName = 'PFsLin.mat';
     end
     savePath = saveName; 
-    save(savePath,'OccMap','RunOccMap', 'xBin', 'TMap_unsmoothed', 'TMap_gauss', 'TCounts', 'TMap_zRates') %, 'TMap_gauss'
+    save(savePath,'OccMap','RunOccMap', 'xBin', 'TMap_unsmoothed', 'TMap_firesAtAll','TMap_gauss', 'TCounts', 'TMap_zRates') %, 'TMap_gauss'
 end
 
 %if dispProgress

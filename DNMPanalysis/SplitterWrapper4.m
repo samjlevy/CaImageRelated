@@ -42,7 +42,7 @@ h = waitbar(0,'Starting to shuffle');
 
 for shuffleI = 1:numShuffles
     shuffledTBT = ShuffleTrialsAcrossConditions(trialbytrial,typeShuff);
-    [tmapShuff, ~, ~, ~, ~, ~, ~] =...
+    [~, tmapShuff, ~, ~, ~, ~, ~] =...
         PFsLinTBTdnmp(shuffledTBT, binEdges, minspeed, [], false,shuffPFcondpairs);
     for cpI = 1:numCondPairs
         [rateDiff, ~, ~, ~, ~] =... % rateSplit{shuffleI}, meanRateDiff{shuffleI}, DIeach{shuffleI}, DImean{shuffleI}
@@ -56,11 +56,11 @@ for shuffleI = 1:numShuffles
             end
         end
     end
-    h = waitbar(shuffleI/numShuffles,'Still shuffling');
+    waitbar(shuffleI/numShuffles,h,'Still shuffling');
 end
 
 %p.stop;
-close h
+close(h)
 disp('Done with shuffling')
 
 [baseRateDiff, ~, ~, ~, ~, ~] = LookAtSplitters4(baseTMap,baseCondPairs,[]);
