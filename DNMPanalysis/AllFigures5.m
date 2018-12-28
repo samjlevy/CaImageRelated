@@ -46,85 +46,15 @@ end
 
 %% Change in Proportion of Each splitter type by days apart
 
-
-
-
-%Comparison
-plotREV=0;
-
-gg=figure('Position',[65 410 1813 510]);
-sRows = 1;
-sCols = 4;
-for pcI = 1:length(cpsPlot)
-    subplot(sRows,sCols,pcI)
-    pcIndsHere = pairsCompareInd(cpsPlot(pcI),:);
-    %plot data
-    plot(pooledDaysApartFWD-0.1,pooledSplitPctChangeFWD{pcIndsHere(1)},'.','Color',colorAssc{pcIndsHere(1)},'MarkerSize',12)
-    hold on
-    plot(pooledDaysApartFWD+0.1,pooledSplitPctChangeFWD{pcIndsHere(2)},'.','Color',colorAssc{pcIndsHere(2)},'MarkerSize',12)
-    %plot reg fit line    
-    plot(splitterFitPlotDays,splitterFitPlotPct{pcIndsHere(1)},'Color',colorAssc{pcIndsHere(1)},'LineWidth',2)
-    plot(splitterFitPlotDays,splitterFitPlotPct{pcIndsHere(2)},'Color',colorAssc{pcIndsHere(2)},'LineWidth',2)
-    
-    if plotREV==1
-        plot(pooledDaysApartREV-0.1,pooledSplitPctChangeREV{pcIndsHere(1)},'.','Color',colorAssc{pcIndsHere(1)},'MarkerSize',12)
-        plot(pooledDaysApartREV+0.1,pooledSplitPctChangeREV{pcIndsHere(2)},'.','Color',colorAssc{pcIndsHere(2)},'MarkerSize',12)   
-        plot(splitterFitPlotDaysREV,splitterFitPlotPctREV{pcIndsHere(1)},'Color',colorAssc{pcIndsHere(1)},'LineWidth',2)
-        plot(splitterFitPlotDaysREV,splitterFitPlotPctREV{pcIndsHere(2)},'Color',colorAssc{pcIndsHere(2)},'LineWidth',2)
-    end
-    
-    ylim([-0.5 0.5])
-    xlim([0.5 max(pooledDaysApartFWD)-0.5]) %cell2mat(cellfun(@max,cellRealDays,'UniformOutput',false))
-    if plotREV==1; xlim([min(pooledDaysApartREV)-0.5 max(pooledDaysApartFWD)-0.5]); end
-    xlabel('Days Apart')
-    ylabel('Proportion Change')
-    %indicate the r2 of each line
-    %switch slopeDiffRank(pcI)>=(1*numPerms-numPerms*pThresh); case 1; diffTxt='ARE'; case 0; diffTxt ='ARE NOT'; end
-    %title([pairsCompare{pcI,1} ' vs ' pairsCompare{pcI,2} ', slopes ' diffTxt ' diff at p = ' num2str(1-slopeDiffRank(pcI)/1000)])
-    switch pVal(cpsPlot(pcI))<pThresh; case 1; diffTxt='ARE'; case 0; diffTxt ='are NOT'; end
-    title([traitLabels{pcIndsHere(1)} ' vs ' traitLabels{pcIndsHere(2)} ', slopes ' diffTxt ' diff at p = ' num2str(pVal(cpsPlot(pcI)))])
-    legend(traitLabels{pcIndsHere(1)},traitLabels{pcIndsHere(2)})
+gh = [];
+statsOut = [];
+for slI = 1:2
+    gh{slI} = figure('Position',[435 278 988 390]);
+    [gh{slI},statsOut{slI}] = PlotTraitChangeOverDays(pooledSplitNumChange{slI},pooledRealDayDiffs,...
+        pairsCompareInd(cpsPlot,:),colorAssc,traitLabels,gh{slI}); %Num in this case is diff in Pcts.
+    suptitleSL(['Change in Proportion of Splitters on ' splitterLoc{slI}])
 end
-suptitleSL('Changes by days apart in proportion of splitting type')
 
-%% Change in Proportion of Each ARM splitter type by days apart
-%Comparison
-plotREV=1;
-
-gg=figure('Position',[65 410 1813 510]);
-sRows = 1;
-sCols = 3;
-for pcI = 1:length(cpsPlot)
-    subplot(sRows,sCols,pcI)
-    pcIndsHere = pairsCompareInd(cpsPlot(pcI),:);
-    %plot data
-    plot(pooledDaysApartFWD-0.1,ARMpooledSplitPctChangeFWD{pcIndsHere(1)},'.','Color',colorAssc{pcIndsHere(1)},'MarkerSize',12)
-    hold on
-    plot(pooledDaysApartFWD+0.1,ARMpooledSplitPctChangeFWD{pcIndsHere(2)},'.','Color',colorAssc{pcIndsHere(2)},'MarkerSize',12)
-    %plot reg fit line    
-    plot(ARMsplitterFitPlotDays,ARMsplitterFitPlotPct{pcIndsHere(1)},'Color',colorAssc{pcIndsHere(1)},'LineWidth',2)
-    plot(ARMsplitterFitPlotDays,ARMsplitterFitPlotPct{pcIndsHere(2)},'Color',colorAssc{pcIndsHere(2)},'LineWidth',2)
-    
-    if plotREV==1
-        plot(pooledDaysApartREV-0.1,ARMpooledSplitPctChangeREV{pcIndsHere(1)},'.','Color',colorAssc{pcIndsHere(1)},'MarkerSize',12)
-        plot(pooledDaysApartREV+0.1,ARMpooledSplitPctChangeREV{pcIndsHere(2)},'.','Color',colorAssc{pcIndsHere(2)},'MarkerSize',12)   
-        plot(ARMsplitterFitPlotDaysREV,ARMsplitterFitPlotPctREV{pcIndsHere(1)},'Color',colorAssc{pcIndsHere(1)},'LineWidth',2)
-        plot(ARMsplitterFitPlotDaysREV,ARMsplitterFitPlotPctREV{pcIndsHere(2)},'Color',colorAssc{pcIndsHere(2)},'LineWidth',2)
-    end
-    
-    ylim([-0.5 0.5])
-    xlim([0.5 max(pooledDaysApartFWD)-0.5]) %cell2mat(cellfun(@max,cellRealDays,'UniformOutput',false))
-    if plotREV==1; xlim([min(pooledDaysApartREV)-0.5 max(pooledDaysApartFWD)-0.5]); end
-    xlabel('Days Apart')
-    ylabel('Proportion Change')
-    %indicate the r2 of each line
-    %switch slopeDiffRank(pcI)>=(1*numPerms-numPerms*pThresh); case 1; diffTxt='ARE'; case 0; diffTxt ='ARE NOT'; end
-    %title([pairsCompare{pcI,1} ' vs ' pairsCompare{pcI,2} ', slopes ' diffTxt ' diff at p = ' num2str(1-slopeDiffRank(pcI)/1000)])
-    switch ARMpVal(cpsPlot(pcI))<pThresh; case 1; diffTxt='ARE'; case 0; diffTxt ='are NOT'; end
-    title([ARMtraitLabels{pcIndsHere(1)} ' vs ' ARMtraitLabels{pcIndsHere(2)} ', slopes ' diffTxt ' diff at p = ' num2str(ARMpVal(cpsPlot(pcI)))])
-    legend(ARMtraitLabels{pcIndsHere(1)},ARMtraitLabels{pcIndsHere(2)})
-end
-suptitleSL('Changes by days apart in proportion of ARM splitting type')
 
 %% Prop of splitters that come back
 %Comparison

@@ -3,7 +3,7 @@ function [Fval,dfNum,dfDen,pVal] = TwoSlopeFTest(dataVecA, dataVecB, daysA, days
 %Step 1: Get the slope of all the data together (not 100% sure this is right...
 allData = [dataVecA; dataVecB];
 allDays = [daysA; daysB];
-[allSlope, allIntercept, ~, ~] = fitLinRegSL(allData,allDays);
+[allSlope, allIntercept, ~, ~, ~, ~] = fitLinRegSL(allData,allDays);
 
 %Step 2: Fit linear regression to each data starting with known slope
 interceptAsame = sum(dataVecA - allSlope*daysA) / length(dataVecA);
@@ -18,8 +18,8 @@ rsquaredAsame = sum(errorAsame.^2);
 rsquaredBsame = sum(errorBsame.^2);
 
 %Step 3: Fit lear regresstion to each data intependently
-[slopeA, interceptA, ~, ~] = fitLinRegSL(dataVecA, daysA);
-[slopeB, interceptB, ~, ~] = fitLinRegSL(dataVecB, daysB);
+[slopeA, interceptA, ~, ~, ~, ~] = fitLinRegSL(dataVecA, daysA);
+[slopeB, interceptB, ~, ~, ~, ~] = fitLinRegSL(dataVecB, daysB);
 
 errorA = dataVecA - slopeA*daysA - interceptA*ones(size(dataVecA,1),size(dataVecA,2));
 errorB = dataVecB - slopeB*daysB - interceptB*ones(size(dataVecB,1),size(dataVecB,2));
@@ -42,6 +42,7 @@ dfDen = nPts - 2; %Num data pts. - num groups
 
 pVal = fcdf(Fval,dfNum,dfDen,'upper');
 
+try
 if kstest(zscore(dataVecA))==1
     disp('Error: found that dataA not normally distributed') 
 end
@@ -64,6 +65,7 @@ if sum(eCorr > shCorr) > 950
 end
 else
     disp('cannot check errorA/B correlation, diff number elements')
+end
 end
 
 end

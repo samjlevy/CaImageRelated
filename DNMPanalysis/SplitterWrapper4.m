@@ -37,7 +37,8 @@ numSess = size(baseTMap,2);
 %Shuffle things and make new rate maps
 numCondPairs = size(meascondPairs,1);
 rateDiffReorg = cell(numCells,numSess,numCondPairs);
-p = ProgressBar(numShuffles);
+%p = ProgressBar(numShuffles);
+h = waitbar(0,'Starting to shuffle');
 
 for shuffleI = 1:numShuffles
     shuffledTBT = ShuffleTrialsAcrossConditions(trialbytrial,typeShuff);
@@ -55,10 +56,11 @@ for shuffleI = 1:numShuffles
             end
         end
     end
-    p.progress;
+    h = waitbar(shuffleI/numShuffles,'Still shuffling');
 end
 
-p.stop;
+%p.stop;
+close h
 disp('Done with shuffling')
 
 [baseRateDiff, ~, ~, ~, ~, ~] = LookAtSplitters4(baseTMap,baseCondPairs,[]);

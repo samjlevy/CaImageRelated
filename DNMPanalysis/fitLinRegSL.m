@@ -19,7 +19,8 @@ intercept = lm.Coefficients.Estimate(1);
 slope = lm.Coefficients.Estimate(2);
 rr = lm.Rsquared;
 
-fitLine = [realDays'; realDays'*slope+intercept]';
+pInt = lm.Coefficients.pValue(1);
+pSlope = lm.Coefficients.pValue(2);
 
-%Get pvals for slope and intercept
+fitLine = [realDays'; realDays'*slope+intercept]';
 end

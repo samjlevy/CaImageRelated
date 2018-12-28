@@ -58,14 +58,6 @@ for mouseI = 1:numMice
     accuracyRange(mouseI, 1:2) = [mean(accuracy{mouseI}),...
         std(accuracy{mouseI})/sqrt(length(accuracy{mouseI}))];
 end
-%{
-%Pooled Reliability
-for mouseI = 1:numMice
-    cellTBTpooled{mouseI} = PoolTBTacrossConds(cellTBT{mouseI},condPairs,{'Left','Right','Study','Test'});
-    [dayUsePooled{mouseI},threshAndConsecPooled{mouseI}] = GetUseCells(cellTBTpooled{mouseI}, lapPctThresh, consecLapThresh);
-        [trialReliPooled{mouseI},aboveThreshPooled{mouseI},~,~] = TrialReliability(cellTBTpooled{mouseI}, lapPctThresh);
-end
-%}
 
 disp('Getting reliability')
 dayUse = cell(1,numMice); threshAndConsec = cell(1,numMice);
@@ -103,6 +95,35 @@ for mouseI = 1:numMice
     clear reliability
 end
 
+
+%Pooled Reliability
+disp('Getting pooled reliability')
+for mouseI = 1:numMice
+    saveName = fullfile(mainFolder,mice{mouseI},'trialReliabilityPooled.mat');
+    if exist(saveName,'file')==0
+    cellTBTpooled{mouseI} = PoolTBTacrossConds(cellTBT{mouseI},condPairs,{'Left','Right','Study','Test'});
+    [dayUsePooled,threshAndConsecPooled] = GetUseCells(cellTBTpooled{mouseI}, lapPctThresh, consecLapThresh);
+    [trialReliPooled,aboveThreshPooled,~,~] = TrialReliability(cellTBTpooled{mouseI}, lapPctThresh);
+    
+    cellTBTarmPooled{mouseI} = PoolTBTacrossConds(cellTBTarm{mouseI},condPairs,{'Left','Right','Study','Test'});
+    [dayUseArmPooled,threshAndConsecArmPooled] = GetUseCells(cellTBTarmPooled{mouseI}, lapPctThresh, consecLapThresh);
+    [trialReliArmPooled,aboveThreshArmPooled,~,~] = TrialReliability(cellTBTarmPooled{mouseI}, lapPctThresh);
+    
+    save(saveName,'dayUsePooled','threshAndConsecPooled','dayUseArmPooled','threshAndConsecArmPooled','trialReliPooled','trialReliArmPooled')
+    clear('dayUsePooled','threshAndConsecPooled','dayUseArmPooled','threshAndConsecArmPooled','trialReliPooled','trialReliArmPooled')
+    end
+    
+    reliabilityPooled{mouseI} = load(saveName);
+    dayUsePooled{mouseI} = reliabilityPooled{mouseI}.dayUsePooled;
+    threshAndConsecPooled{mouseI} = reliabilityPooled{mouseI}.threshAndConsecPooled;
+    trialReliPooled{mouseI} = reliabilityPooled{mouseI}.trialReliPooled;
+    
+    dayUseArmPooled{mouseI} = reliabilityPooled{mouseI}.dayUseArmPooled;
+    threshAndConsecArmPooled{mouseI} = reliabilityPooled{mouseI}.threshAndConsecArmPooled;
+    trialReliArmPooled{mouseI} = reliabilityPooled{mouseI}.trialReliArmPooled;
+    clear reliability
+end
+%}
 
 %Place fields
 condPairs = [1 3; 2 4; 1 2; 3 4];
@@ -176,6 +197,146 @@ for mouseI = 1:numMice
 end
 %}
 
+%% Splitter cells: Shuffle versions, pooled
+numShuffles = 1000;
+shuffThresh = 1 - pThresh;
+binsMin = 1;
+splitDir = 'splitters';
+
+splitterType = {'LR' 'ST'};
+splitterCPs = {[1 2] [3 4]};
+splitterLoc = {'stem' 'arm'};
+
+%Get/make splitting
+binsAboveShuffle = [];
+thisCellSplits = [];
+for mouseI = 1:numMice
+    shuffleDir = fullfile(mainFolder,mice{mouseI},splitDir);
+    for stI = 1:length(splitterType)
+        for slI = 1:length(splitterLoc)
+            switch splitterLoc{slI}
+                case 'stem'
+                    binEdgesHere = stemBinEdges;
+                    splitterFile = fullfile(shuffleDir,['splitters' splitterType{stI} '.mat']);
+                    cellTMap = cellPooledTMap_unsmoothed{1}{mouseI};
+                    tbtHere = cellTBT{mouseI};
+                case 'arm'
+                    splitterFile = fullfile(shuffleDir,['ARMsplitters' splitterType{stI} '.mat']);
+                    binEdgesHere = armBinEdges;
+                    cellTMap = cellPooledTMap_unsmoothedArm{1}{mouseI};
+                    tbtHere = cellTBTarm{mouseI};
+            end
+            
+            if exist(splitterFile,'file')==0
+            disp(['did not find ' splitterType{stI} ' on ' splitterLoc{slI} ' splitting for mouse ' num2str(mouseI) ', making now'])
+            tic
+            [binsAboveShuffle, thisCellSplits] = SplitterWrapper4(tbtHere, cellTMap,  splitterType{stI},...
+                'pooled', numShuffles, binEdgesHere, minspeed, shuffThresh, binsMin);
+            save(splitterFile,'binsAboveShuffle','thisCellSplits')
+            toc
+            end
+            
+            loadedSplit = load(splitterFile);
+            
+            binsAboveShuffle{slI}{stI}{mouseI} = loadedSplit.binsAboveShuffle;
+            thisCellSplits{slI}{stI}{mouseI} = loadedSplit.thisCellSplits;
+            
+            [rateDiff{slI}{stI}{mouseI}, rateSplit{slI}{stI}{mouseI}, meanRateDiff{slI}{stI}{mouseI}, DIeach{slI}{stI}{mouseI},...
+                DImean{slI}{stI}{mouseI}, DIall{slI}{stI}{mouseI}] =...
+                LookAtSplitters4(cellTMap, splitterCPs{stI}, []);
+            
+            disp(['done ' splitterType{stI} ' on ' splitterLoc{slI} ' splitting for mouse ' num2str(mouseI)])
+        end
+    end
+end
+   
+%% Splitter cells: logical each type
+%dayUseFilter = {dayUse; dayUseArm}; 
+dayUseFilter = {dayUsePooled; dayUseArmPooled};
+%dayUseFilter = {cellfun(@(x) ones(size(x)),dayUse,'UniformOutput',false); cellfun(@(x) ones(size(x)),dayUseArm,'UniformOutput',false)};
+
+splitterCells = [];
+for mouseI = 1:numMice
+    for slI = 1:length(splitterLoc)
+        for stI = 1:length(splitterType)
+            %Filter for active cells
+            splitterCells{slI}{stI}{mouseI} = thisCellSplits{slI}{stI}{mouseI}.*dayUseFilter{slI}{mouseI};
+            
+            %Get different splitting types
+            switch splitterType{stI}
+                case 'LR'
+                    splittersLR{slI}{mouseI} = splitterCells{slI}{stI}{mouseI};
+                case 'ST'
+                    splittersST{slI}{mouseI} = splitterCells{slI}{stI}{mouseI};
+            end            
+        end
+        [splittersLRonly{slI}{mouseI}, splittersSTonly{slI}{mouseI}, splittersBoth{slI}{mouseI},...
+            splittersOne{slI}{mouseI}, splittersAny{slI}{mouseI}, splittersNone{slI}{mouseI}] = ...
+            GetSplittingTypes(splittersLR{slI}{mouseI}, splittersST{slI}{mouseI}, dayUseFilter{slI}{mouseI});
+            
+        %Package into trait logicals
+        traitGroups{slI}{mouseI} = {splittersLR{slI}{mouseI};... 
+                                    splittersST{slI}{mouseI};... 
+                                    splittersLRonly{slI}{mouseI};... 
+                                    splittersSTonly{slI}{mouseI}; ...
+                                    splittersBoth{slI}{mouseI}; ...
+                                    splittersOne{slI}{mouseI};... 
+                                    splittersAny{slI}{mouseI}; ...
+                                    splittersNone{slI}{mouseI}};
+    end
+end
+numTraitGroups = length(traitGroups{1}{1});
+
+purp = [0.4902    0.1804    0.5608]; % uisetcolor
+orng = [0.8510    0.3294    0.1020];
+colorAssc = {'r'            'b'        'm'         'c'              purp     orng    'g'      'k'  };
+colorAssc = { [1 0 0]     [0 0 1]    [1 0 1]       [0 1 1]         purp     orng        [0 1 0]       [0 0 0]};
+traitLabels = {'splitLR' 'splitST'  'splitLRonly' 'splitSTonly' 'splitBOTH' 'splitONE' 'splitEITHER' 'dontSplit'};
+
+pairsCompare = {'splitLR' 'splitST';...
+                'splitLRonly' 'splitSTonly';...
+                'splitBOTH' 'splitONE';...
+                'splitEITHER' 'dontSplit'};
+pairsCompareInd = cell2mat(cellfun(@(x) find(strcmpi(traitLabels,x)),pairsCompare,'UniformOutput',false));
+numPairsCompare = size(pairsCompare,1);
+
+disp('done splitter logicals')
+
+%% How many each type per day?
+pooledSplitProp = [];
+splitPropEachDay = [];
+for slI = 1:2
+    pooledSplitProp{slI} = cell(1,numTraitGroups);
+    splitPropEachDay{slI} = [];
+    for mouseI = 1:numMice
+        splitPropEachDay{slI}{mouseI} = RunGroupFunction('TraitDailyPct',traitGroups{slI}{mouseI},dayUseFilter{slI}{mouseI});
+        withinMouseSplitPropEachDayMeans{mouseI} = cellfun(@mean,splitPropEachDay{slI}{mouseI},'UniformOutput',false);
+        withinMouseSplitPropEachDaySEMs{mouseI} = cellfun(@standarderrorSL,splitPropEachDay{slI}{mouseI},'UniformOutput',false);
+        for tgI = 1:numTraitGroups
+            pooledSplitProp{slI}{tgI} = [pooledSplitProp{slI}{tgI}; splitPropEachDay{slI}{mouseI}{tgI}(:)];
+        end
+    end
+end 
+
+% Changes in number of splitters over time
+pooledSplitNumChange = []; splitterNumChange = []; %Change in percentage splitter type
+pooledSplitPctChange = []; splitterPctChange = []; %Change in percentage over percentage of first day in pair
+for slI = 1:2
+    pooledSplitNumChange{slI} = cell(numTraitGroups,1);
+    pooledSplitPctChange{slI} = cell(numTraitGroups,1);
+    
+    for mouseI = 1:numMice
+        [splitterNumChange{slI}{mouseI}, splitterPctChange{slI}{mouseI}] = cellfun(@(x) TraitChangeDayPairs(x,dayPairs{mouseI}),splitPropEachDay{slI}{mouseI},'UniformOutput',false);        
+        for tgI = 1:numTraitGroups
+            pooledSplitNumChange{slI}{tgI} = [pooledSplitNumChange{slI}{tgI}; splitterNumChange{slI}{mouseI}{tgI}];
+            pooledSplitPctChange{slI}{tgI} = [pooledSplitPctChange{slI}{tgI}; splitterPctChange{slI}{mouseI}{tgI}];
+        end
+    end
+end
+
+disp('done how many splitters')
+
+
 %% Change in accuracy, speed, time to run down arm
 pooledAccuracyChange = []; accuracyChange = [];
 for mouseI = 1:numMice
@@ -188,6 +349,8 @@ end
 [accuracyFval,accuracydfNum,accuracydfDen,accuracypVal] = slopeDiffFromZeroFtest(pooledAccuracyChange,pooledRealDayDiffs);
 [~, ~, accuracyFitLine, ~,~,~] = fitLinRegSL(pooledAccuracyChange, pooledRealDayDiffs);
 
+%time down arm: 
+%cellfun(@(x) sum(x,2),cellTBT{mouseI}(condI).trialPSAbool,'UniformOutput',false)
 
 %% How many active cells by days?
 pooledActiveCellsChange = []; pooledRealDayDiffs = [];
@@ -264,212 +427,6 @@ ylim([0 1])
 title('b = activeStillActive, g = activeComeBack, r = cellComeBack')
 
 %% Cells coming back across conditions
-
-
-
-
-
-%% Splitter cells: Shuffle versions, pooled
-numShuffles = 1000;
-shuffThresh = 1 - pThresh;
-binsMin = 1;
-splitDir = 'splitters';
-
-splitterType = {'LR' 'ST'};
-splitterCPs = {[1 2] [3 4]};
-splitterLoc = {'stem' 'arm'};
-
-%Get/make splitting
-binsAboveShuffle = [];
-thisCellSplits = [];
-for mouseI = 1:numMice
-    shuffleDir = fullfile(mainFolder,mice{mouseI},splitDir);
-    for stI = 1:length(splitterType)
-        for slI = 1:length(splitterLoc)
-            switch splitterLoc{slI}
-                case 'stem'
-                    binEdgesHere = stemBinEdges;
-                    splitterFile = fullfile(shuffleDir,['splitters' splitterType{stI} '.mat']);
-                    cellTMap = cellPooledTMap_unsmoothed{1}{mouseI};
-                    tbtHere = cellTBT{mouseI};
-                case 'arm'
-                    splitterFile = fullfile(shuffleDir,['ARMsplitters' splitterType{stI} '.mat']);
-                    binEdgesHere = armBinEdges;
-                    cellTMap = cellPooledTMap_unsmoothedArm{1}{mouseI};
-                    tbtHere = cellTBTarm{mouseI};
-            end
-            
-            if exist(splitterFile,'file')==0
-            disp(['did not find ' splitterType{stI} ' on ' splitterLoc{slI} ' splitting for mouse ' num2str(mouseI) ', making now'])
-            tic
-            [binsAboveShuffle, thisCellSplits] = SplitterWrapper4(tbtHere, cellTMap,  splitterType{stI},...
-                'pooled', numShuffles, binEdgesHere, minspeed, shuffThresh, binsMin);
-            save(splitterFile,'binsAboveShuffle','thisCellSplits')
-            toc
-            end
-            
-            loadedSplit = load(splitterFile);
-            
-            binsAboveShuffle{slI}{stI}{mouseI} = loadedSplit.binsAboveShuffle;
-            thisCellSplits{slI}{stI}{mouseI} = loadedSplit.thisCellSplits;
-            
-            [rateDiff{slI}{stI}{mouseI}, rateSplit{slI}{stI}{mouseI}, meanRateDiff{slI}{stI}{mouseI}, DIeach{slI}{stI}{mouseI},...
-                DImean{slI}{stI}{mouseI}, DIall{slI}{stI}{mouseI}] =...
-                LookAtSplitters4(cellTMap, splitterCPs{stI}, []);
-            
-            disp(['done ' splitterType{stI} ' on ' splitterLoc{slI} ' splitting for mouse ' num2str(mouseI)])
-        end
-    end
-end
-   
-%% Splitter cells: logical each type
-dayUseFilter = {dayUse; dayUseArm}; 
-%dayUseFilter = {cellfun(@(x) ones(size(x)),dayUse,'UniformOutput',false); cellfun(@(x) ones(size(x)),dayUseArm,'UniformOutput',false)};
-%dayUseFilter = {dayUsePooled; dayUseArmPooled};
-
-for mouseI = 1:numMice
-    for slI = 1:length(splitterLoc)
-        for stI = 1:length(splitterType)
-            %Filter for active cells
-            thisCellSplits{slI}{stI}{mouseI} = thisCellSplits{slI}{stI}{mouseI}.*dayUseFilter{slI}{mouseI};
-            
-            %Get different splitting types
-            switch splitterType{stI}
-                case 'LR'
-                    splittersLR{slI}{mouseI} = thisCellSplits{slI}{stI}{mouseI};
-                case 'ST'
-                    splittersST{slI}{mouseI} = thisCellSplits{slI}{stI}{mouseI};
-            end            
-        end
-        [splittersLRonly{slI}{mouseI}, splittersSTonly{slI}{mouseI}, splittersBoth{slI}{mouseI},...
-            splittersOne{slI}{mouseI}, splittersAny{slI}{mouseI}, splittersNone{slI}{mouseI}] = ...
-            GetSplittingTypes(splittersLR{slI}{mouseI}, splittersST{slI}{mouseI}, dayUseFilter{slI}{mouseI});
-            
-        %Package into trait logicals
-        traitGroups{slI}{mouseI} = {splittersLR{slI}{mouseI};... 
-                                    splittersST{slI}{mouseI};... 
-                                    splittersLRonly{slI}{mouseI};... 
-                                    splittersSTonly{slI}{mouseI}; ...
-                                    splittersBoth{slI}{mouseI}; ...
-                                    splittersOne{slI}{mouseI};... 
-                                    splittersAny{slI}{mouseI}; ...
-                                    splittersNone{slI}{mouseI}};
-    end
-end
-numTraitGroups = length(traitGroups{1}{1});
-
-purp = [0.4902    0.1804    0.5608]; % uisetcolor
-orng = [0.8510    0.3294    0.1020];
-colorAssc = {'r'            'b'        'm'         'c'              purp     orng    'g'      'k'  };
-colorAssc = { [1 0 0]     [0 0 1]    [1 0 1]       [0 1 1]         purp     orng        [0 1 0]       [0 0 0]};
-traitLabels = {'splitLR' 'splitST'  'splitLRonly' 'splitSTonly' 'splitBOTH' 'splitONE' 'splitEITHER' 'dontSplit'};
-
-pairsCompare = {'splitLR' 'splitST';...
-                'splitLRonly' 'splitSTonly';...
-                'splitBOTH' 'splitONE';...
-                'splitEITHER' 'dontSplit'};
-pairsCompareInd = cell2mat(cellfun(@(x) find(strcmpi(traitLabels,x)),pairsCompare,'UniformOutput',false));
-numPairsCompare = size(pairsCompare,1);
-
-disp('done splitter logicals')
-
-%% How many each type per day?
-pooledSplitProp = [];
-splitPropEachDay = [];
-for slI = 1:2
-    pooledSplitProp{slI} = cell(1,numTraitGroups);
-    splitPropEachDay{slI} = [];
-    for mouseI = 1:numMice
-        splitPropEachDay{slI}{mouseI} = RunGroupFunction('TraitDailyPct',traitGroups{slI}{mouseI},dayUseFilter{slI}{mouseI});
-        withinMouseSplitPropEachDayMeans{mouseI} = cellfun(@mean,splitPropEachDay{slI}{mouseI},'UniformOutput',false);
-        withinMouseSplitPropEachDaySEMs{mouseI} = cellfun(@standarderrorSL,splitPropEachDay{slI}{mouseI},'UniformOutput',false);
-        for tgI = 1:numTraitGroups
-            pooledSplitProp{slI}{tgI} = [pooledSplitProp{slI}{tgI}; splitPropEachDay{slI}{mouseI}{tgI}(:)];
-        end
-    end
-end 
-
-% Changes in number of splitters over time
-pooledSplitNumChange = [];
-pooledSplitPctChange = [];
-for slI = 1:2
-    for mouseI = 1:numMice
-        [splitterNumChange{slI}{mouseI}, splitterPctChange{slI}{mouseI}] = cellfun(@(x) TraitChangeDayPairs(x,dayPairs{mouseI}),splitPropEachDay{slI}{mouseI},'UniformOutput',false);
-        
-        pooledSplitNumChange{slI} = cell(numTraitGroups,1);
-        pooledSplitPctChange{slI} = cell(numTraitGroups,1);
-        for tgI = 1:numTraitGroups
-            pooledSplitNumChange{slI}{tgI} = [pooledSplitNumChange{slI}{tgI}; splitterNumChange{slI}{mouseI}{tgI}];
-            pooledSplitPctChange{slI}{tgI} = [pooledSplitPctChange{slI}{tgI}; splitterPctChange{slI}{mouseI}{tgI}];
-        end
-    end
-end
-
-disp('done how many splitters')
-
-%% Get changes in number of splitters over time
-%Packaging for running neatly in a big group
-
-pooledDaysApartFWD = []; pooledDaysApartREV = []; splitterDayPairsFWD = []; splitterDayPairsREV = []; 
-pooledSplitPctChangeFWD = cell(1,numTraitGroups); pooledSplitPctChangeREV = cell(1,numTraitGroups);
-splitterPctDayChangesFWD = []; splitterPctDayChangesREV = [];
-for mouseI = 1:numMice
-    [splitterPctDayChangesFWD{mouseI}] = RunGroupFunction('NNplusKChange',traitGroups{1}{mouseI},sum(trialReli{mouseI},3)>0);%dayUse{mouseI}
-    [splitterPctDayChangesREV{mouseI}] = RunGroupFunction('NNplusKChange',traitGroupsREV{1}{mouseI},dayUseREV{mouseI});
-    
-    for tgI = 1:length(traitGroups{1}{mouseI})
-        splitterPctDayChangesREV{mouseI}(tgI).dayPairs = sessionsIndREV{mouseI}(splitterPctDayChangesREV{mouseI}(tgI).dayPairs);
-    end
-    
-    REVorder = [];
-    tt = fieldnames(splitterPctDayChangesREV{mouseI}(tgI));
-    if alignDayPairsREV==1
-        if mouseI==1; disp('Aligning forward and reverse day pairs'); end 
-        for tgI = 1:length(traitGroups{1}{mouseI})
-            if sum(splitterPctDayChangesFWD{mouseI}(tgI).dayPairs(1,:)' == fliplr(splitterPctDayChangesREV{mouseI}(tgI).dayPairs(1,:))')~=2
-            pairsFWD = splitterPctDayChangesFWD{mouseI}(tgI).dayPairs;
-            pairsREV = splitterPctDayChangesREV{mouseI}(tgI).dayPairs;
-            pairsREVcell = mat2cell(pairsREV,ones(size(splitterPctDayChangesFWD{mouseI}(tgI).dayPairs,1),1),2);
-            pairsREVflip = cellfun(@fliplr,pairsREVcell,'UniformOutput',false);
-            for dpF = 1:size(splitterPctDayChangesFWD{mouseI}(tgI).dayPairs,1)
-                REVorder(dpF) = find(cell2mat(cellfun(@(x) sum(pairsFWD(dpF,:)'==x')==2,pairsREVflip,'UniformOutput',false)));
-            end
-                
-            for ttI = 1:length(tt)
-            %   splitterPctDayChangesREV{mouseI}(tgI).(tt{ttI}) = flipud(splitterPctDayChangesREV{mouseI}(tgI).(tt{ttI}));
-                splitterPctDayChangesREV{mouseI}(tgI).(tt{ttI}) = splitterPctDayChangesREV{mouseI}(tgI).(tt{ttI})(REVorder,:);
-            end
-            end
-        end
-    end
-    
-    compDayPairsFWD{mouseI} = splitterPctDayChangesFWD{mouseI}(tgI).dayPairs;
-    compDayPairsREV{mouseI} = splitterPctDayChangesREV{mouseI}(tgI).dayPairs;
-    
-    if useRealDays==1    
-        if mouseI==1; disp('Using real days'); end 
-        for tgI = 1:length(traitGroups{1}{mouseI})
-        splitterDayPairsFWD{mouseI}{tgI} = cellRealDays{mouseI}(splitterPctDayChangesFWD{mouseI}(tgI).dayPairs);
-        splitterDayPairsREV{mouseI}{tgI} = cellRealDays{mouseI}(splitterPctDayChangesREV{mouseI}(tgI).dayPairs);
-        end
-    end
-    dayPairsFWD{mouseI} = splitterDayPairsFWD{mouseI}{1};
-    dayPairsREV{mouseI} = splitterDayPairsREV{mouseI}{1};
-    
-    daysApartFWD{mouseI} = diff(splitterDayPairsFWD{mouseI}{1},1,2);
-    daysApartREV{mouseI} = diff(splitterDayPairsREV{mouseI}{1},1,2);
-    
-    pooledDaysApartFWD = [pooledDaysApartFWD; daysApartFWD{mouseI}];
-    pooledDaysApartREV = [pooledDaysApartREV; daysApartREV{mouseI}];
-    for tgI = 1:length(traitGroups{1}{mouseI})
-        pooledSplitPctChangeFWD{tgI} = [pooledSplitPctChangeFWD{tgI}; splitterPctDayChangesFWD{mouseI}(tgI).pctChange];
-        pooledSplitPctChangeREV{tgI} = [pooledSplitPctChangeREV{tgI}; splitterPctDayChangesREV{mouseI}(tgI).pctChange];
-    end
-end
-
-
-disp('Done change in number of splitters')
-
 
 
 %% Days each cell is this splitter type (persistence/reactivation)
