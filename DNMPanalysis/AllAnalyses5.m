@@ -140,7 +140,7 @@ for mouseI = 1:numMice
     
     load(fullfile(mainFolder,mice{mouseI},'PFsLinPooled.mat'),'TMap_unsmoothed','TMap_zRates')
     cellPooledTMap_unsmoothed{1}{mouseI} = TMap_unsmoothed;
-    cellPooledTMap_firesAtAll{1}{mouseI} = TMap_firesAtAll;
+    %cellPooledTMap_firesAtAll{1}{mouseI} = TMap_firesAtAll;
     cellPooledTMap_zRates{1}{mouseI} = TMap_unsmoothed; 
     
     saveName = fullfile(mainFolder,mice{mouseI},'PFsLinPooledArm.mat');
@@ -155,7 +155,7 @@ for mouseI = 1:numMice
     
     load(saveName,'TMap_unsmoothed','TMap_zRates')
     cellPooledTMap_unsmoothedArm{1}{mouseI} = TMap_unsmoothed;
-    cellPooledTMap_firesAtAllArm{1}{mouseI} = TMap_firesAtAll;
+    %cellPooledTMap_firesAtAllArm{1}{mouseI} = TMap_firesAtAll;
     cellPooledTMap_zRatesArm{1}{mouseI} = TMap_unsmoothed; 
 end
 

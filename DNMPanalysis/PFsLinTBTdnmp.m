@@ -58,7 +58,8 @@ cmperbin = mean(abs(diff(binEdges)));
 
 %if dispProgress
 %p = ProgressBar(numCells*numConds*numSess);
-%end
+%end 
+binHits = GenerateBinHitsTBT(trialbytrial,binEdges);
 
 for condPairI = 1:numConds
     for sessI = 1:numSess
@@ -110,6 +111,18 @@ for condPairI = 1:numConds
         TMap_unsmoothed(1:numCells,sessI,condPairI) = cellfun(@(x) x./RunOccMap{condPairI,sessI},spikeCounts,'UniformOutput',false); %normalize by occupancy
         
         %Version that just asks 'did the cell fire at all in this bin
+        allBinHits = [];
+        for chK = 1:numCondsHere
+            allBinHits = [allBinHits; binHits{condsHere(chK)}(lapsUse{chK})]; 
+        end
+        binHitsAll = [];
+        for lapI = 1:sum(numLaps)
+            binHitsAll(:,:,lapI) = allBinHits{lapI};
+        end
+        cellBinHits = sum(binHitsAll,3)/sum(numLaps);
+        TMap_firesAtAll(:,sessI,condPairI) = mat2cell(cellBinHits,ones(numCells,1),numBins);
+        
+        %{
         lapX = cell(1,sum(numLaps));
         spks = cell(numCells,sum(numLaps));
         numLapsPlus = [0 numLaps];
@@ -121,20 +134,21 @@ for condPairI = 1:numConds
         end
         
         spikeLapPos = cell(numCells,sum(numLaps));
-        spikeLapsBinned = cell(numCells,sum(numLaps));
-        spikeLapsBinnedAny = cell(numCells,sum(numLaps));
+        %spikeLapsBinned = cell(numCells,sum(numLaps));
+        %spikeLapsBinnedAny = cell(numCells,sum(numLaps));
         for lapI = 1:sum(numLaps)
             spikeLapPos(:,lapI) = cellfun(@(x) lapX{lapI}(x),spks(:,lapI),'UniformOutput',false);
-            spikeLapsBinned(:,lapI) = cellfun(@(x) histcounts(x,linearEdges),spikeLapPos(:,lapI),'UniformOutput',false);
-            spikeLapsBinnedAny(:,lapI) = cellfun(@(x) x>0,spikeLapsBinned(:,lapI),'UniformOutput',false);
-        end
+            %spikeLapsBinned(:,lapI) = cellfun(@(x) histcounts(x,linearEdges),spikeLapPos(:,lapI),'UniformOutput',false);
+            %spikeLapsBinnedAny(:,lapI) = cellfun(@(x) x>0,spikeLapsBinned(:,lapI),'UniformOutput',false);
+        end 
+        spikeLapsBinnedAny = cellfun(@(x) histcounts(x,linearEdges)>0,spikeLapPos,'UniformOutput',false);
         
         cellSpikesBinary = [];
         for cellI = 1:numCells
             cellSpikesBinary{cellI,1} = sum(cell2mat(spikeLapsBinnedAny(cellI,:)'),1);
         end
         TMap_firesAtAll(1:numCells,sessI,condPairI) = cellfun(@(x) x/sum(numLaps),cellSpikesBinary,'UniformOutput',false);
-        
+        %}
         if smth
             Tsum = cellfun(@sum,spikeCounts,'UniformOutput',false);
 
