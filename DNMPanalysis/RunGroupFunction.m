@@ -8,6 +8,7 @@ for ngI = 1:length(traitGroup)
         case 'TraitDailyPct'
             groupout{ngI} = TraitDailyPct(traitGroup{ngI},dayUse);
         case 'GetCellsOverlap'
+            %varargin 1 is dayPairs
             if iscell(dayUse) && length(dayUse)==length(traitGroup)
                 [groupout(ngI).activeCellsOverlap, groupout(ngI).overlapWithModel, groupout(ngI).overlapWithTest] =...
                     GetCellsOverlap(traitGroup{ngI}, dayUse{ngI},varargin{1});
@@ -17,6 +18,8 @@ for ngI = 1:length(traitGroup)
             end
         case 'GetFirstDayTrait'
             [groupout(ngI).firstDay] = GetFirstDayTrait(traitGroup{ngI});
+        case 'LogicalTraitCenterofMass'
+            [groupout(ngI).dayCOM,groupout(ngI).dayBias] = LogicalTraitCenterofMass(traitGroup{ngI},dayUse);
         otherwise
             disp('not a recognized option')
     end

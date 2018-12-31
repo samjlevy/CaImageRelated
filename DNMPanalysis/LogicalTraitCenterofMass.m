@@ -1,4 +1,4 @@
-function [splitterCOM, splitterDayBias] = LogicalTraitCenterofMass(dayUse, splittersLogical)
+function [splitterCOM, splitterDayBias] = LogicalTraitCenterofMass(splittersLogical, dayUse)
 %Day bias output: [early bias, no bias didn't split all days, late bias, split all days]
 %Generalized version that describes where the center of mass of a cell
 %satisfying Logical thing in order to say what proportion of cells stop
@@ -7,7 +7,8 @@ function [splitterCOM, splitterDayBias] = LogicalTraitCenterofMass(dayUse, split
 numCells = size(dayUse,1);
 daysEachCellActive = sum(dayUse,2);
 
-numDaysSplitter = nan(numCells,1); splitterCOM = nan(numCells,1);
+numDaysSplitter = nan(numCells,1); 
+splitterCOM = nan(numCells,1);
 neverSplit = zeros(numCells,1);
 
 for cellI = 1:numCells
@@ -37,10 +38,16 @@ for cellI = 1:numCells
     end
 end
 
-% Only includes cells that show up more than 1 day and split at least 1 day; won't equal some number of splitters or active cells
-% early bias, didn't split all days, late bias, no bias,  split all days
-splitterDayBias(1,[1 3]) = [sum(splitterCOM<0) sum(splitterCOM>0)];
-splitterDayBias(1, 2) = sum((splitterCOM==0).*(numDaysSplitter~=daysEachCellActive));
-splitterDayBias(1, 4) = sum((splitterCOM==0).*(numDaysSplitter==daysEachCellActive));
-splitterDayBias(1, 5) = sum(neverSplit);
+everSplit = sum(sum(splittersLogical,2)>0,1);
+
+splitterDayBias.Raw.Early = sum(splitterCOM<0); 
+splitterDayBias.Raw.Late = sum(splitterCOM>0);
+splitterDayBias.Raw.NoBias = sum((splitterCOM==0).*(numDaysSplitter~=daysEachCellActive));
+splitterDayBias.Raw.SplitAllDays = sum((splitterCOM==0).*(numDaysSplitter==daysEachCellActive));
+
+splitterDayBias.Pct.Early = splitterDayBias.Raw.Early / everSplit;
+splitterDayBias.Pct.Late = splitterDayBias.Raw.Late / everSplit;
+splitterDayBias.Pct.NoBias = splitterDayBias.Raw.NoBias / everSplit;
+splitterDayBias.Pct.SplitAllDays = splitterDayBias.Raw.SplitAllDays / everSplit;
+
 end

@@ -1,4 +1,4 @@
-function [figHand,statsOut] = PlotTraitChangeOverDays(pooledTraitChanges,pooledDaysApart,comparisons,colorsUse,labels,figHand)
+function [figHand,statsOut] = PlotTraitChangeOverDays(pooledTraitChanges,pooledDaysApart,comparisons,colorsUse,labels,figHand,ylims,yLabel)
 
 numComps = size(comparisons,1);
 for compI = 1:numComps
@@ -19,23 +19,27 @@ for compI = 1:numComps
     
     xlim([0.5 max(pooledDaysApart)+0.5])
     xlabel('Day Lag')
-    ylim([-0.6 0.6])
-    ylabel('Pct. Change')
+    ylim(ylims)
+    ylabel(yLabel)
     
     title([labels{comparisons(compI,1)} ' vs ' labels{comparisons(compI,1)}])
     legend([pp(1) pp(2)])
     
-    %Slopes differenf from each other?
+    %Slopes different from each other?
     [statsOut.slopeDiffComp(compI).Fval,statsOut.slopeDiffComp(compI).dfNum,...
-     statsOut.slopeDiffComp(compI).dfDen,statsOut.slopeDiffComp(compI).Pval] =...
+     statsOut.slopeDiffComp(compI).dfDen,statsOut.slopeDiffComp(compI).pVal] =...
         TwoSlopeFTest(pooledTraitChanges{comparisons(compI,1)},pooledTraitChanges{comparisons(compI,2)},...
                       pooledDaysApart,pooledDaysApart);
                   
     %Sign test each day
-    [statsOut.signtests.pVal{compI},statsOut.signtests.hVal{compI},...
-     statsOut.signtests.whichWon{compI},statsOut.signtests.eachDayPair{compI}] =...
+    [statsOut.signtests(compI).pVal,statsOut.signtests(compI).hVal,...
+     statsOut.signtests(compI).whichWon,statsOut.signtests(compI).eachDayPair] =...
         SignTestAllDayPairs(pooledTraitChanges{comparisons(compI,1)},...
         pooledTraitChanges{comparisons(compI,2)},pooledDaysApart);
+    
+    %Rank sum all
+    [statsOut.rankSumAll(compI).pVal, statsOut.rankSumAll(compI).hVal] = ...
+        ranksum(pooledTraitChanges{comparisons(compI,1)},pooledTraitChanges{comparisons(compI,2)});
 end
 
 % Slopes of each of these lines
@@ -44,7 +48,7 @@ for tgI = 1:length(pooledTraitChanges)
         fitLinRegSL(pooledTraitChanges{tgI}, pooledDaysApart);
     
     [statsOut.slopeDiffZero(tgI).Fval,statsOut.slopeDiffZero(tgI).dfNum,...
-     statsOut.slopeDiffZero(tgI).dnDen,statsOut.slopeDiffZero(tgI).pVal] =...
+     statsOut.slopeDiffZero(tgI).dfDen,statsOut.slopeDiffZero(tgI).pVal] =...
         slopeDiffFromZeroFtest(pooledTraitChanges{tgI}, pooledDaysApart);
 end
 

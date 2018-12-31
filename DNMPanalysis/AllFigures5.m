@@ -45,334 +45,88 @@ end
 
 
 %% Change in Proportion of Each splitter type by days apart
-
 gh = [];
 statsOut = [];
 for slI = 1:2
     gh{slI} = figure('Position',[435 278 988 390]);
     [gh{slI},statsOut{slI}] = PlotTraitChangeOverDays(pooledSplitNumChange{slI},pooledRealDayDiffs,...
-        pairsCompareInd(cpsPlot,:),colorAssc,traitLabels,gh{slI}); %Num in this case is diff in Pcts.
+        pairsCompareInd(cpsPlot,:),colorAssc,traitLabels,gh{slI},[-0.6 0.6],'pct Change'); %Num in this case is diff in Pcts.
     suptitleSL(['Change in Proportion of Splitters on ' splitterLoc{slI}])
 end
 
+%% Prop of splitters that come back
+gh = [];
+statsOut = [];
+for slI = 1:2
+    gh{slI} = figure('Position',[435 278 988 390]);
+    [gh{slI},statsOut{slI}] = PlotTraitChangeOverDays(pooledSplitterComesBack{slI},pooledRealDayDiffs,...
+        pairsCompareInd(cpsPlot,:),colorAssc,traitLabels,gh{slI},[0 1],'pct. Cells Return'); %Num in this case is diff in Pcts.
+    suptitleSL(['Change in Proportion of Splitters that Come Back on ' splitterLoc{slI}])
+end
 
 %% Prop of splitters that come back
-%Comparison
-hh = figure('Position',[680 459 1049 519]);
-sRows = 1;
-sCols = 3;
-for pcI = 1:length(cpsPlot)
-    subplot(sRows,sCols,pcI)
-    pcIndsHere = pairsCompareInd(cpsPlot(pcI),:);
-    p1 = plot(pooledDaysApartFWD-0.1,pooledSplitterComesBackFWD{pcIndsHere(1)},'.','Color',colorAssc{pcIndsHere(1)},'MarkerSize',8,'DisplayName',pairsCompare{pcI,1});
-    hold on
-    p2 = plot(pooledDaysApartFWD+0.1,pooledSplitterComesBackFWD{pcIndsHere(2)},'.','Color',colorAssc{pcIndsHere(2)},'MarkerSize',8,'DisplayName',pairsCompare{pcI,2});
-    
-    plot(pooledDaysApartREV-0.1,pooledSplitterComesBackREV{pcIndsHere(1)},'.','Color',colorAssc{pcIndsHere(1)},'MarkerSize',8)
-    plot(pooledDaysApartREV+0.1,pooledSplitterComesBackREV{pcIndsHere(2)},'.','Color',colorAssc{pcIndsHere(2)},'MarkerSize',8)
-    
-    plot(splitterCBFitPlotDaysFWD{pcIndsHere(1)},splitterCBFitPlotPctFWD{pcIndsHere(1)},'Color',colorAssc{pcIndsHere(1)},'LineWidth',2)
-    plot(splitterCBFitPlotDaysFWD{pcIndsHere(2)},splitterCBFitPlotPctFWD{pcIndsHere(2)},'Color',colorAssc{pcIndsHere(2)},'LineWidth',2)
-    plot(splitterCBFitPlotDaysREV{pcIndsHere(1)},splitterCBFitPlotPctREV{pcIndsHere(1)},'Color',colorAssc{pcIndsHere(1)},'LineWidth',2)
-    plot(splitterCBFitPlotDaysREV{pcIndsHere(2)},splitterCBFitPlotPctREV{pcIndsHere(2)},'Color',colorAssc{pcIndsHere(2)},'LineWidth',2)
-    
-    ylim([-0.01 1.01])
-    xlim([(min(pooledDaysApartREV)-0.5) (max(pooledDaysApartFWD)-0.5)])
-    xlabel('Days Apart')
-    ylabel('% of cells in model')
-    
-    if hValSplitterComesBackAll{pcI} == 1
-        titleText = [pairsCompare{pcI,whichWonSplitterComesBackAll{pcI}} ' more stable, p = ' num2str(pValSplitterComesBackAll{pcI}) ];
-    else 
-        titleText = ['NOT diff at p = ' num2str(pValSplitterComesBackAll{pcI}) ];
+gh = [];
+statsOut = [];
+for slI = 1:2
+    gh{slI} = figure('Position',[435 278 988 390]);
+    [gh{slI},statsOut{slI}] = PlotTraitChangeOverDays(pooledSplitterStillSplitter{slI},pooledRealDayDiffs,...
+        pairsCompareInd(cpsPlot,:),colorAssc,traitLabels,gh{slI},[0 1],'pct. Cells Same Type'); %Num in this case is diff in Pcts.
+    suptitleSL(['Change in Proportion of Splitters that Are the Same Splitting Type on ' splitterLoc{slI}])
+end
+
+%% Num days a splitter
+qw = [];
+for slI = 1:2
+    qw{slI} = figure('Position',[697 219 695 466]);
+    for cpI = 1:length(cpsPlot)
+        datA = pooledNumDaysSplitter{slI}{pairsCompareInd(cpI,1)}(pooledNumDaysSplitter{slI}{pairsCompareInd(cpI,1)}>0);
+        datB = pooledNumDaysSplitter{slI}{pairsCompareInd(cpI,2)}(pooledNumDaysSplitter{slI}{pairsCompareInd(cpI,2)}>0);
+        plot(cpI*2-1+[-0.25 0.25],ones(1,2)*mean(datA),'k','LineWidth',2); hold on
+        plot([cpI*2-1 cpI*2-1],[mean(datA)+[-1 1]*standarderrorSL(datA)],'k','LineWidth',2)
+        
+        text(cpI*2-0.75,0.65,[num2str(mean(datA)) ' +/- ' num2str(standarderrorSL(datA))],'HorizontalAlignment','center')
+        
+        plot(cpI*2+[-0.25 0.25],ones(1,2)*mean(datB),'k','LineWidth',2)
+        plot([cpI*2 cpI*2],[mean(datB)+[-1 1]*standarderrorSL(datB)],'k','LineWidth',2)
+        
+        text(cpI*2-0.25,0.45,[num2str(mean(datB)) ' +/- ' num2str(standarderrorSL(datB))],'HorizontalAlignment','center')
+        
+        [pHere,hHere] = ranksum(datA,datB);
+        heightH = max([mean(datA) mean(datB)]) + 0.3;
+        plot([cpI*2-1 cpI*2],[heightH heightH],'k','LineWidth',2)
+        text(cpI*2-0.5,heightH+0.1,['p = ' num2str(pHere)],'HorizontalAlignment','center')
     end
-    title(titleText)
-    
-    %{
-    yHeight = 0.8;
-    for dpI = 1:length(dayPairsSCB{pcI})
-        if hValSplitterComesBack{pcI}(dpI)==1
-            plot(dayPairsSCB{pcI}(dpI),yHeight,'*','Color',colorAssc{pcIndsHere(whichWonSplitterComesBack{pcI}(dpI))})
+    ylim([0 3])
+    xlim([0.5 cpI*2+0.5])
+    qw{slI}.Children.XTickLabel = traitLabels(tgsPlot);
+    ylabel('Mean +/- SEM number of days this trait')
+    title(['How many days each cell this trait on ' splitterLoc{slI}])
+end
+%% When are splitters active (dayBias)
+
+for slI = 1:2
+    figure;
+    for cpI = 1:length(cpsPlot)
+        subplot(length(cpsPlot),2,cpI*2-1)
+        
+        for mouseI = 1:numMice
+            plot([1,2,3],[logicalCOMgroupout{slI}{mouseI}(pairsCompareInd(cpI,1)).dayBias.Pct.Early,...
+                          logicalCOMgroupout{slI}{mouseI}(pairsCompareInd(cpI,1)).dayBias.Pct.NoBias,...
+                          logicalCOMgroupout{slI}{mouseI}(pairsCompareInd(cpI,1)).dayBias.Pct.Late]); hold on
         end
-        %pValSplitterComesBack{pcI}
-    end
-    %}
-    
-    legend([p1; p2],'location','NW') 
-end
-suptitleSL('Percent cells of model day come back')
-
-%% Prop of ARM splitters that come back
-%Comparison
-hh = figure('Position',[680 459 1049 519]);
-sRows = 1;
-sCols = 3;
-for pcI = 1:length(cpsPlot)
-    subplot(sRows,sCols,pcI)
-    pcIndsHere = pairsCompareInd(cpsPlot(pcI),:);
-    p1 = plot(pooledDaysApartFWD-0.1,ARMpooledSplitterComesBackFWD{pcIndsHere(1)},'.','Color',ARMcolorAssc{pcIndsHere(1)},'MarkerSize',8,'DisplayName',pairsCompare{pcI,1});
-    hold on
-    p2 = plot(pooledDaysApartFWD+0.1,ARMpooledSplitterComesBackFWD{pcIndsHere(2)},'.','Color',ARMcolorAssc{pcIndsHere(2)},'MarkerSize',8,'DisplayName',pairsCompare{pcI,2});
-    
-    plot(pooledDaysApartREV-0.1,ARMpooledSplitterComesBackREV{pcIndsHere(1)},'.','Color',ARMcolorAssc{pcIndsHere(1)},'MarkerSize',8)
-    plot(pooledDaysApartREV+0.1,ARMpooledSplitterComesBackREV{pcIndsHere(2)},'.','Color',ARMcolorAssc{pcIndsHere(2)},'MarkerSize',8)
-    
-    plot(ARMsplitterCBFitPlotDaysFWD{pcIndsHere(1)},ARMsplitterCBFitPlotPctFWD{pcIndsHere(1)},'Color',ARMcolorAssc{pcIndsHere(1)},'LineWidth',2)
-    plot(ARMsplitterCBFitPlotDaysFWD{pcIndsHere(2)},ARMsplitterCBFitPlotPctFWD{pcIndsHere(2)},'Color',ARMcolorAssc{pcIndsHere(2)},'LineWidth',2)
-    plot(ARMsplitterCBFitPlotDaysREV{pcIndsHere(1)},ARMsplitterCBFitPlotPctREV{pcIndsHere(1)},'Color',ARMcolorAssc{pcIndsHere(1)},'LineWidth',2)
-    plot(ARMsplitterCBFitPlotDaysREV{pcIndsHere(2)},ARMsplitterCBFitPlotPctREV{pcIndsHere(2)},'Color',ARMcolorAssc{pcIndsHere(2)},'LineWidth',2)
-    
-    ylim([-0.01 1.01])
-    xlim([(min(pooledDaysApartREV)-0.5) (max(pooledDaysApartFWD)-0.5)])
-    xlabel('Days Apart')
-    ylabel('% of cells in model')
-    
-    if hValSplitterComesBackAllARM{pcI} == 1 && whichWonSplitterComesBackAllARM{pcI}~=0
-        titleText = [pairsCompare{pcI,whichWonSplitterComesBackAllARM{pcI}} ' more stable, p = ' num2str(pValSplitterComesBackAllARM{pcI}) ];
-    else 
-        titleText = ['NOT diff at p = ' num2str(pValSplitterComesBackAllARM{pcI}) ];
-    end
-    title(titleText)
-       
-    % legend([p1; p2],[pairsCompare{pcI,1}; pairsCompare{pcI,2}],'location','NW')  
-    legend([p1; p2],'location','NW') 
-end
-suptitleSL('Percent ARM cells of model day come back on ARMs')
-
-%% Prop of splitters that are still a splitter
-hh = figure('Position',[680 459 1049 519]);
-sRows = 1;
-sCols = 3;
-for pcI = 1:length(cpsPlot)
-    subplot(sRows,sCols,pcI)
-    pcIndsHere = pairsCompareInd(cpsPlot(pcI),:);
-    p1 = plot(pooledDaysApartFWD-0.1,pooledSplitterStillSplitterFWD{pcIndsHere(1)},'.','Color',colorAssc{pcIndsHere(1)},'MarkerSize',8,'DisplayName',pairsCompare{pcI,1});
-    hold on
-    p2 = plot(pooledDaysApartFWD+0.1,pooledSplitterStillSplitterFWD{pcIndsHere(2)},'.','Color',colorAssc{pcIndsHere(2)},'MarkerSize',8,'DisplayName',pairsCompare{pcI,2});
-    
-    plot(pooledDaysApartREV-0.1,pooledSplitterStillSplitterREV{pcIndsHere(1)},'.','Color',colorAssc{pcIndsHere(1)},'MarkerSize',8)
-    plot(pooledDaysApartREV+0.1,pooledSplitterStillSplitterREV{pcIndsHere(2)},'.','Color',colorAssc{pcIndsHere(2)},'MarkerSize',8)
-    
-    plot(splitterSSFitPlotDaysFWD{pcIndsHere(1)},splitterSSFitPlotPctFWD{pcIndsHere(1)},'Color',colorAssc{pcIndsHere(1)},'LineWidth',2)
-    plot(splitterSSFitPlotDaysFWD{pcIndsHere(2)},splitterSSFitPlotPctFWD{pcIndsHere(2)},'Color',colorAssc{pcIndsHere(2)},'LineWidth',2)
-    plot(splitterSSFitPlotDaysREV{pcIndsHere(1)},splitterSSFitPlotPctREV{pcIndsHere(1)},'Color',colorAssc{pcIndsHere(1)},'LineWidth',2)
-    plot(splitterSSFitPlotDaysREV{pcIndsHere(2)},splitterSSFitPlotPctREV{pcIndsHere(2)},'Color',colorAssc{pcIndsHere(2)},'LineWidth',2)
-    
-    ylim([-0.01 1.01])
-    xlim([(min(pooledDaysApartREV)-0.5) (max(pooledDaysApartFWD)-0.5)])
-    xlabel('Days Apart')
-    ylabel('% of cells in model day')
-    
-    if hValSplitterStillSplitterAll{pcI} == 1
-        titleText = [pairsCompare{pcI,whichWonSplitterStillSplitterAll{pcI}} ' more stable, p = ' num2str(pValSplitterStillSplitterAll{pcI}) ];
-    else 
-        titleText = ['NOT diff at p = ' num2str(pValSplitterStillSplitterAll{pcI}) ];
-    end
-    title(titleText)
-    
-    %{
-    yHeight = 0.8;
-    for dpI = 1:length(dayPairsSSS{pcI})
-        if hValSplitterStillSplitter{pcI}(dpI)==1
-            plot(dayPairsSSS{pcI}(dpI),yHeight,'*','Color',colorAssc{pcIndsHere(whichWonSplitterStillSplitter{pcI}(dpI))})
+        
+        subplot(length(cpsPlot),2,cpI*2)
+        for mouseI = 1:numMice
+            plot([1,2,3],[logicalCOMgroupout{slI}{mouseI}(pairsCompareInd(cpI,2)).dayBias.Pct.Early,...
+                          logicalCOMgroupout{slI}{mouseI}(pairsCompareInd(cpI,2)).dayBias.Pct.NoBias,...
+                          logicalCOMgroupout{slI}{mouseI}(pairsCompareInd(cpI,2)).dayBias.Pct.Late]); hold on
         end
-        %pValSplitterComesBack{pcI}
     end
-     %}
-    
-    % legend([p1; p2],[pairsCompare{pcI,1}; pairsCompare{pcI,2}],'location','NW')  
-    legend([p1; p2],'location','NW') 
 end
-suptitleSL('Percent cells of model day apart still that trait')
+%% Center of mass
 
-%% Prop of ARM splitters that are still an ARM splitter
-hh = figure('Position',[680 459 1049 519]);
-sRows = 1;
-sCols = 3;
-for pcI = 1:length(cpsPlot)
-    gg(pcI) = subplot(sRows,sCols,pcI);
-    pcIndsHere = pairsCompareInd(cpsPlot(pcI),:);
-    p1 = plot(pooledDaysApartFWD-0.1,ARMpooledSplitterStillSplitterFWD{pcIndsHere(1)},'.','Color',ARMcolorAssc{pcIndsHere(1)},'MarkerSize',8,'DisplayName',pairsCompare{pcI,1});
-    hold on
-    p2 = plot(pooledDaysApartFWD+0.1,ARMpooledSplitterStillSplitterFWD{pcIndsHere(2)},'.','Color',ARMcolorAssc{pcIndsHere(2)},'MarkerSize',8,'DisplayName',pairsCompare{pcI,2});
-    
-    plot(pooledDaysApartREV-0.1,ARMpooledSplitterStillSplitterREV{pcIndsHere(1)},'.','Color',ARMcolorAssc{pcIndsHere(1)},'MarkerSize',8)
-    plot(pooledDaysApartREV+0.1,ARMpooledSplitterStillSplitterREV{pcIndsHere(2)},'.','Color',ARMcolorAssc{pcIndsHere(2)},'MarkerSize',8)
-    
-    plot(ARMsplitterSSFitPlotDaysFWD{pcIndsHere(1)},ARMsplitterSSFitPlotPctFWD{pcIndsHere(1)},'Color',ARMcolorAssc{pcIndsHere(1)},'LineWidth',2)
-    plot(ARMsplitterSSFitPlotDaysFWD{pcIndsHere(2)},ARMsplitterSSFitPlotPctFWD{pcIndsHere(2)},'Color',ARMcolorAssc{pcIndsHere(2)},'LineWidth',2)
-    plot(ARMsplitterSSFitPlotDaysREV{pcIndsHere(1)},ARMsplitterSSFitPlotPctREV{pcIndsHere(1)},'Color',ARMcolorAssc{pcIndsHere(1)},'LineWidth',2)
-    plot(ARMsplitterSSFitPlotDaysREV{pcIndsHere(2)},ARMsplitterSSFitPlotPctREV{pcIndsHere(2)},'Color',ARMcolorAssc{pcIndsHere(2)},'LineWidth',2)
-    
-    
-    if hValSplitterStillSplitterAllARM{pcI} == 1 && whichWonSplitterStillSplitterAllARM{pcI}~=0
-        titleText = [pairsCompare{pcI,whichWonSplitterStillSplitterAllARM{pcI}} ' more stable, p = ' num2str(pValSplitterStillSplitterAllARM{pcI}) ];
-    else 
-        titleText = ['NOT diff at p = ' num2str(pValSplitterStillSplitterAllARM{pcI}) ];
-    end
-    title(titleText)
-    
-    dim = [0.15 0.6 0.4 0.2];
-    textPlot{1,1} = ['FWD slopes p= ' num2str(ARMpValSSSslopeFWD{pcI})];
-    textPlot{2,1} = ['FWD slopes p= ' num2str(ARMpValSSSslopeREV{pcI})];
-    %qq = annotation(gg(pcI),'textbox',dim,'String',textPlot,'FitBoxToText','on');
+%Peak firing bin
 
-    ylim([-0.01 1.01])
-    xlim([(min(pooledDaysApartREV)-0.5) (max(pooledDaysApartFWD)-0.5)])
-    xlabel('Days Apart')
-    ylabel('% of cells in model day')
-       
-    % legend([p1; p2],[pairsCompare{pcI,1}; pairsCompare{pcI,2}],'location','NW')  
-    legend([p1; p2],'location','NW') 
-end
-suptitleSL('Percent ARM cells of model day apart still that trait')
-
-%% FWD vs. REV time within splitter type coming back
-%Now plot within trait pos vs. negative day change
-figure; 
-sCols = 3;
-sRows = ceil(length(tgsPlot)/sCols);
-markerss = {'.' 'o'};
-%for tgI = 1:length(traitGroups{1})
-FWDREVtxt = {'FWD' 'REV'};
-for tgI = 1:length(tgsPlot)
-    subplot(sRows,sCols,tgI)
-    color1 = colorAssc{tgsPlot(tgI)}+0.2; color1(color1>1) = 1; color1(color1<0) = 0;
-    color2 = colorAssc{tgsPlot(tgI)}-0.2; color2(color2>1) = 1; color2(color2<0) = 0;
-    p1 = plot(pooledDaysApartFWD+0.15,pooledSplitterComesBackFWD{tgsPlot(tgI)},markerss{1},'Color',color1,'MarkerSize',8,'DisplayName','Days Forward');
-    hold on
-    p2 = plot(-1*pooledDaysApartREV-0.15,pooledSplitterComesBackREV{tgsPlot(tgI)},markerss{2},'Color',color2,'MarkerSize',3,'DisplayName','Days Backwards');
-    
-    plot(splitterCBFitLineFWD{tgI}(:,1),splitterCBFitLineFWD{tgI}(:,2),'LineWidth',2)
-    plot(-1*splitterCBFitLineREV{tgI}(:,1),splitterCBFitLineREV{tgI}(:,2),'LineWidth',2)
-    %{
-    yHeight = 0.75;
-    for dpI = 1:length(dayPairsCBpvn{tgsPlot(tgI)})
-        if hValCBpvn{tgsPlot(tgI)}(dpI)
-             markersz = [14 8]; colorss = [color1; color2];
-            plot(dayPairsCBpvn{tgsPlot(tgI)}(dpI),yHeight,markerss{whichWonCBpvn{tgsPlot(tgI)}(dpI)},'Color',colorss(whichWonCBpvn{tgsPlot(tgI)}(dpI),:),'MarkerSize',markersz(whichWonCBpvn{tgI}(dpI)))    
-        end
-        %pValSplitCBpvn{tgI}
-    end
-    %}
-    
-    
-    if hValSCBall{tgI} == 1
-        titleText = [traitLabels{tgsPlot(tgI)} ': ' FWDREVtxt{whichWonSCBall{tgI}} ' more stable, p = ' num2str(pValSCBall{tgI}) ];
-    else 
-        titleText = [traitLabels{tgsPlot(tgI)} ': NOT diff at p = ' num2str(pValSCBall{tgI}) ];
-    end
-    title(titleText)
-    
-    xlabel('Days Apart')
-    ylabel('Proportion of Model')
-    ylim([-0.01 1.01])
-    xlim([min(pooledDaysApartFWD)-0.5 max(pooledDaysApartFWD)+0.5])
-    legend([p1; p2],'location','NE')
-end
-suptitleSL('Percent cells of model day come back, Positive vs. negative time')
-
-%% FWD vs. REV time within splitter still splitter
-figure; 
-sCols = 3;
-sRows = ceil(length(tgsPlot)/sCols);
-markerss = {'.' 'o'}; 
-%for tgI = 1:length(traitGroups{1})
-for tgI = 1:length(tgsPlot)
-    subplot(sRows,sCols,tgI)
-    color1 = colorAssc{tgsPlot(tgI)}+0.2; color1(color1>1) = 1; color1(color1<0) = 0;
-    color2 = colorAssc{tgsPlot(tgI)}-0.2; color2(color2>1) = 1; color2(color2<0) = 0;
-    p1 = plot(pooledDaysApartFWD+0.15,pooledSplitterStillSplitterFWD{tgsPlot(tgI)},markerss{1},'Color',color1,'MarkerSize',8,'DisplayName','Days Forward');
-    hold on
-    p2 = plot(-1*pooledDaysApartREV-0.15,pooledSplitterStillSplitterREV{tgsPlot(tgI)},markerss{2},'Color',color2,'MarkerSize',3,'DisplayName','Days Backwards');
-    
-    %{
-    yHeight = 0.8;
-    for dpI = 1:length(dayPairsSSpvn{tgsPlot(tgI)})
-        if hValSSpvn{tgsPlot(tgI)}(dpI)
-            markersz = [14 8]; colorss = [color1; color2];
-            plot(dayPairsSSpvn{tgsPlot(tgI)}(dpI),yHeight,markerss{whichWonSSpvn{tgsPlot(tgI)}(dpI)},'Color',colorss(whichWonSSpvn{tgsPlot(tgI)}(dpI),:),'MarkerSize',markersz(whichWonCBpvn{tgI}(dpI)))    
-        end
-        %pValSplitSSpvn{tgI}
-    end
-    %}
-    plot(splitterSSFitLineFWD{tgI}(:,1),splitterSSFitLineFWD{tgI}(:,2),'LineWidth',2)
-    plot(-1*splitterSSFitLineREV{tgI}(:,1),splitterSSFitLineREV{tgI}(:,2),'LineWidth',2)
-    
-    if hValSSSall{tgI} == 1
-        titleText = [traitLabels{tgsPlot(tgI)} ': ' FWDREVtxt{whichWonSSSall{tgI}} ' more stable, p = ' num2str(pValSSSall{tgI}) ];
-    else 
-        titleText = [traitLabels{tgsPlot(tgI)} ': NOT diff at p = ' num2str(pValSSSall{tgI}) ];
-    end
-    title(titleText)
-    
-    xlabel('Days Apart')
-    ylabel('Proportion of Model')
-    ylim([-0.01 1.01])
-    xlim([min(pooledDaysApartFWD)-0.5 max(pooledDaysApartFWD)+0.5])
-    legend([p1; p2],'location','NE')
-end
-suptitleSL('Percent cells of model day still that trait v self, Positive vs. negative time')
-
-%% FWD vs. REV time within splitter type coming back ARM
-%Now plot within trait pos vs. negative day change
-figure; 
-sCols = 3;
-sRows = ceil(length(tgsPlot)/sCols);
-markerss = {'.' 'o'};
-%for tgI = 1:length(traitGroups{1})
-FWDREVtxt = {'FWD' 'REV'};
-for tgI = 1:length(tgsPlot)
-    subplot(sRows,sCols,tgI)
-    color1 = ARMcolorAssc{tgsPlot(tgI)}+0.2; color1(color1>1) = 1; color1(color1<0) = 0;
-    color2 = ARMcolorAssc{tgsPlot(tgI)}-0.2; color2(color2>1) = 1; color2(color2<0) = 0;
-    p1 = plot(pooledDaysApartFWD+0.15,ARMpooledSplitterComesBackFWD{tgsPlot(tgI)},markerss{1},'Color',color1,'MarkerSize',8,'DisplayName','Days Forward');
-    hold on
-    p2 = plot(-1*pooledDaysApartREV-0.15,ARMpooledSplitterComesBackREV{tgsPlot(tgI)},markerss{2},'Color',color2,'MarkerSize',3,'DisplayName','Days Backwards');
-     
-    if ARMhValSCBall{tgI} == 1
-        titleText = [ARMtraitLabels{tgsPlot(tgI)} ': ' FWDREVtxt{ARMwhichWonSCBall{tgI}} ' more stable, p = ' num2str(ARMpValSCBall{tgI}) ];
-    else 
-        titleText = [ARMtraitLabels{tgsPlot(tgI)} ': NOT diff at p = ' num2str(ARMpValSCBall{tgI}) ];
-    end
-    title(titleText)
-    
-    xlabel('Days Apart')
-    ylabel('Proportion of Model')
-    ylim([-0.01 1.01])
-    xlim([min(pooledDaysApartFWD)-0.5 max(pooledDaysApartFWD)+0.5])
-    legend([p1; p2],'location','NE')
-end
-suptitleSL('ARM Percent cells of model day come back, Positive vs. negative time')
-
-%% FWD vs. REV time within splitter still splitter ARM
-figure; 
-sCols = 3;
-sRows = ceil(length(tgsPlot)/sCols);
-markerss = {'.' 'o'}; 
-%for tgI = 1:length(traitGroups{1})
-for tgI = 1:length(tgsPlot)
-    subplot(sRows,sCols,tgI)
-    color1 = ARMcolorAssc{tgsPlot(tgI)}+0.2; color1(color1>1) = 1; color1(color1<0) = 0;
-    color2 = ARMcolorAssc{tgsPlot(tgI)}-0.2; color2(color2>1) = 1; color2(color2<0) = 0;
-    p1 = plot(pooledDaysApartFWD+0.15,ARMpooledSplitterStillSplitterFWD{tgsPlot(tgI)},markerss{1},'Color',color1,'MarkerSize',8,'DisplayName','Days Forward');
-    hold on
-    p2 = plot(-1*pooledDaysApartREV-0.15,ARMpooledSplitterStillSplitterREV{tgsPlot(tgI)},markerss{2},'Color',color2,'MarkerSize',3,'DisplayName','Days Backwards');
-    
-    if ARMhValSSSall{tgI} == 1
-        titleText = [ARMtraitLabels{tgsPlot(tgI)} ': ' FWDREVtxt{ARMwhichWonSSSall{tgI}} ' more stable, p = ' num2str(ARMpValSSSall{tgI}) ];
-    else 
-        titleText = [ARMtraitLabels{tgsPlot(tgI)} ': NOT diff at p = ' num2str(ARMpValSSSall{tgI}) ];
-    end
-    title(titleText)
-    
-    xlabel('Days Apart')
-    ylabel('Proportion of Model')
-    ylim([-0.01 1.01])
-    xlim([min(pooledDaysApartFWD)-0.5 max(pooledDaysApartFWD)+0.5])
-    legend([p1; p2],'location','NE')
-end
-suptitleSL('ARM Percent cells of model day still that trait v self, Positive vs. negative time')
 
 %% Splitters becoming another type of splitter STEM
 
