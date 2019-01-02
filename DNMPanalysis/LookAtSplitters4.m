@@ -8,7 +8,7 @@ function [rateDiff, rateSplit, meanRateDiff, DIeach, DImean, DIall] = LookAtSpli
 
 %rateDiff      - rate differences of individual bins
 %rateSplit     - sum of rate differences in all bins
-%meanRateDiff  - rateSplit / number of bins cell is active
+%meanRateDiff  - mean of rate diffs / number of bins cell is active
 %DIeach        - DI score each bin (rateDiff / total amount of firing in that bin)
 %DImax         - max of the DIeach
 %DImean        - nanmean of DIeach

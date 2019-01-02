@@ -64,7 +64,7 @@ for slI = 1:2
     suptitleSL(['Change in Proportion of Splitters that Come Back on ' splitterLoc{slI}])
 end
 
-%% Prop of splitters that come back
+%% Prop of splitters that still split
 gh = [];
 statsOut = [];
 for slI = 1:2
@@ -110,114 +110,85 @@ for slI = 1:2
         subplot(length(cpsPlot),2,cpI*2-1)
         
         for mouseI = 1:numMice
-            plot([1,2,3],[logicalCOMgroupout{slI}{mouseI}(pairsCompareInd(cpI,1)).dayBias.Pct.Early,...
+            parsedBiases{slI}{cpI,1}(mouseI,:) = ...
+                [logicalCOMgroupout{slI}{mouseI}(pairsCompareInd(cpI,1)).dayBias.Pct.Early,...
                           logicalCOMgroupout{slI}{mouseI}(pairsCompareInd(cpI,1)).dayBias.Pct.NoBias,...
-                          logicalCOMgroupout{slI}{mouseI}(pairsCompareInd(cpI,1)).dayBias.Pct.Late]); hold on
+                          logicalCOMgroupout{slI}{mouseI}(pairsCompareInd(cpI,1)).dayBias.Pct.Late];
+            plot([1,2,3],parsedBiases{slI}{cpI,1}(mouseI,:)); hold on
         end
+        title(traitLabels{pairsCompareInd(cpI,1)})
         
         subplot(length(cpsPlot),2,cpI*2)
         for mouseI = 1:numMice
-            plot([1,2,3],[logicalCOMgroupout{slI}{mouseI}(pairsCompareInd(cpI,2)).dayBias.Pct.Early,...
+            parsedBiases{slI}{cpI,2}(mouseI,:) = ...
+                [logicalCOMgroupout{slI}{mouseI}(pairsCompareInd(cpI,2)).dayBias.Pct.Early,...
                           logicalCOMgroupout{slI}{mouseI}(pairsCompareInd(cpI,2)).dayBias.Pct.NoBias,...
-                          logicalCOMgroupout{slI}{mouseI}(pairsCompareInd(cpI,2)).dayBias.Pct.Late]); hold on
+                          logicalCOMgroupout{slI}{mouseI}(pairsCompareInd(cpI,2)).dayBias.Pct.Late];
+            plot([1,2,3],parsedBiases{slI}{cpI,2}(mouseI,:)); hold on
         end
+        title(traitLabels{pairsCompareInd(cpI,2)})
     end
 end
-%% Center of mass
 
-%Peak firing bin
+%% What are new cells?
 
-
-%% Splitters becoming another type of splitter STEM
-
-%Don't yet have reverse day order
-
-figure;
-for scI = 1:length(pooledSplitterChanges)/2
-    subplot(2,3,scI)
-    plot(pooledDaysApartFWD-0.15,pooledSplitterChanges{scI*2-1},'.','MarkerSize',10)
-    hold on
-    plot(pooledDaysApartFWD+0.15,pooledSplitterChanges{scI*2},'.','MarkerSize',10)
-    [p,h] = ranksum(pooledSplitterChanges{scI*2-1},pooledSplitterChanges{scI*2});
-    ww = WhichWonRanks(pooledSplitterChanges{scI*2-1},pooledSplitterChanges{scI*2});
-    title(['h = ' num2str(h) ', ww= ' num2str(ww) ', p = ' num2str(p)])
-    xlabel([transLabels{scI*2-1,1} '>>' transLabels{scI*2-1,2} '  vs ' transLabels{scI*2,1} '>>' transLabels{scI*2,2}])
+gh = [];
+statsOut = [];
+for slI = 1:2
+    gh{slI} = figure('Position',[435 278 988 390]);
+    [gh{slI},statsOut{slI}] = PlotTraitChangeOverDays(pooledNewCellPropChanges{slI},pooledRealDayDiffs,...
+        pairsCompareInd(cpsPlot,:),colorAssc,traitLabels,gh{slI},[-1 1],'Change in Pct. New Cells this Type'); %Num in this case is diff in Pcts.
+    suptitleSL(['Change in Proportion of New Cells taht are a splitting type ' splitterLoc{slI}])
 end
-    
-
 
 
 %% Cells splitter type in STEM and ARM
-nPts = size( pctTraitBothPooled{1},1);
-dataHere = [pctTraitBothPooled{:}]; dataHere = dataHere(:);
-grps = repmat(1:numTraitGroups,nPts,1); grps = grps(:); 
+%Same splitter type in cell and arm
+hh = figure('Position',[589 293 637 447]); 
+axHand = axes;
+statsOut = [];
+[axHand,statsOut] = PlotTraitProps(pctTraitBothPooled,tgsPlot,pairsCompareInd(cpsPlot,:),colorAssc,traitLabels,axHand);
+title('Proportions of Splitter Cells on Central Stem and Return Arms')
+ylabel('% of active on both')
 
-scatterBoxSL(dataHere,grps,'transparency',1,'xLabels',traitLabels)
-title('% of cells that split the same way on stem and arm')
-
-%%  STEM vs ARM proportion splitting
-statBump = 0.025;
-nPts = size( pctTraitBothPooled{1},1);
-dataHere = []; 
-grps = [];
-labelsHere = cell(numTraitGroups*2,1);
-colorsPlot = [];
-for tgI = 1:numTraitGroups
-    dataHere = [dataHere; pooledSplitProp{tgI}(:); ARMpooledSplitProp{tgI}(:)];
-    grps = [grps; (tgI*2-1)*ones(nPts,1); (tgI*2)*ones(nPts,1)];
-    labelsHere{tgI*2-1} = traitLabels{tgI};
-    labelsHere{tgI*2} = ARMtraitLabels{tgI};
-    colorsPlot = [colorsPlot; repmat(colorAssc{tgI},nPts,1); repmat(ARMcolorAssc{tgI},nPts,1)];
+%Cells have the same preference
+hj = figure;%('Position',[593 58 651 803]);
+axHand = []; statsOut = []; statsExtra = [];
+axHand{1} = subplot(1,3,1); 
+[axHand{1},statsOut{1}] = PlotTraitProps(pooledPctSamePref,[1 2],[1 2],[],splitterType,axHand{1});
+title('Cells Active Both Same Pref'); xlabel('Which splitting')
+axHand{2} = subplot(1,3,2); 
+[axHand{2},statsOut{2}] = PlotTraitProps(pooledPctSamePrefSTEM,[1 2],[1 2],[],splitterType,axHand{2});
+title('Cells Active STEM Same Pref'); xlabel('Which splitting')
+axHand{3} = subplot(1,3,3); 
+[axHand{3},statsOut{3}] = PlotTraitProps(pooledPctSamePrefARM,[1 2],[1 2],[],splitterType,axHand{3});
+title('Cells Active ARMs Same Pref'); xlabel('Which splitting')
+%Stem vs. arm
+for stI = 1:2
+    [statsExtra.ranksum.pVal(stI), statsExtra.ranksum.hVal(stI)] = ranksum(pooledPctSamePrefSTEM{stI},pooledPctSamePrefARM{stI});
+    statsExtra.ranksum.whichWon(stI) = WhichWonRanks(pooledPctSamePrefSTEM{stI},pooledPctSamePrefARM{stI});
 end
-hh = figure;
-scatterBoxSL(dataHere,grps,'transparency',1,'xLabels',labelsHere,'circleColors',colorsPlot)
-ylabel('Proportion of Cells')
-title('Comparison of Number of Splitters in STEM and ARMS')
 
-xMarks = hh.Children.XTick;
-for tgI = 1:numTraitGroups
-    sHeight = max([pooledSplitProp{tgI}(:); ARMpooledSplitProp{tgI}(:)]) + statBump;
-    plot(xMarks((tgI*2-1):tgI*2),[sHeight sHeight],'k','LineWidth',1.5)
-    switch hSvAsplitPropDiffs{tgI}
-        case 0; txtPlot = 'n.s.';
-        case 1
-            switch pSvAsplitPropDiffs{tgI}<0.001
-                case 1; txtPlot = '*p < 0.001';
-                case 0; txtPlot = ['*p = ' num2str(round(pSvAsplitPropDiffs{tgI},2))];
-            end
+%Same Preferences by splitting type
+hj = []; axHand = []; statsOut = [];
+for slI = 1:2
+    hj{slI} = figure('Position',[593 58 651 803]);
+    for stI = 1:2
+        axHand{slI}{stI} = subplot(2,1,stI);
+        [axHand{slI}{stI},statsOut{slI}{stI}] = PlotTraitProps(pooledPctSamePrefByTG{stI}{slI},tgsPlot,pairsCompareInd(cpsPlot,:),colorAssc,traitLabels,axHand{slI}{stI});
+        title(['Same ' splitterType{stI} ' preference'])
     end
-    text(mean(xMarks((tgI*2-1):tgI*2)),sHeight+0.01,txtPlot,'Color','k','HorizontalAlignment','center')
+    suptitleSL(['Pct. of cell type with same preference of ' splitterLoc{slI} ' splitters'])
 end
-    
-%% ARM vs STEM prop splitting
-
-nPts = length(pooledSplitProp{1});
-dataHere = [];
-grps= [];
-labelsHere = cell(numTraitGroups*2,1)
-
-
-
-pSvAsplitPropDiffs{tgI}, hSvAsplitPropDiffs{tgI}
-
-%% What are new cells?
-figure;
-for pcI = 1:length(cpsPlot)
-    subplot(1,length(cpsPlot),pcI)
-    plot(pooledDaysApartFWD,pooledNewCellPropChanges{pairsCompareInd(pcI,1)},'.','MarkerSize',6,'Color',colorAssc{pairsCompareInd(pcI,1)})
-    hold on
-    plot(pooledDaysApartFWD,pooledNewCellPropChanges{pairsCompareInd(pcI,2)},'.','MarkerSize',6,'Color',colorAssc{pairsCompareInd(pcI,2)})
-    
-    plot([0 20],[0 0],'k')
-    
-    plot(newCellFit{pairsCompareInd(pcI,1)}(:,1),newCellFit{pairsCompareInd(pcI,1)}(:,2),'Color',colorAssc{pairsCompareInd(pcI,1)},'LineWidth',2)
-    plot(newCellFit{pairsCompareInd(pcI,2)}(:,1),newCellFit{pairsCompareInd(pcI,2)}(:,2),'Color',colorAssc{pairsCompareInd(pcI,2)},'LineWidth',2)
-    
-    title(['p = ' num2str(newCellsSlopeDiffpVal{pcI})]) 
-    ylim([-0.8 0.8])
-    xlabel('Days apart') 
+%Stem vs. arm
+statsExtra = [];
+for stI = 1:2
+    for tgI = 1:numTraitGroups
+        [statsExtra{stI}.signtest.pVal(tgI), statsExtra{stI}.signtest.hVal(tgI)] = signtest(...
+            pooledPctSamePrefByTG{stI}{1}{tgI},pooledPctSamePrefByTG{stI}{2}{tgI});
+        statsExtra{stI}.signtest.whichWon(tgI) = WhichWonRanks(pooledPctSamePrefByTG{stI}{1}{tgI},pooledPctSamePrefByTG{stI}{2}{tgI});
+    end
 end
-suptitleSL('Comparisons of change in proportion of new cells')
 
 
 %% Mean pop vector corr all animals all days, each condSet

@@ -9,11 +9,16 @@ numDataPts = length(pooledSplitProp{1});
 grps = repmat(1:length(plotWhich),numDataPts,1); grps = grps(:);
 dataHere = [pooledSplitProp{plotWhich}]; 
 dataHere = dataHere(:);
-colorsHere = plotColors(plotWhich);
-allColors = cellfun(@(x) repmat(x,numDataPts,1),colorsHere,'UniformOutput',false)';
-colorsUse = []; for aa = 1:length(allColors); colorsUse = [colorsUse; allColors{aa}]; end
 xLabels = traitLabels(plotWhich);
-scatterBoxSL(dataHere, grps, 'xLabel', xLabels, 'plotBox', true, 'circleColors', colorsUse, 'transparency', 0.8,'plotHandle',axHand)  
+if ~isempty(plotColors)
+    colorsHere = plotColors(plotWhich);
+    allColors = cellfun(@(x) repmat(x,numDataPts,1),colorsHere,'UniformOutput',false)';
+    colorsUse = []; for aa = 1:length(allColors); colorsUse = [colorsUse; allColors{aa}]; end
+    scatterBoxSL(dataHere, grps, 'xLabel', xLabels, 'plotBox', true, 'circleColors', colorsUse, 'transparency', 0.8,'plotHandle',axHand)  
+else
+    scatterBoxSL(dataHere, grps, 'xLabel', xLabels, 'plotBox', true, 'transparency', 0.8,'plotHandle',axHand)  
+end
+
 ylabel('Proportion of Splitter Cells')
 hold on
 ylim([-0.05 1.1])

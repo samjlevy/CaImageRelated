@@ -362,39 +362,8 @@ end
 
 disp('Done splitter reactivation/persistence')
 
-%% Cell Turning into other types
-transInds = [ 5 6; 6 5; 1 3; 1 4; 3 1; 4 1; 2 4; 2 3; 4 2; 3 2; 8 6; 8 5]; 
 
-for mouseI = 1:numMice
-    cellTransTraits{mouseI} = {splittersBOTH{mouseI}, splittersOne{mouseI};...
-                               splittersOne{mouseI}, splittersBOTH{mouseI};...
-                               splittersLR{mouseI}, splittersLRonly{mouseI};...
-                               splittersLR{mouseI}, splittersSTonly{mouseI};...
-                               splittersLRonly{mouseI}, splittersLR{mouseI};...
-                               splittersSTonly{mouseI}, splittersLR{mouseI};...
-                               splittersST{mouseI}, splittersSTonly{mouseI};...
-                               splittersST{mouseI}, splittersLRonly{mouseI};...
-                               splittersSTonly{mouseI}, splittersST{mouseI};...
-                               splittersLRonly{mouseI}, splittersST{mouseI};...
-                               splittersNone{mouseI}, splittersOne{mouseI};...
-                               splittersNone{mouseI}, splittersBOTH{mouseI}};
-                           
-    cellTransTraitsREV{mouseI} = cellfun(@fliplr,cellTransTraits{mouseI},'UniformOutput',false);
-    %Need all that realignment stuff to get this in the right order
-end
-   
-transLabels = traitLabels(transInds);
-pooledSplitterChanges = cell(size(cellTransTraits{mouseI},1),1);
-for mouseI = 1:numMice    
-    [splitterChanges{mouseI}] = RunGroupFunction('GetCellsOverlap',cellTransTraits{mouseI}(:,1),cellTransTraits{mouseI}(:,2),dayPairs{mouseI});    
-    for ctI = 1:size(cellTransTraits{mouseI},1)    
-        pooledSplitterChanges{ctI} = [pooledSplitterChanges{ctI}; splitterChanges{mouseI}(ctI).overlapWithModel];
-    end
-    
-    
-end
-
-%% When are these splitters showing up
+%% When are splitters showing up
 %How many days a splitter
 for slI = 1:2
     for mouseI = 1:numMice
@@ -412,7 +381,7 @@ logicalCOMgroupout = [];
 pooledSplitDayCOM = [];
 for slI = 1:2
     for mouseI = 1:numMice
-        [logicalCOMgroupout{slI}{mouseI}] = RunGroupFunction('LogicalTraitCenterofMass',traitGroups{slI}{mouseI},dayUseFilter{slI}{mouseI});%ones(size(dayUse{mouseI}))
+        [logicalCOMgroupout{slI}{mouseI}] = RunGroupFunction('LogicalTraitCenterofMass',traitGroups{slI}{mouseI},ones(size(dayUse{mouseI})));%dayUseFilter{slI}{mouseI}
         %[dayCOMsignpVal(mouseI,tgI),dayCOMsignpVal(mouseI,tgI)] = signtest(logicalCOMgroupout{slI}{mouseI}(tgI).dayBias.Early
         
         pooledSplitDayCOM{slI} = cell(numTraitGroups,1);
@@ -422,189 +391,107 @@ for slI = 1:2
     end
 end
 
+%What are new cells?
+pooledNewCellPropChanges = [];
+firstDayGroupout = []; firstDays = [];
 for slI = 1:2
-    figure;
-    for tgI = 1:numTraitGroups
-        subplot(3,3,tgI)
-        for mouseI = 1:numMice
-            plot([1,2,3],[logicalCOMgroupout{slI}{mouseI}(tgI).dayBias.Pct.Early,...
-                          logicalCOMgroupout{slI}{mouseI}(tgI).dayBias.Pct.NoBias,...
-                          logicalCOMgroupout{slI}{mouseI}(tgI).dayBias.Pct.Late]); hold on
+    pooledNewCellPropChanges{slI} = cell(numTraitGroups,1);
+    for mouseI = 1:numMice
+        firstDays{slI}{mouseI} = GetFirstDayTrait(dayUseFilter{slI}{mouseI});
+        %[firstDayGroupout{slI}{mouseI}] = RunGroupFunction('GetFirstDayTrait',traitGroups{slI}{mouseI},[]);
+        
+        firstDayLogical{slI}{mouseI} = false(size(cellSSI{mouseI}));
+        for cellI = 1:size(cellSSI{mouseI},1)
+            if ~isnan(firstDays{slI}{mouseI}(cellI))
+            firstDayLogical{slI}{mouseI}(cellI,firstDays{slI}{mouseI}(cellI)) = true;
+            firstDayNums{slI}{mouseI} = sum(firstDayLogical{slI}{mouseI},1);
+            end
         end
-        xlim([0.5 3.5])
-        title(traitLabels{tgI})
-    end
-end
+    
+        
+        for tgI = 1:numTraitGroups
+            traitFirst{slI}{mouseI}{tgI} = traitGroups{slI}{mouseI}{tgI}.*firstDayLogical{slI}{mouseI};
+            traitFirstNums{slI}{mouseI}{tgI} = sum(traitFirst{slI}{mouseI}{tgI},1);
 
-% New cells: what types?
-%First day each splitter type
-%{
-pooledFirstDays = cell(numTraitGroups,1);
-for mouseI = 1:numMice
-    firstDays{mouseI} = RunGroupFunction('GetFirstDayTrait',traitGroups{1}{mouseI},[]);
-    
-    for tgI = 1:numTraitGroups
-        pooledFirstDays{tgI} = [pooledFirstDays{tgI}; firstDays{mouseI}(tgI).firstDay];
-    end
-    
-end
-%}
-propChecks = {[1 2 8]; [3 4]; [5 6 8]};
-%Left/right %Left/right only %One/both/none
-%figure;
-pooledNewCellPropChanges = cell(numTraitGroups,1);
-traitFirstDiffsPooledChanges = cell(size(pairsCompareInd,1),1);
-traitFirstDiffsPooled = cell(size(pairsCompareInd,1),1);
-for mouseI = 1:numMice
-    %firstDays{mouseI} = GetFirstDayTrait(cellSSI{mouseI}>0);
-    firstDays{mouseI} = GetFirstDayTrait(dayUse{mouseI});
-    %firstDays{mouseI} = GetFirstDayTrait(sum(trialReli{mouseI},3)>0);
-    
-    firstDayLogical{mouseI} = false(size(cellSSI{mouseI}));
-    for cellI = 1:size(cellSSI{mouseI},1)
-        if ~isnan(firstDays{mouseI}(cellI))
-        firstDayLogical{mouseI}(cellI,firstDays{mouseI}(cellI)) = true;
-        firstDayNums{mouseI} = sum(firstDayLogical{mouseI},1);
+            traitFirstPcts{slI}{mouseI}{tgI} = traitFirstNums{slI}{mouseI}{tgI}./ firstDayNums{slI}{mouseI};
+            [newCellChanges{slI}{mouseI}{tgI},~] = TraitChangeDayPairs(traitFirstPcts{slI}{mouseI}{tgI},dayPairs{mouseI});
+
+            pooledNewCellPropChanges{slI}{tgI} = [pooledNewCellPropChanges{slI}{tgI}; newCellChanges{slI}{mouseI}{tgI}(:)];
         end
+        
+        %{
+        for pcI = 1:size(pairsCompareInd,1)
+            traitFirstDiffs{mouseI}{pcI} = traitFirstPcts{slI}{mouseI}{pairsCompareInd(pcI,2)} - traitFirstPcts{slI}{mouseI}{pairsCompareInd(pcI,1)};
+            [traitFirstDiffsChanges{mouseI}{pcI},~] = TraitChangeDayPairs(traitFirstDiffs{mouseI}{pcI},compDayPairsFWD{mouseI});
+
+            traitFirstDiffsPooled{slI}{pcI} = [traitFirstDiffsPooled{slI}{pcI}; traitFirstDiffs{mouseI}{pcI}(:)];
+            traitFirstDiffsPooledChanges{{slI}pcI} = [traitFirstDiffsPooledChanges{slI}{pcI}; traitFirstDiffsChanges{mouseI}{pcI}(:)];
+        end
+        %}
     end
+end
+
+%% Overlap in both
+pctTraitBothPooled = cell(numTraitGroups,1);
+for mouseI = 1:numMice
+    activeTodayStem{mouseI} = sum(dayUse{mouseI},1)/numCells(mouseI);
+    activeTodayArm{mouseI} = sum(dayUseArm{mouseI},1)/numCells(mouseI);
+    activeARMandSTEM{mouseI} = dayUse{mouseI} + dayUseArm{mouseI}==2;
+    activeEither{mouseI} = dayUse{mouseI} + dayUseArm{mouseI} >0;
+    %pctActiveBoth{mouseI} = sum(activeARMandSTEM{mouseI},1) / size(dayUse{mouseI},1);
+    %pctActiveBoth{mouseI} = sum(activeARMandSTEM{mouseI},1) ./ sum(cellSSI{mouseI}>0,1);
+    pctActiveBoth{mouseI} = sum(activeARMandSTEM{mouseI},1) ./ sum(activeEither{mouseI},1);
     
     for tgI = 1:numTraitGroups
-        traitFirst{mouseI}{tgI} = traitGroups{1}{mouseI}{tgI}.*firstDayLogical{mouseI};
-        traitFirstNums{mouseI}{tgI} = sum(traitFirst{mouseI}{tgI},1);
-        
-        traitFirstPcts{mouseI}{tgI} = traitFirstNums{mouseI}{tgI}./ firstDayNums{mouseI};
-        [newCellChanges{mouseI}{tgI},~] = TraitChangeDayPairs(traitFirstPcts{mouseI}{tgI},compDayPairsFWD{mouseI});
-        
-        pooledNewCellPropChanges{tgI} = [pooledNewCellPropChanges{tgI}; newCellChanges{mouseI}{tgI}(:)];
-        fitLinRegSL(pooledNewCellPropChanges{tgI},pooledDaysApartFWD);
+        traitARMandSTEM{mouseI}{tgI} = traitGroups{1}{mouseI}{tgI} + traitGroups{2}{mouseI}{tgI}==2;
+        %pctTraitBoth{mouseI}{tgI} = sum(traitARMandSTEM{mouseI}{tgI},1) / numCells(mouseI);
+        pctTraitBoth{mouseI}{tgI} = sum(traitARMandSTEM{mouseI}{tgI},1) ./ sum(activeARMandSTEM{mouseI},1);
+        pctTraitBothPooled{tgI} = [pctTraitBothPooled{tgI}; pctTraitBoth{mouseI}{tgI}(:)];
     end
-    
-    
-    %{
-    for tgI = 1:8
-        subplot(2,4,tgI)
-        plot(traitFirstPcts{mouseI}{tgI})
-            hold on
-        title(traitLabels{tgI})
-        %ylim([0 0.2])
-        ylim([0 1])
-    end
-    %}
-    for pcI = 1:size(pairsCompareInd,1)
-        traitFirstDiffs{mouseI}{pcI} = traitFirstPcts{mouseI}{pairsCompareInd(pcI,2)} - traitFirstPcts{mouseI}{pairsCompareInd(pcI,1)};
-        [traitFirstDiffsChanges{mouseI}{pcI},~] = TraitChangeDayPairs(traitFirstDiffs{mouseI}{pcI},compDayPairsFWD{mouseI});
+end
+
+
+%Splits the same
+pooledPctSamePref = cell(2,1);
+pooledPctSamePrefSTEM = cell(2,1);
+pooledPctSamePrefARM = cell(2,1);
+for stI = 1:length(splitterType)
+    for mouseI = 1:numMice
+        splitNeg = (meanRateDiff{1}{stI}{mouseI} < 0) + (meanRateDiff{2}{stI}{mouseI} < 0) == 2;
+        splitPos = (meanRateDiff{1}{stI}{mouseI} > 0) + (meanRateDiff{2}{stI}{mouseI} > 0) == 2;
         
-        traitFirstDiffsPooled{pcI} = [traitFirstDiffsPooled{pcI}; traitFirstDiffs{mouseI}{pcI}(:)];
-        traitFirstDiffsPooledChanges{pcI} = [traitFirstDiffsPooledChanges{pcI}; traitFirstDiffsChanges{mouseI}{pcI}(:)];
+        splitSame = splitNeg + splitPos;
+        
+        samePrefSTEMandARM{stI}{mouseI} = splitSame;  
+        
+        pctSamePref{stI}{mouseI} = sum(samePrefSTEMandARM{stI}{mouseI}.*activeARMandSTEM{mouseI},1) ./ sum(activeARMandSTEM{mouseI},1);
+        pooledPctSamePref{stI} = [pooledPctSamePref{stI}; pctSamePref{stI}{mouseI}(:)];
+        
+        pctSamePrefSTEM{stI}{mouseI} = sum(samePrefSTEMandARM{stI}{mouseI}.*activeARMandSTEM{mouseI},1) ./ sum(dayUse{mouseI},1);
+        pooledPctSamePrefSTEM{stI} = [pooledPctSamePref{stI}; pctSamePrefSTEM{stI}{mouseI}(:)];
+        pctSamePrefARM{stI}{mouseI} = sum(samePrefSTEMandARM{stI}{mouseI}.*activeARMandSTEM{mouseI},1) ./ sum(dayUseArm{mouseI},1);
+        pooledPctSamePrefARM{stI} = [pooledPctSamePrefARM{stI}; pctSamePrefARM{stI}{mouseI}(:)];
     end
-    
-    
 end
-
-for pcI = 1:size(pairsCompareInd,1)
-   [~,~,~,newCellsSlopeDiffpVal{pcI}] = TwoSlopeFTest(pooledNewCellPropChanges{pairsCompareInd(pcI,2)},pooledNewCellPropChanges{pairsCompareInd(pcI,1)},...
-       pooledDaysApartFWD,pooledDaysApartFWD);
-end
-for tgI = 1:numTraitGroups
-    [~,~,newCellFit{tgI},~,~,~] = fitLinRegSL(pooledNewCellPropChanges{tgI},pooledDaysApartFWD);
-end
-
-%% Center of mass, change over time
-
-for mouseI = 1:numMice
-    allFiringCOM{mouseI} = TMapFiringCOM(cellPooledTMap_unsmoothed{1}{mouseI});
-    [~,allFiringMAX{mouseI}] = cellfun(@max,cellPooledTMap_unsmoothed{1}{mouseI},'UniformOutput',false);
-end
-
-
-possDaysApart = unique(pooledDaysApartFWD);
-pooledCOMchange = cell(4,length(possDaysApart));
-for mouseI = 1:numMice
-    COMchange{mouseI} = nan(size(cellSSI{mouseI},1),size(dayPairs{mouseI},1),4);
-    for condI = 1:4
-        for dpI = 1:size(dayPairs{mouseI},1)
-            for cellI = 1:size(cellSSI{mouseI},1)
-                fCOMB = allFiringCOM{mouseI}(cellI,dayPairs{mouseI}(dpI,2),condI);
-                fCOMA = allFiringCOM{mouseI}(cellI,dayPairs{mouseI}(dpI,1),condI);
-                if fCOMA > 0 && fCOMB > 0
-                    COMchange{mouseI}(cellI,dpI,condI) = fCOMB - fCOMA;
-                end
+        
+%Filter by each splitting type
+pooledPctSamePrefByTG = []; samePrefByTG = []; numSamePrefByTG = []; pctSamePreByTG = [];
+for stI = 1:length(splitterType)
+    for slI = 1:2
+        pooledPctSamePrefByTG{stI}{slI} = cell(numTraitGroups,1);
+        for tgI = 1:numTraitGroups
+            for mouseI = 1:numMice
+                samePrefByTG{slI}{stI}{tgI}{mouseI} = samePrefSTEMandARM{stI}{mouseI}.*traitGroups{slI}{mouseI}{tgI};
+                
+                numSamePrefByTG{slI}{stI}{tgI}{mouseI} = sum(samePrefByTG{slI}{stI}{tgI}{mouseI},1);
+                
+                pctSamePreByTG{slI}{stI}{tgI}{mouseI} = numSamePrefByTG{slI}{stI}{tgI}{mouseI} ./ sum(traitGroups{slI}{mouseI}{tgI},1);
+                pooledPctSamePrefByTG{stI}{slI}{tgI} = [pooledPctSamePrefByTG{stI}{slI}{tgI}; pctSamePreByTG{slI}{stI}{tgI}{mouseI}(:)];
             end
         end
     end
-    
-    for condI = 1:4
-    for ddI = 1:length(possDaysApart)
-        changes = COMchange{mouseI}(:,daysApartFWD{mouseI}==possDaysApart(ddI),condI);
-        changes = changes(:);
-        pooledCOMchange{condI,ddI} = [pooledCOMchange{condI,ddI}; changes(isnan(changes)==0)];
-    end
-    end
 end
-
-figure; 
-for condI = 1:4
-    subplot(2,2,condI)
-    for ddI = 1:17
-    plot(ddI*ones(length(pooledCOMchange{condI,ddI}),1),pooledCOMchange{condI,ddI},'.')
-    means(condI,ddI) = mean(pooledCOMchange{condI,ddI});
-    hold on
-    end
-    plot(means(condI,:),'LineWidth',2)
-end
-
-
-%% Cells still active
-pooledActiveStillActive = []; pooledActiveComeBack = []; pooledCellComeBack = [];
-for mouseI = 1:numMice
-    [~, activeStillActiveFWD{mouseI}, activeStillActiveREV{mouseI}] = GetCellsOverlap(dayUse{mouseI},dayUse{mouseI},splitterPctDayChangesFWD{mouseI}(1).dayPairs);
-    [~, activeComeBackFWD{mouseI}, activeComeBackREV{mouseI}] = GetCellsOverlap(dayUse{mouseI},cellSSI{mouseI}>0,splitterPctDayChangesFWD{mouseI}(1).dayPairs);
-    [~, cellComeBackFWD{mouseI}, cellComeBackREV{mouseI}] = GetCellsOverlap(cellSSI{mouseI}>0,cellSSI{mouseI}>0,splitterPctDayChangesFWD{mouseI}(1).dayPairs);
-    
-    pooledActiveStillActive = [pooledActiveStillActive; activeStillActiveFWD{mouseI}];
-    pooledActiveComeBack = [pooledActiveComeBack; activeComeBackFWD{mouseI}];
-    pooledCellComeBack = [pooledCellComeBack; cellComeBackFWD{mouseI}];
-end
-
-[~,~,activeStillActiveFit,~,~,~] = fitLinRegSL(pooledActiveStillActive,pooledDaysApartFWD);
-[~,~,activeComeBackFit,~,~,~] = fitLinRegSL(pooledActiveComeBack,pooledDaysApartFWD);
-[~,~,cellComeBackFit,~,~,~] = fitLinRegSL(pooledCellComeBack,pooledDaysApartFWD);
-
-dayDiffsHere = unique(pooledDaysApartFWD);
-for ddI = 1:length(dayDiffsHere)
-    asaMean(ddI,1) = mean(pooledActiveStillActive(pooledDaysApartFWD==dayDiffsHere(ddI)));
-    acbMean(ddI,1) = mean(pooledActiveComeBack(pooledDaysApartFWD==dayDiffsHere(ddI)));
-    ccbMean(ddI,1) = mean(pooledCellComeBack(pooledDaysApartFWD==dayDiffsHere(ddI)));
-end
-
-figure; 
-plot(pooledDaysApartFWD-0.15,pooledActiveStillActive,'.b');
-hold on
-plot(pooledDaysApartFWD,pooledActiveComeBack,'.g');
-plot(pooledDaysApartFWD+0.15,pooledCellComeBack,'.r');
-
-plot(activeStillActiveFit(:,1),activeStillActiveFit(:,2),'b')
-plot(activeComeBackFit(:,1), activeComeBackFit(:,2),'g')
-plot(cellComeBackFit(:,1), cellComeBackFit(:,2),'r')
-
-plot(dayDiffsHere,asaMean,'b')
-plot(dayDiffsHere,acbMean,'g')
-plot(dayDiffsHere,ccbMean,'r')
-
-ylim([0 1])
-title('b = activeStillActive, g = activeComeBack, r = cellComeBack')
-
-%% Cells coming back across conditions
-
-
-%% Days each cell is this splitter type (persistence/reactivation)
-for mouseI = 1:numMice
-    daysTrait{mouseI}=cellfun(@(x) sum(x,2),traitGroups{1}{mouseI},'UniformOutput',false);
-    activeMoreThanOnce{mouseI} = daysEachCellActive{mouseI};
-    activeMoreThanOnce{mouseI}(activeMoreThanOnce{mouseI}==1) = NaN;
-    daysTraitOutOfActive{mouseI} = cellfun(@(x) x./activeMoreThanOnce{mouseI},daysTrait{mouseI},'UniformOutput',false);
-end
-
+        
 
 %% Change in accuracy, speed, time to run down arm
 pooledAccuracyChange = []; accuracyChange = [];
@@ -621,67 +508,115 @@ end
 %time down arm: 
 %cellfun(@(x) sum(x,2),cellTBT{mouseI}(condI).trialPSAbool,'UniformOutput',false)
 
-%% How many active cells by days?
-pooledActiveCellsChange = []; pooledRealDayDiffs = [];
-for mouseI = 1:numMice
-    cellsActiveEachDay{mouseI} = sum(dayUse{mouseI},1)/size(dayUse{mouseI},1);
-    
-    for dpI = 1:size(dayPairs{mouseI},1)
-        activeCellsChange{mouseI}(dpI,1) = cellsActiveEachDay{mouseI}(dayPairs{mouseI}(dpI,2)) - cellsActiveEachDay{mouseI}(dayPairs{mouseI}(dpI,1));
-    end
-    
-    pooledActiveCellsChange = [pooledActiveCellsChange; activeCellsChange{mouseI}]; 
+
+
+%% Pop vector corr differences by cells included (Do Work here)
+
+pooledCondPairs = condPairs;
+poolLabels = {'Left','Right','Study','Test'};
+condSet = {[1:4]; [5 6]; [7 8]};
+condSetComps = [1 2; 1 3; 2 3];
+condSetLabels = {'VS Self', 'Left vs. Right', 'Study vs. Test'}; csLabelsShort = {'VSelf','LvR','SvT'};
+condSetColors = {'b' 'r' 'g'};
+for cscI = 1:size(condSetComps,1)
+    cscLabels{cscI} = [csLabelsShort{condSetComps(cscI,1)} ' - ' csLabelsShort{condSetComps(cscI,2)}];
 end
+condSetInds = [1*ones(length(condSet{1}),1); 2*ones(length(condSet{2}),1); 3*ones(length(condSet{3}),1)];
+pooledCompPairs = {[1 1]; [2 2]; [3 3]; [4 4]; [1 2]; [2 1]; [3 4]; [4 3]}; %PFs from half tmap1/2 to use
 
-[~, ~, cellsActiveFitLine, ~,~,~] = fitLinRegSL(pooledActiveCellsChange, pooledRealDayDiffs);
-[cellsActiveFval,cellsActivedfNum,cellsActivedfDen,cellsActivepVal] = slopeDiffFromZeroFtest(pooledActiveCellsChange,pooledRealDayDiffs);
-    
+%Set up different trait logicals
+traitLogical = threshAndConsec;
+pooledTraitLogicalA = [];
+for mouseI = 1:numMice; for cc = 1:size(pooledCondPairs,1)
+        pooledTraitLogicalA{mouseI}(:,:,cc) = sum(traitLogical{mouseI}(:,:,pooledCondPairs(cc,:)),3) > 0;
+end; end
 
-pooledActiveCellsChangeARM = []; pooledRealDayDiffsARM = [];
-for mouseI = 1:numMice
-    cellsActiveEachDayARM{mouseI} = sum(dayUseArm{mouseI},1)/size(dayUseArm{mouseI},1);
-    %dayPairs{mouseI} = combnk(1:numDays(mouseI),2);
-    %realDayPairs{mouseI} = cellRealDays{mouseI}(dayPairs{mouseI});
-    for dpI = 1:size(dayPairs{mouseI},1)
-        activeCellsChangeARM{mouseI}(dpI,1) = cellsActiveEachDayARM{mouseI}(dayPairs{mouseI}(dpI,2)) - cellsActiveEachDayARM{mouseI}(dayPairs{mouseI}(dpI,1));
-    end
-    
-    %realDayDiffs{mouseI} = diff(realDayPairs{mouseI},1,2);
-    
-    pooledActiveCellsChangeARM = [pooledActiveCellsChangeARM; activeCellsChangeARM{mouseI}];
-    pooledRealDayDiffsARM = [pooledRealDayDiffsARM; realDayDiffs{mouseI}];  
-end
+traitLogical = trialReli;
+pooledTraitLogicalB = [];
+for mouseI = 1:numMice; for cc = 1:size(pooledCondPairs,1)
+        pooledTraitLogicalB{mouseI}(:,:,cc) = sum(traitLogical{mouseI}(:,:,pooledCondPairs(cc,:)),3) > 0;
+end; end
+pooledTraitLogicalC = cellfun(@(x) repmat(x>0,1,1,4),cellSSI,'UniformOutput',false);
 
-[~, ~, cellsActiveFitLineARM, ~,~,~] = fitLinRegSL(pooledActiveCellsChangeARM, pooledRealDayDiffs);
-[cellsActiveFvalARM,cellsActivedfNumARM,cellsActivedfDenARM,cellsActivepValARM] = slopeDiffFromZeroFtest(pooledActiveCellsChangeARM,pooledRealDayDiffs);
-    
+pvNames = {'includeSilent', 'aboveThreshBoth', 'aboveThreshEither', 'cellPresentBoth'}
+traitLogUse{1} = {cellfun(@(x) ones(size(x)),cellSSI,'UniformOutput',false) }
 
+%To do: function that predetermines cellsUse for each day pair/cond pair,
+%(needed to aboveThreshOne but present both)
+%Also need a toggle in pvcorrswrapper to check to use this
 
-
-
-%% Comparisons of some stuff from center stem and arms
-
+pvNames = {'aboveThreshEither',       'includeSilent',       'activeBoth',     'firesEither',       'cellPresentBoth', 'cellPresentEither'};
+traitLogUse = {pooledTraitLogicalA, pooledTraitLogicalA, pooledTraitLogicalB, pooledTraitLogicalB, pooledTraitLogicalC, pooledTraitLogicalC};
+cellsUseAll = {'activeEither',        'includeSilent',    'activeBoth',       'activeEither',        'activeBoth',       'activeEither'};
 
 
-%% STEM vs. ARM props
-for tgI = 1:numTraitGroups
-    [pSvAsplitPropDiffs{tgI}, hSvAsplitPropDiffs{tgI}] = signtest(pooledSplitProp{tgI} - ARMpooledSplitProp{tgI});
-end
-
-%% Overlap in both
-pctTraitBothPooled = cell(numTraitGroups,1);
-for mouseI = 1:numMice
-    activeARMandSTEM{mouseI} = dayUse{mouseI} + dayUseArm{mouseI}==2;
-    pctActiveBoth{mouseI} = sum(activeARMandSTEM{mouseI},1) / size(dayUse{mouseI},1);
-    
-    for tgI = 1:numTraitGroups
-        traitARMandSTEM{mouseI}{tgI} = traitGroups{1}{mouseI}{tgI} + traitGroups{2}{mouseI}{tgI}==2;
-        pctTraitBoth{mouseI}{tgI} = sum(traitARMandSTEM{mouseI}{tgI},1) / size(dayUse{mouseI},1);
-        pctTraitBothPooled{tgI} = [pctTraitBothPooled{tgI}; pctTraitBoth{mouseI}{tgI}(:)];
+%Make (or check for) PV corrs
+for pvtI = 1:length(pvNames)
+    for mouseI = 1:numMice
+        pvBasicFile = fullfile(mainFolder,mice{mouseI},'corrs',['basic_corrs_' pvNames{pvtI} '.mat']);
+        %Make the pv corrs
+        if exist(pvBasicFile,'file') == 0
+            disp(['Did not find basic corrs ' pvNames{pvtI} ' for mouse ' num2str(mouseI) ', making it now'])
+            [tpvCorrs, tmeanCorr, ~, ~, ~, ~, tPVdayPairs]=...
+                MakePVcorrsWrapper2(cellTBT{mouseI}, [], [], 0, pooledCompPairs,...
+                pooledCondPairs, poolLabels, traitLogUse{pvtI}{mouseI}, stemBinEdges, minspeed,cellsUseAll{pvtI});
+            save(pvBasicFile,'tpvCorrs','tmeanCorr','tPVdayPairs','pooledCompPairs')
+        end
     end
 end
 
+for pvtI = 1:length(pvNames)
+    for mouseI = 1:numMice
+        pvBasicFile = fullfile(mainFolder,mice{mouseI},'corrs',['basic_corrs_' pvNames{pvtI} '.mat']);
 
+        load(pvBasicFile)
+
+        pvCorrs{pvtI}{mouseI} = tpvCorrs;
+        meanCorr{pvtI}{mouseI} = cell2mat(tmeanCorr);
+        PVdayPairs{pvtI}{mouseI} = tPVdayPairs;
+        PVdayPairs{pvtI}{mouseI} = cellRealDays{mouseI}(PVdayPairs{pvtI}{mouseI});
+        PVdaysApart{pvtI}{mouseI} = diff(PVdayPairs{pvtI}{mouseI},[],2);
+
+        %meanCorrHalfFirst{pvtI}{mouseI} = cell2mat(cellfun(@(x) mean(x(:,1:numBins/2),2),tpvCorrs,'UniformOutput',false));
+        %meanCorrHalfSecond{pvtI}{mouseI} = cell2mat(cellfun(@(x) mean(x(:,numBins/2+1:numBins),2),tpvCorrs,'UniformOutput',false));
+        meanCorrHalfFirst{pvtI}{mouseI} = cell2mat(cellfun(@(x) mean(x(:,1:2),2),tpvCorrs,'UniformOutput',false));
+        meanCorrHalfSecond{pvtI}{mouseI} = cell2mat(cellfun(@(x) mean(x(:,numBins-1:numBins),2),tpvCorrs,'UniformOutput',false));
+
+        disp(['Done basic corrs ' pvNames{pvtI} ' for mouse ' num2str(mouseI)])
+    end
+    
+    %Pool Corrs across mice
+    pooledPVcorrs{pvtI} = PoolCorrsAcrossMice(pvCorrs{pvtI});
+    pooledMeanPVcorrs{pvtI} = PoolCorrsAcrossMice(meanCorr{pvtI});
+    pooledMeanPVcorrsHalfFirst{pvtI} = PoolCorrsAcrossMice(meanCorrHalfFirst{pvtI});
+    pooledMeanPVcorrsHalfSecond{pvtI} = PoolCorrsAcrossMice(meanCorrHalfSecond{pvtI});
+
+    pooledPVdayPairsTemp{pvtI} = PoolCorrsAcrossMice(PVdayPairs{pvtI});
+    pooledPVdayPairs{pvtI} = [pooledPVdayPairsTemp{pvtI}{1} pooledPVdayPairsTemp{pvtI}{2}];
+    %pooledPVDaysApart{pvtI} = cellfun(@(x) abs(diff(x,[],2)),pooledPVdayPairs{pvtI},'UniformOutput',false);
+    pooledPVDaysApart{pvtI} = abs(diff(pooledPVdayPairs{pvtI},[],2));
+    
+    %Pool by condset
+    CSpooledPVcorrs{pvtI} = PoolCellArr(pooledPVcorrs{pvtI},condSet);
+    CSpooledMeanPVcorrs{pvtI} = PoolCellArr(pooledMeanPVcorrs{pvtI},condSet);
+    CSpooledMeanPVcorrsHalfFirst{pvtI} = PoolCellArr(pooledMeanPVcorrsHalfFirst{pvtI},condSet);
+    CSpooledMeanPVcorrsHalfSecond{pvtI} = PoolCellArr(pooledMeanPVcorrsHalfSecond{pvtI},condSet);
+
+    %CSpooledPVdaysApart{pvtI} = PoolCellArr(pooledPVDaysApart{pvtI},condSet);
+    CSpooledPVdaysApart{pvtI} = cellfun(@(x) repmat(pooledPVDaysApart{pvtI},length(x),1),condSet,'UniformOutput',false);
+end
+
+%Change of each corr over time
+sameDayDayDiffsPooled = cell(length(pvNames),1);
+for pvtI = 1:length(pvNames)
+    for mouseI = 1:numMice
+        sameDayDayDiffsPooled{pvtI} = [sameDayDayDiffsPooled{pvtI}; realDayDiffs{mouseI}];
+    end
+    
+    [withinCSdayChangeMean{pvtI},cscDiffsChangeMeanPooled{pvtI},sameDayCompsPooled{pvtI}] = CorrChangeOverDays(meanCorr{pvtI},PVdayPairs{pvtI},dayPairs,condSet,condSetComps);
+    [withinCSdayChangeMeanHalfFirst{pvtI},cscDiffsChangeMeanHalfFirstPooled{pvtI},~] = CorrChangeOverDays(meanCorrHalfFirst{pvtI},PVdayPairs{pvtI},dayPairs,condSet,condSetComps);
+    [withinCSdayChangeMeanHalfSecond{pvtI},cscDiffsChangeMeanHalfSecondPooled{pvtI},~] = CorrChangeOverDays(meanCorrHalfSecond{pvtI},PVdayPairs{pvtI},dayPairs,condSet,condSetComps);
+end
 
 
 %% Pop vector corr differences by cells included
@@ -865,6 +800,49 @@ for pvtI = 1:length(pvNames)
     [withinCSdayChangeMeanHalfSecondARM{pvtI},cscDiffsChangeMeanHalfSecondPooledARM{pvtI},~] = CorrChangeOverDays(ARMmeanCorrHalfSecond{pvtI},PVdayPairs{pvtI},dayPairs,condSet,condSetComps);
 end
 
+%% Center of mass, change over time
+
+for mouseI = 1:numMice
+    allFiringCOM{mouseI} = TMapFiringCOM(cellPooledTMap_unsmoothed{1}{mouseI});
+    [~,allFiringMAX{mouseI}] = cellfun(@max,cellPooledTMap_unsmoothed{1}{mouseI},'UniformOutput',false);
+end
+
+
+possDaysApart = unique(pooledDaysApartFWD);
+pooledCOMchange = cell(4,length(possDaysApart));
+for mouseI = 1:numMice
+    COMchange{mouseI} = nan(size(cellSSI{mouseI},1),size(dayPairs{mouseI},1),4);
+    for condI = 1:4
+        for dpI = 1:size(dayPairs{mouseI},1)
+            for cellI = 1:size(cellSSI{mouseI},1)
+                fCOMB = allFiringCOM{mouseI}(cellI,dayPairs{mouseI}(dpI,2),condI);
+                fCOMA = allFiringCOM{mouseI}(cellI,dayPairs{mouseI}(dpI,1),condI);
+                if fCOMA > 0 && fCOMB > 0
+                    COMchange{mouseI}(cellI,dpI,condI) = fCOMB - fCOMA;
+                end
+            end
+        end
+    end
+    
+    for condI = 1:4
+    for ddI = 1:length(possDaysApart)
+        changes = COMchange{mouseI}(:,daysApartFWD{mouseI}==possDaysApart(ddI),condI);
+        changes = changes(:);
+        pooledCOMchange{condI,ddI} = [pooledCOMchange{condI,ddI}; changes(isnan(changes)==0)];
+    end
+    end
+end
+
+figure; 
+for condI = 1:4
+    subplot(2,2,condI)
+    for ddI = 1:17
+    plot(ddI*ones(length(pooledCOMchange{condI,ddI}),1),pooledCOMchange{condI,ddI},'.')
+    means(condI,ddI) = mean(pooledCOMchange{condI,ddI});
+    hold on
+    end
+    plot(means(condI,:),'LineWidth',2)
+end
 
 %% Decoder analysis
 numShuffles = 100;
