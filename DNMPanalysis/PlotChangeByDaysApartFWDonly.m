@@ -9,7 +9,8 @@ end
 condSetComps = combnk(1:length(traitChange),2);
 numConds = length(traitChange);
 offset = linspace(1,numConds,numConds); offset = (offset - mean(offset))/10;
-plot([0 max(dayDiffs)+0.75],[0 0],'k')  
+plot([0 max(dayDiffs)+0.75],[0 0],'k') 
+hold on
 for csI = 1:numConds
     [~,~,~,DiffZeropVal(csI)] = slopeDiffFromZeroFtest(traitChange{csI},dayDiffs);
     plot(dayDiffs+offset(csI),traitChange{csI},'.','Color',plotColors{csI});
@@ -25,6 +26,8 @@ for cscI = 1:size(condSetComps,1)
         dayDiffs, dayDiffs);
     titleText{cscI,1} = [plotColors{condSetComps(cscI,1)} ' vs ' plotColors{condSetComps(cscI,2)} ': p = ' num2str(twoSlopepVal(cscI))];
 end
+
+xlim([min(dayDiffs)+0.5 max(dayDiffs)+0.5])
 
 statsOut.DiffZeropVal = DiffZeropVal;
 statsOut.twoSlopepVal = twoSlopepVal;

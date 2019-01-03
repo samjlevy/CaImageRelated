@@ -152,17 +152,17 @@ title('Proportions of Splitter Cells on Central Stem and Return Arms')
 ylabel('% of active on both')
 
 %Cells have the same preference
-hj = figure;%('Position',[593 58 651 803]);
+hj = figure('Position',[519 337 1138 336]);
 axHand = []; statsOut = []; statsExtra = [];
 axHand{1} = subplot(1,3,1); 
 [axHand{1},statsOut{1}] = PlotTraitProps(pooledPctSamePref,[1 2],[1 2],[],splitterType,axHand{1});
-title('Cells Active Both Same Pref'); xlabel('Which splitting')
+title('Active Both Same Pref'); xlabel('Which splitting'); ylabel('Prop. Cells with Same Split Pref.')
 axHand{2} = subplot(1,3,2); 
 [axHand{2},statsOut{2}] = PlotTraitProps(pooledPctSamePrefSTEM,[1 2],[1 2],[],splitterType,axHand{2});
-title('Cells Active STEM Same Pref'); xlabel('Which splitting')
+title('Active STEM Same Pref'); xlabel('Which splitting'); ylabel('Prop. Cells with Same Split Pref.')
 axHand{3} = subplot(1,3,3); 
 [axHand{3},statsOut{3}] = PlotTraitProps(pooledPctSamePrefARM,[1 2],[1 2],[],splitterType,axHand{3});
-title('Cells Active ARMs Same Pref'); xlabel('Which splitting')
+title('Active ARMs Same Pref'); xlabel('Which splitting'); ylabel('Prop. Cells with Same Split Pref.')
 %Stem vs. arm
 for stI = 1:2
     [statsExtra.ranksum.pVal(stI), statsExtra.ranksum.hVal(stI)] = ranksum(pooledPctSamePrefSTEM{stI},pooledPctSamePrefARM{stI});
@@ -190,210 +190,126 @@ for stI = 1:2
     end
 end
 
+%% PV corr figures, cellsPresentBoth only
+%Stem
+cellCritUse = 5;
+jj = PlotPVcurves(CSpooledPVcorrs{cellCritUse},CSpooledPVdaysApart{cellCritUse},condSetColors,condSetLabels,[]);
+title(['Mean Within-Day Population Vector Correlation (' pvNames{cellCritUse} ')'])
+ylim([0 0.7])
 
-%% Mean pop vector corr all animals all days, each condSet
+figure('Position',[317 403 1448 417]);
+gg = []; statsOut = [];
+gg{1} = subplot(1,3,1);
+[gg{1}, statsOut{1}] = PlotMeanPVcorrsDaysApart(CSpooledMeanPVcorrs{cellCritUse}, CSpooledPVdaysApart{cellCritUse}, 'none', condSetColors, condSetLabels, false, gg{1});
+gg{1}.Title.String = ['Mean All Bins (' pvNames{cellCritUse} ')'];
+gg{2} = subplot(1,3,2);
+[gg{2}, statsOut{2}] = PlotMeanPVcorrsDaysApart(CSpooledMeanPVcorrsHalfFirst{cellCritUse}, CSpooledPVdaysApart{cellCritUse}, 'none', condSetColors, condSetLabels, false, gg{2});
+gg{2}.Title.String = ['Mean 1st 2 bins (' pvNames{cellCritUse} ')'];
+gg{3} = subplot(1,3,3);
+[gg{3}, statsOut{3}] = PlotMeanPVcorrsDaysApart(CSpooledMeanPVcorrsHalfSecond{cellCritUse}, CSpooledPVdaysApart{cellCritUse}, 'none', condSetColors, condSetLabels, false, gg{3});
+gg{3}.Title.String = ['Mean Last 2 bins (' pvNames{cellCritUse} ')'];
+suptitleSL('Mean correlation by days apart')
 
-%mean =/- sem corr each bin, corr to decorr, decorr to corr, flat
+% PV corr self change by days apart
+figure('Position',[317 403 1448 417]); 
+ggt = []; statsOut = [];
+ggt{1} = subplot(1,3,1);
+[ggt{1},statsOut{1}] = PlotChangeByDaysApartFWDonly(withinCSdayChangeMean{cellCritUse},sameDayDayDiffsPooled{cellCritUse},condSetColors,condSetLabels,ggt{1});
+ggt{1}.Title.String = ['Mean All Bins'];
+xlabel('Days Apart'); ylabel('Change in mean PV corr'); ylim([-0.4 0.4])
+ggt{2} = subplot(1,3,2);
+[ggt{2},statsOut{2}] = PlotChangeByDaysApartFWDonly(withinCSdayChangeMeanHalfFirst{cellCritUse},sameDayDayDiffsPooled{cellCritUse},condSetColors,condSetLabels,ggt{2});
+ggt{2}.Title.String = ['1st 2 bins'];
+xlabel('Days Apart'); ylabel('Change in mean PV corr'); ylim([-0.4 0.4])
+ggt{3} = subplot(1,3,3);
+[ggt{3},statsOut{3}] = PlotChangeByDaysApartFWDonly(withinCSdayChangeMeanHalfSecond{cellCritUse},sameDayDayDiffsPooled{cellCritUse},condSetColors,condSetLabels,ggt{3});
+ggt{3}.Title.String = ['Last 2 bins'];
+xlabel('Days Apart'); ylabel('Change in mean PV corr'); ylim([-0.4 0.4])
+suptitleSL('Change of Within-Day PV corrs')
 
-hh = PlotAllPVcorrsCurves(CSpooledPVcorrs,CSpooledPVdaysApart,pvNames,condSetColors);
-suptitleSL({'Mean PV curves, all mice All Days'; 'B - VS Self,   G - Study vs. Test,   R - Left vs. Right'})
-
-ii = PlotAllPVcorrsCurves(CSpooledPVcorrsARM,CSpooledPVdaysApart,pvNames,condSetColors);
-suptitleSL({'ARM Mean PV curves, all mice All Days'; 'B - VS Self,   G - Study vs. Test,   R - Left vs. Right'})
-%
-
-%% First two bins vs. last two bins
-csColorNums = {[0 0 1]; [0 1 0]; [1 0 0]};
-[figHand,statsOut] = FirstHalfVsSecondHaldf(CSpooledPVcorrs,CSpooledPVdaysApart,pvNames,csColorNums,4);
-suptitleSL('1st Half vs 2nd half Stem Correlations')
-    
-csColorNums = {[0 0 1]; [0 1 0]; [1 0 0]};
-[figHand,statsOut] = FirstHalfVsSecondHaldf(CSpooledPVcorrs,CSpooledPVdaysApart,pvNames,csColorNums,2);
-suptitleSL('1st 2 bins vs Last 2 bins Stem Correlations')
-    
-csColorNums = {[0 0 1]; [0 1 0]; [1 0 0]};
-[figHand,statsOut] = FirstHalfVsSecondHaldf(CSpooledPVcorrsARM,CSpooledPVdaysApart,pvNames,csColorNums,4);
-suptitleSL('1st Half vs 2nd half ARM Correlations')
-    
-csColorNums = {[0 0 1]; [0 1 0]; [1 0 0]};
-[figHand,statsOut] = FirstHalfVsSecondHaldf(CSpooledPVcorrsARM,CSpooledPVdaysApart,pvNames,csColorNums,2);
-suptitleSL('1st 2 bins vs Last 2 bins ARM Correlations')
-
-%% Pop Vector corrs by days apart
-gg = figure('Position',[288 37 1521 849]); 
-hht = [];
-for pvtI = 1:length(pvNames)
-    hht{pvtI} = subplot(2,3,pvtI);
-[hht{pvtI}, statsOut] = PlotMeanPVcorrsDaysApart(CSpooledMeanPVcorrs{pvtI}, CSpooledPVdaysApart{pvtI}, 'mean', condSetColors, condSetLabels, hht{pvtI});
-hht{pvtI}.Title.String = [pvNames{pvtI}; hht{pvtI}.Title.String];
-end
-suptitleSL('PV by days apart')
-
-% Pop Vector corrs by days apart FIRST HALF
-gg = figure('Position',[288 37 1521 849]); 
-hht = [];
-for pvtI = 1:length(pvNames)
-    hht{pvtI} = subplot(2,3,pvtI);
-[hht{pvtI}, statsOut] = PlotMeanPVcorrsDaysApart(CSpooledMeanPVcorrsHalfFirst{pvtI}, CSpooledPVdaysApart{pvtI}, 'mean', condSetColors, condSetLabels, hht{pvtI});
-hht{pvtI}.Title.String = [pvNames{pvtI}; hht{pvtI}.Title.String];
-end
-suptitleSL('PV by days apart, FRIST HALF')
-
-% Pop Vector corrs by days apart SECOND HALF
-gg = figure('Position',[288 37 1521 849]); 
-hht = [];
-for pvtI = 1:length(pvNames)
-    hht{pvtI} = subplot(2,3,pvtI);
-    [hht{pvtI}, statsOut] = PlotMeanPVcorrsDaysApart(CSpooledMeanPVcorrsHalfSecond{pvtI}, CSpooledPVdaysApart{pvtI}, 'mean', condSetColors, condSetLabels, hht{pvtI});
-    hht{pvtI}.Title.String = [pvNames{pvtI}; hht{pvtI}.Title.String];
-end
-suptitleSL('PV by days apart, SECOND HALF')
-%% PV corr self change by days apart
-figure('Position',[288 37 1521 849]);
-for pvtI = 1:length(pvNames)
-    ggt{pvtI} = subplot(2,3,pvtI);
-    [ggt{pvtI},statsOut] = PlotChangeByDaysApartFWDonly(withinCSdayChangeMean{pvtI},sameDayDayDiffsPooled{pvtI},condSetColors,condSetLabels,ggt{pvtI});
-    ggt{pvtI}.Title.String = [pvNames{pvtI}; ggt{pvtI}.Title.String];
-end
-suptitleSL('Chance in Each Correlation over Experience')
-
-% PV corr self change by days apart FIRST HALF
-figure('Position',[288 37 1521 849]);
-for pvtI = 1:length(pvNames)
-    ggt{pvtI} = subplot(2,3,pvtI);
-    [ggt{pvtI},statsOut] = PlotChangeByDaysApartFWDonly(withinCSdayChangeMeanHalfFirst{pvtI},sameDayDayDiffsPooled{pvtI},condSetColors,condSetLabels,ggt{pvtI});
-    ggt{pvtI}.Title.String = [pvNames{pvtI}; ggt{pvtI}.Title.String];
-end
-suptitleSL('Chance in Each Correlation over Experience First Half')
-
-% PV corr self change by days apart SECOND HALF
-figure('Position',[288 37 1521 849]);
-for pvtI = 1:length(pvNames)
-    ggt{pvtI} = subplot(2,3,pvtI);
-    [ggt{pvtI},statsOut] = PlotChangeByDaysApartFWDonly(withinCSdayChangeMeanHalfSecond{pvtI},sameDayDayDiffsPooled{pvtI},condSetColors,condSetLabels,ggt{pvtI});
-    ggt{pvtI}.Title.String = [pvNames{pvtI}; ggt{pvtI}.Title.String];
-end
-suptitleSL('Chance in Each Correlation over Experience Second Half')
-
-%% PV corr separation by days apart
-
-cscColors = {'m'; 'c'; 'k'};%[0.8 0.2 0]
-figure('Position',[288 37 1521 849]);
-for pvtI = 1:length(pvNames)
-    ggt{pvtI} = subplot(2,3,pvtI);
-    [ggt{pvtI},statsOut] = PlotChangeByDaysApartFWDonly(cscDiffsChangeMeanPooled{pvtI},sameDayDayDiffsPooled{pvtI},cscColors,cscLabels,ggt{pvtI});
-    ggt{pvtI}.Title.String = [pvNames{pvtI}; ggt{pvtI}.Title.String];
-end
-suptitleSL('Change in Separation between Correlations')
-
-% PV corr separation by days apart FIRST HALF
-figure('Position',[288 37 1521 849]);
-for pvtI = 1:length(pvNames)
-    ggt{pvtI} = subplot(2,3,pvtI);
-    [ggt{pvtI},statsOut] = PlotChangeByDaysApartFWDonly(cscDiffsChangeMeanHalfFirstPooled{pvtI},sameDayDayDiffsPooled{pvtI},cscColors,cscLabels,ggt{pvtI});
-    ggt{pvtI}.Title.String = [pvNames{pvtI}; ggt{pvtI}.Title.String];
-end
-suptitleSL('Change in Separation between Correlations FIRST HALF')
-
-% PV corr separation by days apart SECOND HALF
-figure('Position',[288 37 1521 849]);
-for pvtI = 1:length(pvNames)
-    ggt{pvtI} = subplot(2,3,pvtI);
-    [ggt{pvtI},statsOut] = PlotChangeByDaysApartFWDonly(cscDiffsChangeMeanHalfSecondPooled{pvtI},sameDayDayDiffsPooled{pvtI},cscColors,cscLabels,ggt{pvtI});
-    ggt{pvtI}.Title.String = [pvNames{pvtI}; ggt{pvtI}.Title.String];
-end
-suptitleSL('Change in Separation between Correlations SECOND HALF')
-%% Pop Vector corrs by days apart ARMs
-gg = figure('Position',[288 37 1521 849]); 
-hht = [];
-for pvtI = 1:length(pvNames)
-    hht{pvtI} = subplot(2,3,pvtI);
-[hht{pvtI}, statsOut] = PlotMeanPVcorrsDaysApart(CSpooledMeanPVcorrsARM{pvtI}, CSpooledPVdaysApart{pvtI}, 'mean', condSetColors, condSetLabels, hht{pvtI});
-hht{pvtI}.Title.String = [pvNames{pvtI}; hht{pvtI}.Title.String];
-end
-suptitleSL('PV by days apart ARMS')
-
-gg = figure('Position',[288 37 1521 849]); 
-hht = [];
-for pvtI = 1:length(pvNames)
-    hht{pvtI} = subplot(2,3,pvtI);
-[hht{pvtI}, statsOut] = PlotMeanPVcorrsDaysApart(CSpooledMeanPVcorrsHalfFirstARM{pvtI}, CSpooledPVdaysApart{pvtI}, 'mean', condSetColors, condSetLabels, hht{pvtI});
-hht{pvtI}.Title.String = [pvNames{pvtI}; hht{pvtI}.Title.String];
-end
-suptitleSL('PV by days apart ARMS FIRST HALF')
+%PV corr separation by days apart
+cscColors = {'m'; 'c'; 'k'};
+figure('Position',[317 403 1448 417]); 
+ggt = []; statsOut = [];
+ggt{1} = subplot(1,3,1);
+[ggt{1},statsOut{1}] = PlotChangeByDaysApartFWDonly(cscDiffsChangeMeanPooled{cellCritUse},sameDayDayDiffsPooled{cellCritUse},cscColors,cscLabels,ggt{1});
+ggt{1}.Title.String = ['Mean All Bins'];
+xlabel('Days Apart'); ylabel('Change in mean PV corr'); ylim([-0.4 0.4])
+ggt{2} = subplot(1,3,2);
+[ggt{2},statsOut{2}] = PlotChangeByDaysApartFWDonly(cscDiffsChangeMeanHalfFirstPooled{cellCritUse},sameDayDayDiffsPooled{cellCritUse},cscColors,cscLabels,ggt{2});
+ggt{2}.Title.String = ['1st 2 bins'];
+xlabel('Days Apart'); ylabel('Change in mean PV corr'); ylim([-0.4 0.4])
+ggt{3} = subplot(1,3,3);
+[ggt{3},statsOut{3}] = PlotChangeByDaysApartFWDonly(cscDiffsChangeMeanHalfSecondPooled{cellCritUse},sameDayDayDiffsPooled{cellCritUse},cscColors,cscLabels,ggt{3});
+ggt{3}.Title.String = ['Last 2 bins'];
+xlabel('Days Apart'); ylabel('Change in mean PV corr'); ylim([-0.4 0.4])
+suptitleSL('Change of Within-Day Separation of PV corrs')
 
 
-gg = figure('Position',[288 37 1521 849]); 
-hht = [];
-for pvtI = 1:length(pvNames)
-    hht{pvtI} = subplot(2,3,pvtI);
-[hht{pvtI}, statsOut] = PlotMeanPVcorrsDaysApart(CSpooledMeanPVcorrsHalfSecondARM{pvtI}, CSpooledPVdaysApart{pvtI}, 'mean', condSetColors, condSetLabels, hht{pvtI});
-hht{pvtI}.Title.String = [pvNames{pvtI}; hht{pvtI}.Title.String];
-end
-suptitleSL('PV by days apart ARMS SECOND HALF')
+%Arms
+jj = PlotPVcurves(CSpooledPVcorrsARM{cellCritUse},CSpooledPVdaysApart{cellCritUse},condSetColors,condSetLabels,[]);
+title(['Mean Within-Day Population Vector Correlation ARM(' pvNames{cellCritUse} ')'])
+ylim([0 0.7])
 
+figure('Position',[317 403 1448 417]);
+gg = []; statsOut = [];
+gg{1} = subplot(1,3,1);
+[gg{1}, statsOut{1}] = PlotMeanPVcorrsDaysApart(CSpooledMeanPVcorrsARM{cellCritUse}, CSpooledPVdaysApart{cellCritUse}, 'none', condSetColors, condSetLabels, false, gg{1});
+gg{1}.Title.String = ['Mean Correlation by Days Apart (' pvNames{cellCritUse} ')'];
+gg{2} = subplot(1,3,2);
+[gg{2}, statsOut{2}] = PlotMeanPVcorrsDaysApart(CSpooledMeanPVcorrsHalfFirstARM{cellCritUse}, CSpooledPVdaysApart{cellCritUse}, 'none', condSetColors, condSetLabels, false, gg{2});
+gg{2}.Title.String = ['Mean Correlation by Days Apart 1st 2 bins (' pvNames{cellCritUse} ')'];
+gg{3} = subplot(1,3,3);
+[gg{3}, statsOut{3}] = PlotMeanPVcorrsDaysApart(CSpooledMeanPVcorrsHalfSecondARM{cellCritUse}, CSpooledPVdaysApart{cellCritUse}, 'none', condSetColors, condSetLabels, false, gg{3});
+gg{3}.Title.String = ['Mean Correlation by Days Apart last 2 bins (' pvNames{cellCritUse} ')'];
+suptitleSL('Mean correlation by days apart ARM')
 
+% PV corr self change by days apart
+figure('Position',[317 403 1448 417]); 
+ggt = []; statsOut = [];
+ggt{1} = subplot(1,3,1);
+[ggt{1},statsOut{1}] = PlotChangeByDaysApartFWDonly(withinCSdayChangeMeanARM{cellCritUse},sameDayDayDiffsPooled{cellCritUse},condSetColors,condSetLabels,ggt{1});
+ggt{1}.Title.String = ['Mean All Bins'];
+xlabel('Days Apart'); ylabel('Change in mean PV corr'); ylim([-0.4 0.4])
+ggt{2} = subplot(1,3,2);
+[ggt{2},statsOut{2}] = PlotChangeByDaysApartFWDonly(withinCSdayChangeMeanHalfFirstARM{cellCritUse},sameDayDayDiffsPooled{cellCritUse},condSetColors,condSetLabels,ggt{2});
+ggt{2}.Title.String = ['1st 2 bins'];
+xlabel('Days Apart'); ylabel('Change in mean PV corr'); ylim([-0.4 0.4])
+ggt{3} = subplot(1,3,3);
+[ggt{3},statsOut{3}] = PlotChangeByDaysApartFWDonly(withinCSdayChangeMeanHalfSecondARM{cellCritUse},sameDayDayDiffsPooled{cellCritUse},condSetColors,condSetLabels,ggt{3});
+ggt{3}.Title.String = ['Last 2 bins'];
+xlabel('Days Apart'); ylabel('Change in mean PV corr'); ylim([-0.4 0.4])
+suptitleSL('Change of Within-Day PV corrs ARM')
 
-%% PV corr self change by days apart ARMS
-figure('Position',[288 37 1521 849]);
-for pvtI = 1:length(pvNames)
-    ggt{pvtI} = subplot(2,3,pvtI);
-    [ggt{pvtI},statsOut] = PlotChangeByDaysApartFWDonly(withinCSdayChangeMeanARM{pvtI},sameDayDayDiffsPooled{pvtI},condSetColors,condSetLabels,ggt{pvtI});
-    ggt{pvtI}.Title.String = [pvNames{pvtI}; ggt{pvtI}.Title.String];
-end
-suptitleSL('Chance in Each Correlation over Experience ARMS')
-
-figure('Position',[288 37 1521 849]);
-for pvtI = 1:length(pvNames)
-    ggt{pvtI} = subplot(2,3,pvtI);
-    [ggt{pvtI},statsOut] = PlotChangeByDaysApartFWDonly(withinCSdayChangeMeanHalfFirstARM{pvtI},sameDayDayDiffsPooled{pvtI},condSetColors,condSetLabels,ggt{pvtI});
-    ggt{pvtI}.Title.String = [pvNames{pvtI}; ggt{pvtI}.Title.String];
-end
-suptitleSL('Chance in Each Correlation over Experience ARMS first half')
-
-figure('Position',[288 37 1521 849]);
-for pvtI = 1:length(pvNames)
-    ggt{pvtI} = subplot(2,3,pvtI);
-    [ggt{pvtI},statsOut] = PlotChangeByDaysApartFWDonly(withinCSdayChangeMeanHalfSecondARM{pvtI},sameDayDayDiffsPooled{pvtI},condSetColors,condSetLabels,ggt{pvtI});
-    ggt{pvtI}.Title.String = [pvNames{pvtI}; ggt{pvtI}.Title.String];
-end
-suptitleSL('Chance in Each Correlation over Experience ARMS second half')
-%% PV corr separation by days apart ARMS
-
-cscColors = {'m'; 'c'; 'k'};%[0.8 0.2 0]
-figure('Position',[288 37 1521 849]);
-for pvtI = 1:length(pvNames)
-    ggt{pvtI} = subplot(2,3,pvtI);
-    [ggt{pvtI},statsOut] = PlotChangeByDaysApartFWDonly(cscDiffsChangeMeanPooledARM{pvtI},sameDayDayDiffsPooled{pvtI},cscColors,cscLabels,ggt{pvtI});
-    ggt{pvtI}.Title.String = [pvNames{pvtI}; ggt{pvtI}.Title.String];
-end
-suptitleSL('Change in Separation between Correlations ARMS')
-
-cscColors = {'m'; 'c'; 'k'};%[0.8 0.2 0]
-figure('Position',[288 37 1521 849]);
-for pvtI = 1:length(pvNames)
-    ggt{pvtI} = subplot(2,3,pvtI);
-    [ggt{pvtI},statsOut] = PlotChangeByDaysApartFWDonly(cscDiffsChangeMeanHalfFirstPooledARM{pvtI},sameDayDayDiffsPooled{pvtI},cscColors,cscLabels,ggt{pvtI});
-    ggt{pvtI}.Title.String = [pvNames{pvtI}; ggt{pvtI}.Title.String];
-end
-suptitleSL('Change in Separation between Correlations ARMS First Half')
-
-cscColors = {'m'; 'c'; 'k'};%[0.8 0.2 0]
-figure('Position',[288 37 1521 849]);
-for pvtI = 1:length(pvNames)
-    ggt{pvtI} = subplot(2,3,pvtI);
-    [ggt{pvtI},statsOut] = PlotChangeByDaysApartFWDonly(cscDiffsChangeMeanHalfSecondPooledARM{pvtI},sameDayDayDiffsPooled{pvtI},cscColors,cscLabels,ggt{pvtI});
-    ggt{pvtI}.Title.String = [pvNames{pvtI}; ggt{pvtI}.Title.String];
-end
-suptitleSL('Change in Separation between Correlations ARMS Second Half')
+%PV corr separation by days apart
+cscColors = {'m'; 'c'; 'k'};
+figure('Position',[317 403 1448 417]); 
+ggt = []; statsOut = [];
+ggt{1} = subplot(1,3,1);
+[ggt{1},statsOut{1}] = PlotChangeByDaysApartFWDonly(cscDiffsChangeMeanPooledARM{cellCritUse},sameDayDayDiffsPooled{cellCritUse},cscColors,cscLabels,ggt{1});
+ggt{1}.Title.String = ['Mean All Bins'];
+xlabel('Days Apart'); ylabel('Change in mean PV corr'); ylim([-0.4 0.4])
+ggt{2} = subplot(1,3,2);
+[ggt{2},statsOut{2}] = PlotChangeByDaysApartFWDonly(cscDiffsChangeMeanHalfFirstPooledARM{cellCritUse},sameDayDayDiffsPooled{cellCritUse},cscColors,cscLabels,ggt{2});
+ggt{2}.Title.String = ['1st 2 bins'];
+xlabel('Days Apart'); ylabel('Change in mean PV corr'); ylim([-0.4 0.4])
+ggt{3} = subplot(1,3,3);
+[ggt{3},statsOut{3}] = PlotChangeByDaysApartFWDonly(cscDiffsChangeMeanHalfSecondPooledARM{cellCritUse},sameDayDayDiffsPooled{cellCritUse},cscColors,cscLabels,ggt{3});
+ggt{3}.Title.String = ['Last 2 bins'];
+xlabel('Days Apart'); ylabel('Change in mean PV corr'); ylim([-0.4 0.4])
+suptitleSL('Change of Within-Day Separation of PV corrs ARM')
 
 %% Stem vs Arms
 
 statsOut = [];
-for condI = 1:length(condSet)
+
 [figHand, statsOut{condI}] = PVcorrCompStemVsArmDaysApart(CSpooledMeanPVcorrs,CSpooledMeanPVcorrsARM,CSpooledPVdaysApart,pvNames,condI);
-suptitleSL(['Difference between Stem (l) and ARM (r) corrs in ' condSetLabels{condI}])
+   
+for condI = 1:length(condSet)
+    [figHand, statsOut{condI}] = PVcorrCompStemVsArmDaysApart(CSpooledMeanPVcorrs,CSpooledMeanPVcorrsARM,CSpooledPVdaysApart,pvNames,condI);
+    suptitleSL(['Difference between Stem (l) and ARM (r) corrs in ' condSetLabels{condI}])
 end
+
 
 
 %% Decoder results 

@@ -253,7 +253,8 @@ for mouseI = 1:numMice
         end
     end
 end
-   
+disp('Done loading all splitting')
+
 %% Splitter cells: logical each type
 dayUseFilter = {dayUse; dayUseArm}; 
 %dayUseFilter = {dayUsePooled; dayUseArmPooled};
@@ -304,7 +305,7 @@ pairsCompare = {'splitLR' 'splitST';...
 pairsCompareInd = cell2mat(cellfun(@(x) find(strcmpi(traitLabels,x)),pairsCompare,'UniformOutput',false));
 numPairsCompare = size(pairsCompare,1);
 
-disp('done splitter logicals')
+disp('Done splitter logicals')
 
 %% How many each type per day?
 pooledSplitProp = [];
@@ -338,7 +339,7 @@ for slI = 1:2
     end
 end
 
-disp('done how many splitters')
+disp('Done how many splitters')
 
 %% Cells coming back across days
 splitCBgroupOut = []; splitSSgroupOut = [];
@@ -361,7 +362,6 @@ for slI = 1:2
 end
 
 disp('Done splitter reactivation/persistence')
-
 
 %% When are splitters showing up
 %How many days a splitter
@@ -430,6 +430,7 @@ for slI = 1:2
         %}
     end
 end
+disp('Done when do splitters show up')
 
 %% Overlap in both
 pctTraitBothPooled = cell(numTraitGroups,1);
@@ -491,7 +492,7 @@ for stI = 1:length(splitterType)
         end
     end
 end
-        
+disp('Done arm/stem splitter overlap')
 
 %% Change in accuracy, speed, time to run down arm
 pooledAccuracyChange = []; accuracyChange = [];
