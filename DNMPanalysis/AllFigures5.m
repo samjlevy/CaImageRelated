@@ -300,16 +300,20 @@ xlabel('Days Apart'); ylabel('Change in mean PV corr'); ylim([-0.4 0.4])
 suptitleSL('Change of Within-Day Separation of PV corrs ARM')
 
 %% Stem vs Arms
-
+plotColors = {[0 0 1], [0 1 1];...
+              [0.6392    0.0784    0.1804],[0.8510    0.3294    0.1020];...
+              [0.4706    0.6706    0.1882],[0 1 0]};
+          
+figure('Position',[317 403 1448 417]);
 statsOut = [];
-
-[figHand, statsOut{condI}] = PVcorrCompStemVsArmDaysApart(CSpooledMeanPVcorrs,CSpooledMeanPVcorrsARM,CSpooledPVdaysApart,pvNames,condI);
-   
-for condI = 1:length(condSet)
-    [figHand, statsOut{condI}] = PVcorrCompStemVsArmDaysApart(CSpooledMeanPVcorrs,CSpooledMeanPVcorrsARM,CSpooledPVdaysApart,pvNames,condI);
-    suptitleSL(['Difference between Stem (l) and ARM (r) corrs in ' condSetLabels{condI}])
+for condI = 1:length(condSetLabels)
+    subplot(1,length(condSetLabels),condI)
+    [statsOut{condI}] = PVcorrCompStemVSarm(CSpooledMeanPVcorrs{cellCritUse}{condI},CSpooledMeanPVcorrsARM{cellCritUse}{condI},...
+        CSpooledPVdaysApart{cellCritUse}{condI},plotColors(condI,:)); 
+    title(condSetLabels{condI})
+    ylim([-0.1 1]); xlabel('Days Apart'); ylabel('Correlation')
 end
-
+suptitleSL(['Difference between STEM (L) and ARM (R) corrs (' pvNames{cellCritUse} ')'])
 
 
 %% Decoder results 

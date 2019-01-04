@@ -34,7 +34,8 @@ for csI = 1:numConds
 end
 
 for cscI = 1:size(condSetComps,1)            
-    [statsOut.Fval(cscI),statsOut.dfNum(cscI),statsOut.dfDen(cscI),statsOut.pVal(cscI)] = TwoSlopeFTest(meanPVcorrs{condSetComps(cscI,1)},...
+    [statsOut.TwoSlope.Fval(cscI),statsOut.TwoSlope.dfNum(cscI),statsOut.TwoSlope.dfDen(cscI),statsOut.TwoSlope.pVal(cscI)] =...
+        TwoSlopeFTest(meanPVcorrs{condSetComps(cscI,1)},...
         meanPVcorrs{condSetComps(cscI,2)}, daysApart{condSetComps(cscI,1)}, daysApart{condSetComps(cscI,2)});
     %plotStr{csI,1} = [condSetColors{condSetComps(csI,1)} ' vs. ' condSetColors{condSetComps(csI,2)} ': p=' num2str(statsOut.pVal(csI))];
     
@@ -42,7 +43,8 @@ for cscI = 1:size(condSetComps,1)
     for ddI = 1:length(allPVdayDiffs)
         dataA = meanPVcorrs{condSetComps(cscI,1)}(daysApart{condSetComps(cscI,1)}==allPVdayDiffs(ddI));
         dataB = meanPVcorrs{condSetComps(cscI,2)}(daysApart{condSetComps(cscI,2)}==allPVdayDiffs(ddI));
-        [statsOut.pDDmeanPV(cscI,ddI),statsOut.hDDmeanPV(cscI,ddI)] = ranksum(dataA,dataB);
+        [statsOut.ranksum.pVal(cscI,ddI),statsOut.ranksum.hVal(cscI,ddI)] = ranksum(dataA,dataB);
+        %[statsOut.signtest.pVal(cscI,ddI),statsOut.signtest.hVal(cscI,ddI)] = signtest(dataA,dataB);
         %{
                 if statsOut.hDDmeanPV(cscI,ddI)==1
                     plot(allPVdayDiffs(ddI),plotHeights(cscI),'*k','MarkerSize',6)

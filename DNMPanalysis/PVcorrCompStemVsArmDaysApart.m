@@ -5,12 +5,15 @@ plotColors = {[0 0 1], [0 1 1];...
               [0.4706    0.6706    0.1882],[0 1 0]};
 
 figHand = figure('Position',[680 421 1177 557]); qq = [];
+
+subRows = ceil(length(pvNames)/3);
 for pvtI = 1:length(pvNames)
+    qq{pvtI} = subplot(subRows,3,pvtI);
     
-    PVcorrCompStemVSarm 
-    
+    [statsOut{pvtI}] = PVcorrCompStemVSarm(stemCorrsPooled{pvtI}{condI},armCorrsPooled{pvtI}{condI},...
+                        pooledDaysApart{pvtI}{condI},plotColors(condI,:));
+                        
     title(pvNames{pvtI})
-    xlim([-0.5 max(pooledDaysApart{pvtI}{condI})+0.5])
 end
 
 end
