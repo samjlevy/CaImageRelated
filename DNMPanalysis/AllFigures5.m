@@ -64,6 +64,20 @@ for slI = 1:2
     suptitleSL(['Change in Proportion of Splitters that Come Back on ' splitterLoc{slI}])
 end
 
+hj = [];
+for slI = 1:2
+    hj{slI} = figure;
+    for tgI = 1:length(tgsPlot)
+        [fitVal,daysPlot] = FitLineForPlotting(pooledSplitterComesBack{slI}{tgsPlot(tgI)},pooledRealDayDiffs);
+        plot(daysPlot,fitVal,'Color',colorAssc{tgsPlot(tgI)},'LineWidth',2);
+        hold on
+    end
+    ylim([0 1])
+    xlim([0.5 max(pooledRealDayDiffs)+0.5])
+    xlabel('Days Apart'); ylabel('Percent returning')
+    title(['Pct. of Splitters that come back on ' splitterLoc{slI}])
+end
+        
 %% Prop of splitters that still split
 gh = [];
 statsOut = [];
@@ -72,6 +86,20 @@ for slI = 1:2
     [gh{slI},statsOut{slI}] = PlotTraitChangeOverDays(pooledSplitterStillSplitter{slI},pooledRealDayDiffs,...
         pairsCompareInd(cpsPlot,:),colorAssc,traitLabels,gh{slI},[0 1],'pct. Cells Same Type'); %Num in this case is diff in Pcts.
     suptitleSL(['Change in Proportion of Splitters that Are the Same Splitting Type on ' splitterLoc{slI}])
+end
+
+hj = [];
+for slI = 1:2
+    hj{slI} = figure;
+    for tgI = 1:length(tgsPlot)
+        [fitVal,daysPlot] = FitLineForPlotting(pooledSplitterStillSplitter{slI}{tgsPlot(tgI)},pooledRealDayDiffs);
+        plot(daysPlot,fitVal,'Color',colorAssc{tgsPlot(tgI)},'LineWidth',2);
+        hold on
+    end
+    ylim([0 1])
+    xlim([0.5 max(pooledRealDayDiffs)+0.5])
+    xlabel('Days Apart'); ylabel('Percent returning')
+    title(['Pct. of Splitters that split same type on ' splitterLoc{slI}])
 end
 
 %% Num days a splitter
