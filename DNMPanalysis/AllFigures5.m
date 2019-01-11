@@ -54,6 +54,15 @@ for slI = 1:2
     suptitleSL(['Change in Proportion of Splitters on ' splitterLoc{slI}])
 end
 
+gh = [];
+statsOut = [];
+for slI = 1:2
+    gh{slI} = figure('Position',[435 278 988 390]);
+    [gh{slI},statsOut{slI}] = PlotTraitChangeOverDays(pooledSplitNumChange{slI},pooledRealDayDiffs,...
+        {[1 2]; [3 4 5]},colorAssc,traitLabels,gh{slI},[-0.6 0.6],'pct Change'); %Num in this case is diff in Pcts.
+    suptitleSL(['Change in Proportion of Splitters on ' splitterLoc{slI}])
+end
+
 %% Prop of splitters that come back
 gh = [];
 statsOut = [];
@@ -61,6 +70,15 @@ for slI = 1:2
     gh{slI} = figure('Position',[435 278 988 390]);
     [gh{slI},statsOut{slI}] = PlotTraitChangeOverDays(pooledSplitterComesBack{slI},pooledRealDayDiffs,...
         pairsCompareInd(cpsPlot,:),colorAssc,traitLabels,gh{slI},[0 1],'pct. Cells Return'); %Num in this case is diff in Pcts.
+    suptitleSL(['Change in Proportion of Splitters that Come Back on ' splitterLoc{slI}])
+end
+
+gh = [];
+statsOut = [];
+for slI = 1:2
+    gh{slI} = figure('Position',[435 278 988 390]);
+    [gh{slI},statsOut{slI}] = PlotTraitChangeOverDays(pooledSplitterComesBack{slI},pooledRealDayDiffs,...
+        {[1 2]; [3 4 5]},colorAssc,traitLabels,gh{slI},[0 1],'pct. Cells Return'); %Num in this case is diff in Pcts.
     suptitleSL(['Change in Proportion of Splitters that Come Back on ' splitterLoc{slI}])
 end
 
@@ -77,7 +95,13 @@ for slI = 1:2
     xlabel('Days Apart'); ylabel('Percent returning')
     title(['Pct. of Splitters that come back on ' splitterLoc{slI}])
 end
-        
+     
+%Stem vs. arm
+jk = figure;
+statsOut = [];
+[jk,statsOut] = PlotTraitChangeOverDaysSTEMvsARM(pooledSplitterComesBack{1},pooledRealDayDiffs,pooledSplitterComesBack{2},...
+    pooledRealDayDiffs,colorAssc,traitLabels,jk,[0 1],'% Cells That Come Back');
+
 %% Prop of splitters that still split
 gh = [];
 statsOut = [];
@@ -85,6 +109,15 @@ for slI = 1:2
     gh{slI} = figure('Position',[435 278 988 390]);
     [gh{slI},statsOut{slI}] = PlotTraitChangeOverDays(pooledSplitterStillSplitter{slI},pooledRealDayDiffs,...
         pairsCompareInd(cpsPlot,:),colorAssc,traitLabels,gh{slI},[0 1],'pct. Cells Same Type'); %Num in this case is diff in Pcts.
+    suptitleSL(['Change in Proportion of Splitters that Are the Same Splitting Type on ' splitterLoc{slI}])
+end
+
+gh = [];
+statsOut = [];
+for slI = 1:2
+    gh{slI} = figure('Position',[435 278 988 390]);
+    [gh{slI},statsOut{slI}] = PlotTraitChangeOverDays(pooledSplitterStillSplitter{slI},pooledRealDayDiffs,...
+        {[1 2]; [3 4 5]},colorAssc,traitLabels,gh{slI},[0 1],'pct. Cells Same Type'); %Num in this case is diff in Pcts.
     suptitleSL(['Change in Proportion of Splitters that Are the Same Splitting Type on ' splitterLoc{slI}])
 end
 
@@ -100,6 +133,33 @@ for slI = 1:2
     xlim([0.5 max(pooledRealDayDiffs)+0.5])
     xlabel('Days Apart'); ylabel('Percent returning')
     title(['Pct. of Splitters that split same type on ' splitterLoc{slI}])
+end
+
+%Stem vs. arm
+jk = figure;
+statsOut = [];
+[jk,statsOut] = PlotTraitChangeOverDaysSTEMvsARM(pooledSplitterStillSplitter{1},pooledRealDayDiffs,pooledSplitterStillSplitter{2},...
+    pooledRealDayDiffs,colorAssc,traitLabels,jk,[0 1],'% Cells That Still Split');
+
+%% Splitters changing type
+gj = [];
+statsOut = [];
+for slI = 1:2
+    gj{slI} = figure('Position',[258 350 1542 459]);
+    [gj{slI},statsOut{slI}]=PlotTraitChangeOverDays(pooledSplitterChanges{slI},pooledRealDayDiffs,...
+        [1 2; 5 6; 3 5; 4 6],...%[1 3; 2 4; 3 4; 5 6],...
+        colorAssc,transLabels,gj{slI},[0 1],'pct. Cells Changing Type');
+    suptitleSL(['Transition likelihoods on ' splitterLoc{slI}])
+end
+
+%% What are new cells?
+gh = [];
+statsOut = [];
+for slI = 1:2
+    gh{slI} = figure('Position',[435 278 988 390]);
+    [gh{slI},statsOut{slI}] = PlotTraitChangeOverDays(pooledNewCellPropChanges{slI},pooledRealDayDiffs,...
+        {[1 2];[3 4 5]},colorAssc,traitLabels,gh{slI},[-1 1],'Change in Pct. New Cells this Type'); %Num in this case is diff in Pcts.
+    suptitleSL(['Change in Proportion of New Cells that are a splitting type ' splitterLoc{slI}])
 end
 
 %% Num days a splitter
@@ -130,7 +190,31 @@ for slI = 1:2
     ylabel('Mean +/- SEM number of days this trait')
     title(['How many days each cell this trait on ' splitterLoc{slI}])
 end
+
+statsOutBonus = [];
+for tgI = 1:numTraitGroups
+    [statsOutBonus.ranksum(tgI).pVal, statsOutBonus.ranksum(tgI).hVal] = ranksum(...
+        pooledNumDaysSplitter{1}{tgI}(pooledNumDaysSplitter{1}{tgI}>0),...
+        pooledNumDaysSplitter{2}{tgI}(pooledNumDaysSplitter{2}{tgI}>0));
+    statsOutBonus.ranksum(tgI).whichWon = WhichWonRanks(...
+        pooledNumDaysSplitter{1}{tgI}(pooledNumDaysSplitter{1}{tgI}>0),...
+        pooledNumDaysSplitter{2}{tgI}(pooledNumDaysSplitter{2}{tgI}>0));
+end
+
 %% When are splitters active (dayBias)
+compsDisp = {[1 2] [3 4 5]};
+for slI = 1:2
+    disp(splitterLoc{slI})
+for cdI = 1:2
+    for cdJ = 1:length(compsDisp{cdI})
+        datHere = pooledCOMBiases{slI}{compsDisp{cdI}(cdJ)};
+        disp([traitLabels{compsDisp{cdI}(cdJ)} ': '...
+            num2str(mean(datHere(:,1))) '+/-' num2str(standarderrorSL(datHere(:,1))) '; '... 
+            num2str(mean(datHere(:,2))) '+/-' num2str(standarderrorSL(datHere(:,2))) '; '...
+            num2str(mean(datHere(:,3))) '+/-' num2str(standarderrorSL(datHere(:,3))) '; '])
+    end
+end
+end
 
 for slI = 1:2
     figure;
@@ -156,17 +240,6 @@ for slI = 1:2
         end
         title(traitLabels{pairsCompareInd(cpI,2)})
     end
-end
-
-%% What are new cells?
-
-gh = [];
-statsOut = [];
-for slI = 1:2
-    gh{slI} = figure('Position',[435 278 988 390]);
-    [gh{slI},statsOut{slI}] = PlotTraitChangeOverDays(pooledNewCellPropChanges{slI},pooledRealDayDiffs,...
-        pairsCompareInd(cpsPlot,:),colorAssc,traitLabels,gh{slI},[-1 1],'Change in Pct. New Cells this Type'); %Num in this case is diff in Pcts.
-    suptitleSL(['Change in Proportion of New Cells taht are a splitting type ' splitterLoc{slI}])
 end
 
 

@@ -1,21 +1,24 @@
-function [figHand,statsOut] = PlotTraitChangeOverDays(pooledTraitChanges,pooledDaysApart,comparisons,colorsUse,labels,figHand,ylims,yLabel)
+function [figHand,statsOut] = PlotTraitChangeOverDaysSTEMvsARM(pooledTraitChangesSTEM,pooledDaysApartSTEM,pooledTraitChangesARM,...
+    pooledDaysApartARM,colorsUse,labels,figHand,ylims,yLabel)
 
-if isnumeric(comparisons)
-    numComps = size(comparisons,1);
-    comparisons = mat2cell(comparisons,ones(numComps,1),size(comparisons,2));
-elseif iscell(comparisons)
-    numComps = length(comparisons);
-end
+numTgs = length(pooledTraitChangesSTEM);
+subRows = ceil(numTgs/3);
 
-for compI = 1:numComps
-    subplot(1,numComps,compI)
-    [statsOutTemp] = PlotTraitChangeOverDaysOne(pooledTraitChanges(comparisons{compI}),pooledDaysApart,...
-        colorsUse(comparisons{compI}),labels(comparisons{compI}),yLabel,ylims);
+for tgI = 1:numTgs
+    subplot(subRows,3,tgI)
     
-    statsOut.slopeDiffComp(compI) = statsOutTemp.slopeDiffComp;
-    statsOut.signtests(compI) = statsOutTemp.signtests;
-    statsOut.rankSumAll(compI) = statsOutTemp.rankSumAll;
-    statsOut.comps{compI} = statsOutTemp.comps;
+    colorHere = colorsUse{tgI};
+    colorsUseHereA = colorHere+0.15; colorsUseHereA(colorsUseHereA > 1)=1;
+    colorsUseHereB = colorHere-0.15; colorsUseHereB(colorsUseHereB < 0)=0;
+    colorsUseHere = {colorsUseHereA; colorsUseHereB};
+    labelsHere = {[labels{tgI} '-STEM']; [labels{tgI} '-ARM']};
+    
+    [statsOutTemp] = PlotTraitChangeOverDaysOne({pooledTraitChangesSTEM{tgI} pooledTraitChangesARM{tgI}},...
+        pooledDaysApartSTEM,colorsUseHere,labelsHere,yLabel,ylims);
+    
+    statsOut.slopeDiffComp(tgI) = statsOutTemp.slopeDiffComp;
+    statsOut.signtests(tgI) = statsOutTemp.signtests;
+    statsOut.rankSumAll(tgI) = statsOutTemp.rankSumAll;
     %{
     plot([0.5 max(pooledDaysApart)+0.5],[0 0],'k')
     hold on
@@ -58,13 +61,20 @@ for compI = 1:numComps
 end
 
 % Slopes of each of these lines
-for tgI = 1:length(pooledTraitChanges)
-    [~, ~, ~, statsOut.slopeRR(tgI), statsOut.slopePval(tgI), ~] =...
-        fitLinRegSL(pooledTraitChanges{tgI}, pooledDaysApart);
+for tgI = 1:numTgs
+    [~, ~, ~, statsOut.stem.slopeRR(tgI), statsOut.stem.slopePval(tgI), ~] =...
+        fitLinRegSL(pooledTraitChangesSTEM{tgI}, pooledDaysApartSTEM);
     
-    [statsOut.slopeDiffZero(tgI).Fval,statsOut.slopeDiffZero(tgI).dfNum,...
-     statsOut.slopeDiffZero(tgI).dfDen,statsOut.slopeDiffZero(tgI).pVal] =...
-        slopeDiffFromZeroFtest(pooledTraitChanges{tgI}, pooledDaysApart);
+    [statsOut.stem.slopeDiffZero(tgI).Fval,statsOut.stem.slopeDiffZero(tgI).dfNum,...
+     statsOut.stem.slopeDiffZero(tgI).dfDen,statsOut.stem.slopeDiffZero(tgI).pVal] =...
+        slopeDiffFromZeroFtest(pooledTraitChangesSTEM{tgI}, pooledDaysApartSTEM);
+    
+    [~, ~, ~, statsOut.arm.slopeRR(tgI), statsOut.arm.slopePval(tgI), ~] =...
+        fitLinRegSL(pooledTraitChangesARM{tgI}, pooledDaysApartARM);
+    
+    [statsOut.arm.slopeDiffZero(tgI).Fval,statsOut.arm.slopeDiffZero(tgI).dfNum,...
+     statsOut.arm.slopeDiffZero(tgI).dfDen,statsOut.arm.slopeDiffZero(tgI).pVal] =...
+        slopeDiffFromZeroFtest(pooledTraitChangesARM{tgI}, pooledDaysApartARM);
 end
 
 end

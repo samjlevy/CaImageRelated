@@ -363,6 +363,30 @@ end
 
 disp('Done splitter reactivation/persistence')
 
+%% Cell Turning into other types
+transInds = [3 4; 4 3; 3 5; 4 5; 5 3; 5 4]; 
+
+%transLabels = traitLabels(transInds);
+cellTransTraits = [];
+splitterChanges = [];
+pooledSplitterChanges = [];
+for slI = 1:2
+    pooledSplitterChanges{slI} = cell(size(transInds,1),1);
+    for mouseI = 1:numMice
+        cellTransTraits{slI}{mouseI} = traitGroups{slI}{mouseI}(transInds);
+        
+        [splitterChanges{slI}{mouseI}] = RunGroupFunction('GetCellsOverlap',cellTransTraits{slI}{mouseI}(:,1),cellTransTraits{slI}{mouseI}(:,2),dayPairs{mouseI});
+        
+        
+        for tiI = 1:size(transInds,1)
+            pooledSplitterChanges{slI}{tiI} = [pooledSplitterChanges{slI}{tiI}; splitterChanges{slI}{mouseI}(tiI).overlapWithModel];
+            
+            transLabels{tiI} = [traitLabels{transInds(tiI,1)} '-to-' traitLabels{transInds(tiI,2)}];
+        end
+    end   
+end
+
+disp('Done splitter transitions')
 %% When are splitters showing up
 %How many days a splitter
 for slI = 1:2
@@ -379,17 +403,24 @@ end
 %Day trait center of mass
 logicalCOMgroupout = []; 
 pooledSplitDayCOM = [];
+pooledCOMBiases = [];
 for slI = 1:2
+    pooledSplitDayCOM{slI} = cell(numTraitGroups,1);
+    pooledCOMBiases{slI} = cell(numTraitGroups,1);
     for mouseI = 1:numMice
-        [logicalCOMgroupout{slI}{mouseI}] = RunGroupFunction('LogicalTraitCenterofMass',traitGroups{slI}{mouseI},ones(size(dayUse{mouseI})));%dayUseFilter{slI}{mouseI}
+        [logicalCOMgroupout{slI}{mouseI}] = RunGroupFunction('LogicalTraitCenterofMass',traitGroups{slI}{mouseI},dayUseFilter{slI}{mouseI});%ones(size(dayUse{mouseI}))
         %[dayCOMsignpVal(mouseI,tgI),dayCOMsignpVal(mouseI,tgI)] = signtest(logicalCOMgroupout{slI}{mouseI}(tgI).dayBias.Early
         
-        pooledSplitDayCOM{slI} = cell(numTraitGroups,1);
         for tgI = 1:numTraitGroups
             pooledSplitDayCOM{slI}{tgI} = [pooledSplitDayCOM{slI}{tgI}; logicalCOMgroupout{slI}{mouseI}(tgI).dayCOM];
-        end
+            
+            pooledCOMBiases{slI}{tgI} = [pooledCOMBiases{slI}{tgI}; logicalCOMgroupout{slI}{mouseI}(tgI).dayBias.Pct.Early...
+                                                                    logicalCOMgroupout{slI}{mouseI}(tgI).dayBias.Pct.NoBias+logicalCOMgroupout{slI}{mouseI}(tgI).dayBias.Pct.SplitAllDays...
+                                                                    logicalCOMgroupout{slI}{mouseI}(tgI).dayBias.Pct.Late];
+        end        
     end
 end
+
 
 %What are new cells?
 pooledNewCellPropChanges = [];
