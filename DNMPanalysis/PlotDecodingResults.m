@@ -1,5 +1,5 @@
 function [axHand, statsOut] = PlotDecodingResults(decodingResults,decodedWell,...
-    shuffledResults,dayDiffsDecoding,dayDiffsShuffled,fitType,axHand,useColors)
+    shuffledResults,dayDiffsDecoding,dayDiffsShuffled,fitType,axHand,useColors,xShift)
 
 dealCell = 1;
 dealDouble = 1;
@@ -21,7 +21,7 @@ if isempty(axHand)
     figure; axHand = axes;
 end
 
-numDayPairs = size(dayDiffsShuffled,1);
+numDayPairs = size(dayDiffsDecoding,1);
 numShuffles = size(shuffledResults,3);
 
 %if size(dayDiffs,2)==2
@@ -71,10 +71,10 @@ plotColors(dcCorrect==1,:) = repmat(useColors(1,:),sum(dcCorrect==1),1);
 plotColors(dcCorrect==0,:) = repmat(useColors(2,:),sum(dcCorrect==0),1);
 
 if any(shuffledResults)
-scatterBoxSL(allShuffledData,shuffledDataDays,'xLabels',daylabels,'transparency',0.2,'plotBox',false,'plotHand',axHand)
+scatterBoxSL(allShuffledData,shuffledDataDays+xShift,'xLabels',daylabels,'transparency',0.2,'plotBox',false,'plotHand',axHand)
 hold on
 end
-scatterBoxSL(dcRes,dcResDays,'transparency',1,'plotBox',false,'circleColors',plotColors,'plotHand',axHand)
+scatterBoxSL(dcRes,dcResDays+xShift,'transparency',1,'plotBox',false,'circleColors',plotColors,'plotHand',axHand)
 
 switch fitType
     case 'mean'
@@ -86,16 +86,16 @@ switch fitType
         
         errorbar(eachDayDiffs,statsOut.meanLine,statsOut.errorLine,'Color',useColors(1,:));
     case 'regress'
-        [statsOut.plotRegFWD,statsOut.daysPlotFWD] = FitLineForPlotting(dcRes(dcResDays>-1),dcResDays(dcResDays>-1));
-        
-        [statsOut.plotRegREV,statsOut.daysPlotREV] = FitLineForPlotting(dcRes(dcResDays<1),dcResDays(dcResDays<1));
-        
-        if length(statsOut.daysPlotREV) > 1
-           plot(statsOut.daysPlotREV,statsOut.plotRegREV,'Color',useColors(1,:))
+        if any(dcResDays>0)
+            [statsOut.plotRegFWD,statsOut.daysPlotFWD] = FitLineForPlotting(dcRes(dcResDays>0),dcResDays(dcResDays>0));
+            plot(statsOut.daysPlotFWD,statsOut.plotRegFWD,'Color',useColors(1,:),'LineWidth',2)
         end
-        if length(statsOut.daysPlotFWD) > 1
-            plot(statsOut.daysPlotFWD,statsOut.plotRegFWD,'Color',useColors(1,:))
+        
+        if any(dcResDays<0)
+            [statsOut.plotRegREV,statsOut.daysPlotREV] = FitLineForPlotting(dcRes(dcResDays<0),dcResDays(dcResDays<0));
+            plot(statsOut.daysPlotREV,statsOut.plotRegREV,'Color',useColors(1,:),'LineWidth',2)
         end
+        
 end
 
 

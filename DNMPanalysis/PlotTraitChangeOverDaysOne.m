@@ -42,6 +42,15 @@ for compI = 1:size(comps,1)
     [statsOut.rankSumAll(compI).pVal, statsOut.rankSumAll(compI).hVal] = ...
         ranksum(pooledTraitChanges{comps(compI,1)},pooledTraitChanges{comps(compI,2)});
     statsOut.rankSumAll(compI).whichWon = WhichWonRanks(pooledTraitChanges{comps(compI,1)},pooledTraitChanges{comps(compI,2)});
+    
+    for aa = 1:2
+        [~, ~, ~, statsOut(compI).slope.slopeRR(aa), statsOut(compI).slope.slopePval(aa), ~] =...
+            fitLinRegSL(pooledTraitChanges{comps(compI,aa)}, pooledDaysApart);
+    
+        [statsOut(compI).slope.slopeDiffZero(aa).Fval,statsOut(compI).slope.slopeDiffZero(aa).dfNum,...
+         statsOut(compI).slope.slopeDiffZero(aa).dfDen,statsOut(compI).slope.slopeDiffZero(aa).pVal] =...
+            slopeDiffFromZeroFtest(pooledTraitChanges{comps(compI,aa)}, pooledDaysApart);
+    end
 end
 
 end

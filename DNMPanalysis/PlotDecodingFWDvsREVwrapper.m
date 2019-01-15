@@ -1,9 +1,12 @@
 function [axHand,statsOut] = PlotDecodingFWDvsREVwrapper(decodingResults,decodedRight,dayDiffs,axHand)
 
 [axHand, ~] = PlotDecodingResults(decodingResults(dayDiffs>-1),decodedRight(dayDiffs>-1),...
-    [],dayDiffs(dayDiffs>-1),'mean',axHand,[0 1 0; 0.4706    0.6706    0.1882]);
+    [],dayDiffs(dayDiffs>-1),[],'mean',axHand,[0 1 0; 0.4706    0.6706    0.1882]);
+%(decodingResults,decodedWell,...
+%    shuffledResults,dayDiffsDecoding,dayDiffsShuffled,fitType,axHand,useColors)
+
 [axHand, ~] = PlotDecodingResults(decodingResults(dayDiffs<1),decodedRight(dayDiffs<1),...
-    [],abs(dayDiffs(dayDiffs<1)),'mean',axHand,[1 0 0;0.6392    0.0784    0.1804]);
+    [],abs(dayDiffs(dayDiffs<1)),[],'mean',axHand,[1 0 0;0.6392    0.0784    0.1804]);
 
 %Comparison of the two slopes
 [statsOut.comp.Fval,statsOut.comp.dfNum,statsOut.comp.dfDen,statsOut.comp.pVal] =...
