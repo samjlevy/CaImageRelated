@@ -375,15 +375,18 @@ suptitleSL('Mean correlation by days apart ARM')
 figure('Position',[317 403 1448 417]); 
 ggt = []; statsOut = [];
 ggt{1} = subplot(1,3,1);
-[ggt{1},statsOut{1}] = PlotChangeByDaysApartFWDonly(withinCSdayChangeMeanARM{cellCritUse},sameDayDayDiffsPooled{cellCritUse},condSetColors,condSetLabels,ggt{1});
+[ggt{1},statsOut{1}] = PlotChangeByDaysApartFWDonly(withinCSdayChangeMeanARM{cellCritUse},...
+    sameDayDayDiffsPooled{cellCritUse},condSetColors,condSetLabels,ggt{1});
 ggt{1}.Title.String = ['Mean All Bins'];
 xlabel('Days Apart'); ylabel('Change in mean PV corr'); ylim([-0.4 0.4])
 ggt{2} = subplot(1,3,2);
-[ggt{2},statsOut{2}] = PlotChangeByDaysApartFWDonly(withinCSdayChangeMeanHalfFirstARM{cellCritUse},sameDayDayDiffsPooled{cellCritUse},condSetColors,condSetLabels,ggt{2});
+[ggt{2},statsOut{2}] = PlotChangeByDaysApartFWDonly(withinCSdayChangeMeanHalfFirstARM{cellCritUse},...
+    sameDayDayDiffsPooled{cellCritUse},condSetColors,condSetLabels,ggt{2});
 ggt{2}.Title.String = ['1st 2 bins'];
 xlabel('Days Apart'); ylabel('Change in mean PV corr'); ylim([-0.4 0.4])
 ggt{3} = subplot(1,3,3);
-[ggt{3},statsOut{3}] = PlotChangeByDaysApartFWDonly(withinCSdayChangeMeanHalfSecondARM{cellCritUse},sameDayDayDiffsPooled{cellCritUse},condSetColors,condSetLabels,ggt{3});
+[ggt{3},statsOut{3}] = PlotChangeByDaysApartFWDonly(withinCSdayChangeMeanHalfSecondARM{cellCritUse},...
+    sameDayDayDiffsPooled{cellCritUse},condSetColors,condSetLabels,ggt{3});
 ggt{3}.Title.String = ['Last 2 bins'];
 xlabel('Days Apart'); ylabel('Change in mean PV corr'); ylim([-0.4 0.4])
 suptitleSL('Change of Within-Day PV corrs ARM')
@@ -490,11 +493,29 @@ statsOut = [];
 for slI = 1:length(decodeLoc)
 for dtI = 1:length(decodingType)
     figH = figure('Position',[723 207 690 559]);
-    [axH, statsOut{dtI}] = PlotDecodingOneVSother2(decodingResultsPooled{slI}{dtI},shuffledResultsPooled{slI}{dtI},decodedWellPooled{slI}{dtI},...
+    [axH, statsOut{slI}{dtI}] = PlotDecodingOneVSother2({decodingResultsPooled{slI}{dtI},shuffledResultsPooled{slI}{dtI},decodedWellPooled{slI}{dtI},...
                                                 sessDayDiffs{slI}{dtI}{1},sessDayDiffs{slI}{dtI}{1},{'Turn Direction','Task Phase'},figH);
     suptitleSL(['Decoding Comparison, ' fileName{dtI} ' cells on ' decodeLoc{slI}])
 end
 end
+
+%Stem vs. Arm
+decDim = {'Traj. Dest.','Task Phase'};
+statsOut = [];
+for dtI = 1:length(decodingType)
+for ddI = 1:2 %decoding dimension
+    figH = figure('Position',[723 207 690 559]);
+    [axH, statsOut{dtI}{ddI}] = PlotDecodingOneVSother2(...
+                            {decodingResultsPooled{1}{dtI}{ddI},decodingResultsPooled{2}{dtI}{ddI}},...
+                            {shuffledResultsPooled{1}{dtI}{ddI},shuffledResultsPooled{1}{dtI}{ddI}},...
+                            {decodedWellPooled{1}{dtI}{ddI},decodedWellPooled{1}{dtI}{ddI}},...
+                            sessDayDiffs{1}{dtI}{ddI},sessDayDiffs{1}{dtI}{ddI},decodeLoc,figH);
+    suptitleSL(['Decoding Comparison, ' fileName{dtI} ' cells on ' decDim{ddI}])
+end
+end
+
+
+
 
 
 
@@ -513,39 +534,34 @@ for slI = 1:length(decodeLoc)
         end
     end
 end
-       
-%LvR vs. SvT comparison
-statsOut = [];
-for slI = 1:length(decodeLoc)
-for dtI = 1:length(decodingType)
-    [axH, statsOut{dtI}] = PlotDecodingOneVSother(decodingResultsPooled{slI}{dtI},shuffledResultsPooled{slI}{dtI},decodedWellPooled{slI}{dtI},...
-                                                sessDayDiffs{slI}{dtI}{1},sessDayDiffs{slI}{dtI}{1},{'Turn Direction','Task Phase'});
-    suptitleSL(['Decoding Comparison, ' fileName{dtI} ' cells on ' decodeLoc{slI}])
-end
-end
+
 
 %Within dimension, which cell inclusion is better?
-dimsDecoded = regDecoding{1}{1}.titles;
+decDim = {'Traj. Dest.','Task Phase'};
 statsOut = [];
 for slI = 1:length(decodeLoc)
-for dwI = 1:length(dimsDecoded)
-[axH, statsOut{dwI}] = PlotDecodingOneVSother({decodingResultsPooled{1}{dwI} decodingResultsPooled{2}{dwI}},...
-                                         {shuffledResultsPooled{1}{dwI} shuffledResultsPooled{2}{dwI}},...
-                                         {decodedWellPooled{1}{dwI} decodedWellPooled{2}{dwI}},sessDayDiffs{1}{dwI},decodingType);
+for dwI = 1:length(decDim)
+      figH = figure('Position',[723 207 690 559]);
+      [axH, statsOut{slI}{dwI}] = PlotDecodingOneVSother2({decodingResultsPooled{slI}{1}{dwI} decodingResultsPooled{slI}{2}{dwI}},...
+                                         {shuffledResultsPooled{slI}{1}{dwI} shuffledResultsPooled{slI}{2}{dwI}},...
+                                         {decodedWellPooled{slI}{1}{dwI} decodedWellPooled{slI}{2}{dwI}},...
+                                         sessDayDiffs{slI}{1}{dwI},sessDayDiffs{slI}{1}{dwI},decodingType,figH);
       suptitleSL(['Decoding Cell Inclusion Comparison, ' dimsDecoded{dwI} ' on ' decodeLoc{slI}])
 end
 end
 
 %Regular vs Downsampling
-dimsDecoded = regDecoding{1}{1}.titles;
 statsOut = [];
 for slI = 1:length(decodeLoc)
 for dtI = 1:length(decodingType)
-    [axH, statsOut{dtI}] = PlotDecodingOneVSother(decodingResultsPooled{dtI},...
-           downsampledResultsPooled{dtI},decodeOutofDSpooled{dtI},sessDayDiffs{dtI}{1},sessDayDiffs{dtI}{1},{'Turn Direction','Task Phase'});
+    figH = figure('Position',[723 207 690 559]);
+    [axH, statsOut{slI}{dtI}] = PlotDecodingDECvsDS(decodingResultsPooled{slI}{dtI},...
+           downsampledResultsPooled{slI}{dtI},decodeOutofDSpooled{slI}{dtI},sessDayDiffs{slI}{dtI}{1},sessDayDiffs{slI}{dtI}{1},{'Turn Direction','Task Phase'},figH);
     suptitleSL(['Reg vs. downsampled distribution, ' fileName{dtI} ' cells on ' decodeLoc{slI}])
 end
 end
+
+
 
 %Downsampled inclusion comparison
 %Is each downsample above 95% of shuffles?

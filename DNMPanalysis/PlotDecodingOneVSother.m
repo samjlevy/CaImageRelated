@@ -31,22 +31,22 @@ if iscell(decodedWell{1}(1))
 end
 
 axH(1) = subplot(3,2,1:2);
-[axH(1), statsOut{1}] = PlotDecodingResults(decodingResults{1},decodedWell{1},shuffledResults{1},dayDiffsDecoding,dayDiffsShuffled,'mean',axH(1),[ ]);
+[axH(1), statsOut{1}] = PlotDecodingResults(decodingResults{1},decodedWell{1},shuffledResults{1},dayDiffsDecoding,dayDiffsShuffled,'mean',axH(1),[ ],-0.25);
 title(titles{1})
 xlim([min(dayDiffsDecoding)-0.5 max(dayDiffsDecoding)+0.5])
 xlabel('Days Apart'); ylabel('Pct. Decoded Correct')
 
 axH(2) = subplot(3,2,3:4);
-[axH(2), statsOut{2}] = PlotDecodingResults(decodingResults{2},decodedWell{2},shuffledResults{2},dayDiffsDecoding,dayDiffsShuffled,'mean',axH(2),[ ]);
+[axH(2), statsOut{2}] = PlotDecodingResults(decodingResults{2},decodedWell{2},shuffledResults{2},dayDiffsDecoding,dayDiffsShuffled,'mean',axH(2),[ ],0.25);
 title(titles{2})
 xlim([min(dayDiffsDecoding)-0.5 max(dayDiffsDecoding)+0.5])
 xlabel('Days Apart'); ylabel('Pct. Decoded Correct')
 
 axH(4) = subplot(3,2,6);
 [axH(4), statsOut{4}{1}] = PlotDecodingResults(decodingResults{1}(dayDiffsDecoding>-1),decodedWell{1}(dayDiffsDecoding>-1),...
-    shuffledResults{1}(dayDiffsShuffled>-1),dayDiffsDecoding(dayDiffsDecoding>-1),dayDiffsShuffled(dayDiffsShuffled>-1),'regress',axH(3),[ ]);%useColors
+    shuffledResults{1}(dayDiffsShuffled>-1),dayDiffsDecoding(dayDiffsDecoding>-1),dayDiffsShuffled(dayDiffsShuffled>-1),'regress',axH(3),[ ],-0.25);%useColors
 [axH(4), statsOut{4}{2}] = PlotDecodingResults(decodingResults{2}(dayDiffsDecoding>-1),decodedWell{2}(dayDiffsDecoding>-1),...
-    shuffledResults{2}(dayDiffsShuffled>-1),dayDiffsDecoding(dayDiffsDecoding>-1),dayDiffsShuffled(dayDiffsShuffled>-1),'regress',axH(3),[ ]);%useColors2
+    shuffledResults{2}(dayDiffsShuffled>-1),dayDiffsDecoding(dayDiffsDecoding>-1),dayDiffsShuffled(dayDiffsShuffled>-1),'regress',axH(3),[ ],0.25);%useColors2
 title(['FWD time ' titles{1} ' vs ' titles{2}])
 xlim([-0.5 max(dayDiffsDecoding)+0.5])
 xlabel('Days Apart'); ylabel('Pct. Decoded Correct')

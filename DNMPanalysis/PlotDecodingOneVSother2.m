@@ -32,94 +32,73 @@ if iscell(decodedWell{1}(1))
     end
 end
 
-axH(1) = subplot(2,2,1:2);
+FWDorREV = {'FWD','REV'};
 
-dayDiffsUse = dayDiffsDecoding>0;
-dayDiffsShuffUse = dayDiffsShuffled>0;
-shuffDayDiffs = repmat(dayDiffsShuffled(dayDiffsShuffUse),numShuffles,1);
+for plotI = 1:length(FWDorREV)
+    axH(plotI) = subplot(2,2,plotI*2-[1 0]);
 
-useColors = [1 0 0; 0.4 0.4 0.4];
-shuffResUse = shuffledResults{1}(dayDiffsShuffUse,:,:); shuffResUse = shuffResUse(:);
-[axH(1), ~] = PlotDecodingResults(decodingResults{1}(dayDiffsUse),decodedWell{1}(dayDiffsUse),...
-    shuffResUse,dayDiffsDecoding(dayDiffsUse),shuffDayDiffs,'regress',axH(1),useColors,-0.15);
+    switch FWDorREV{plotI}
+        case 'FWD'
+            dayDiffsUse = dayDiffsDecoding>0;
+            dayDiffsShuffUse = dayDiffsShuffled>0;
+            xlimHere = [0.5 max(dayDiffsDecoding)+0.5];
+        case 'REV'
+            dayDiffsUse = dayDiffsDecoding<0;
+            dayDiffsShuffUse = dayDiffsShuffled<0;
+            xlimHere = [min(dayDiffsDecoding)-0.5 -0.5];
+    end
+    shuffDayDiffs = repmat(dayDiffsShuffled(dayDiffsShuffUse),numShuffles,1);
 
-useColors = [0 0 1; 0.4 0.4 0.4];
-shuffResUse = shuffledResults{2}(dayDiffsShuffUse,:,:); shuffResUse = shuffResUse(:);
-[axH(1), ~] = PlotDecodingResults(decodingResults{2}(dayDiffsUse),decodedWell{2}(dayDiffsUse),...
-    shuffResUse,dayDiffsDecoding(dayDiffsUse),shuffDayDiffs,'regress',axH(1),useColors,0.15);
+    useColors = [1 0 0; 0.4 0.4 0.4];
+    shuffResUse = shuffledResults{1}(dayDiffsShuffUse,:,:); shuffResUse = shuffResUse(:);
+    [axH(plotI), ~] = PlotDecodingResults(decodingResults{1}(dayDiffsUse),decodedWell{1}(dayDiffsUse),...
+        shuffResUse,dayDiffsDecoding(dayDiffsUse),shuffDayDiffs,'regress',axH(plotI),useColors,-0.15);
 
-title(['FWD time ' titles{1} ' vs ' titles{2}])
-xlim([0 max(dayDiffsDecoding)+0.5])
-ylim([0 1.05])
-xlabel('Days Apart'); ylabel('Pct. Decoded Correct')
+    [statsOut(plotI).slopeDiffZero.Fval(1), statsOut(plotI).slopeDiffZero.dfNum(1),...
+        statsOut(plotI).slopeDiffZero.dfDen(1), statsOut(plotI).slopeDiffZero.pVal(1)] =...
+        slopeDiffFromZeroFtest(decodingResults{1}(dayDiffsUse),dayDiffsDecoding(dayDiffsUse));
+    [~, ~, ~, statsOut(plotI).slope.RR(1), statsOut(plotI).slope.pVal(1), ~] =...
+        fitLinRegSL(decodingResults{1}(dayDiffsUse),dayDiffsDecoding(dayDiffsUse));
+    
+    useColors = [0 0 1; 0.4 0.4 0.4];
+    shuffResUse = shuffledResults{2}(dayDiffsShuffUse,:,:); shuffResUse = shuffResUse(:);
+    [axH(plotI), ~] = PlotDecodingResults(decodingResults{2}(dayDiffsUse),decodedWell{2}(dayDiffsUse),...
+        shuffResUse,dayDiffsDecoding(dayDiffsUse),shuffDayDiffs,'regress',axH(plotI),useColors,0.15);
 
-statsOut{1}
+    [statsOut(plotI).slopeDiffZero.Fval(2),statsOut(plotI).slopeDiffZero.dfNum(2),...
+        statsOut(plotI).slopeDiffZero.dfDen(2),statsOut(plotI).slopeDiffZero.pVal(2)] =...
+        slopeDiffFromZeroFtest(decodingResults{2}(dayDiffsUse),dayDiffsDecoding(dayDiffsUse));
+    [~, ~, ~, statsOut(plotI).slope.RR(2), statsOut(plotI).slope.pVal(2), ~] =...
+        fitLinRegSL(decodingResults{2}(dayDiffsUse),dayDiffsDecoding(dayDiffsUse));
+    
+    title([FWDorREV{plotI} ' time ' titles{1} ' vs ' titles{2}])
+    xlim(xlimHere)
+    ylim([0 1.05])
+    xlabel('Days Apart'); 
+    ylabel('Pct. Decoded Correct')
 
-[statsOut.fwdSlope.Fval,statsOut.fwdSlope.dfNum,statsOut.fwdSlope.dfDen,statsOut.fwdSlope.pVal] =...
-    slopeDiffFromZeroFtest(decodingResults(dayDiffs>-1),dayDiffs(dayDiffs>-1));
-[~, ~, ~, statsOut.arm.slopeRR(tgI), statsOut.arm.slopePval(tgI), ~] =...
-        fitLinRegSL(pooledTraitChangesARM{tgI}, pooledDaysApartARM);
     %Slopes different from each other?
-    [statsOut.slopeDiffComp(compI).Fval,statsOut.slopeDiffComp(compI).dfNum,...
-     statsOut.slopeDiffComp(compI).dfDen,statsOut.slopeDiffComp(compI).pVal] =...
-        TwoSlopeFTest(pooledTraitChanges{comps(compI,1)},pooledTraitChanges{comps(compI,2)},...
-                      pooledDaysApart,pooledDaysApart);
+    [statsOut(plotI).slopeDiffComp.Fval,statsOut(plotI).slopeDiffComp.dfNum,...
+         statsOut(plotI).slopeDiffComp.dfDen,statsOut(plotI).slopeDiffComp.pVal] =...
+         TwoSlopeFTest(decodingResults{1}(dayDiffsUse),decodingResults{2}(dayDiffsUse),...
+                          dayDiffsDecoding(dayDiffsUse),dayDiffsDecoding(dayDiffsUse));
                   
     %Sign test each day
-    [statsOut.signtests(compI).pVal,statsOut.signtests(compI).hVal,...
-     statsOut.signtests(compI).whichWon,statsOut.signtests(compI).eachDayPair] =...
-        SignTestAllDayPairs(pooledTraitChanges{comps(compI,1)},...
-        pooledTraitChanges{comps(compI,2)},pooledDaysApart);
-
-    
-    
-    
-axH(2) = subplot(2,2,3:4);
-
-dayDiffsUse = dayDiffsDecoding<0;
-dayDiffsShuffUse = dayDiffsShuffled<0;
-shuffDayDiffs = repmat(dayDiffsShuffled(dayDiffsShuffUse),numShuffles,1);
-
-useColors = [1 0 0; 0.4 0.4 0.4];
-shuffResUse = shuffledResults{1}(dayDiffsShuffUse,:,:); shuffResUse = shuffResUse(:);
-[axH(2), statsOut{2}{1}] = PlotDecodingResults(decodingResults{1}(dayDiffsUse),decodedWell{1}(dayDiffsUse),...
-    shuffResUse,dayDiffsDecoding(dayDiffsUse),shuffDayDiffs,'regress',axH(2),useColors,-0.15);
-
-useColors = [0 0 1; 0.4 0.4 0.4];
-shuffResUse = shuffledResults{2}(dayDiffsShuffUse,:,:); shuffResUse = shuffResUse(:);
-[axH(2), statsOut{2}{2}] = PlotDecodingResults(decodingResults{2}(dayDiffsUse),decodedWell{2}(dayDiffsUse),...
-    shuffResUse,dayDiffsDecoding(dayDiffsUse),shuffDayDiffs,'regress',axH(2),useColors,0.15);
-
-title(['REV time ' titles{1} ' vs ' titles{2}])       
-xlim([min(dayDiffsDecoding)-0.5 0])
-ylim([0 1.05])
-xlabel('Days Apart'); ylabel('Pct. Decoded Correct')
-
-%{
-%Stats
-%Indiv. day sign test
-[statsOut{5}.signTest.pVal,statsOut{5}.signTest.hVal,statsOut{5}.signTest.stats] =...
-    signtest(decodingResults{1},decodingResults{2});
-   
-%Ranksum all day pairs
-[statsOut{5}.RSallDaypairs.pVal,statsOut{5}.RSallDaypairs.hVal,statsOut{5}.RSallDaypairs.whichWon,statsOut{5}.RSallDaypairs.dayPairs] =...
-    RankSumAllDaypairs(decodingResults{1},decodingResults{2},dayDiffsDecoding);
-    
-%Each dayDiff more out of shuffled?
-eachDayDiff = unique(dayDiffsDecoding);
-for dayDiffI = 1:length(eachDayDiff)
-    statsOut{5}.diffOut(dayDiffI,1) = sum(decodedWell{1}(dayDiffsDecoding==eachDayDiff(dayDiffI))) - ...
-            sum(decodedWell{2}(dayDiffsDecoding==eachDayDiff(dayDiffI)));
+    [statsOut(plotI).signtests.pVal, statsOut(plotI).signtests.hVal,...
+     statsOut(plotI).signtests.whichWon, statsOut(plotI).signtests.eachDayPair] =...
+        SignTestAllDayPairs(decodingResults{1}(dayDiffsUse),...
+        	decodingResults{2}(dayDiffsUse),dayDiffsDecoding(dayDiffsUse));
+        
+    %Ranksum each day
+    [statsOut(plotI).ranksums.pVal, statsOut(plotI).ranksums.hVal,...
+     statsOut(plotI).ranksums.whichWon, statsOut(plotI).ranksums.eachDayPair] =...
+        RankSumAllDaypairs(decodingResults{1}(dayDiffsUse),...
+        	decodingResults{2}(dayDiffsUse),dayDiffsDecoding(dayDiffsUse));
+        
+    %Ranksum
+    [statsOut(plotI).rankSumAll.pVal, statsOut(plotI).rankSumAll.hVal] = ...
+        ranksum(decodingResults{1}(dayDiffsUse),decodingResults{2}(dayDiffsUse));
 end
-[statsOut{5}.diffOutSignTest.pVal,statsOut{5}.diffOutSignTest.hVal] = signtest(statsOut{5}.diffOut);
-[~,statsOut{5}.diffOutSignTest.whichWon] = max([sum(decodedWell{1}) sum(decodedWell{2})]);
 
-%Compare slopes FWD and REV
-[statsOut{5}.TwoSlopeFWD.Fval,statsOut{5}.TwoSlopeFWD.dfNum,statsOut{5}.TwoSlopeFWD.dfDen,statsOut{5}.TwoSlopeFWD.pVal] =...
-    TwoSlopeFTest(decodingResults{1}(dayDiffsDecoding>-1), decodingResults{2}(dayDiffsDecoding>-1),...
-                                     dayDiffsDecoding(dayDiffsDecoding>-1), dayDiffsDecoding(dayDiffsDecoding>-1));
-[statsOut{5}.TwoSlopeREV.Fval,statsOut{5}.TwoSlopeREV.dfNum,statsOut{5}.TwoSlopeREV.dfDen,statsOut{5}.TwoSlopeREV.pVal] =...
-    TwoSlopeFTest(decodingResults{1}(dayDiffsDecoding<1), decodingResults{2}(dayDiffsDecoding<1),...
-                                     dayDiffsDecoding(dayDiffsDecoding<1), dayDiffsDecoding(dayDiffsDecoding<1));
-%}
+
 end

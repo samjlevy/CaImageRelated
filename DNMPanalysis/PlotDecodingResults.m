@@ -95,6 +95,8 @@ switch fitType
             [statsOut.plotRegREV,statsOut.daysPlotREV] = FitLineForPlotting(dcRes(dcResDays<0),dcResDays(dcResDays<0));
             plot(statsOut.daysPlotREV,statsOut.plotRegREV,'Color',useColors(1,:),'LineWidth',2)
         end
+    case 'none'
+        %do nothing
         
 end
 
