@@ -24,7 +24,6 @@ for condI = 1:numConds
 end
 
 comps = combnk(1:numConds,2);
-statsOut.comps = comps;
 for compI = 1:size(comps,1)
     %Slopes different from each other?
     [statsOut.slopeDiffComp(compI).Fval,statsOut.slopeDiffComp(compI).dfNum,...
@@ -44,13 +43,13 @@ for compI = 1:size(comps,1)
     statsOut.rankSumAll(compI).whichWon = WhichWonRanks(pooledTraitChanges{comps(compI,1)},pooledTraitChanges{comps(compI,2)});
     
     for aa = 1:2
-        [~, ~, ~, statsOut(compI).slope.slopeRR(aa), statsOut(compI).slope.slopePval(aa), ~] =...
+        [~, ~, ~, statsOut.slope(compI).slopeRR(aa), statsOut.slope(compI).slopePval(aa), ~] =...
             fitLinRegSL(pooledTraitChanges{comps(compI,aa)}, pooledDaysApart);
     
-        [statsOut(compI).slope.slopeDiffZero(aa).Fval,statsOut(compI).slope.slopeDiffZero(aa).dfNum,...
-         statsOut(compI).slope.slopeDiffZero(aa).dfDen,statsOut(compI).slope.slopeDiffZero(aa).pVal] =...
+        [statsOut.slope(compI).slopeDiffZero(aa).Fval,statsOut.slope(compI).slopeDiffZero(aa).dfNum,...
+         statsOut.slope(compI).slopeDiffZero(aa).dfDen,statsOut.slope(compI).slopeDiffZero(aa).pVal] =...
             slopeDiffFromZeroFtest(pooledTraitChanges{comps(compI,aa)}, pooledDaysApart);
     end
 end
-
+statsOut.comps = comps;
 end

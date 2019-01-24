@@ -12,9 +12,9 @@ for compI = 1:numComps
     [statsOutTemp] = PlotTraitChangeOverDaysOne(pooledTraitChanges(comparisons{compI}),pooledDaysApart,...
         colorsUse(comparisons{compI}),labels(comparisons{compI}),yLabel,ylims);
     
-    statsOut.slopeDiffComp(compI) = statsOutTemp.slopeDiffComp;
-    statsOut.signtests(compI) = statsOutTemp.signtests;
-    statsOut.rankSumAll(compI) = statsOutTemp.rankSumAll;
+    statsOut.slopeDiffComp{compI} = statsOutTemp.slopeDiffComp;
+    statsOut.signtests{compI} = statsOutTemp.signtests;
+    statsOut.rankSumAll{compI} = statsOutTemp.rankSumAll;
     statsOut.comps{compI} = statsOutTemp.comps;
     %{
     plot([0.5 max(pooledDaysApart)+0.5],[0 0],'k')

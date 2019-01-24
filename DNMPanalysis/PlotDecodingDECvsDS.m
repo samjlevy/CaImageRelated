@@ -1,16 +1,17 @@
-function [axH, statsOut] = PlotDecodingDECvsDS(decodingResults,shuffledResults,decodedWell,dayDiffsDecoding,dayDiffsShuffled,titles,figHand)
+function [axH, statsOut] = PlotDecodingDECvsDS(decodingResults,downsampledResults,shuffledResults,...
+    regDecodedWell,dsDecodedWell,dayDiffsDecoding,dayDiffsDownsampled,dayDiffsShuffled,titles,figHand)
 
-Maybe this should compare the lines for performance over shuffle (decodingresults(decodedWell)) vs. 
-                                        performance over downsampled (decodingresults(decodedAboveDS))
+%Maybe this should compare the lines for performance over shuffle (decodingresults(decodedWell)) vs. 
+%                                        performance over downsampled (decodingresults(decodedAboveDS))
 
 %shuffledResults = squeeze(shuffledResults);
 numShuffles = size(shuffledResults,3);
 
 %Reshape decoding data 
 numDDs = size(dayDiffsDecoding,1);
-if iscell(decodedWell{1}(1))
+if iscell(regDecodedWell{1}(1))
     resOrig = decodingResults;      decodingResults = [];
-    wellOrig = decodedWell;         decodedWell = [];
+    wellOrig = regDecodedWell;         regDecodedWell = [];
     ddsOrig = dayDiffsDecoding;     dayDiffsDecoding = [];
     for dtI = 1:length(resOrig)
         dcRes = [];
@@ -30,7 +31,7 @@ if iscell(decodedWell{1}(1))
         end
         
         decodingResults{dtI} = dcRes;
-    	decodedWell{dtI} = dcCorrect;
+    	regDecodedWell{dtI} = dcCorrect;
     	dayDiffsDecoding = dcResDays;
     end
 end
@@ -40,7 +41,7 @@ numPlots = length(decodingResults);
 
 for plotI = 1:numPlots
     for fwd = 1:length(FWDorREV)
-        axH(plotI) = subplot(numPlots,2,plotI*2-rem(fwd,2));
+        axH(plotI,fwd) = subplot(numPlots,2,plotI*2-rem(fwd,2));
 
         switch FWDorREV{fwd}
             case 'FWD'
@@ -52,28 +53,50 @@ for plotI = 1:numPlots
                 dayDiffsShuffUse = dayDiffsShuffled<0;
                 xlimHere = [min(dayDiffsDecoding)-0.5 -0.5];
         end
-        shuffDayDiffs = repmat(dayDiffsShuffled(dayDiffsShuffUse),numShuffles,1);
+        
+        useColorsA = [0 0 1; 0.4 0.4 0.4];
+        [axHand, lineOut] = PlotDecodingResults2(downsampledResults{plotI}(dayDiffsUse,:,:),dsDecodedWell{plotI}(dayDiffsUse),...
+            shuffledResults{plotI}(dayDiffsShuffUse,:,:),dayDiffsDecoding(dayDiffsUse),dayDiffsShuffled(dayDiffsUse),...
+            'regress',axH(plotI),useColorsA,0,'all');
+        
+        useColorsB = [1 0 0; 0.4 0.4 0.4];
+        [axHand, ~] = PlotDecodingResults2(decodingResults{plotI}(dayDiffsUse),regDecodedWell{plotI}(dayDiffsUse),...
+            shuffledResults{plotI}(dayDiffsShuffUse,:,:),dayDiffsDecoding(dayDiffsUse),dayDiffsShuffled(dayDiffsUse),...
+            'regress',axH(plotI),useColorsB,0,'all');
 
-        useColors = [1 0 0; 0.4 0.4 0.4];
-        shuffResUse = shuffledResults{plotI}(dayDiffsShuffUse,:,:); shuffResUse = shuffResUse(:);
-        [axH(plotI), ~] = PlotDecodingResults(decodingResults{plotI}(dayDiffsUse),decodedWell{1}(dayDiffsUse),...
-            shuffResUse,dayDiffsDecoding(dayDiffsUse),shuffDayDiffs,'none',axH(plotI),[],0);
-
-        [statsOut(plotI,fwd).slopeDiffZero.Fval, statsOut(plotI,fwd).slopeDiffZero.dfNum,...
-         statsOut(plotI,fwd).slopeDiffZero.dfDen, statsOut(plotI,fwd).slopeDiffZero.pVal] =...
-            slopeDiffFromZeroFtest(decodingResults{plotI}(dayDiffsUse),dayDiffsDecoding(dayDiffsUse));
-        [~, ~, ~, statsOut(plotI,fwd).slope.RR, statsOut(plotI,fwd).slope.pVal, ~] =...
-            fitLinRegSL(decodingResults{plotI}(dayDiffsUse),dayDiffsDecoding(dayDiffsUse));
+        hold on
+        switch FWDorREV{fwd}
+            case 'FWD'
+                plot(lineOut.daysPlotFWD,lineOut.plotRegFWD,'Color',useColorsA(1,:),'LineWidth',2)
+            case 'REV'
+                plot(lineOut.daysPlotREV,lineOut.plotRegREV,'Color',useColorsA(1,:),'LineWidth',2)
+        end
+        
+        %Comparison of the two slopes
+        %[statsOut(plotI,fwd).slopeComp.Fval,statsOut(plotI,fwd).slopeComp.dfNum,...
+        % statsOut(plotI,fwd).slopeComp.dfDen,statsOut(plotI,fwd).slopeComp.pVal] =...
+        %    TwoSlopeFTest(decodingResults{plotI}(dayDiffsUse), downsampledResults{plotI}(dayDiffsUse,:,:),...
+        %        dayDiffs(dayDiffs>0), abs(dayDiffs(dayDiffs<0)));
+            
+        %[statsOut(plotI,fwd).slopeDiffZero.Fval, statsOut(plotI,fwd).slopeDiffZero.dfNum,...
+        % statsOut(plotI,fwd).slopeDiffZero.dfDen, statsOut(plotI,fwd).slopeDiffZero.pVal] =...
+        %    slopeDiffFromZeroFtest(decodingResults{plotI}(dayDiffsUse & regDecodedWell{plotI}),dayDiffsDecoding(dayDiffsUse & regDecodedWell{plotI}));
+        %[~, ~, ~, statsOut(plotI,fwd).slope.RR, statsOut(plotI,fwd).slope.pVal, ~] =...
+        %    fitLinRegSL(decodingResults{plotI}(dayDiffsUse & regDecodedWell{plotI}),dayDiffsDecoding(dayDiffsUse & regDecodedWell{plotI}));
     
+        [allDS, allDSwell] = LinearizeCell(downsampledResults{plotI}(dayDiffsUse,:,:),dsDecodedWell{plotI}(dayDiffsUse));
         %Ranksum
         [statsOut(plotI,fwd).rankSumAll.pVal, statsOut(plotI,fwd).rankSumAll.hVal] = ...
-            ranksum(decodingResults{plotI}(dayDiffsUse),shuffResUse);
-    
+            ranksum(decodingResults{plotI}(dayDiffsUse),allDS);
+
+        cellDSdds = mat2cell(dayDiffsDownsampled,ones(length(dayDiffsDownsampled),1),1);
+        dsWellDDs = cellfun(@(x,y) x*ones(1,length(y)),cellDSdds,dsDecodedWell{plotI},'UniformOutput',false);
+        dsUseDDs = [dsWellDDs{dayDiffsUse}];
         %Ranksum each day
         [statsOut(plotI,fwd).ranksums.pVal, statsOut(plotI,fwd).ranksums.hVal,...
          statsOut(plotI,fwd).ranksums.whichWon, statsOut(plotI,fwd).ranksums.eachDayPair] =...
             RankSumAllDaypairsX(decodingResults{plotI}(dayDiffsUse),...
-                shuffResUse,dayDiffsDecoding(dayDiffsUse),shuffDayDiffs);
+                allDS,dayDiffsDecoding(dayDiffsUse),dsUseDDs);
     
         title([FWDorREV{fwd} ' time ' titles{plotI} ' vs shuffled'])
         xlim(xlimHere)

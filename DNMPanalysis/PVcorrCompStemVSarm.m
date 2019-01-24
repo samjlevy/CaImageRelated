@@ -1,11 +1,25 @@
-function [statsOut] = PVcorrCompStemVSarm(stemCorrsPooled,armCorrsPooled,pooledDaysApart,plotColors)   
+function [statsOut] = PVcorrCompStemVSarm(stemCorrsPooled,armCorrsPooled,pooledDaysApart,plotColors,plotWhat,yLimits)   
     
 plot([-0.5 max(pooledDaysApart)+0.5],[0 0],'k')
 hold on
 
-plot(pooledDaysApart-0.2,stemCorrsPooled,'.','Color',plotColors{1})
-plot(pooledDaysApart+0.2,armCorrsPooled,'.','Color',plotColors{2})
-
+switch plotWhat
+    case 'dots'
+        plot(pooledDaysApart-0.2,stemCorrsPooled,'.','Color',plotColors{1})
+        plot(pooledDaysApart+0.2,armCorrsPooled,'.','Color',plotColors{2})
+    case 'mean'
+        daysHere = unique(pooledDaysApart);
+        for dayI = 1:length(daysHere) 
+            stemMean(dayI) = mean(stemCorrsPooled(pooledDaysApart==daysHere(dayI)));
+            stemError(dayI) = standarderrorSL(stemCorrsPooled(pooledDaysApart==daysHere(dayI)));
+            
+            armMean(dayI) = mean(armCorrsPooled(pooledDaysApart==daysHere(dayI)));
+            armError(dayI) = standarderrorSL(armCorrsPooled(pooledDaysApart==daysHere(dayI)));
+        end
+        
+        errorbar(daysHere,stemMean,stemError,'LineWidth',2,'Color',plotColors{1})
+        errorbar(daysHere,armMean,armError,'LineWidth',2,'Color',plotColors{2})
+end
 daysHere = unique(pooledDaysApart);
 for dayI = 1:length(daysHere)
     [statsOut.rankSum.pVal(dayI),statsOut.rankSum.hVal(dayI)] = ranksum(...
@@ -29,6 +43,7 @@ for dayI = 1:length(daysHere)
     end
 end
 
+ylim(yLimits)
 xlim([min(pooledDaysApart)-0.5 max(pooledDaysApart)+0.5])
 
 end

@@ -5,6 +5,14 @@ if isempty(axHand)
     axHand = axes;
 end
 
+if ~iscell(comparisons)
+    comps = comparisons; comparisons = [];
+    for aa = 1:size(comparisons,1)
+        comparisons{aa,1} = comps(aa,:);
+    end
+end
+
+%Plot the scatter
 numDataPts = length(pooledSplitProp{1});
 grps = repmat(1:length(plotWhich),numDataPts,1); grps = grps(:);
 dataHere = [pooledSplitProp{plotWhich}]; 
@@ -18,20 +26,39 @@ if ~isempty(plotColors)
 else
     scatterBoxSL(dataHere, grps, 'xLabel', xLabels, 'plotBox', true, 'transparency', 0.8,'plotHandle',axHand)  
 end
-
 ylabel('Proportion of Splitter Cells')
 hold on
 ylim([-0.05 1.1])
+
+%Plot some stats stuff
 heightBump = 0.03;
 barXpos = axHand.XTick;
+barX = [];
+barHeights = [];
 for pcI = 1:size(comparisons,1)
-    splitPropDiffs{pcI} = pooledSplitProp{comparisons(pcI,2)} - pooledSplitProp{comparisons(pcI,1)};
+    compHere = comparisons{pcI};
+    
+    %comps = combnk(compHere,2);
+    %for compI = 1:size(comps,1)
+    splitPropDiffs{pcI} = pooledSplitProp{compHere(2)} - pooledSplitProp{compHere(1)};
     [statsOut.pPropDiffs(pcI),statsOut.hPropDiffs(pcI)] = signtest(splitPropDiffs{pcI}); %h = 1 reject (different)
     
     %plot a bar across the pair of compare inds
-    possibleHeight = max(round(cell2mat(cellfun(@max,pooledSplitProp(comparisons(pcI,:)),'UniformOutput',false)),1));
+    possibleHeight = max(round(cell2mat(cellfun(@max,pooledSplitProp(compHere),'UniformOutput',false)),1));
     possibleHeight = possibleHeight + heightBump;
-    plot(barXpos(comparisons(pcI,:)),[possibleHeight possibleHeight],'k','LineWidth',2)
+       
+    possibleX = barXpos(compHere);
+    
+    if pcI > 1
+    [foundOverlap, overlapAtAll] = CheckOverlap(barX,possibleX);
+    if any(overlapAtAll)
+        possibleHeight = max(barHeights(find(overlapAtAll)))+0.07;
+    end
+    end
+    barX = [barX; possibleX];
+    barHeights = [barHeights; possibleHeight];
+   
+    plot(barXpos(compHere),[possibleHeight possibleHeight],'k','LineWidth',2)
     
     switch statsOut.hPropDiffs(pcI)
         case 1
@@ -43,7 +70,7 @@ for pcI = 1:size(comparisons,1)
         case 0
             textPlot = 'n.s.';
     end
-    text(mean(barXpos(comparisons(pcI,:))),possibleHeight+0.025,textPlot,'Color','k','HorizontalAlignment','center')
+    text(mean(possibleX),possibleHeight+0.03,textPlot,'Color','k','HorizontalAlignment','center')
 end
 
 statsOut.propMeans = cell2mat(cellfun(@mean,pooledSplitProp,'UniformOutput',false));
