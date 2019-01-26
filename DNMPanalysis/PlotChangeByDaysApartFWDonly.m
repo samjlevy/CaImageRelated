@@ -27,7 +27,7 @@ for cscI = 1:size(condSetComps,1)
     titleText{cscI,1} = [plotColors{condSetComps(cscI,1)} ' vs ' plotColors{condSetComps(cscI,2)} ': p = ' num2str(twoSlopepVal(cscI))];
 end
 
-xlim([min(dayDiffs)+0.5 max(dayDiffs)+0.5])
+xlim([min(dayDiffs)-0.5 max(dayDiffs)+0.5])
 
 statsOut.DiffZeropVal = DiffZeropVal;
 statsOut.twoSlopepVal = twoSlopepVal;

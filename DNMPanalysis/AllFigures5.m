@@ -438,7 +438,7 @@ for condI = 1:length(condSetLabels)
     title(condSetLabels{condI})
     xlabel('Days Apart'); ylabel('Correlation')
 end
-suptitleSL(['Difference between STEM (dark) and ARM (light) corrs (' pvNames{cellCritUse} ')'])
+suptitleSL(['Difference between STEM (dark) and ARM (light) mean corrs (' pvNames{cellCritUse} ')'])
 
 
 %% Decoder results 

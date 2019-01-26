@@ -463,6 +463,51 @@ for slI = 1:2
 end
 disp('Done when do splitters show up')
 
+sourceCheck = [3 4 5];
+thisSource = [];
+thisSourceSum = [];
+thisSourceSumNorm = [];
+thisSourceSumNormSC = [];
+for slI = 1:2
+    for mouseI = 1:numMice
+        for tgI = 1:length(sourceCheck)
+            for dayI = 2:length(cellRealDays{mouseI})
+                tgJ = sourceCheck(tgI);
+                cellsHere = traitGroups{slI}{mouseI}{tgJ}(:,dayI);
+                
+                sources{1} = firstDayLogical{slI}{mouseI}(:,dayI);
+                sources{2} = traitGroups{slI}{mouseI}{3}(:,dayI-1);
+                sources{3} = traitGroups{slI}{mouseI}{4}(:,dayI-1);
+                sources{4} = traitGroups{slI}{mouseI}{5}(:,dayI-1);
+                
+                
+                
+                for scI = 1:4
+                    thisSource{slI}{mouseI}{tgI}{scI} = cellsHere + sources{scI} == 2; 
+                    thisSourceSum{slI}{mouseI}{tgI}{scI}(dayI-1) = sum(thisSource{slI}{mouseI}{tgI}{scI});
+                    thisSourceSumNorm{slI}{mouseI}{tgI}(scI,dayI-1) = thisSourceSum{slI}{mouseI}{tgI}{scI}(dayI-1) / sum(cellsHere); %dayUseFilter{slI}{mouseI}(:,dayI)
+                    thisSourceSumNormSC{slI}{scI}{tgI}(mouseI,dayI-1) = thisSourceSum{slI}{mouseI}{tgI}{scI}(dayI-1) / sum(cellsHere); %dayUseFilter{slI}{mouseI}(:,dayI)
+                end
+            end
+        end
+    end
+end
+
+sourceLabels = {'newCells','LRonly','STonly','both'};
+figure;
+for scI = 1:4
+    for tgI = 1:3
+        subplot(4,3,tgI+3*(scI-1))
+        for mouseI = 1:4
+            plot(thisSourceSumNorm{1}{mouseI}{tgI}(scI,:))
+            hold on
+        end
+        plot(mean(thisSourceSumNormSC{1}{scI}{tgI}(:,1:8),1),'k','LineWidth',2)
+        ylim([0 1])
+        
+        title([traitLabels{sourceCheck(tgI)} ' from ' sourceLabels{scI}])
+    end
+end
 %% Overlap in both
 pctTraitBothPooled = cell(numTraitGroups,1);
 for mouseI = 1:numMice
