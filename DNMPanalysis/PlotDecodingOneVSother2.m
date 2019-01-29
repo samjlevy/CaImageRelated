@@ -1,4 +1,4 @@
-function [axH, statsOut] = PlotDecodingOneVSother2(decodingResults,shuffledResults,decodedWell,dayDiffsDecoding,dayDiffsShuffled,titles,fiHand)
+function [axH, statsOut] = PlotDecodingOneVSother2(decodingResults,shuffledResults,decodedWell,dayDiffsDecoding,dayDiffsShuffled,titles,figHand)
 
 %shuffledResults = squeeze(shuffledResults);
 numShuffles = size(shuffledResults,3);
@@ -33,9 +33,19 @@ if iscell(decodedWell{1}(1))
 end
 
 FWDorREV = {'FWD','REV'};
+samePlot = 'yes';
+lineType = {'-';'-'};
+
+if strcmpi(samePlot,'yes')
+    axH(1) = axes;
+    lineType = {'-';'--'};
+end
 
 for plotI = 1:length(FWDorREV)
-    axH(plotI) = subplot(2,2,plotI*2-[1 0]);
+    axH(plotI) = axH(1); hold on
+    if strcmpi(samePlot,'no')
+        axH(plotI) = subplot(2,2,plotI*2-[1 0]);
+    end 
 
     switch FWDorREV{plotI}
         case 'FWD'
@@ -46,13 +56,16 @@ for plotI = 1:length(FWDorREV)
             dayDiffsUse = dayDiffsDecoding<0;
             dayDiffsShuffUse = dayDiffsShuffled<0;
             xlimHere = [min(dayDiffsDecoding)-0.5 -0.5];
+            if strcmpi(samePlot,'yes')
+                xlimHere = abs(fliplr(xlimHere));
+            end
     end
     shuffDayDiffs = repmat(dayDiffsShuffled(dayDiffsShuffUse),numShuffles,1);
 
     useColors = [1 0 0; 0.4 0.4 0.4];
     shuffResUse = shuffledResults{1}(dayDiffsShuffUse,:,:); shuffResUse = shuffResUse(:);
-    [axH(plotI), ~] = PlotDecodingResults(decodingResults{1}(dayDiffsUse),decodedWell{1}(dayDiffsUse),...
-        shuffResUse,dayDiffsDecoding(dayDiffsUse),shuffDayDiffs,'regress',axH(plotI),useColors,-0.15);
+    [axH(plotI), ~] = PlotDecodingResults2(decodingResults{1}(dayDiffsUse),decodedWell{1}(dayDiffsUse),...
+        shuffResUse,dayDiffsDecoding(dayDiffsUse),shuffDayDiffs,'mean',axH(plotI),useColors,-0.15,'all',true,lineType{plotI});
 
     [statsOut(plotI).slopeDiffZero.Fval(1), statsOut(plotI).slopeDiffZero.dfNum(1),...
         statsOut(plotI).slopeDiffZero.dfDen(1), statsOut(plotI).slopeDiffZero.pVal(1)] =...
@@ -62,8 +75,8 @@ for plotI = 1:length(FWDorREV)
     
     useColors = [0 0 1; 0.4 0.4 0.4];
     shuffResUse = shuffledResults{2}(dayDiffsShuffUse,:,:); shuffResUse = shuffResUse(:);
-    [axH(plotI), ~] = PlotDecodingResults(decodingResults{2}(dayDiffsUse),decodedWell{2}(dayDiffsUse),...
-        shuffResUse,dayDiffsDecoding(dayDiffsUse),shuffDayDiffs,'regress',axH(plotI),useColors,0.15);
+    [axH(plotI), ~] = PlotDecodingResults2(decodingResults{2}(dayDiffsUse),decodedWell{2}(dayDiffsUse),...
+        shuffResUse,dayDiffsDecoding(dayDiffsUse),shuffDayDiffs,'mean',axH(plotI),useColors,0.15,'all',true,lineType{plotI});
 
     [statsOut(plotI).slopeDiffZero.Fval(2),statsOut(plotI).slopeDiffZero.dfNum(2),...
         statsOut(plotI).slopeDiffZero.dfDen(2),statsOut(plotI).slopeDiffZero.pVal(2)] =...
@@ -74,7 +87,7 @@ for plotI = 1:length(FWDorREV)
     title([FWDorREV{plotI} ' time ' titles{1} ' vs ' titles{2}])
     xlim(xlimHere)
     ylim([0 1.05])
-    xlabel('Days Apart'); 
+    xlabel('Days Apart') 
     ylabel('Pct. Decoded Correct')
 
     %Slopes different from each other?

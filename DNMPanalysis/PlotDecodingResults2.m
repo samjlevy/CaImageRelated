@@ -1,5 +1,5 @@
 function [axHand, statsOut] = PlotDecodingResults2(decodingResults,decodedWell,...
-    shuffledResults,dayDiffsDecoding,dayDiffsShuffled,fitType,axHand,useColors,xShift,fitWhich)
+    shuffledResults,dayDiffsDecoding,dayDiffsShuffled,fitType,axHand,useColors,xShift,fitWhich,absNeg,lineType)
 
 statsOut = [];
 
@@ -41,6 +41,14 @@ for ddI = 1:numDayPairs
     end
 end
 
+if absNeg == true
+    if any(shuffledResults)
+    shuffledDataDays = abs(shuffledDataDays);
+    end
+    dcResDays = abs(dcResDays);
+    eachDayDiffs = abs(eachDayDiffs);
+end
+
 if isempty(useColors)
     useColors = [0 0 1; 1 0 0];
 end
@@ -51,6 +59,8 @@ plotColors(dcCorrect==0,:) = repmat(useColors(2,:),sum(dcCorrect==0),1);
 if isempty(axHand)
     figure; axHand = axes;
 end
+
+
 
 if any(shuffledResults)
 scatterBoxSL(allShuffledData,shuffledDataDays+xShift,'xLabels',daylabels,'transparency',0.2,'plotBox',false,'plotHand',axHand)
@@ -75,16 +85,20 @@ if any(dcResDays<0)
     [statsOut.plotRegREV,statsOut.daysPlotREV] = FitLineForPlotting(dcRes(dcResDays<0 & fitMod),dcResDays(dcResDays<0 & fitMod));
 end   
 
+if isempty(lineType)
+    lineType = '-';
+end
+
 switch fitType
     case 'mean'    
-        errorbar(eachDayDiffs,statsOut.meanLine,statsOut.errorLine,'Color',useColors(1,:));
+        errorbar(eachDayDiffs,statsOut.meanLine,statsOut.errorLine,lineType,'Color',useColors(1,:),'LineWidth',2);
     case 'regress'
         if any(dcResDays>0)
-            plot(statsOut.daysPlotFWD,statsOut.plotRegFWD,'Color',useColors(1,:),'LineWidth',2)
+            plot(statsOut.daysPlotFWD,statsOut.plotRegFWD,lineType,'Color',useColors(1,:),'LineWidth',2)
         end
         
         if any(dcResDays<0)
-            plot(statsOut.daysPlotREV,statsOut.plotRegREV,'Color',useColors(1,:),'LineWidth',2)
+            plot(statsOut.daysPlotREV,statsOut.plotRegREV,lineType,'Color',useColors(1,:),'LineWidth',2)
         end
     case 'none'
         %do nothing

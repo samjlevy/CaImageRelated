@@ -91,7 +91,11 @@ end
 if isempty(figHand)
     figHandOut.Children.YLim(2) = 1;
 else
-    figHandOut.YLim(2) = 1;
+    try
+        figHandOut.YLim(2) = 1;
+    catch
+        figHandOut.Children.YLim(2) = 1;
+    end
 end
 
 ylabel('Mean Correlation')

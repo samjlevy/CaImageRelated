@@ -505,16 +505,6 @@ end
 statsOut = [];
 for slI = 1:length(decodeLoc)
 for dtI = 1:length(decodingType)
-    figH = figure('Position',[723 207 690 559]);
-    
-
-
-
-
-%LvR vs. SvT comparison
-statsOut = [];
-for slI = 1:length(decodeLoc)
-for dtI = 1:length(decodingType)
     figH = figure('Position',[723 305 574 461]);
     [axH, statsOut{slI}{dtI}] = PlotDecodingOneVSother3(...
                                                 decodingResultsPooled{slI}{dtI},shuffledResultsPooled{slI}{dtI},...%shuffledResultsPooled{slI}{dtI}
@@ -523,6 +513,8 @@ for dtI = 1:length(decodingType)
     title(['Decoding Comparison, ' fileName{dtI} ' cells on ' decodeLoc{slI} ',r=lr b=st'])
 end
 end
+
+
 
 %Stem vs. Arm
 decDim = {'Traj. Dest.','Task Phase'};

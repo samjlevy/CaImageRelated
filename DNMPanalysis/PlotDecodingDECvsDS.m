@@ -57,12 +57,12 @@ for plotI = 1:numPlots
         useColorsA = [0 0 1; 0.4 0.4 0.4];
         [axHand, lineOut] = PlotDecodingResults2(downsampledResults{plotI}(dayDiffsUse,:,:),dsDecodedWell{plotI}(dayDiffsUse),...
             shuffledResults{plotI}(dayDiffsShuffUse,:,:),dayDiffsDecoding(dayDiffsUse),dayDiffsShuffled(dayDiffsUse),...
-            'regress',axH(plotI),useColorsA,0,'all');
+            'regress',axH(plotI),useColorsA,0,'all',false,[]);
         
         useColorsB = [1 0 0; 0.4 0.4 0.4];
         [axHand, ~] = PlotDecodingResults2(decodingResults{plotI}(dayDiffsUse),regDecodedWell{plotI}(dayDiffsUse),...
             shuffledResults{plotI}(dayDiffsShuffUse,:,:),dayDiffsDecoding(dayDiffsUse),dayDiffsShuffled(dayDiffsUse),...
-            'regress',axH(plotI),useColorsB,0,'all');
+            'regress',axH(plotI),useColorsB,0,'all',false,[]);
 
         hold on
         switch FWDorREV{fwd}
