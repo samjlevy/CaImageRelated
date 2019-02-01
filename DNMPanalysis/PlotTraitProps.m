@@ -40,11 +40,11 @@ for pcI = 1:size(comparisons,1)
     
     %comps = combnk(compHere,2);
     %for compI = 1:size(comps,1)
-    splitPropDiffs{pcI} = pooledSplitProp{compHere(2)} - pooledSplitProp{compHere(1)};
+    splitPropDiffs{pcI} = pooledSplitProp{plotWhich(compHere(2))} - pooledSplitProp{plotWhich(compHere(1))};
     [statsOut.pPropDiffs(pcI),statsOut.hPropDiffs(pcI)] = signtest(splitPropDiffs{pcI}); %h = 1 reject (different)
     
     %plot a bar across the pair of compare inds
-    possibleHeight = max(round(cell2mat(cellfun(@max,pooledSplitProp(compHere),'UniformOutput',false)),1));
+    possibleHeight = max(round(cell2mat(cellfun(@max,pooledSplitProp(plotWhich(compHere)),'UniformOutput',false)),1));
     possibleHeight = possibleHeight + heightBump;
        
     possibleX = barXpos(compHere);

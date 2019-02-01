@@ -1,5 +1,9 @@
-function [statsOut] = PlotDecodingScatter(decodingRes,shuffledRes,decodedWell,daysApart,fitWhich,plotDots,fitType,xDotShift,xLineShift,useColors,lineType,axHand)
+function [statsOut] = PlotDecodingScatter(decodingRes,shuffledRes,decodedWell,daysApart,fitWhich,plotDots,fitType,xDotShift,...
+    xLineShift,useColors,lineType,transparency,axHand)
 
+if isempty(transparency)
+    transparency = 1;
+end
 statsOut = [];
 numDayPairs = size(daysApart,1);
 
@@ -14,7 +18,7 @@ if ~isempty(decodingRes)
         dcResDays = [];
 
         for dpI = 1:length(decodedWell)
-            dcResDays = [dcResDays; dayaApart(dpI)*ones(length(decodedWell{dpI}),1)];
+            dcResDays = [dcResDays; daysApart(dpI)*ones(length(decodedWell{dpI}),1)];
             dcCorrect = [dcCorrect; decodedWell{dpI}(:)];
             if iscell(decodingRes(1))
                 dcRes = [dcRes; decodingRes{dpI}(:)];
@@ -62,20 +66,21 @@ if ~isempty(decodingRes)
 
     switch fitType
         case 'mean'    
-            errorbar(eachDayDiffs+xLineShift,statsOut.meanLine,statsOut.errorLine,lineType,'Color',useColors(1,:),'LineWidth',2);
+            aa = errorbar(eachDayDiffs+xLineShift,statsOut.meanLine,statsOut.errorLine,lineType,'Color',[useColors(1,:) transparency],'LineWidth',2);
         case 'meanNoErr'
-            plot(eachDayDiffs+xLineShift,statsOut.meanLine,lineType,'Color',useColors(1,:),'LineWidth',2);
+            aa = plot(eachDayDiffs+xLineShift,statsOut.meanLine,lineType,'Color',[useColors(1,:) transparency],'LineWidth',2);
         case 'regress'
             if any(dcResDays>0)
-                plot(statsOut.daysPlotFWD+xLineShift,statsOut.plotRegFWD,lineType,'Color',useColors(1,:),'LineWidth',2)
+                aa = plot(statsOut.daysPlotFWD+xLineShift,statsOut.plotRegFWD,lineType,'Color',[useColors(1,:) transparency],'LineWidth',2);
             end
 
             if any(dcResDays<0)
-                plot(statsOut.daysPlotREV+xLineShift,statsOut.plotRegREV,lineType,'Color',useColors(1,:),'LineWidth',2)
+                aa = plot(statsOut.daysPlotREV+xLineShift,statsOut.plotRegREV,lineType,'Color',[useColors(1,:) transparency],'LineWidth',2);
             end
         case 'none'
             %do nothing
     end
+    
        
 %Check if it's shuffled data
 elseif ~isempty(shuffledRes)

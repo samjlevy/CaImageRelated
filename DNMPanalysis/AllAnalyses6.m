@@ -21,6 +21,7 @@ zeronans = 1;
 posThresh = 3;
 cmperbin = (max(xlims)-min(xlims))/numBins;
 condPairs = [1 3; 2 4; 1 2; 3 4];
+mazeLocations = {'Stem','Arms'};
 
 disp('Loading stuff')
 for mouseI = 1:numMice
@@ -189,15 +190,6 @@ for mouseI = 1:numMice
 end
 
 disp('Done all setup stuff')
-%% Plot rasters for all good cells
-%Works, but probably don't accidentally run this
-%{
-for mouseI = 1:numMice
-    saveDir = fullfile(mainFolder,mice{mouseI});
-    cellsUse = find(sum(dayUse{mouseI},2)>0);
-    PlotRastersPDF(cellTBT{mouseI}, cellSSI{mouseI}, cellAllFiles{mouseI}, cellsUse, saveDir, mice{mouseI});
-end
-%}
 
 %% Splitter cells: Shuffle versions, pooled
 numShuffles = 1000;
@@ -463,50 +455,174 @@ for slI = 1:2
 end
 disp('Done when do splitters show up')
 
-sourceCheck = [3 4 5];
-thisSource = [];
-thisSourceSum = [];
-thisSourceSumNorm = [];
-thisSourceSumNormSC = [];
+cellCheck = [3 4 5];
+thisSource = []; thisSink = [];
+thisSourceSum = []; thisSinkSum = [];
+thisSourceSumNorm = []; thisSinkSumNorm = [];
+thisSourceSumNormSC = []; thisSinkSumNormSC = [];
 for slI = 1:2
+    abbrevDayDiffsPooled = [];
+    abbrevDayDiffsPooledJ = [];
     for mouseI = 1:numMice
-        for tgI = 1:length(sourceCheck)
+        for tgI = 1:length(cellCheck)
+            %Where do cells come from
             for dayI = 2:length(cellRealDays{mouseI})
-                tgJ = sourceCheck(tgI);
+                tgJ = cellCheck(tgI);
                 cellsHere = traitGroups{slI}{mouseI}{tgJ}(:,dayI);
                 
-                sources{1} = firstDayLogical{slI}{mouseI}(:,dayI);
+                %sources{1} = firstDayLogical{slI}{mouseI}(:,dayI);%
+                sources{1} = dayUseFilter{slI}{mouseI}(:,dayI-1)==0;%inactive previous day
                 sources{2} = traitGroups{slI}{mouseI}{3}(:,dayI-1);
                 sources{3} = traitGroups{slI}{mouseI}{4}(:,dayI-1);
                 sources{4} = traitGroups{slI}{mouseI}{5}(:,dayI-1);
+                sources{5} = traitGroups{slI}{mouseI}{8}(:,dayI-1);
+                sourceLabels = {'prevInactive','splitLR','splitST','splitBoth','notSplit'};
                 
-                
-                
-                for scI = 1:4
+                for scI = 1:length(sources)
                     thisSource{slI}{mouseI}{tgI}{scI} = cellsHere + sources{scI} == 2; 
                     thisSourceSum{slI}{mouseI}{tgI}{scI}(dayI-1) = sum(thisSource{slI}{mouseI}{tgI}{scI});
                     thisSourceSumNorm{slI}{mouseI}{tgI}(scI,dayI-1) = thisSourceSum{slI}{mouseI}{tgI}{scI}(dayI-1) / sum(cellsHere); %dayUseFilter{slI}{mouseI}(:,dayI)
                     thisSourceSumNormSC{slI}{scI}{tgI}(mouseI,dayI-1) = thisSourceSum{slI}{mouseI}{tgI}{scI}(dayI-1) / sum(cellsHere); %dayUseFilter{slI}{mouseI}(:,dayI)
                 end
             end
+            
+            dayPairsHere = combnk(1:length(cellRealDays{mouseI})-1,2);
+            abbrevRealDays = cellRealDays{mouseI}(2:end);
+            abbrevDayDiffs{mouseI} = diff(abbrevRealDays(dayPairsHere),[],2);
+            for scI = 1:length(sources)
+                [sourceChange{slI}{scI}{tgI}{mouseI}, sourcePctChange{slI}{scI}{tgI}{mouseI}] = TraitChangeDayPairs(...
+                        thisSourceSumNormSC{slI}{scI}{tgI}(mouseI,1:length(cellRealDays{mouseI})-1),dayPairsHere);
+            end
+            
+            %Where are cells going
+            for dayJ = 1:length(cellRealDays{mouseI})-1
+                tgK = cellCheck(tgI);
+                cellsHereJ = traitGroups{slI}{mouseI}{tgK}(:,dayJ);
+                
+                sinks{1} = dayUseFilter{slI}{mouseI}(:,dayJ+1)==0;
+                sinks{2} = traitGroups{slI}{mouseI}{3}(:,dayJ+1);
+                sinks{3} = traitGroups{slI}{mouseI}{4}(:,dayJ+1);
+                sinks{4} = traitGroups{slI}{mouseI}{5}(:,dayJ+1);
+                sinks{5} = traitGroups{slI}{mouseI}{8}(:,dayJ+1);
+                sinkLabels = {'nextInactive','splitLR','splitST','splitBoth','notSplit'};
+                
+                for scJ = 1:length(sinks)
+                    thisSink{slI}{mouseI}{tgI}{scJ} = cellsHereJ + sinks{scJ} == 2;
+                    thisSinkSum{slI}{mouseI}{tgI}{scJ}(dayJ) = sum(thisSink{slI}{mouseI}{tgI}{scJ});
+                    thisSinkSumNorm{slI}{mouseI}{tgI}(scJ,dayJ) = thisSinkSum{slI}{mouseI}{tgI}{scJ}(dayJ) / sum(cellsHereJ);
+                    thisSinkSumNormSC{slI}{scJ}{tgI}(mouseI,dayJ) = thisSinkSum{slI}{mouseI}{tgI}{scJ}(dayJ) / sum(cellsHereJ);
+                end    
+            end
+            
+            dayPairsHereJ = combnk(1:length(cellRealDays{mouseI})-1,2);
+            abbrevRealDaysJ = cellRealDays{mouseI}(1:end-1);
+            abbrevDayDiffsJ{mouseI} = diff(abbrevRealDaysJ(dayPairsHereJ),[],2);
+            
+            for scJ = 1:length(sinks)
+                [sinkChange{slI}{scJ}{tgI}{mouseI}, sinkPctChange{slI}{scJ}{tgI}{mouseI}] = TraitChangeDayPairs(...
+                        thisSinkSumNormSC{slI}{scJ}{tgI}(mouseI,1:length(cellRealDays{mouseI})-1),dayPairsHereJ);
+            end
         end
+        abbrevDayDiffsPooled = [abbrevDayDiffsPooled; abbrevDayDiffs{mouseI}];
+        abbrevDayDiffsPooledJ = [abbrevDayDiffsPooledJ; abbrevDayDiffsJ{mouseI}];
     end
 end
+
+
+for slI = 1:2
+    %figure;
+    for tgI = 1:3
+        %Source of cells
+        for scI = 1:length(sources)
+            sourceChangePooled{slI}{tgI}{scI} = [];
+            for mouseI = 1:numMice
+                sourceChangePooled{slI}{tgI}{scI} = [sourceChangePooled{slI}{tgI}{scI}; sourceChange{slI}{scI}{tgI}{mouseI}(:)];
+            end
+        end
+        
+        %Where cells going
+        for scK = 1:length(sinks)
+            sinkChangePooled{slI}{tgI}{scK} = [];
+            for mouseI = 1:numMice
+                sinkChangePooled{slI}{tgI}{scK} = [sinkChangePooled{slI}{tgI}{scK}; sinkChange{slI}{scK}{tgI}{mouseI}(:)];
+            end
+        end
+        
+    end
+    
+    %Where are cells coming from
+    dfg = figure('Position',[468 122 1132 609]);
+       
+    sourceColors = {[0.9294    0.6902    0.1294];colorAssc{1}; colorAssc{2}; colorAssc{5}; colorAssc{8}};
+    sourceColorsAll = {sourceColors{:} sourceColors{:} sourceColors{:}};
+    scPooledAll = {sourceChangePooled{slI}{1}{:} sourceChangePooled{slI}{2}{:} sourceChangePooled{slI}{3}{:}};
+    compsAll = [1 2 3 4 5; 6 7 8 9 10; 11 12 13 14 15];
+    sourceLabelsAll = {sourceLabels{:} sourceLabels{:} sourceLabels{:}};
+        
+    [figHand,statsOut] = PlotTraitChangeOverDays(scPooledAll,abbrevDayDiffsPooled,compsAll,...
+        sourceColorsAll,sourceLabelsAll,dfg,true,'regress',[-1 1],'change pct This Source');
+    for tgI = 1:3
+        dfg.Children((3+1)*2-tgI*2).Title.String = ['sources for: ' traitLabels{cellCheck(tgI)}];%
+    end
+    suptitleSL(['Where are these cells coming from? ' upper(mazeLocations{slI})])
+    
+    %Where are cells going
+    dfh = figure('Position',[468 122 1132 609]);
+       
+    sourceColors = {[0.9294    0.6902    0.1294];colorAssc{1}; colorAssc{2}; colorAssc{5}; colorAssc{8}};
+    sourceColorsAll = {sourceColors{:} sourceColors{:} sourceColors{:}};
+    scPooledAllK = {sinkChangePooled{slI}{1}{:} sinkChangePooled{slI}{2}{:} sinkChangePooled{slI}{3}{:}};
+    compsAll = [1 2 3 4 5; 6 7 8 9 10; 11 12 13 14 15];
+    sinkLabelsAll = {sinkLabels{:} sinkLabels{:} sinkLabels{:}};
+        
+    [figHand,statsOut] = PlotTraitChangeOverDays(scPooledAllK,abbrevDayDiffsPooledJ,compsAll,...
+        sourceColorsAll,sinkLabelsAll,dfh,true,'regress',[-1 1],'change pct This Source');
+    for tgI = 1:3
+        dfh.Children((3+1)*2-tgI*2).Title.String = ['sinks for: ' traitLabels{cellCheck(tgI)}];
+    end        
+    suptitleSL(['Where are these cells going? ' upper(mazeLocations{slI})])
+    
+end
+
 
 sourceLabels = {'newCells','LRonly','STonly','both'};
 figure;
 for scI = 1:4
     for tgI = 1:3
-        subplot(4,3,tgI+3*(scI-1))
+        %subplot(4,3,tgI+3*(scI-1))
         for mouseI = 1:4
-            plot(thisSourceSumNorm{1}{mouseI}{tgI}(scI,:))
+            %plot(thisSourceSumNorm{1}{mouseI}{tgI}(scI,:))
             hold on
         end
-        plot(mean(thisSourceSumNormSC{1}{scI}{tgI}(:,1:8),1),'k','LineWidth',2)
+        %plot(mean(thisSourceSumNormSC{1}{scI}{tgI}(:,1:8),1),'k','LineWidth',2)
+        
+        dataKeep{1}{tgI}(scI,:) = mean(thisSourceSumNormSC{1}{scI}{tgI}(:,1:8),1);
         ylim([0 1])
         
-        title([traitLabels{sourceCheck(tgI)} ' from ' sourceLabels{scI}])
+        %title([traitLabels{sourceCheck(tgI)} ' from ' sourceLabels{scI}])
     end
+end
+
+figure;
+scColors = {[0.9294    0.6902    0.1294];colorAssc{1}; colorAssc{2}; colorAssc{5}};
+for tgI = 1:3
+    barDataAll = [];
+    pp = [];
+    subplot(1,3,tgI)
+    for dayI = 1:8
+        dataHere = dataKeep{1}{tgI}(:,dayI);
+        barData = dataHere/sum(dataHere);
+        barDataAll = [barDataAll; barData(:)'];
+    end
+    
+    for scI = 1:4
+        pp(scI) = plot(barDataAll(:,scI),'LineWidth',2,'Color',scColors{scI},'DisplayName',sourceLabels{scI});
+        hold on
+    end
+    ylim([0 1])
+    title([traitLabels{cellCheck(tgI)} ' sources'])   
+    legend(pp,'location','nw')
+    xlabel('DayN+1/DayN')
 end
 %% Overlap in both
 pctTraitBothPooled = cell(numTraitGroups,1);

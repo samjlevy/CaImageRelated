@@ -1,4 +1,4 @@
-function [figHand,statsOut] = PlotTraitChangeOverDays(pooledTraitChanges,pooledDaysApart,comparisons,colorsUse,labels,figHand,ylims,yLabel)
+function [figHand,statsOut] = PlotTraitChangeOverDays(pooledTraitChanges,pooledDaysApart,comparisons,colorsUse,labels,figHand,plotDots,lineType,ylims,yLabel)
 
 if isnumeric(comparisons)
     numComps = size(comparisons,1);
@@ -10,7 +10,7 @@ end
 for compI = 1:numComps
     subplot(1,numComps,compI)
     [statsOutTemp] = PlotTraitChangeOverDaysOne(pooledTraitChanges(comparisons{compI}),pooledDaysApart,...
-        colorsUse(comparisons{compI}),labels(comparisons{compI}),yLabel,ylims);
+        colorsUse(comparisons{compI}),labels(comparisons{compI}),plotDots,lineType,yLabel,ylims);
     
     statsOut.slopeDiffComp{compI} = statsOutTemp.slopeDiffComp;
     statsOut.signtests{compI} = statsOutTemp.signtests;
