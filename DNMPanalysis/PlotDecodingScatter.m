@@ -46,6 +46,8 @@ if ~isempty(decodingRes)
     fitMod = true(length(dcRes),1);
     if strcmpi(fitWhich,'goodOnly')
         fitMod = logical(dcCorrect);
+    elseif strcmpi(fitWhich,'all')%really anything else
+        %do nothing
     end
     
     for ddI = 1:length(eachDayDiffs)

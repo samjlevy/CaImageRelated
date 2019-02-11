@@ -18,7 +18,7 @@ end
 
 %}
 
-eachDayPair = unique(dayDiffsA);
+eachDayPair = unique([dayDiffsA(:); dayDiffsB(:)]);
 
 for dpI = 1:length(eachDayPair)
     datA = dataVecA(dayDiffsA==eachDayPair(dpI));

@@ -189,6 +189,10 @@ for mouseI = 1:numMice
     pooledAllRealDayDiffs = [pooledAllRealDayDiffs; allRealDayDiffs{mouseI}];
 end
 
+purp = [0.4902    0.1804    0.5608]; orng = [0.8510    0.3294    0.1020];
+colorAssc = { [1 0 0]     [0 0 1]    [1 0 1]       [0 1 1]         purp     orng        [0 1 0]       [0 0 0]};
+traitLabels = {'splitLR' 'splitST'  'splitLRonly' 'splitSTonly' 'splitBOTH' 'splitONE' 'splitEITHER' 'dontSplit'};
+
 disp('Done all setup stuff')
 
 %% Splitter cells: Shuffle versions, pooled
@@ -338,6 +342,7 @@ splitCBgroupOut = []; splitSSgroupOut = [];
 for slI = 1:2
     pooledSplitterComesBack{slI} = cell(numTraitGroups,1);
     pooledSplitterStillSplitter{slI} = cell(numTraitGroups,1);
+    pooledSplitterStillSplitterNorm{slI} = cell(numTraitGroups,1);
     
     for mouseI = 1:numMice
         [splitCBgroupOut{slI}{mouseI}] = RunGroupFunction(...
@@ -347,8 +352,16 @@ for slI = 1:2
             'GetCellsOverlap',traitGroups{slI}{mouseI},traitGroups{slI}{mouseI},dayPairs{mouseI});
         
         for tgI = 1:numTraitGroups
+            %cellsActiveHere = sum(dayUseFilter{slI}{mouseI},1);
+            splitSSgroupOut{slI}{mouseI}(tgI).overlapWithModelActiveNormalized = ...
+                (splitSSgroupOut{slI}{mouseI}(tgI).overlapWithModel ./ splitCBgroupOut{slI}{mouseI}(tgI).overlapWithModel);%...
+                %.*splitCBgroupOut{slI}{mouseI}(tgI).overlapWithModel;
+        end
+        
+        for tgI = 1:numTraitGroups
             pooledSplitterComesBack{slI}{tgI} =  [pooledSplitterComesBack{slI}{tgI}; splitCBgroupOut{slI}{mouseI}(tgI).overlapWithModel];
             pooledSplitterStillSplitter{slI}{tgI} =  [pooledSplitterStillSplitter{slI}{tgI}; splitSSgroupOut{slI}{mouseI}(tgI).overlapWithModel];
+            pooledSplitterStillSplitterNorm{slI}{tgI} =  [pooledSplitterStillSplitterNorm{slI}{tgI}; splitSSgroupOut{slI}{mouseI}(tgI).overlapWithModelActiveNormalized];
         end
     end
 end
@@ -415,9 +428,11 @@ end
 
 
 %What are new cells?
+pooledNewCellProps = [];
 pooledNewCellPropChanges = [];
 firstDayGroupout = []; firstDays = [];
 for slI = 1:2
+    pooledNewCellProps{slI} = cell(numTraitGroups,1);
     pooledNewCellPropChanges{slI} = cell(numTraitGroups,1);
     for mouseI = 1:numMice
         firstDays{slI}{mouseI} = GetFirstDayTrait(dayUseFilter{slI}{mouseI});
@@ -426,19 +441,20 @@ for slI = 1:2
         firstDayLogical{slI}{mouseI} = false(size(cellSSI{mouseI}));
         for cellI = 1:size(cellSSI{mouseI},1)
             if ~isnan(firstDays{slI}{mouseI}(cellI))
-            firstDayLogical{slI}{mouseI}(cellI,firstDays{slI}{mouseI}(cellI)) = true;
-            firstDayNums{slI}{mouseI} = sum(firstDayLogical{slI}{mouseI},1);
+            firstDayLogical{slI}{mouseI}(cellI,firstDays{slI}{mouseI}(cellI)) = true;  %NEED to eliminate day 1 after performing this
             end
         end
-    
+        firstDayLogical{slI}{mouseI}(:,1) = [];
+        firstDayNums{slI}{mouseI} = sum(firstDayLogical{slI}{mouseI},1);
         
         for tgI = 1:numTraitGroups
-            traitFirst{slI}{mouseI}{tgI} = traitGroups{slI}{mouseI}{tgI}.*firstDayLogical{slI}{mouseI};
+            traitFirst{slI}{mouseI}{tgI} = traitGroups{slI}{mouseI}{tgI}(:,2:end).*firstDayLogical{slI}{mouseI};
             traitFirstNums{slI}{mouseI}{tgI} = sum(traitFirst{slI}{mouseI}{tgI},1);
 
             traitFirstPcts{slI}{mouseI}{tgI} = traitFirstNums{slI}{mouseI}{tgI}./ firstDayNums{slI}{mouseI};
-            [newCellChanges{slI}{mouseI}{tgI},~] = TraitChangeDayPairs(traitFirstPcts{slI}{mouseI}{tgI},dayPairs{mouseI});
+            [newCellChanges{slI}{mouseI}{tgI},~] = TraitChangeDayPairs(traitFirstPcts{slI}{mouseI}{tgI},combnk(1:length(cellRealDays{mouseI})-1,2));%
 
+            pooledNewCellProps{slI}{tgI} = [pooledNewCellProps{slI}{tgI}; traitFirstPcts{slI}{mouseI}{tgI}(:)];
             pooledNewCellPropChanges{slI}{tgI} = [pooledNewCellPropChanges{slI}{tgI}; newCellChanges{slI}{mouseI}{tgI}(:)];
         end
         
@@ -455,80 +471,52 @@ for slI = 1:2
 end
 disp('Done when do splitters show up')
 
+%% Splitter sources and sinks
 cellCheck = [3 4 5];
-thisSource = []; thisSink = [];
-thisSourceSum = []; thisSinkSum = [];
-thisSourceSumNorm = []; thisSinkSumNorm = [];
-thisSourceSumNormSC = []; thisSinkSumNormSC = [];
+%transCheck = [3 3; 3 4; 3 5; 4 4; 4 3; 4 5; 5 5; 5 3; 5 4];
+transCheck = [3 5; 4 5; 5 3; 5 4]; %sources: [starts as, becomes]
+transCheck = [1 3; 2 3; 3 1; 3 2]; %in cellCheck indices
+transLabels = {'LR to BOTH','ST to BOTH', 'BOTH to LR', 'BOTH t ST'};
+
+pooledSourceChanges = []; 
+pooledDailySources = [];
+pooledSinkChanges = [];
+pooledDailySinks = [];
+sourceDayDiffsPooled = [];
+sinkDayDiffsPooled = [];
+newCellProps = [];
+newCellPropChanges = [];
+cellTransProps = [];
+cellTransPropChanges = [];
+
 for slI = 1:2
-    abbrevDayDiffsPooled = [];
-    abbrevDayDiffsPooledJ = [];
     for mouseI = 1:numMice
-        for tgI = 1:length(cellCheck)
-            %Where do cells come from
-            for dayI = 2:length(cellRealDays{mouseI})
-                tgJ = cellCheck(tgI);
-                cellsHere = traitGroups{slI}{mouseI}{tgJ}(:,dayI);
-                
-                %sources{1} = firstDayLogical{slI}{mouseI}(:,dayI);%
-                sources{1} = dayUseFilter{slI}{mouseI}(:,dayI-1)==0;%inactive previous day
-                sources{2} = traitGroups{slI}{mouseI}{3}(:,dayI-1);
-                sources{3} = traitGroups{slI}{mouseI}{4}(:,dayI-1);
-                sources{4} = traitGroups{slI}{mouseI}{5}(:,dayI-1);
-                sources{5} = traitGroups{slI}{mouseI}{8}(:,dayI-1);
-                sourceLabels = {'prevInactive','splitLR','splitST','splitBoth','notSplit'};
-                
-                for scI = 1:length(sources)
-                    thisSource{slI}{mouseI}{tgI}{scI} = cellsHere + sources{scI} == 2; 
-                    thisSourceSum{slI}{mouseI}{tgI}{scI}(dayI-1) = sum(thisSource{slI}{mouseI}{tgI}{scI});
-                    thisSourceSumNorm{slI}{mouseI}{tgI}(scI,dayI-1) = thisSourceSum{slI}{mouseI}{tgI}{scI}(dayI-1) / sum(cellsHere); %dayUseFilter{slI}{mouseI}(:,dayI)
-                    thisSourceSumNormSC{slI}{scI}{tgI}(mouseI,dayI-1) = thisSourceSum{slI}{mouseI}{tgI}{scI}(dayI-1) / sum(cellsHere); %dayUseFilter{slI}{mouseI}(:,dayI)
-                end
-            end
-            
-            dayPairsHere = combnk(1:length(cellRealDays{mouseI})-1,2);
-            abbrevRealDays = cellRealDays{mouseI}(2:end);
-            abbrevDayDiffs{mouseI} = diff(abbrevRealDays(dayPairsHere),[],2);
-            for scI = 1:length(sources)
-                [sourceChange{slI}{scI}{tgI}{mouseI}, sourcePctChange{slI}{scI}{tgI}{mouseI}] = TraitChangeDayPairs(...
-                        thisSourceSumNormSC{slI}{scI}{tgI}(mouseI,1:length(cellRealDays{mouseI})-1),dayPairsHere);
-            end
-            
-            %Where are cells going
-            for dayJ = 1:length(cellRealDays{mouseI})-1
-                tgK = cellCheck(tgI);
-                cellsHereJ = traitGroups{slI}{mouseI}{tgK}(:,dayJ);
-                
-                sinks{1} = dayUseFilter{slI}{mouseI}(:,dayJ+1)==0;
-                sinks{2} = traitGroups{slI}{mouseI}{3}(:,dayJ+1);
-                sinks{3} = traitGroups{slI}{mouseI}{4}(:,dayJ+1);
-                sinks{4} = traitGroups{slI}{mouseI}{5}(:,dayJ+1);
-                sinks{5} = traitGroups{slI}{mouseI}{8}(:,dayJ+1);
-                sinkLabels = {'nextInactive','splitLR','splitST','splitBoth','notSplit'};
-                
-                for scJ = 1:length(sinks)
-                    thisSink{slI}{mouseI}{tgI}{scJ} = cellsHereJ + sinks{scJ} == 2;
-                    thisSinkSum{slI}{mouseI}{tgI}{scJ}(dayJ) = sum(thisSink{slI}{mouseI}{tgI}{scJ});
-                    thisSinkSumNorm{slI}{mouseI}{tgI}(scJ,dayJ) = thisSinkSum{slI}{mouseI}{tgI}{scJ}(dayJ) / sum(cellsHereJ);
-                    thisSinkSumNormSC{slI}{scJ}{tgI}(mouseI,dayJ) = thisSinkSum{slI}{mouseI}{tgI}{scJ}(dayJ) / sum(cellsHereJ);
-                end    
-            end
-            
-            dayPairsHereJ = combnk(1:length(cellRealDays{mouseI})-1,2);
-            abbrevRealDaysJ = cellRealDays{mouseI}(1:end-1);
-            abbrevDayDiffsJ{mouseI} = diff(abbrevRealDaysJ(dayPairsHereJ),[],2);
-            
-            for scJ = 1:length(sinks)
-                [sinkChange{slI}{scJ}{tgI}{mouseI}, sinkPctChange{slI}{scJ}{tgI}{mouseI}] = TraitChangeDayPairs(...
-                        thisSinkSumNormSC{slI}{scJ}{tgI}(mouseI,1:length(cellRealDays{mouseI})-1),dayPairsHereJ);
-            end
-        end
-        abbrevDayDiffsPooled = [abbrevDayDiffsPooled; abbrevDayDiffs{mouseI}];
-        abbrevDayDiffsPooledJ = [abbrevDayDiffsPooledJ; abbrevDayDiffsJ{mouseI}];
+        targets{mouseI} = traitGroups{slI}{mouseI}(cellCheck);
+        sources{mouseI} = [dayUseFilter{slI}{mouseI}==0; traitGroups{slI}{mouseI}([cellCheck 8])];
+        sinks{mouseI} = sources{mouseI};
     end
+    
+    [pooledSourceChanges{slI}, pooledDailySources{slI}, pooledSinkChanges{slI}, pooledDailySinks{slI}, sourceDayDiffsPooled{slI}, sinkDayDiffsPooled{slI}] =...
+        CheckLogicalSinksAndSources(targets,sources,sinks,cellRealDays);
+    
+    %Reorganize new cell (previously inactive) destinations (what pct of ccI was previously inactive)
+    for ccI = 1:length(cellCheck)
+        newCellProps{slI}{ccI} = pooledDailySources{slI}{ccI}{1};
+        newCellPropChanges{slI}{ccI} = pooledSourceChanges{slI}{ccI}{1};
+    end
+    
+    %Reorganize cell type transitions
+    for tcI = 1:size(transCheck,1)
+        cellTransProps{slI}{tcI} = pooledDailySources{slI}{transCheck(tcI,1)}{transCheck(tcI,2)+1}; %+1 bc first is dayUse==0 
+        cellTransPropChanges{slI}{tcI} = pooledSourceChanges{slI}{transCheck(tcI,1)}{transCheck(tcI,2)+1};
+    end    
 end
 
 
+
+
+
+%old, probably doesn't work
 for slI = 1:2
     %figure;
     for tgI = 1:3

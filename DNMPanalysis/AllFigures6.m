@@ -8,6 +8,16 @@ for mouseI = 1:numMice
 end
 %}
 
+%% Accuracy
+
+figure('Position',[662 264 650 417]); 
+for mouseI = 1:numMice; plot(cellRealDays{mouseI},accuracy{mouseI},'LineWidth',2); hold on; end
+xlabel('Recording Day #')
+ylabel('Performance')
+ylim([0.5 1])
+plot([2 22],[0.7 0.7],'--','Color',[0.6 0.6 0.6],'LineWidth',2)
+title('Performance of Individual Mice')
+
 %% How many cells active?
 figure;
 plot(pooledRealDayDiffs,pooledActiveCellsChange,'.k','MarkerSize',8)
@@ -36,12 +46,13 @@ ylim([-0.15 0.15])
 %%
 compsMake = {[1 2];[3 5];[4 5]};
 tgsPlot = unique([compsMake{:}]);
+tgsPlot = [3 4 5];
 
 colorAsscAlt = colorAssc;
 colorAsscAlt{3} = colorAssc{1};
-colorAsscAlt{4} = colorAssc{2};
+colorAsscAlt{3} = colorAssc{2};
 colorAsscAlt{8} = [0.6 0.6 0.6];
-
+traitLabelsAlt = traitLabels; traitLabelsAlt{3} = traitLabels{1}; traitLabelsAlt{4} = traitLabels{2}; 
 %% Proportion of each splitter type
 hh = figure('Position',[593 58 651 803]);
 axHand = []; statsOut = [];
@@ -104,6 +115,31 @@ for slI = 1:2
     %dimComp(statsOut{slI}.comps{2})
     %statsOut{1}.slopeDiffComp{2}.pVal
 end
+
+tgsPlot = [1 2 5];
+eachDayDiffs = unique(pooledRealDayDiffs);
+jk = [];
+for slI = 1:2
+    jk{slI} = figure;
+    hold on
+    for tgI = 1:length(tgsPlot)
+        for ddI = 1:length(eachDayDiffs)
+            splitterCBmean{tgI}(ddI) = mean(pooledSplitterComesBack{slI}{tgsPlot(tgI)}(pooledRealDayDiffs==eachDayDiffs(ddI)));
+            splitterSSmean{tgI}(ddI) = mean(pooledSplitterStillSplitter{slI}{tgsPlot(tgI)}(pooledRealDayDiffs==eachDayDiffs(ddI)));
+        end
+        
+        plot(eachDayDiffs,splitterCBmean{tgI},'Color',colorAsscAlt{tgsPlot(tgI)},'LineWidth',2,'DisplayName',[traitLabelsAlt{tgsPlot(tgI)} ' return'])
+        plot(eachDayDiffs,splitterSSmean{tgI},'--','Color',colorAsscAlt{tgsPlot(tgI)},'LineWidth',2,'DisplayName',[traitLabelsAlt{tgsPlot(tgI)} ' still split'])
+        
+    end
+    legend('location','northeast')
+    title(['Likelihood of reactivation and continued splitting on ' mazeLocations{slI}])
+    xlabel('Day lag')
+    ylabel('Pct. returning')
+    ylim([0 0.6])
+end
+
+
      
 %Stem vs. arm
 jk = figure;
@@ -144,6 +180,36 @@ for slI = 1:2
     title(['Pct. of Splitters that split same type on ' splitterLoc{slI}])
 end
 
+plotHere = [1 2 5];
+hj = [];
+for slI = 1:2
+    hj{slI} = figure;
+    subplot(1,2,1)
+    for tgI = 1:length(plotHere)
+        [fitVal,daysPlot] = FitLineForPlotting(pooledSplitterComesBack{slI}{plotHere(tgI)},pooledRealDayDiffs);
+        plot(daysPlot,fitVal,'Color',colorAssc{plotHere(tgI)},'LineWidth',2);
+        hold on
+    end
+    ylim([0.15 0.55])
+    xlim([0.5 max(pooledRealDayDiffs)+0.5])
+    xlabel('Day Lag')
+    ylabel('Percent returning')
+    subplot(1,2,2)
+    for tgI = 1:length(plotHere)
+        [fitVal,daysPlot] = FitLineForPlotting(pooledSplitterStillSplitterNorm{slI}{plotHere(tgI)},pooledRealDayDiffs);
+        plot(daysPlot,fitVal,'Color',colorAssc{plotHere(tgI)},'LineWidth',2);%'--',
+        hold on
+    end
+    ylim([0.5 1])
+    xlim([0.5 max(pooledRealDayDiffs)+0.5])
+    xlabel('Day Lag')
+    ylabel('Percent still split')
+    title(['Pct of splitters reactivating (solid) and of those still splitting (dashed) on ' splitterLoc{slI}])
+end
+
+
+
+
 %Stem vs. arm
 jk = figure;
 statsOut = [];
@@ -151,25 +217,66 @@ statsOut = [];
     pooledRealDayDiffs,colorAssc,traitLabels,jk,[0 1],'% Cells That Still Split');
 
 %% Splitters changing type
+
+fh = []; statsOut = [];
+for slI = 1:2
+    figure; fh{slI} = axes;
+    [fh{slI},statsOut{slI}] = PlotTraitProps(cellTransProps{slI},[],[],colorAssc,transLabels,fh{slI}); 
+    title(['Daily likelihood of changing splitter type on ' mazeLocations{slI}])
+    ylabel('Likelihood')
+end
+
+
 gj = [];
 statsOut = [];
 for slI = 1:2
-    gj{slI} = figure('Position',[258 350 1542 459]);
-    [gj{slI},statsOut{slI}]=PlotTraitChangeOverDays(pooledSplitterChanges{slI},pooledRealDayDiffs,...
-        [5 6 3 4],...%[1 3; 2 4; 3 4; 5 6],...
-        colorAssc,transLabels,gj{slI},[0 0.6],'pct. Cells Changing Type');
+    gj{slI} = figure;%('Position',[258 350 1542 459]);
+    [gj{slI},statsOut{slI}]=PlotTraitChangeOverDays(cellTransPropChanges{slI},sourceDayDiffsPooled{slI},...
+        [1:length(cellTransPropChanges{slI})],...
+        colorAssc(1:length(cellTransPropChanges{slI})),transLabels,gj{slI},true,'regress',[-1 1],'pct. Change Transition Probability');
     suptitleSL(['Transition likelihoods on ' splitterLoc{slI}])
 end
 
 %% What are new cells?
+fg = [];
+statsOut = [];
+for slI = 1:2
+    figure; fg{slI} = axes;
+    [fg{slI}, statsOut{slI}] = PlotTraitProps(pooledNewCellProps{slI},[3 4 5 8],{[2 3];[1 3];[3 4];[2 4];[1 4]},colorAsscAlt,traitLabels,fg{slI}); 
+    ylabel('Proportion of New Cells')
+    title(['Proportion of new cells that go to each type on ' mazeLocations{slI}])
+end
+
 gh = [];
 statsOut = [];
 for slI = 1:2
-    gh{slI} = figure('Position',[435 278 988 390]);
-    [gh{slI},statsOut{slI}] = PlotTraitChangeOverDays(pooledNewCellPropChanges{slI},pooledRealDayDiffs,...
-        {[1 2];[3 4 5]},colorAssc,traitLabels,gh{slI},[-0.65 0.65],'Change in Pct. New Cells this Type'); %Num in this case is diff in Pcts.
+    gh{slI} = figure;%('Position',[435 278 988 390]);
+    [gh{slI},statsOut{slI}] = PlotTraitChangeOverDays(pooledNewCellPropChanges{slI},sourceDayDiffsPooled{slI},...
+        [3 4 5 8],colorAsscAlt,traitLabels,gh{slI},true,'regress',[-0.75 0.4],'Change in Pct. New Cells this Type'); %Num in this case is diff in Pcts.
+    %(pooledTraitChanges,pooledDaysApart,comparisons,colorsUse,labels,figHand,plotDots,lineType,ylims,yLabel)
+
     suptitleSL(['Change in Proportion of New Cells that are a splitting type ' splitterLoc{slI}])
 end
+
+%{
+%% What are new cells?
+fg = [];
+statsOut = [];
+for slI = 1:2
+    figure; fg{slI} = axes;
+    [fg{slI}, statsOut{slI}] = PlotTraitProps(newCellProps{slI},[],[],colorAssc,{'LR','ST','BOTH'},fg{slI});
+    title(['Daily distribution of new cells among splitter types on ' mazeLocations{slI}])
+    ylabel('Pct. of new cells')
+end
+
+statsOut = [];
+for slI = 1:2
+    sd{slI} = figure;
+    [sd{slI},statsOut{slI}]=PlotTraitChangeOverDays(newCellPropChanges{slI},sourceDayDiffsPooled{slI},...
+        1:length(newCellPropChanges{slI}),...
+        colorAssc,{'LR','ST','BOTH'},sd{slI},true,'regress',[-1 1],'Change in pct. new cells');
+end
+%}
 
 %% Num days a splitter
 qw = [];
@@ -489,12 +596,27 @@ suptitleSL(['Difference between STEM (dark) and ARM (light) mean corrs (' pvName
 %decResults{1} = decodingResultsPooled{1}{dtI}
 %decResults{2} = decodingResultsPooled{2}{dtI}
 %Within day decoding
+
+colors = {colorAssc{1} colorAssc{2}};
+axH = []; statsOut = [];
+for slI = 1:2
+    figure('Position',[725 217 340 406]); axH = axes;
+    [axH,statsOut] = PlotTraitProps({decodingResultsPooled{slI}{2}{1}(sessDayDiffs{slI}{2}{1}==0) decodingResultsPooled{slI}{2}{2}(sessDayDiffs{slI}{2}{2}==0)},...
+        [1 2],[1 2],colors,{'Traj. Dest.','Task Phase'},axH);
+    hold on
+    plot([0 3],[0.5 0.5],'--','Color',[0.6 0.6 0.6],'LineWidth',2)
+    title(['Within Day Decoding on ' decodeLoc{slI} ', thresh cells'])
+    ylabel('% Trials Decoded Correct')
+end
+
+%{
 for slI = 1:2
     colors{1} = {colorAssc{1} colorAssc{2}}; colors{2} = {colorAssc{1} colorAssc{2}};
     [axH,statsOut]=PlotWithinDayDecoding(decodingResultsPooled{slI},shuffledResultsPooled{slI},sessDayDiffs{slI},...
         {'all','thresh'},{'LR','ST'},colors);
     title(['Within-Day Decoding on ' decodeLoc{slI}])
 end
+%}
 %Need downsampled control
 
 %Does within-day decoding change
@@ -510,9 +632,34 @@ for dtI = 1:length(decodingType)
     suptitleSL(['Change in daily decoding performance using ' decodingType{dtI}]) 
 end
 
+%Reg vs. Downsampled
+dimCols = {[0.6392 0.0784 0.1804;1 0 0];[ 0 1 1;0 0 1]};
+decDim = {'Traj. Dest.','Task Phase'};
+lineType = {{'-','--'},{'-','--'}};
+transHere = {[0.6 1];[0.6 1]};
+dtI = 2
+statsOut = [];
+asd = figure('Position',[373 137 482 766]);%[723 305 574 461]
+axH = [];
+for slI = 1:length(decodeLoc)
+    axInd = slI;
+    axH(axInd) = subplot(length(decodeLoc),1,axInd);
+for ddI = 1:2%decoding Dimension
+    [axH(axInd), statsOut{slI}{ddI}] = PlotDecodingOneVSother3(...
+                                {decodingResultsPooled{slI}{dtI}{ddI} downsampledResultsPooled{slI}{dtI}{ddI}},...
+                                {shuffledResultsPooled{slI}{dtI}{ddI} shuffledResultsPooled{slI}{dtI}{ddI}},...
+                                {decodedWellPooled{slI}{dtI}{ddI} DSaboveShuffPpooled{slI}{dtI}{ddI}},...
+                                sessDayDiffs{slI}{dtI}{ddI},sessDayDiffs{slI}{dtI}{ddI},[],lineType{ddI},transHere{ddI},dimCols{ddI},axH(axInd));
+    title(['Decoding comparison, reg. vs. DS, decoding Cells on ' decodeLoc{slI} ])
+end
+end
+asd.Renderer = 'painters';
+suptitleSL(['Decoding with ' decodingType{dtI} ', solid = REG, dotted = DS, r = lr b = st'])
+
+
 %LvR vs. SvT comparison
 statsOut = [];
-figure('Position',[373 137 482 766]);%[723 305 574 461]
+asd = figure('Position',[373 137 482 766]);%[723 305 574 461]
 axH = [];
 lineType = {{'-','-'},{'--','--'}};
 transHere = {[0.6 0.6];[1 1]};
@@ -526,15 +673,41 @@ for dtI = 1:length(decodingType)
                                                 decodingResultsPooled{slI}{dtI},shuffledResultsPooled{slI}{dtI},...%shuffledResultsPooled{slI}{dtI}
                                                 decodedWellPooled{slI}{dtI},sessDayDiffs{slI}{dtI}{1},sessDayDiffs{slI}{dtI}{1},...
                                                 [],lineType{dtI},transHere{dtI},[1 0 0; 0 0 1],axH(axInd));
-    title(['Decoding Comparison, ' fileName{dtI} ' cells on ' decodeLoc{slI} ',r=lr b=st'])
+    title(['Decoding Comparison ' decodeLoc{slI} ',r=lr b=st'])
 end
 end
+asd.Renderer = 'painters';
 suptitleSL('Transparent = all cells, dotted = above thresh')
+
+%Downsampled
+%LR vs. ST
+statsOut = [];
+asd = figure('Position',[373 137 482 766]);%[723 305 574 461]
+axH = [];
+lineType = {{'-','-'},{'--','--'}};
+transHere = {[0.6 0.6];[1 1]};
+for slI = 1:length(decodeLoc)
+for dtI = 1:length(decodingType)
+    %axInd = dtI+length(decodeLoc)*(slI-1);
+    %axH(axInd) = subplot(length(decodeLoc),length(decodingType),axInd);
+    axInd = slI;
+    axH(axInd) = subplot(length(decodeLoc),1,axInd);
+      
+    [axH(axInd), statsOut{slI}{dtI}] = PlotDecodingOneVSother3(...
+                                downsampledResultsPooled{slI}{dtI},shuffledResultsPooled{slI}{dtI},...%shuffledResultsPooled{slI}{dtI}
+                                DSaboveShuffPpooled{slI}{dtI},sessDayDiffs{slI}{dtI}{1},sessDayDiffs{slI}{dtI}{1},...
+                                 [],lineType{dtI},transHere{dtI},[1 0 0; 0 0 1],axH(axInd));
+    title(['Decoding Comparison, Downsampled cells on ' decodeLoc{slI} ',r=lr b=st'])
+end
+end
+asd.Renderer = 'painters';
+suptitleSL('Solid = all cells, dotted = thresh')
+
 
 %Stem vs. Arm
 decDim = {'Traj. Dest.','Task Phase'};
 statsOut = [];
-figure('Position',[373 137 482 766]);%[723 305 574 461]
+asd = figure('Position',[373 137 482 766]);%[723 305 574 461]
 axH = [];
 lineType = {{'-','-'},{'--','--'}};
 transHere = {[0.6 0.6];[1 1]};
@@ -554,6 +727,7 @@ for ddI = 1:2 %decoding dimension
     title(['Decoding Comparison, ' fileName{dtI} ' cells by task timension o=stem p=arm'])
 end
 end
+asd.Renderer = 'painters';
 suptitleSL('Transparent = LR, dotted = ST')
 
 
@@ -561,10 +735,10 @@ suptitleSL('Transparent = LR, dotted = ST')
 dimCols = {[0.6392 0.0784 0.1804;1 0 0];[ 0 1 1;0 0 1]};
 decDim = {'Traj. Dest.','Task Phase'};
 statsOut = [];
-figure('Position',[373 137 482 766]);%[723 305 574 461]
+asd = figure('Position',[373 137 482 766]);%[723 305 574 461]
 axH = [];
-lineType = {{'-','-'},{'--','--'}};
-transHere = {[0.6 0.6];[1 1]};
+lineType = {{'-','--'},{'-','--'}};
+transHere = {[0.6 1];[0.6 1]};
 for slI = 1:length(decodeLoc)
 for dwI = 1:length(decDim)
       %figH = figure('Position',[723 207 690 559]);
@@ -578,33 +752,12 @@ for dwI = 1:length(decDim)
                                 {shuffledResultsPooled{slI}{1}{dwI} shuffledResultsPooled{slI}{2}{dwI}},...
                                 {decodedWellPooled{slI}{1}{dwI} decodedWellPooled{slI}{2}{dwI}},...
                                 sessDayDiffs{slI}{1}{dwI},sessDayDiffs{slI}{1}{dwI},decodingType,lineType{dwI},transHere{dwI},dimCols{dwI},axH(axInd));
-      title(['Decoding Cell Inclusion Comparison, on ' decodeLoc{slI} ', light=all dark=thresh'])
+      title(['Decoding Cell Inclusion Comparison, on ' decodeLoc{slI} ', solid=all dotted=thresh'])
 end
 end
-suptitleSL('Solid = LR, dotted = ST')
+asd.Renderer = 'painters';
+suptitleSL('Red = LR, Blue = ST')
 
-%Downsampled
-%LR vs. ST
-statsOut = [];
-figure('Position',[373 137 482 766]);%[723 305 574 461]
-axH = [];
-lineType = {{'-','-'},{'--','--'}};
-transHere = {[0.6 0.6];[1 1]};
-for slI = 1:length(decodeLoc)
-for dtI = 1:length(decodingType)
-    %axInd = dtI+length(decodeLoc)*(slI-1);
-    %axH(axInd) = subplot(length(decodeLoc),length(decodingType),axInd);
-    axInd = slI;
-    axH(axInd) = subplot(length(decodeLoc),1,axInd);
-      
-    [axH(axInd), statsOut{slI}{dtI}] = PlotDecodingOneVSother3(...
-                                downsampledResultsPooled{slI}{dtI},shuffledResultsPooled{slI}{dtI},...%shuffledResultsPooled{slI}{dtI}
-                                DSaboveShuffPpooled{slI}{dtI},...
-                                sessDayDiffs{slI}{dtI}{1},sessDayDiffs{slI}{dtI}{1},{'Turn Direction','Task Phase'},lineType{dtI},transHere{dtI},[],axH(axInd));
-    title(['Decoding Comparison, Downsampled cells on ' decodeLoc{slI} ',r=lr b=st'])
-end
-end
-suptitleSL('Solid = all cells, dotted = thresh')
 
 
 %Redo here - something needs to be organized differently, may require
@@ -616,7 +769,7 @@ lineType = {{'-','--'},{'-','--'}};
 transHere = {[0.6 1];[0.6 1]};
 for dtI = 1:length(decodingType)
 statsOut = [];
-figure('Position',[373 137 482 766]);%[723 305 574 461]
+asd = figure('Position',[373 137 482 766]);%[723 305 574 461]
 axH = [];
 for slI = 1:length(decodeLoc)
 for ddI = 1:2%decoding Dimension
@@ -625,14 +778,15 @@ for ddI = 1:2%decoding Dimension
     axInd = slI;
     axH(axInd) = subplot(length(decodeLoc),1,axInd);
     
-    [axH(axInd), statsOut{slI}{dtI}] = PlotDecodingOneVSother3(...
+    [axH(axInd), statsOut{slI}{ddI}] = PlotDecodingOneVSother3(...
                                 {decodingResultsPooled{slI}{dtI}{ddI} downsampledResultsPooled{slI}{dtI}{ddI}},...
-                                shuffledResultsPooled{slI}{dtI},...%shuffledResultsPooled{slI}{dtI}
+                                {shuffledResultsPooled{slI}{dtI}{ddI} shuffledResultsPooled{slI}{dtI}{ddI}},...
                                 {decodedWellPooled{slI}{dtI}{ddI} DSaboveShuffPpooled{slI}{dtI}{ddI}},...
                                 sessDayDiffs{slI}{dtI}{ddI},sessDayDiffs{slI}{dtI}{ddI},[],lineType{ddI},transHere{ddI},dimCols{ddI},axH(axInd));
     title(['Decoding comparison, reg. vs. DS, decoding Cells on ' decodeLoc{slI} ])
 end
 end
+asd.Renderer = 'painters';
 suptitleSL(['Decoding with ' decodingType{dtI} ', solid = REG, dotted = DS, r = lr b = st'])
 end
             

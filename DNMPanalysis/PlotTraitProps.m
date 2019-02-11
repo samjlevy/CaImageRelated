@@ -5,9 +5,17 @@ if isempty(axHand)
     axHand = axes;
 end
 
+if isempty(plotWhich)
+    plotWhich = 1:length(pooledSplitProp);
+end
+
+if isempty(comparisons)
+    comparisons = combnk(plotWhich,2);
+end
+
 if ~iscell(comparisons)
     comps = comparisons; comparisons = [];
-    for aa = 1:size(comparisons,1)
+    for aa = 1:size(comps,1)
         comparisons{aa,1} = comps(aa,:);
     end
 end

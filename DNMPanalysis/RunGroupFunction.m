@@ -14,7 +14,7 @@ for ngI = 1:length(traitGroup)
                     GetCellsOverlap(traitGroup{ngI}, dayUse{ngI},varargin{1});
             else
                 [groupout(ngI).activeCellsOverlap, groupout(ngI).overlapWithModel, groupout(ngI).overlapWithTest] =...
-                    GetCellsOverlap(traitGroup{ngI},dayUse,varargin{1});
+                    GetCellsOverlap(traitGroup{ngI}, dayUse,varargin{1});
             end
         case 'GetFirstDayTrait'
             [groupout(ngI).firstDay] = GetFirstDayTrait(traitGroup{ngI});
