@@ -22,6 +22,7 @@ posThresh = 3;
 cmperbin = (max(xlims)-min(xlims))/numBins;
 condPairs = [1 3; 2 4; 1 2; 3 4];
 mazeLocations = {'Stem','Arms'};
+performanceThreshold = 0.7;
 
 disp('Loading stuff')
 for mouseI = 1:numMice
@@ -59,6 +60,9 @@ for mouseI = 1:numMice
     accuracy{mouseI} = performance;
     accuracyRange(mouseI, 1:2) = [mean(accuracy{mouseI}),...
         std(accuracy{mouseI})/sqrt(length(accuracy{mouseI}))];
+    
+    load(fullfile(mainFolder,mice{mouseI},'allAccuracy.mat'))
+    allDaysAccuracy{mouseI} = allAccuracy;
 end
 
 disp('Getting reliability')
@@ -194,6 +198,55 @@ colorAssc = { [1 0 0]     [0 0 1]    [1 0 1]       [0 1 1]         purp     orng
 traitLabels = {'splitLR' 'splitST'  'splitLRonly' 'splitSTonly' 'splitBOTH' 'splitONE' 'splitEITHER' 'dontSplit'};
 
 disp('Done all setup stuff')
+
+%% New cells/lost cells
+numNewCellsPooled = [];
+pctNewCellsChangePooled = [];
+numLostCellsPooled = [];
+pctLostCellsChangePooled = [];
+dayPairsHerePooled = [];
+for mouseI = 1:numMice
+    cellPresent = cellSSI{mouseI} > 0;
+    for dayI = 2:length(cellRealDays{mouseI})
+        newCells = cellPresent(:,dayI) == (cellPresent(:,dayI-1)==0);
+        numNewCells{mouseI}(dayI-1) = sum(newCells);
+        newOutofTotal{mouseI}(dayI-1) = numNewCells{mouseI}(dayI-1) / sum(cellPresent(:,dayI));
+        
+        lostCells = (cellPresent(:,dayI)==0) == cellPresent(:,dayI-1);
+        numLostCells{mouseI}(dayI-1) = sum(lostCells);
+        lostOutofTotal{mouseI}(dayI-1) = numLostCells{mouseI}(dayI-1) / sum(cellPresent(:,dayI-1));
+    end
+    
+    dayPairsHere = combnk(1:length(cellRealDays{mouseI})-1,2);
+    realDaysHere = cellRealDays{mouseI}(2:end);
+    realDayPairsHere = realDaysHere(dayPairsHere);
+    realDayDiffsHere = diff(realDayPairsHere,1,2);
+    dayPairsHerePooled = [dayPairsHerePooled; realDayDiffsHere];
+    
+    [~, numNewCellsPctChange{mouseI}] = TraitChangeDayPairs(numNewCells{mouseI},dayPairsHere);
+    [pctNewCellsChange{mouseI}, ~] = TraitChangeDayPairs(newOutofTotal{mouseI},dayPairsHere);
+    
+    numNewCellsPooled = [numNewCellsPooled; numNewCellsPctChange{mouseI}];
+    pctNewCellsChangePooled = [pctNewCellsChangePooled; pctNewCellsChange{mouseI}];
+    
+    [~, numLostCellsPctChange{mouseI}] = TraitChangeDayPairs(numLostCells{mouseI},dayPairsHere);
+    [pctLostCellsChange{mouseI}, ~] = TraitChangeDayPairs(lostOutofTotal{mouseI},dayPairsHere);
+    
+    numLostCellsPooled = [numLostCellsPooled; numLostCellsPctChange{mouseI}];
+    pctLostCellsChangePooled = [pctLostCellsChangePooled; pctLostCellsChange{mouseI}];
+end
+
+figure; plot(dayPairsHerePooled,pctNewCellsChangePooled,'.')
+hold on
+[fitVal,daysPlot] = FitLineForPlotting(pctNewCellsChangePooled,dayPairsHerePooled);
+plot(daysPlot,fitVal,'k'); plot([0 16],[0 0],'k')
+title('Pct change in new cells as pct of present that day')
+
+figure; plot(dayPairsHerePooled,pctLostCellsChangePooled,'.')
+hold on
+[fitVal,daysPlot] = FitLineForPlotting(pctLostCellsChangePooled,dayPairsHerePooled);
+plot(daysPlot,fitVal,'k'); plot([0 16],[0 0],'k')
+title('Pct change in lost cells as pct of present previous day')
 
 %% Splitter cells: Shuffle versions, pooled
 numShuffles = 1000;

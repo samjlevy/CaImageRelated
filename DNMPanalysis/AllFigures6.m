@@ -18,6 +18,24 @@ ylim([0.5 1])
 plot([2 22],[0.7 0.7],'--','Color',[0.6 0.6 0.6],'LineWidth',2)
 title('Performance of Individual Mice')
 
+
+mouseColors = [0    0.4510    0.7412; 0.8510    0.3294    0.1020; 0.4706    0.6706    0.1882; 0.9294    0.6902    0.1294];
+figure('Position',[662 264 650 417]); 
+plot([2 22],[0.7 0.7],'--','Color',[0.6 0.6 0.6],'LineWidth',2)
+hold on; 
+for mouseI = 1:numMice 
+    hereAcc = allDaysAccuracy{mouseI};
+    plot(hereAcc(:,1),hereAcc(:,2),'Color',mouseColors(mouseI,:),'LineWidth',1.5);     
+    belowThresh = hereAcc(:,2) < performanceThreshold;
+    plot(hereAcc(belowThresh==0,1),hereAcc(belowThresh==0,2),'o','Color',mouseColors(mouseI,:));
+    plot(hereAcc(belowThresh,1),hereAcc(belowThresh,2),'*r')
+end
+xlabel('Recording Day #')
+ylabel('Performance')
+ylim([0.4 1])
+title('Performance of Individual Mice')
+
+
 %% How many cells active?
 figure;
 plot(pooledRealDayDiffs,pooledActiveCellsChange,'.k','MarkerSize',8)
@@ -41,6 +59,12 @@ title(['ARM Change in cells above activity threshold, slope diff from 0 at p=' n
 xlabel('Days Apart')
 ylabel('Change in Proportion of Cells Active')
 ylim([-0.15 0.15])
+
+%% New cells/lost cells
+
+
+
+
 
 
 %%

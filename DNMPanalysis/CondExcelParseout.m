@@ -23,6 +23,9 @@ if columnExists == 0
         case 'Enter Delay'
             columnLabel = 'Enter delay zone';
             disp('Switched label')
+        case 'Start on maze'
+            columnLabel = 'Start on maze (start of Forced';
+            disp('Switched label')
         otherwise
             disp('Not going to find this column')
     end
