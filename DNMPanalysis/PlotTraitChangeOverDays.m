@@ -10,6 +10,7 @@ end
 if length(colorsUse)~=length(pooledTraitChanges)
     disp('Error: not equal number of traits and colors, will fail')
     keyboard
+    
 end
 
 for compI = 1:numComps

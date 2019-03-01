@@ -6,6 +6,11 @@ mainFolder = 'C:\Users\Sam\Desktop\DNMPfinalData';
 mice = {'Bellatrix', 'Polaris', 'Calisto', 'Nix'}; %'Europa'
 numMice = length(mice);
 
+mouseDefaultFolder = {'G:\SLIDE\Processed Data\Bellatrix\Bellatrix_160831';...
+                      'G:\SLIDE\Processed Data\Polaris\Polaris_160831';...
+                      'G:\SLIDE\Processed Data\Callisto\Calisto_161026';...
+                      'G:\SLIDE\Processed Data\Nix\Nix_180502'};
+
 %Thresholds
 pThresh = 0.05;
 lapPctThresh = 0.25;
@@ -497,11 +502,12 @@ for slI = 1:2
             firstDayLogical{slI}{mouseI}(cellI,firstDays{slI}{mouseI}(cellI)) = true;  %NEED to eliminate day 1 after performing this
             end
         end
-        firstDayLogical{slI}{mouseI}(:,1) = [];
-        firstDayNums{slI}{mouseI} = sum(firstDayLogical{slI}{mouseI},1);
+        firstDayLogicalUse{slI}{mouseI} = firstDayLogical{slI}{mouseI};
+        firstDayLogicalUse{slI}{mouseI}(:,1) = [];
+        firstDayNums{slI}{mouseI} = sum(firstDayLogicalUse{slI}{mouseI},1);
         
         for tgI = 1:numTraitGroups
-            traitFirst{slI}{mouseI}{tgI} = traitGroups{slI}{mouseI}{tgI}(:,2:end).*firstDayLogical{slI}{mouseI};
+            traitFirst{slI}{mouseI}{tgI} = traitGroups{slI}{mouseI}{tgI}(:,2:end).*firstDayLogicalUse{slI}{mouseI};
             traitFirstNums{slI}{mouseI}{tgI} = sum(traitFirst{slI}{mouseI}{tgI},1);
 
             traitFirstPcts{slI}{mouseI}{tgI} = traitFirstNums{slI}{mouseI}{tgI}./ firstDayNums{slI}{mouseI};
@@ -529,7 +535,9 @@ cellCheck = [3 4 5];
 %transCheck = [3 3; 3 4; 3 5; 4 4; 4 3; 4 5; 5 5; 5 3; 5 4];
 transCheck = [3 5; 4 5; 5 3; 5 4]; %sources: [starts as, becomes]
 transCheck = [1 3; 2 3; 3 1; 3 2]; %in cellCheck indices
-transLabels = {'LR to BOTH','ST to BOTH', 'BOTH to LR', 'BOTH t ST'};
+transLabels = {'LR to BOTH','ST to BOTH', 'BOTH to LR', 'BOTH to ST'};
+%transCheck = [1 2; 1 3; 1 4; 2 2; 2 3; 2 4; 3 2; 3 3; 3 4];
+%transLabels = {'LR to LR','LR to ST','LR to BOTH','ST to LR','ST to ST','ST to BOTH','BOTH to LR','BOTH to ST','BOTH to BOTH'};
 
 pooledSourceChanges = []; 
 pooledDailySources = [];
@@ -542,15 +550,27 @@ newCellPropChanges = [];
 cellTransProps = [];
 cellTransPropChanges = [];
 
+sourceColors = [0 1 0; colorAssc{1}; colorAssc{2}; colorAssc{5}; 0.6 0.6 0.6]; 
+sourceLabels = {'New Cells',traitLabels{[1 2 5 8]}};
 for slI = 1:2
     for mouseI = 1:numMice
+        firstDaySource{slI}{mouseI} = [firstDayLogical{slI}{mouseI}(:,2:end) zeros(size(cellSSI{mouseI},1),1)];
+            %new cell that day, shifted to get matched as dayI-1
         targets{mouseI} = traitGroups{slI}{mouseI}(cellCheck);
-        sources{mouseI} = [dayUseFilter{slI}{mouseI}==0; traitGroups{slI}{mouseI}([cellCheck 8])];
+        sources{mouseI} = [firstDaySource{slI}{mouseI}; traitGroups{slI}{mouseI}([cellCheck 8])]; %dayUseFilter{slI}{mouseI}==0; 
+        
         sinks{mouseI} = sources{mouseI};
     end
     
     [pooledSourceChanges{slI}, pooledDailySources{slI}, pooledSinkChanges{slI}, pooledDailySinks{slI}, sourceDayDiffsPooled{slI}, sinkDayDiffsPooled{slI}] =...
         CheckLogicalSinksAndSources(targets,sources,sinks,cellRealDays);
+    
+    for tcI = 1:length(cellCheck) %target
+        for scI = 1:length(sources{1}) %source
+            dailySourcesMean{slI}(tcI,scI) = nanmean(pooledDailySources{slI}{tcI}{scI});
+        end
+    end
+    
     
     %Reorganize new cell (previously inactive) destinations (what pct of ccI was previously inactive)
     for ccI = 1:length(cellCheck)
@@ -570,6 +590,7 @@ end
 
 
 %old, probably doesn't work
+%{
 for slI = 1:2
     %figure;
     for tgI = 1:3
@@ -665,6 +686,7 @@ for tgI = 1:3
     legend(pp,'location','nw')
     xlabel('DayN+1/DayN')
 end
+%}
 %% Overlap in both
 pctTraitBothPooled = cell(numTraitGroups,1);
 for mouseI = 1:numMice

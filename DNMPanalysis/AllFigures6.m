@@ -21,10 +21,12 @@ title('Performance of Individual Mice')
 
 mouseColors = [0    0.4510    0.7412; 0.8510    0.3294    0.1020; 0.4706    0.6706    0.1882; 0.9294    0.6902    0.1294];
 figure('Position',[662 264 650 417]); 
-plot([2 22],[0.7 0.7],'--','Color',[0.6 0.6 0.6],'LineWidth',2)
+plot([0 22],[0.7 0.7],'--','Color',[0.6 0.6 0.6],'LineWidth',2)
 hold on; 
+for mouseI = 1:numMice; minss(mouseI) = min(allDaysAccuracy{mouseI}(:,1)); end
+minShift = min(minss)-1;
 for mouseI = 1:numMice 
-    hereAcc = allDaysAccuracy{mouseI};
+    hereAcc = allDaysAccuracy{mouseI}; hereAcc(:,1) = hereAcc(:,1)-minShift;
     plot(hereAcc(:,1),hereAcc(:,2),'Color',mouseColors(mouseI,:),'LineWidth',1.5);     
     belowThresh = hereAcc(:,2) < performanceThreshold;
     plot(hereAcc(belowThresh==0,1),hereAcc(belowThresh==0,2),'o','Color',mouseColors(mouseI,:));
@@ -32,9 +34,32 @@ for mouseI = 1:numMice
 end
 xlabel('Recording Day #')
 ylabel('Performance')
-ylim([0.4 1])
+ylim([0.4 1.025])
+xlim([0.75 20.25])
 title('Performance of Individual Mice')
 
+%% Example cell plots
+
+%Stable: 
+stableSplitter = {[43 44];[4];[293];20};
+splitterBecomingBoth = {[ ];[ ];[ ];[65 97]};
+randomFiringCell = {[];[4 176 184];267;[]};
+cellComing = {[];[];267;[]};
+cellLeaving = {[242];[];359;[]};
+toBoth = {[14 180];[];[230];[]};
+
+splittersPlot = randomFiringCell;
+for mouseI = 1:numMice
+    if any(splittersPlot{mouseI})
+        load(fullfile(mouseDefaultFolder{mouseI},'daybyday.mat'))
+        for cellI = 1:length(splittersPlot{mouseI})
+            cellPlot = splittersPlot{mouseI}(cellI);
+            presentDays = find(cellSSI{mouseI}(cellPlot,:)>0);
+            [figg] = PlotSplittingDotPlot(daybyday,cellTBT{mouseI},cellPlot,presentDays,'stem','line');
+            %cellOutLinePlot...
+        end
+    end
+end
 
 %% How many cells active?
 figure;
@@ -121,6 +146,17 @@ for slI = 1:2
         {[1 2]; [3 4 5]},colorAssc,traitLabels,gh{slI},[0 1],'pct. Cells Return'); %Num in this case is diff in Pcts.
     suptitleSL(['Change in Proportion of Splitters that Come Back on ' splitterLoc{slI}])
 end
+
+tgsPlot = [1 2 5];
+gh = [];
+statsOut = [];
+for slI = 1:2
+    gh{slI} = figure('Position',[360 169 435 444]);
+    [gh{slI},statsOut{slI}] = PlotTraitChangeOverDays(pooledSplitterComesBack{slI},pooledRealDayDiffs,...
+        tgsPlot,colorAssc,traitLabels,gh{slI},true,'mean',[0 0.8],'pct. Cells Return'); %Num in this case is diff in Pcts.
+    suptitleSL(['Change in Proportion of Splitters that Come Back on ' splitterLoc{slI}])
+end
+
 
 hj = [];
 for slI = 1:2
@@ -250,14 +286,23 @@ for slI = 1:2
     ylabel('Likelihood')
 end
 
-
 gj = [];
 statsOut = [];
+transColors = colorAssc([1 2 3 4]);
 for slI = 1:2
     gj{slI} = figure;%('Position',[258 350 1542 459]);
     [gj{slI},statsOut{slI}]=PlotTraitChangeOverDays(cellTransPropChanges{slI},sourceDayDiffsPooled{slI},...
-        [1:length(cellTransPropChanges{slI})],...
-        colorAssc(1:length(cellTransPropChanges{slI})),transLabels,gj{slI},true,'regress',[-1 1],'pct. Change Transition Probability');
+        1:length(cellTransPropChanges{slI}),transColors,transLabels,gj{slI},true,'regress',[-0.8 0.6],'pct. Change Transition Probability');
+    suptitleSL(['Transition likelihoods on ' splitterLoc{slI}])
+end
+
+gj = [];
+statsOut = [];
+transColors = colorAssc([1 2 5 1 2 5 1 2 5]);
+for slI = 1:2
+    gj{slI} = figure;%('Position',[258 350 1542 459]);
+    [gj{slI},statsOut{slI}]=PlotTraitChangeOverDays(cellTransPropChanges{slI},sourceDayDiffsPooled{slI},...
+        {1:3;4:6;7:9},transColors,transLabels,gj{slI},true,'regress',[-0.75 0.75],'pct. Change Transition Probability');
     suptitleSL(['Transition likelihoods on ' splitterLoc{slI}])
 end
 
@@ -301,6 +346,36 @@ for slI = 1:2
         colorAssc,{'LR','ST','BOTH'},sd{slI},true,'regress',[-1 1],'Change in pct. new cells');
 end
 %}
+
+%% Cell type sources bargraph
+
+c = categorical({'Turn','Phase','Conjunctive'});
+statsOut = [];
+for slI = 1:2
+    figure; 
+    for tcI = 1:length(cellCheck)
+        subplot(1,length(cellCheck),tcI)
+        [statsOut{slI}{tcI}] = PlotBarWithData([pooledDailySources{slI}{tcI}{:}],sourceColors,sourceLabels);
+        title(['Sources for ' traitLabels{cellCheck(tcI)}])
+        ylabel('Pct. of cells')
+    end
+    suptitleSL(['Sources for each type on ' mazeLocations{slI}])
+end
+
+%Changes 
+ff = []; statsOut = [];
+compsHere = {[1:5];[6:10];[11:15]};
+allColors = [sourceColors;sourceColors;sourceColors];
+allColors = mat2cell(allColors,ones(15,1),3);
+allLabels = {sourceLabels{:}, sourceLabels{:}, sourceLabels{:}};
+for slI = 1:2
+    allSourceChanges = [pooledSourceChanges{slI}{:}]; allSourceChanges = allSourceChanges(:);
+    ff{slI} = figure;
+    [ff{slI},statsOut{slI}] = PlotTraitChangeOverDays(allSourceChanges,sourceDayDiffsPooled{slI},compsHere,...
+        allColors,allLabels,ff{slI},true,'regress',[-1 1],'Change in sources');
+    suptitleSL(['Change in sources for each type on ' mazeLocations{slI}])
+end
+
 
 %% Num days a splitter
 qw = [];
