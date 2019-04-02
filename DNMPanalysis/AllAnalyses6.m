@@ -334,14 +334,14 @@ for mouseI = 1:numMice
             GetSplittingTypes(splittersLR{slI}{mouseI}, splittersST{slI}{mouseI}, dayUseFilter{slI}{mouseI});
             
         %Package into trait logicals
-        traitGroups{slI}{mouseI} = {splittersLR{slI}{mouseI};... 
-                                    splittersST{slI}{mouseI};... 
-                                    splittersLRonly{slI}{mouseI};... 
-                                    splittersSTonly{slI}{mouseI}; ...
-                                    splittersBoth{slI}{mouseI}; ...
-                                    splittersOne{slI}{mouseI};... 
-                                    splittersAny{slI}{mouseI}; ...
-                                    splittersNone{slI}{mouseI}};
+        traitGroups{slI}{mouseI} = {logical(splittersLR{slI}{mouseI});... 
+                                    logical(splittersST{slI}{mouseI});... 
+                                    logical(splittersLRonly{slI}{mouseI});... 
+                                    logical(splittersSTonly{slI}{mouseI}); ...
+                                    logical(splittersBoth{slI}{mouseI}); ...
+                                    logical(splittersOne{slI}{mouseI});... 
+                                    logical(splittersAny{slI}{mouseI}); ...
+                                    logical(splittersNone{slI}{mouseI})};
     end
 end
 numTraitGroups = length(traitGroups{1}{1});
@@ -533,11 +533,14 @@ disp('Done when do splitters show up')
 %% Splitter sources and sinks
 cellCheck = [3 4 5];
 %transCheck = [3 3; 3 4; 3 5; 4 4; 4 3; 4 5; 5 5; 5 3; 5 4];
-transCheck = [3 5; 4 5; 5 3; 5 4]; %sources: [starts as, becomes]
-transCheck = [1 3; 2 3; 3 1; 3 2]; %in cellCheck indices
-transLabels = {'LR to BOTH','ST to BOTH', 'BOTH to LR', 'BOTH to ST'};
+%transCheck = [3 5; 4 5; 5 3; 5 4]; %sources: [starts as, becomes]
+%transCheck = [1 3; 2 3; 3 1; 3 2]; %in cellCheck indices
+%transLabels = {'LR to BOTH','ST to BOTH', 'BOTH to LR', 'BOTH to ST'};
 %transCheck = [1 2; 1 3; 1 4; 2 2; 2 3; 2 4; 3 2; 3 3; 3 4];
 %transLabels = {'LR to LR','LR to ST','LR to BOTH','ST to LR','ST to ST','ST to BOTH','BOTH to LR','BOTH to ST','BOTH to BOTH'};
+transCheck = [1 3;          1 4;          2 2;     2 4;               3 2;        3 3];
+transLabels = {'LR to ST','LR to BOTH','ST to LR','ST to BOTH','BOTH to LR','BOTH to ST'};
+
 
 pooledSourceChanges = []; 
 pooledDailySources = [];
@@ -585,7 +588,7 @@ for slI = 1:2
     end    
 end
 
-
+disp('Done cell sources and sinks')
 
 
 
@@ -875,7 +878,7 @@ for pvtI = 1:length(pvNames)
 end
 
 
-%% Pop vector corr differences by cells included
+%% Pop vector corr differences by cells included STEM
 
 pooledCondPairs = condPairs;
 poolLabels = {'Left','Right','Study','Test'};
@@ -960,6 +963,9 @@ for pvtI = 1:length(pvNames)
     CSpooledMeanPVcorrsHalfFirst{pvtI} = PoolCellArr(pooledMeanPVcorrsHalfFirst{pvtI},condSet);
     CSpooledMeanPVcorrsHalfSecond{pvtI} = PoolCellArr(pooledMeanPVcorrsHalfSecond{pvtI},condSet);
 
+    %Diff from VS self
+    
+    
     %CSpooledPVdaysApart{pvtI} = PoolCellArr(pooledPVDaysApart{pvtI},condSet);
     CSpooledPVdaysApart{pvtI} = cellfun(@(x) repmat(pooledPVDaysApart{pvtI},length(x),1),condSet,'UniformOutput',false);
 end
@@ -975,6 +981,35 @@ for pvtI = 1:length(pvNames)
     [withinCSdayChangeMeanHalfFirst{pvtI},cscDiffsChangeMeanHalfFirstPooled{pvtI},~] = CorrChangeOverDays(meanCorrHalfFirst{pvtI},PVdayPairs{pvtI},dayPairs,condSet,condSetComps);
     [withinCSdayChangeMeanHalfSecond{pvtI},cscDiffsChangeMeanHalfSecondPooled{pvtI},~] = CorrChangeOverDays(meanCorrHalfSecond{pvtI},PVdayPairs{pvtI},dayPairs,condSet,condSetComps);
 end
+
+%Discrimination index of PV results
+tic
+CSpooledPVcorrsDPrime = [];
+CSpooledPVcorrsDPrimePval = [];
+CSpooledPVcorrsDiff = [];
+for pvtI = 1:length(pvNames)
+    for pvpoolI = 2:3
+        dayDiffsHere = unique([CSpooledPVdaysApart{pvtI}{1}; CSpooledPVdaysApart{pvtI}{pvpoolI}]);
+        for ddI = 1:length(dayDiffsHere)
+            daysUseSig = CSpooledPVdaysApart{pvtI}{pvpoolI}==dayDiffsHere(ddI);
+            daysUseNoise = CSpooledPVdaysApart{pvtI}{1}==dayDiffsHere(ddI);
+            
+            [CSpooledPVcorrsDPrime{pvtI}{pvpoolI-1}(ddI),CSpooledPVcorrsDPrimePval{pvtI}{pvpoolI-1}(ddI)] =...
+                SensitivityIndexSL(CSpooledPVcorrs{pvtI}{pvpoolI}(daysUseSig),CSpooledPVcorrs{pvtI}{1}(daysUseNoise),1000);
+            [CSpooledPVcorrsDPrimeHalfFirst{pvtI}{pvpoolI-1}(ddI),CSpooledPVcorrsDPrimePvalHalfFirst{pvtI}{pvpoolI-1}(ddI)] =...
+                SensitivityIndexSL(CSpooledPVcorrsHalfFirst{pvtI}{pvpoolI}(daysUseSig),CSpooledPVcorrsHalfFirst{pvtI}{1}(daysUseNoise),1000);
+            [CSpooledPVcorrsDPrimeHalfSecond{pvtI}{pvpoolI-1}(ddI),CSpooledPVcorrsDPrimePvalHalfSecond{pvtI}{pvpoolI-1}(ddI)] =...
+                SensitivityIndexSL(CSpooledPVcorrsHalfSecond{pvtI}{pvpoolI}(daysUseSig),CSpooledPVcorrsHalfSecond{pvtI}{1}(daysUseNoise),1000);
+            
+            CSpooledPVcorrsDiff{pvtI}{pvpoolI-1}(ddI) = mean(CSpooledPVcorrs{pvtI}{1}(daysUseNoise)) - mean(CSpooledPVcorrs{pvtI}{pvpoolI}(daysUseSig)); 
+            CSpooledPVcorrsDiffHalfFirst{pvtI}{pvpoolI-1}(ddI) = mean(CSpooledPVcorrsHalfFirst{pvtI}{1}(daysUseNoise)) - mean(CSpooledPVcorrsHalfFirst{pvtI}{pvpoolI}(daysUseSig)); 
+            CSpooledPVcorrsDiffHalfSecond{pvtI}{pvpoolI-1}(ddI) = mean(CSpooledPVcorrsHalfSecond{pvtI}{1}(daysUseNoise)) - mean(CSpooledPVcorrsHalfSecond{pvtI}{pvpoolI}(daysUseSig)); 
+        end
+    end
+end
+toc
+
+disp('Done PV corrs STEM')
 
 %% Pop vector corr differences by cells included ARMS
 
@@ -1056,50 +1091,48 @@ for pvtI = 1:length(pvNames)
     [withinCSdayChangeMeanHalfSecondARM{pvtI},cscDiffsChangeMeanHalfSecondPooledARM{pvtI},~] = CorrChangeOverDays(ARMmeanCorrHalfSecond{pvtI},PVdayPairs{pvtI},dayPairs,condSet,condSetComps);
 end
 
+disp('Done PV corrs ARMS')
+
 %% Center of mass, change over time
 
 for mouseI = 1:numMice
-    allFiringCOM{mouseI} = TMapFiringCOM(cellPooledTMap_unsmoothed{1}{mouseI});
-    [~,allFiringMAX{mouseI}] = cellfun(@max,cellPooledTMap_unsmoothed{1}{mouseI},'UniformOutput',false);
+    [allCondsTMap{mouseI}, ~, ~, ~, ~, ~, ~] =...
+        PFsLinTBTdnmp(cellTBT{mouseI}, stemBinEdges, minspeed, [], false,[1 2 3 4]);
+
+    [allCondsTMapARM{mouseI}, ~, ~, ~, ~, ~, ~] =...
+        PFsLinTBTdnmp(cellTBTarm{mouseI}, armBinEdges, minspeed, [], false,[1 2 3 4]);
+
+    allFiringCOM{mouseI} = TMapFiringCOM(allCondsTMap{mouseI});
+    allFiringCOMarm{mouseI} = TMapFiringCOM(allCondsTMapARM{mouseI});
 end
 
-
-possDaysApart = unique(pooledDaysApartFWD);
-pooledCOMchange = cell(4,length(possDaysApart));
+pooledCOMlr = [];
+pooledCOMst = [];
+pooledCOMlrEx = [];
+pooledCOMstEx = [];
+pooledCOMboth = [];
+pooledCOMlrARM = [];
+pooledCOMstARM = [];
+pooledCOMlrARMex = [];
+pooledCOMstARMex = [];
+pooledCOMbothARM = [];
 for mouseI = 1:numMice
-    COMchange{mouseI} = nan(size(cellSSI{mouseI},1),size(dayPairs{mouseI},1),4);
-    for condI = 1:4
-        for dpI = 1:size(dayPairs{mouseI},1)
-            for cellI = 1:size(cellSSI{mouseI},1)
-                fCOMB = allFiringCOM{mouseI}(cellI,dayPairs{mouseI}(dpI,2),condI);
-                fCOMA = allFiringCOM{mouseI}(cellI,dayPairs{mouseI}(dpI,1),condI);
-                if fCOMA > 0 && fCOMB > 0
-                    COMchange{mouseI}(cellI,dpI,condI) = fCOMB - fCOMA;
-                end
-            end
-        end
-    end
-    
-    for condI = 1:4
-    for ddI = 1:length(possDaysApart)
-        changes = COMchange{mouseI}(:,daysApartFWD{mouseI}==possDaysApart(ddI),condI);
-        changes = changes(:);
-        pooledCOMchange{condI,ddI} = [pooledCOMchange{condI,ddI}; changes(isnan(changes)==0)];
-    end
+    for dayI = 1:numDays(mouseI)
+        pooledCOMlr = [pooledCOMlr; allFiringCOM{mouseI}(traitGroups{1}{mouseI}{1}(:,dayI),dayI)];
+        pooledCOMst = [pooledCOMst; allFiringCOM{mouseI}(traitGroups{1}{mouseI}{2}(:,dayI),dayI)];
+        pooledCOMlrEx = [pooledCOMlrEx; allFiringCOM{mouseI}(traitGroups{1}{mouseI}{3}(:,dayI),dayI)];
+        pooledCOMstEx = [pooledCOMstEx; allFiringCOM{mouseI}(traitGroups{1}{mouseI}{4}(:,dayI),dayI)];
+        pooledCOMboth = [pooledCOMboth; allFiringCOM{mouseI}(traitGroups{1}{mouseI}{5}(:,dayI),dayI)];
+        
+        pooledCOMlrARM = [pooledCOMlrARM; allFiringCOMarm{mouseI}(traitGroups{2}{mouseI}{1}(:,dayI),dayI)];
+        pooledCOMstARM = [pooledCOMstARM; allFiringCOMarm{mouseI}(traitGroups{2}{mouseI}{2}(:,dayI),dayI)];
+        pooledCOMlrARMex = [pooledCOMlrARMex; allFiringCOMarm{mouseI}(traitGroups{2}{mouseI}{3}(:,dayI),dayI)];
+        pooledCOMstARMex = [pooledCOMstARMex; allFiringCOMarm{mouseI}(traitGroups{2}{mouseI}{4}(:,dayI),dayI)];
+        pooledCOMbothARM = [pooledCOMbothARM; allFiringCOMarm{mouseI}(traitGroups{2}{mouseI}{5}(:,dayI),dayI)];
     end
 end
 
-figure; 
-for condI = 1:4
-    subplot(2,2,condI)
-    for ddI = 1:17
-    plot(ddI*ones(length(pooledCOMchange{condI,ddI}),1),pooledCOMchange{condI,ddI},'.')
-    means(condI,ddI) = mean(pooledCOMchange{condI,ddI});
-    hold on
-    end
-    plot(means(condI,:),'LineWidth',2)
-end
-
+disp('Done getting COM')
 %% Decoder analysis
 numShuffles = 100;
 numDownsamples = 100;

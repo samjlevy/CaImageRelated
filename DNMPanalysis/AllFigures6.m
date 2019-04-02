@@ -99,21 +99,36 @@ tgsPlot = [3 4 5];
 
 colorAsscAlt = colorAssc;
 colorAsscAlt{3} = colorAssc{1};
-colorAsscAlt{3} = colorAssc{2};
+colorAsscAlt{4} = colorAssc{2};
 colorAsscAlt{8} = [0.6 0.6 0.6];
 traitLabelsAlt = traitLabels; traitLabelsAlt{3} = traitLabels{1}; traitLabelsAlt{4} = traitLabels{2}; 
 %% Proportion of each splitter type
-hh = figure('Position',[593 58 651 803]);
+hh = figure('Position',[477 83 324 803]);%[593 58 651 803]
 axHand = []; statsOut = [];
+compsMakeHere = {[1 2];[2 3];[1 3];[3 4];[2 4];[1 4]};
 for slI = 1:2
     axHand{slI} = subplot(2,1,slI);
-    [axHand{slI},statsOut{slI}] = PlotTraitProps(pooledSplitProp{slI},[3 4 5 8],{[2 3];[1 3];[3 4];[2 4];[1 4]},colorAsscAlt,traitLabels,axHand{slI});
+    [axHand{slI},statsOut{slI}] = PlotTraitProps(pooledSplitProp{slI},[3 4 5 8],compsMakeHere,colorAsscAlt,traitLabels,axHand{slI});
     title(['Splitter Proportions on ' upper(splitterLoc{slI})])
 end
 suptitleSL('Proportions of Splitter Cells on Central Stem and Return Arms')
 
+%Stats text figure
+figure('Position',[680 558 1055 420]); 
+for slI = 1:2
+    subplot(2,1,slI)
+    text(1,1,'comparisons:'); text(3,0.5,num2str(statsOut{slI}.comparisons'))
+    text(1,1.5,'sign test p'); text(3,1.5,num2str(statsOut{slI}.pPropDiffs))
+    text(1,2,'KS ANOVA p tukey'); text(4,2,num2str(statsOut{slI}.ksANOVA.multComps(:,6)'))
+    text(1,2.5,['KS ANOVA: Chi-sq    ' num2str(statsOut{slI}.ksANOVA.tbl{2,5})]) 
+    text(1,3,['KS ANOVA: df groups, error, total    ' num2str([statsOut{slI}.ksANOVA.tbl{2:end,3}])])
+       
+    xlim([0 12]); ylim([0 5])
+end
+
+
+%sign test stem vs. arms
 for tgI = 1:numTraitGroups
-    %sign test stem vs. arms
     splitPropDiffs{tgI} = pooledSplitProp{1}{tgI} - pooledSplitProp{2}{tgI};
     [pSplitPropDiffs(tgI),hSplitPropDiffs(tgI)] = signtest(splitPropDiffs{tgI}); %h = 1 reject (different)
 end
@@ -124,7 +139,7 @@ statsOut = [];
 for slI = 1:2
     gh{slI} = figure('Position',[593 273 559 501]);%[435 278 988 390]
     [gh{slI},statsOut{slI}] = PlotTraitChangeOverDays(pooledSplitNumChange{slI},pooledRealDayDiffs,...
-        {[3 4 5 8]},colorAsscAlt,traitLabels,gh{slI},false,'mean',[-0.25 0.25],'pct Change'); %Num in this case is diff in Pcts.
+        {[3 4 5 8]},colorAsscAlt,traitLabels,gh{slI},true,'regress',[-0.25 0.25],'pct Change'); %Num in this case is diff in Pcts.
     suptitleSL(['Change in Proportion of Splitters on ' splitterLoc{slI}])
 end
 
@@ -288,11 +303,11 @@ end
 
 gj = [];
 statsOut = [];
-transColors = colorAssc([1 2 3 4]);
+transColors = colorAssc([1 2 3 4 5 6]);
 for slI = 1:2
     gj{slI} = figure;%('Position',[258 350 1542 459]);
     [gj{slI},statsOut{slI}]=PlotTraitChangeOverDays(cellTransPropChanges{slI},sourceDayDiffsPooled{slI},...
-        1:length(cellTransPropChanges{slI}),transColors,transLabels,gj{slI},true,'regress',[-0.8 0.6],'pct. Change Transition Probability');
+        1:length(cellTransPropChanges{slI}),transColors,transLabels,gj{slI},true,'regress',[-0.6 0.6],'pct. Change Transition Probability');
     suptitleSL(['Transition likelihoods on ' splitterLoc{slI}])
 end
 
@@ -519,6 +534,17 @@ jj = PlotPVcurves(CSpooledPVcorrsARM{cellCritUse},CSpooledPVdaysApart{cellCritUs
 title(['Mean Within-Day Population Vector Correlation ARM(' pvNames{cellCritUse} ')'])
 ylim([0 0.7])
 
+
+%D-prime sensitivity index
+%Stem
+[jj,statsOut] = PlotPVcurvesDiff(CSpooledPVcorrs{cellCritUse},CSpooledPVdaysApart{cellCritUse},condSetColors,condSetLabels,[]);
+title(['Within-Day Sensitivity Index STEM (' pvNames{cellCritUse} ')'])
+ylim([0 4.5])
+%Arms
+[jj,statsOut] = PlotPVcurvesDiff(CSpooledPVcorrsARM{cellCritUse},CSpooledPVdaysApart{cellCritUse},condSetColors,condSetLabels,[]);
+title(['Within-Day Sensitivity Index ARM (' pvNames{cellCritUse} ')'])
+ylim([0 7])
+
 %% PV corr by days apart
 %Stem
 figure('Position',[317 403 1448 417]);
@@ -637,6 +663,45 @@ ggt{3}.Title.String = ['Last 2 bins'];
 xlabel('Days Apart'); ylabel('Change in mean PV corr'); ylim([-0.4 0.4])
 suptitleSL('Change of Within-Day Separation of PV corrs ARM')
 
+%% Center-of-mass
+
+figure; histogram(pooledCOMlrEx,1:0.5:8,'FaceColor',[0.8510    0.3294    0.1020])
+hold on
+histogram(pooledCOMstEx,1:0.5:8,'FaceColor',[0    0.4510    0.7412])
+plot([1 1]*mean(pooledCOMlrEx),[0 200],'--r','LineWidth',2)
+plot([1 1]*mean(pooledCOMstEx),[0 200],'--b','LineWidth',2)
+title('STEM COM distributions (exclusive, no both), r = lr b = st')
+xlim([1 8])
+ylabel('Number of cells')
+yyaxis right
+[f,x] = ecdf(pooledCOMlrRx);
+plot(x,f,'-','Color','r','LineWidth',2)
+[f,x] = ecdf(pooledCOMstEx);
+plot(x,f,'-','Color','b','LineWidth',2)
+ylabel('Cumulative portion')
+xlabel('All trials Firing COM')
+[statsOut.ranksum.pVal,statsOut.ranksum.hVal] = ranksum(pooledCOMlrEx,pooledCOMstEx);
+[statsOut.ksTest.hVal,statsOut.ksTest.pVal] = kstest2(pooledCOMlrEx,pooledCOMstEx);
+
+
+figure; histogram(pooledCOMlrARMex,1:0.5:8,'FaceColor',[0.8510    0.3294    0.1020])
+hold on
+histogram(pooledCOMstARMex,1:0.5:8,'FaceColor',[0    0.4510    0.7412])
+plot([1 1]*mean(pooledCOMlrARMex),[0 450],'--r','LineWidth',2)
+plot([1 1]*mean(pooledCOMstARMex),[0 450],'--b','LineWidth',2)
+title('ARM COM distributions (exclusive, no both), r = lr b = st')
+xlim([1 8])
+ylabel('Number of cells')
+yyaxis right
+[f,x] = ecdf(pooledCOMlrARMex);
+plot(x,f,'-','Color','r','LineWidth',2)
+[f,x] = ecdf(pooledCOMstARMex);
+plot(x,f,'-','Color','b','LineWidth',2)
+ylabel('Cumulative portion')
+xlabel('All trials Firing COM')
+
+[statsOut.ranksum.pVal,statsOut.ranksum.hVal] = ranksum(pooledCOMlrARMex,pooledCOMstARMex);
+[statsOut.ksTest.hVal,statsOut.ksTest.pVal] = kstest2(pooledCOMlrARMex,pooledCOMstARMex);
 %% Stem vs Arms
 gg = figure; statsOut = [];
 for condI = 1:length(condSetLabels)

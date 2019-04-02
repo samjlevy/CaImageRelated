@@ -13,12 +13,14 @@ if isempty(comparisons)
     comparisons = combnk(plotWhich,2);
 end
 
+
 if ~iscell(comparisons)
     comps = comparisons; comparisons = [];
     for aa = 1:size(comps,1)
         comparisons{aa,1} = comps(aa,:);
     end
 end
+statsOut.comparisons = cell2mat(comparisons);
 
 %Plot the scatter
 numDataPts = length(pooledSplitProp{1});
@@ -81,6 +83,8 @@ for pcI = 1:size(comparisons,1)
     text(mean(possibleX),possibleHeight+0.03,textPlot,'Color','k','HorizontalAlignment','center')
 end
 
+[statsOut.ksANOVA.p,statsOut.ksANOVA.tbl,statsOut.ksANOVA.stats] = kruskalwallis(dataHere,grps,'off');
+statsOut.ksANOVA.multComps = multcompare(statsOut.ksANOVA.stats,'Display','off');
 statsOut.propMeans = cell2mat(cellfun(@mean,pooledSplitProp,'UniformOutput',false));
 statsOut.propSEMs = cell2mat(cellfun(@standarderrorSL,pooledSplitProp,'UniformOutput',false));
 
