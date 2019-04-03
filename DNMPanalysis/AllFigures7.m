@@ -8,6 +8,15 @@ for mouseI = 1:numMice
 end
 %}
 
+%%
+tgsPlot = [3 4 5];
+
+colorAsscAlt = colorAssc;
+colorAsscAlt{3} = colorAssc{1};
+colorAsscAlt{4} = colorAssc{2};
+colorAsscAlt{8} = [0.6 0.6 0.6];
+traitLabelsAlt = traitLabels; traitLabelsAlt{3} = traitLabels{1}; traitLabelsAlt{4} = traitLabels{2}; 
+
 %% Accuracy
 
 figure('Position',[662 264 650 417]); 
@@ -61,47 +70,6 @@ for mouseI = 1:numMice
     end
 end
 
-%% How many cells active?
-figure;
-plot(pooledRealDayDiffs,pooledActiveCellsChange,'.k','MarkerSize',8)
-hold on
-plot(-1*pooledRealDayDiffs,-1*pooledActiveCellsChange,'.k','MarkerSize',8)
-plot([-20 20],[0 0],'k')
-plot(cellsActiveFitLine(:,1),cellsActiveFitLine(:,2),'k','LineWidth',2)
-plot(-1*cellsActiveFitLine(:,1),-1*cellsActiveFitLine(:,2),'k','LineWidth',2)
-title(['Change in cells above activity threshold, slope diff from 0 at p=' num2str(cellsActivepVal)])
-xlabel('Days Apart')
-ylabel('STEM Change in Proportion of Cells Active on Stem')
-
-figure;
-plot(pooledRealDayDiffs,pooledActiveCellsChangeARM,'.k','MarkerSize',8)
-hold on
-plot(-1*pooledRealDayDiffs,-1*pooledActiveCellsChangeARM,'.k','MarkerSize',8)
-plot([-20 20],[0 0],'k')
-plot(cellsActiveFitLineARM(:,1),cellsActiveFitLineARM(:,2),'k','LineWidth',2)
-plot(-1*cellsActiveFitLineARM(:,1),-1*cellsActiveFitLineARM(:,2),'k','LineWidth',2)
-title(['ARM Change in cells above activity threshold, slope diff from 0 at p=' num2str(cellsActivepValARM)])
-xlabel('Days Apart')
-ylabel('Change in Proportion of Cells Active')
-ylim([-0.15 0.15])
-
-%% New cells/lost cells
-
-
-
-
-
-
-%%
-compsMake = {[1 2];[3 5];[4 5]};
-tgsPlot = unique([compsMake{:}]);
-tgsPlot = [3 4 5];
-
-colorAsscAlt = colorAssc;
-colorAsscAlt{3} = colorAssc{1};
-colorAsscAlt{4} = colorAssc{2};
-colorAsscAlt{8} = [0.6 0.6 0.6];
-traitLabelsAlt = traitLabels; traitLabelsAlt{3} = traitLabels{1}; traitLabelsAlt{4} = traitLabels{2}; 
 %% Proportion of each splitter type
 hh = figure('Position',[477 83 324 803]);%[593 58 651 803]
 axHand = []; statsOut = [];
@@ -125,13 +93,6 @@ for slI = 1:2
        
     xlim([0 12]); ylim([0 5])
     title(['Stats for splitter proportions on ' splitterLoc{slI}])
-end
-
-
-%sign test stem vs. arms
-for tgI = 1:numTraitGroups
-    splitPropDiffs{tgI} = pooledSplitProp{1}{tgI} - pooledSplitProp{2}{tgI};
-    [pSplitPropDiffs(tgI),hSplitPropDiffs(tgI)] = signtest(splitPropDiffs{tgI}); %h = 1 reject (different)
 end
 
 %% Change in Proportion of Each splitter type by days apart
@@ -159,6 +120,40 @@ for slI = 1:2
     title(['stats for splitter prop changes on ' splitterLoc{slI}])
 end
 
+%% Within day decoding results
+
+colors = {colorAssc{1} colorAssc{2}};
+axH = []; statsOut = [];
+for slI = 1:2
+    figure('Position',[725 217 340 406]); axH = axes;
+    [axH,statsOut] = PlotTraitProps({decodingResultsPooled{slI}{2}{1}(sessDayDiffs{slI}{2}{1}==0) decodingResultsPooled{slI}{2}{2}(sessDayDiffs{slI}{2}{2}==0)},...
+        [1 2],[1 2],colors,{'Traj. Dest.','Task Phase'},axH);
+    hold on
+    plot([0 3],[0.5 0.5],'--','Color',[0.6 0.6 0.6],'LineWidth',2)
+    title(['Within Day Decoding on ' decodeLoc{slI} ', thresh cells'])
+    ylabel('% Trials Decoded Correct')
+end
+
+%Stats text
+
+
+% Does within-day decoding change
+statsOut = [];
+for dtI = 1:length(decodingType)
+    figure;
+    for slI = 1:2
+        subplot(1,2,slI)
+        [statsOut{dtI}{slI}] = PlotTraitChangeOverDaysOne(pooledWithinDayDecResChange{slI}{dtI},pooledRealDayDiffs,...
+            {colorAssc{1:2}},{'LR','ST'},'Change in Decoding Performance',[-0.5 0.5]);
+        title([decodeLoc{slI}])
+    end
+    suptitleSL(['Change in daily decoding performance using ' decodingType{dtI}]) 
+end
+
+%Stats text
+
+
+
 %% Prop of splitters that come back
 tgsPlot = [1 2 5];
 gh = [];
@@ -179,7 +174,280 @@ for slI = 1:2
     title(['stats for splitter reactivation by day lag on ' splitterLoc{slI}])
 end
 
-% Old
+%% Cell type sources bar graph
+c = categorical({'Turn','Phase','Conjunctive'});
+statsOut = [];
+for slI = 1:2
+    figure; 
+    for tcI = 1:length(cellCheck)
+        subplot(1,length(cellCheck),tcI)
+        [statsOut{slI}{tcI}] = PlotBarWithData([pooledDailySources{slI}{tcI}{:}],sourceColors,true,false,sourceLabels);
+        title(['Sources for ' traitLabels{cellCheck(tcI)}])
+        ylabel('Pct. of cells')
+    end
+    suptitleSL(['Sources for each type on ' mazeLocations{slI}])
+end
+
+for slI = 1:2
+    figure('Position',[257 92 1551 750]); 
+    for ccI = 1:length(cellCheck)
+        subplot(length(cellCheck),1,ccI)
+        text(1,1,'comparisons:'); text(3,0.5,num2str(statsOut{slI}{ccI}.signtest.comparisons'))
+        text(1,1.5,'sign test p'); text(3,1.5,num2str(statsOut{slI}{ccI}.signtest.pVal))
+        text(1,2,'KS ANOVA p tukey'); text(4,2,num2str(statsOut{slI}{ccI}.ksANOVA.multComps(:,6)'))
+        text(1,2.5,['KS ANOVA: Chi-sq    ' num2str(statsOut{slI}{ccI}.ksANOVA.tbl{2,5})]) 
+        text(1,3,['KS ANOVA: df groups, error, total    ' num2str([statsOut{slI}{ccI}.ksANOVA.tbl{2:end,3}])])
+        text(1,4,'KS ANOVA: groups :'); text(3,4,num2str(statsOut{slI}{ccI}.ksANOVA.multComps(:,1:2)'),'VerticalAlignment','middle')
+
+        xlim([0 12]); ylim([0 5])
+        title(['Stats for splitter sources for ' traitLabels{cellCheck(ccI)} ' on ' splitterLoc{slI}])
+    end
+end
+
+%% Cells transitioning between types
+
+gj = [];
+statsOut = [];
+transChangesPlot = 1:length(cellTransPropChanges{slI});
+transColors = colorAssc(transChangesPlot);
+for slI = 1:2
+    gj{slI} = figure;%('Position',[258 350 1542 459]);
+    [gj{slI},statsOut{slI}]=PlotTraitChangeOverDays(cellTransPropChanges{slI},sourceDayDiffsPooled{slI},...
+        transChangesPlot,transColors,transLabels,gj{slI},true,'regress',[-0.6 0.6],'pct. Change Transition Probability');
+    suptitleSL(['Transition likelihoods on ' splitterLoc{slI}])
+end
+
+for slI = 1:2
+    figure('Position',[680 558 730 420]);
+    for lineI = 1:length(transChangesPlot)
+        tl = transChangesPlot(lineI);
+        text(1,lineI,['F test eqal var ' num2str(transChangesPlot(lineI))...
+            ': F= ' num2str(statsOut{slI}.slopeDiffZero(tl).Fval) ' df num/den = '...
+            num2str(statsOut{slI}.slopeDiffZero(tl).dfNum) ' / ' num2str(statsOut{slI}.slopeDiffZero(tl).dfDen)...
+            ', p= ' num2str(statsOut{slI}.slopeDiffZero(tl).pVal)...
+            ', rr= ' num2str(statsOut{slI}.slopeRR(tl).Ordinary)])
+    end
+    
+    xlim([0 15]); ylim([0 8])
+    title(['stats for splitter prop changes on ' splitterLoc{slI}])
+end
+
+%% What are new cells?
+fg = [];
+statsOut = [];
+figure('Position',[477 83 324 803]);
+for slI = 1:2
+    fg{slI} = subplot(2,1,slI);
+    % fg{slI} = axes;
+    [fg{slI}, statsOut{slI}] = PlotTraitProps(pooledNewCellProps{slI},[3 4 5 8],{[2 3];[1 3];[3 4];[2 4];[1 4]},colorAsscAlt,traitLabels,fg{slI}); 
+    ylabel('Proportion of New Cells')
+    title(['Proportion of new cells that go to each type on ' mazeLocations{slI}])
+end
+
+%Stats text figure
+figure('Position',[680 558 1055 420]); 
+for slI = 1:2
+    subplot(2,1,slI)
+    text(1,1,'comparisons:'); text(3,0.5,num2str(statsOut{slI}.comparisons'))
+    text(1,1.5,'sign test p'); text(3,1.5,num2str(statsOut{slI}.pPropDiffs))
+    text(1,2,'KS ANOVA p tukey'); text(4,2,num2str(statsOut{slI}.ksANOVA.multComps(:,6)'))
+    text(1,2.5,['KS ANOVA: Chi-sq    ' num2str(statsOut{slI}.ksANOVA.tbl{2,5})]) 
+    text(1,3,['KS ANOVA: df groups, error, total    ' num2str([statsOut{slI}.ksANOVA.tbl{2:end,3}])])
+       
+    xlim([0 12]); ylim([0 5])
+    title(['Stats for new cell proportions on ' splitterLoc{slI}])
+end
+
+
+% New cells changing types
+gh = [];
+statsOut = [];
+for slI = 1:2
+    gh{slI} = figure;%('Position',[435 278 988 390]);
+    [gh{slI},statsOut{slI}] = PlotTraitChangeOverDays(pooledNewCellPropChanges{slI},sourceDayDiffsPooled{slI},...
+        [3 4 5 8],colorAsscAlt,traitLabels,gh{slI},true,'regress',[-0.75 0.4],'Change in Pct. New Cells this Type'); %Num in this case is diff in Pcts.
+    %(pooledTraitChanges,pooledDaysApart,comparisons,colorsUse,labels,figHand,plotDots,lineType,ylims,yLabel)
+
+    suptitleSL(['Change in Proportion of New Cells that are a splitting type ' splitterLoc{slI}])
+end
+for slI = 1:2
+    figure('Position',[593 316 660 458]);%[680 558 730 420]
+    for lineI = 1:length(changesPlot)
+        tl = changesPlot(lineI);
+        
+        text(1,lineI,['F test eqal var ' num2str(changesPlot(lineI))...
+            ': F= ' num2str(statsOut{slI}.slopeDiffZero(tl).Fval) ' df num/den = '...
+            num2str(statsOut{slI}.slopeDiffZero(tl).dfNum) ' / ' num2str(statsOut{slI}.slopeDiffZero(tl).dfDen)...
+            ', p= ' num2str(statsOut{slI}.slopeDiffZero(tl).pVal)...
+            ', rr= ' num2str(statsOut{slI}.slopeRR(tl).Ordinary)])
+    end
+    xlim([0 15]); ylim([0 5])
+    title(['stats for splitter prop changes on ' splitterLoc{slI}])
+end
+
+%% Decoding by days apart
+%Reg vs. Downsampled
+dimCols = {[0.6392 0.0784 0.1804;1 0 0];[ 0 1 1;0 0 1]};
+decDim = {'Traj. Dest.','Task Phase'};
+lineType = {{'-','--'},{'-','--'}};
+transHere = {[0.6 1];[0.6 1]};
+dtI = 2
+statsOut = [];
+asd = figure('Position',[373 137 482 766]);%[723 305 574 461]
+axH = [];
+for slI = 1:length(decodeLoc)
+    axInd = slI;
+    axH(axInd) = subplot(length(decodeLoc),1,axInd);
+for ddI = 1:2%decoding Dimension
+    [axH(axInd), statsOut{slI}{ddI}] = PlotDecodingOneVSother3(...
+                                {decodingResultsPooled{slI}{dtI}{ddI} downsampledResultsPooled{slI}{dtI}{ddI}},...
+                                {shuffledResultsPooled{slI}{dtI}{ddI} shuffledResultsPooled{slI}{dtI}{ddI}},...
+                                {decodedWellPooled{slI}{dtI}{ddI} DSaboveShuffPpooled{slI}{dtI}{ddI}},...
+                                sessDayDiffs{slI}{dtI}{ddI},sessDayDiffs{slI}{dtI}{ddI},[],lineType{ddI},transHere{ddI},dimCols{ddI},axH(axInd));
+    title(['Decoding comparison, reg. vs. DS, decoding Cells on ' decodeLoc{slI} ])
+end
+end
+asd.Renderer = 'painters';
+suptitleSL(['Decoding with ' decodingType{dtI} ', solid = REG, dotted = DS, r = lr b = st'])
+
+%Stats text
+
+%% Within day population D-prime sensitivity index
+%Stem
+[jj,statsOut] = PlotPVcurvesDiff(CSpooledPVcorrs{cellCritUse},CSpooledPVdaysApart{cellCritUse},condSetColors,condSetLabels,[]);
+title(['Within-Day Sensitivity Index STEM (' pvNames{cellCritUse} ')'])
+ylim([0 4.5])
+
+%Stats Text
+
+%Arms
+[jj,statsOut] = PlotPVcurvesDiff(CSpooledPVcorrsARM{cellCritUse},CSpooledPVdaysApart{cellCritUse},condSetColors,condSetLabels,[]);
+title(['Within-Day Sensitivity Index ARM (' pvNames{cellCritUse} ')'])
+ylim([0 7])
+
+%Stats Text
+
+%% PV corr by days apart
+%Stem
+figure('Position',[317 403 1448 417]);
+gg = []; statsOut = [];
+gg{1} = subplot(1,3,1);
+[gg{1}, statsOut{1}] = PlotMeanPVcorrsDaysApart(CSpooledMeanPVcorrs{cellCritUse}, CSpooledPVdaysApart{cellCritUse},...
+    'none', condSetColors, condSetLabels, false, gg{1});
+gg{1}.Title.String = ['Mean All Bins (' pvNames{cellCritUse} ')'];
+ylim([-0.3 0.4])
+gg{2} = subplot(1,3,2);
+[gg{2}, statsOut{2}] = PlotMeanPVcorrsDaysApart(CSpooledMeanPVcorrsHalfFirst{cellCritUse}, CSpooledPVdaysApart{cellCritUse},...
+    'none', condSetColors, condSetLabels, false, gg{2});
+gg{2}.Title.String = ['Mean 1st 2 bins (' pvNames{cellCritUse} ')'];
+ylim([-0.3 0.4])
+gg{3} = subplot(1,3,3);
+[gg{3}, statsOut{3}] = PlotMeanPVcorrsDaysApart(CSpooledMeanPVcorrsHalfSecond{cellCritUse}, CSpooledPVdaysApart{cellCritUse},...
+    'none', condSetColors, condSetLabels, false, gg{3});
+ylim([-0.3 0.4])
+gg{3}.Title.String = ['Mean Last 2 bins (' pvNames{cellCritUse} ')'];
+suptitleSL('Mean correlation by days apart STEM')
+%Arm
+figure('Position',[317 403 1448 417]);
+gg = []; statsOut = [];
+gg{1} = subplot(1,3,1);
+[gg{1}, statsOut{1}] = PlotMeanPVcorrsDaysApart(CSpooledMeanPVcorrsARM{cellCritUse}, CSpooledPVdaysApart{cellCritUse},...
+    'none', condSetColors, condSetLabels, false, gg{1});
+gg{1}.Title.String = ['Mean Correlation by Days Apart (' pvNames{cellCritUse} ')'];
+ylim([-0.3 0.4])
+gg{2} = subplot(1,3,2);
+[gg{2}, statsOut{2}] = PlotMeanPVcorrsDaysApart(CSpooledMeanPVcorrsHalfFirstARM{cellCritUse}, CSpooledPVdaysApart{cellCritUse},...
+    'none', condSetColors, condSetLabels, false, gg{2});
+gg{2}.Title.String = ['Mean Correlation by Days Apart 1st 2 bins (' pvNames{cellCritUse} ')'];
+ylim([-0.3 0.4])
+gg{3} = subplot(1,3,3);
+[gg{3}, statsOut{3}] = PlotMeanPVcorrsDaysApart(CSpooledMeanPVcorrsHalfSecondARM{cellCritUse}, CSpooledPVdaysApart{cellCritUse},...
+    'none', condSetColors, condSetLabels, false, gg{3});
+gg{3}.Title.String = ['Mean Correlation by Days Apart last 2 bins (' pvNames{cellCritUse} ')'];
+ylim([-0.3 0.4])
+suptitleSL('Mean correlation by days apart ARM')
+
+%% Center-of-mass
+
+figure; histogram(pooledCOMlrEx,1:0.5:8,'FaceColor',[0.8510    0.3294    0.1020])
+hold on
+histogram(pooledCOMstEx,1:0.5:8,'FaceColor',[0    0.4510    0.7412])
+plot([1 1]*mean(pooledCOMlrEx),[0 200],'--r','LineWidth',2)
+plot([1 1]*mean(pooledCOMstEx),[0 200],'--b','LineWidth',2)
+title('STEM COM distributions (exclusive, no both), r = lr b = st')
+xlim([1 8])
+ylabel('Number of cells')
+yyaxis right
+[f,x] = ecdf(pooledCOMlrRx);
+plot(x,f,'-','Color','r','LineWidth',2)
+[f,x] = ecdf(pooledCOMstEx);
+plot(x,f,'-','Color','b','LineWidth',2)
+ylabel('Cumulative portion')
+xlabel('All trials Firing COM')
+[statsOut.ranksum.pVal,statsOut.ranksum.hVal] = ranksum(pooledCOMlrEx,pooledCOMstEx);
+[statsOut.ksTest.hVal,statsOut.ksTest.pVal] = kstest2(pooledCOMlrEx,pooledCOMstEx);
+
+
+figure; histogram(pooledCOMlrARMex,1:0.5:8,'FaceColor',[0.8510    0.3294    0.1020])
+hold on
+histogram(pooledCOMstARMex,1:0.5:8,'FaceColor',[0    0.4510    0.7412])
+plot([1 1]*mean(pooledCOMlrARMex),[0 450],'--r','LineWidth',2)
+plot([1 1]*mean(pooledCOMstARMex),[0 450],'--b','LineWidth',2)
+title('ARM COM distributions (exclusive, no both), r = lr b = st')
+xlim([1 8])
+ylabel('Number of cells')
+yyaxis right
+[f,x] = ecdf(pooledCOMlrARMex);
+plot(x,f,'-','Color','r','LineWidth',2)
+[f,x] = ecdf(pooledCOMstARMex);
+plot(x,f,'-','Color','b','LineWidth',2)
+ylabel('Cumulative portion')
+xlabel('All trials Firing COM')
+
+[statsOut.ranksum.pVal,statsOut.ranksum.hVal] = ranksum(pooledCOMlrARMex,pooledCOMstARMex);
+[statsOut.ksTest.hVal,statsOut.ksTest.pVal] = kstest2(pooledCOMlrARMex,pooledCOMstARMex);
+
+
+
+
+
+
+
+
+%% How many cells active?
+figure;
+plot(pooledRealDayDiffs,pooledActiveCellsChange,'.k','MarkerSize',8)
+hold on
+plot(-1*pooledRealDayDiffs,-1*pooledActiveCellsChange,'.k','MarkerSize',8)
+plot([-20 20],[0 0],'k')
+plot(cellsActiveFitLine(:,1),cellsActiveFitLine(:,2),'k','LineWidth',2)
+plot(-1*cellsActiveFitLine(:,1),-1*cellsActiveFitLine(:,2),'k','LineWidth',2)
+title(['Change in cells above activity threshold, slope diff from 0 at p=' num2str(cellsActivepVal)])
+xlabel('Days Apart')
+ylabel('STEM Change in Proportion of Cells Active on Stem')
+
+figure;
+plot(pooledRealDayDiffs,pooledActiveCellsChangeARM,'.k','MarkerSize',8)
+hold on
+plot(-1*pooledRealDayDiffs,-1*pooledActiveCellsChangeARM,'.k','MarkerSize',8)
+plot([-20 20],[0 0],'k')
+plot(cellsActiveFitLineARM(:,1),cellsActiveFitLineARM(:,2),'k','LineWidth',2)
+plot(-1*cellsActiveFitLineARM(:,1),-1*cellsActiveFitLineARM(:,2),'k','LineWidth',2)
+title(['ARM Change in cells above activity threshold, slope diff from 0 at p=' num2str(cellsActivepValARM)])
+xlabel('Days Apart')
+ylabel('Change in Proportion of Cells Active')
+ylim([-0.15 0.15])
+
+
+%% sign test stem vs. arms
+for tgI = 1:numTraitGroups
+    splitPropDiffs{tgI} = pooledSplitProp{1}{tgI} - pooledSplitProp{2}{tgI};
+    [pSplitPropDiffs(tgI),hSplitPropDiffs(tgI)] = signtest(splitPropDiffs{tgI}); %h = 1 reject (different)
+end
+
+
+
+%% Old pct splitters come back
 gh = [];
 statsOut = [];
 for slI = 1:2
@@ -326,145 +594,9 @@ for slI = 1:2
     ylabel('Likelihood')
 end
 
-gj = [];
-statsOut = [];
-transChangesPlot = 1:length(cellTransPropChanges{slI});
-transColors = colorAssc(transChangesPlot);
-for slI = 1:2
-    gj{slI} = figure;%('Position',[258 350 1542 459]);
-    [gj{slI},statsOut{slI}]=PlotTraitChangeOverDays(cellTransPropChanges{slI},sourceDayDiffsPooled{slI},...
-        transChangesPlot,transColors,transLabels,gj{slI},true,'regress',[-0.6 0.6],'pct. Change Transition Probability');
-    suptitleSL(['Transition likelihoods on ' splitterLoc{slI}])
-end
-
-for slI = 1:2
-    figure('Position',[680 558 730 420]);
-    for lineI = 1:length(transChangesPlot)
-        tl = transChangesPlot(lineI);
-        text(1,lineI,['F test eqal var ' num2str(transChangesPlot(lineI))...
-            ': F= ' num2str(statsOut{slI}.slopeDiffZero(tl).Fval) ' df num/den = '...
-            num2str(statsOut{slI}.slopeDiffZero(tl).dfNum) ' / ' num2str(statsOut{slI}.slopeDiffZero(tl).dfDen)...
-            ', p= ' num2str(statsOut{slI}.slopeDiffZero(tl).pVal)...
-            ', rr= ' num2str(statsOut{slI}.slopeRR(tl).Ordinary)])
-    end
-    
-    xlim([0 15]); ylim([0 8])
-    title(['stats for splitter prop changes on ' splitterLoc{slI}])
-end
-%{
-gj = [];
-statsOut = [];
-transColors = colorAssc([1 2 5 1 2 5 1 2 5]);
-for slI = 1:2
-    gj{slI} = figure;%('Position',[258 350 1542 459]);
-    [gj{slI},statsOut{slI}]=PlotTraitChangeOverDays(cellTransPropChanges{slI},sourceDayDiffsPooled{slI},...
-        {1:3;4:6;7:9},transColors,transLabels,gj{slI},true,'regress',[-0.75 0.75],'pct. Change Transition Probability');
-    suptitleSL(['Transition likelihoods on ' splitterLoc{slI}])
-end
-%}
-%% What are new cells?
-fg = [];
-statsOut = [];
-figure('Position',[477 83 324 803]);
-for slI = 1:2
-    fg{slI} = subplot(2,1,slI);
-    % fg{slI} = axes;
-    [fg{slI}, statsOut{slI}] = PlotTraitProps(pooledNewCellProps{slI},[3 4 5 8],{[2 3];[1 3];[3 4];[2 4];[1 4]},colorAsscAlt,traitLabels,fg{slI}); 
-    ylabel('Proportion of New Cells')
-    title(['Proportion of new cells that go to each type on ' mazeLocations{slI}])
-end
-
-%Stats text figure
-figure('Position',[680 558 1055 420]); 
-for slI = 1:2
-    subplot(2,1,slI)
-    text(1,1,'comparisons:'); text(3,0.5,num2str(statsOut{slI}.comparisons'))
-    text(1,1.5,'sign test p'); text(3,1.5,num2str(statsOut{slI}.pPropDiffs))
-    text(1,2,'KS ANOVA p tukey'); text(4,2,num2str(statsOut{slI}.ksANOVA.multComps(:,6)'))
-    text(1,2.5,['KS ANOVA: Chi-sq    ' num2str(statsOut{slI}.ksANOVA.tbl{2,5})]) 
-    text(1,3,['KS ANOVA: df groups, error, total    ' num2str([statsOut{slI}.ksANOVA.tbl{2:end,3}])])
-       
-    xlim([0 12]); ylim([0 5])
-    title(['Stats for new cell proportions on ' splitterLoc{slI}])
-end
-
-
-
-gh = [];
-statsOut = [];
-for slI = 1:2
-    gh{slI} = figure;%('Position',[435 278 988 390]);
-    [gh{slI},statsOut{slI}] = PlotTraitChangeOverDays(pooledNewCellPropChanges{slI},sourceDayDiffsPooled{slI},...
-        [3 4 5 8],colorAsscAlt,traitLabels,gh{slI},true,'regress',[-0.75 0.4],'Change in Pct. New Cells this Type'); %Num in this case is diff in Pcts.
-    %(pooledTraitChanges,pooledDaysApart,comparisons,colorsUse,labels,figHand,plotDots,lineType,ylims,yLabel)
-
-    suptitleSL(['Change in Proportion of New Cells that are a splitting type ' splitterLoc{slI}])
-end
-for slI = 1:2
-    figure('Position',[593 316 660 458]);%[680 558 730 420]
-    for lineI = 1:length(changesPlot)
-        tl = changesPlot(lineI);
-        
-        text(1,lineI,['F test eqal var ' num2str(changesPlot(lineI))...
-            ': F= ' num2str(statsOut{slI}.slopeDiffZero(tl).Fval) ' df num/den = '...
-            num2str(statsOut{slI}.slopeDiffZero(tl).dfNum) ' / ' num2str(statsOut{slI}.slopeDiffZero(tl).dfDen)...
-            ', p= ' num2str(statsOut{slI}.slopeDiffZero(tl).pVal)...
-            ', rr= ' num2str(statsOut{slI}.slopeRR(tl).Ordinary)])
-    end
-    xlim([0 15]); ylim([0 5])
-    title(['stats for splitter prop changes on ' splitterLoc{slI}])
-end
-
-%{
-%% What are new cells?
-fg = [];
-statsOut = [];
-for slI = 1:2
-    figure; fg{slI} = axes;
-    [fg{slI}, statsOut{slI}] = PlotTraitProps(newCellProps{slI},[],[],colorAssc,{'LR','ST','BOTH'},fg{slI});
-    title(['Daily distribution of new cells among splitter types on ' mazeLocations{slI}])
-    ylabel('Pct. of new cells')
-end
-
-statsOut = [];
-for slI = 1:2
-    sd{slI} = figure;
-    [sd{slI},statsOut{slI}]=PlotTraitChangeOverDays(newCellPropChanges{slI},sourceDayDiffsPooled{slI},...
-        1:length(newCellPropChanges{slI}),...
-        colorAssc,{'LR','ST','BOTH'},sd{slI},true,'regress',[-1 1],'Change in pct. new cells');
-end
-%}
 
 %% Cell type sources bargraph
 
-c = categorical({'Turn','Phase','Conjunctive'});
-statsOut = [];
-for slI = 1:2
-    figure; 
-    for tcI = 1:length(cellCheck)
-        subplot(1,length(cellCheck),tcI)
-        [statsOut{slI}{tcI}] = PlotBarWithData([pooledDailySources{slI}{tcI}{:}],sourceColors,true,false,sourceLabels);
-        title(['Sources for ' traitLabels{cellCheck(tcI)}])
-        ylabel('Pct. of cells')
-    end
-    suptitleSL(['Sources for each type on ' mazeLocations{slI}])
-end
-
-for slI = 1:2
-    figure('Position',[257 92 1551 750]); 
-    for ccI = 1:length(cellCheck)
-        subplot(length(cellCheck),1,ccI)
-        text(1,1,'comparisons:'); text(3,0.5,num2str(statsOut{slI}{ccI}.signtest.comparisons'))
-        text(1,1.5,'sign test p'); text(3,1.5,num2str(statsOut{slI}{ccI}.signtest.pVal))
-        text(1,2,'KS ANOVA p tukey'); text(4,2,num2str(statsOut{slI}{ccI}.ksANOVA.multComps(:,6)'))
-        text(1,2.5,['KS ANOVA: Chi-sq    ' num2str(statsOut{slI}{ccI}.ksANOVA.tbl{2,5})]) 
-        text(1,3,['KS ANOVA: df groups, error, total    ' num2str([statsOut{slI}{ccI}.ksANOVA.tbl{2:end,3}])])
-        text(1,4,'KS ANOVA: groups :'); text(3,4,num2str(statsOut{slI}{ccI}.ksANOVA.multComps(:,1:2)'),'VerticalAlignment','middle')
-
-        xlim([0 12]); ylim([0 5])
-        title(['Stats for splitter sources for ' traitLabels{cellCheck(ccI)} ' on ' splitterLoc{slI}])
-    end
-end
 
 %Changes 
 ff = []; statsOut = [];
@@ -624,56 +756,6 @@ title(['Mean Within-Day Population Vector Correlation ARM(' pvNames{cellCritUse}
 ylim([0 0.7])
 
 
-%D-prime sensitivity index
-%Stem
-[jj,statsOut] = PlotPVcurvesDiff(CSpooledPVcorrs{cellCritUse},CSpooledPVdaysApart{cellCritUse},condSetColors,condSetLabels,[]);
-title(['Within-Day Sensitivity Index STEM (' pvNames{cellCritUse} ')'])
-ylim([0 4.5])
-%Arms
-[jj,statsOut] = PlotPVcurvesDiff(CSpooledPVcorrsARM{cellCritUse},CSpooledPVdaysApart{cellCritUse},condSetColors,condSetLabels,[]);
-title(['Within-Day Sensitivity Index ARM (' pvNames{cellCritUse} ')'])
-ylim([0 7])
-
-%% PV corr by days apart
-%Stem
-figure('Position',[317 403 1448 417]);
-gg = []; statsOut = [];
-gg{1} = subplot(1,3,1);
-[gg{1}, statsOut{1}] = PlotMeanPVcorrsDaysApart(CSpooledMeanPVcorrs{cellCritUse}, CSpooledPVdaysApart{cellCritUse},...
-    'none', condSetColors, condSetLabels, false, gg{1});
-gg{1}.Title.String = ['Mean All Bins (' pvNames{cellCritUse} ')'];
-ylim([-0.3 0.4])
-gg{2} = subplot(1,3,2);
-[gg{2}, statsOut{2}] = PlotMeanPVcorrsDaysApart(CSpooledMeanPVcorrsHalfFirst{cellCritUse}, CSpooledPVdaysApart{cellCritUse},...
-    'none', condSetColors, condSetLabels, false, gg{2});
-gg{2}.Title.String = ['Mean 1st 2 bins (' pvNames{cellCritUse} ')'];
-ylim([-0.3 0.4])
-gg{3} = subplot(1,3,3);
-[gg{3}, statsOut{3}] = PlotMeanPVcorrsDaysApart(CSpooledMeanPVcorrsHalfSecond{cellCritUse}, CSpooledPVdaysApart{cellCritUse},...
-    'none', condSetColors, condSetLabels, false, gg{3});
-ylim([-0.3 0.4])
-gg{3}.Title.String = ['Mean Last 2 bins (' pvNames{cellCritUse} ')'];
-suptitleSL('Mean correlation by days apart STEM')
-%Arm
-figure('Position',[317 403 1448 417]);
-gg = []; statsOut = [];
-gg{1} = subplot(1,3,1);
-[gg{1}, statsOut{1}] = PlotMeanPVcorrsDaysApart(CSpooledMeanPVcorrsARM{cellCritUse}, CSpooledPVdaysApart{cellCritUse},...
-    'none', condSetColors, condSetLabels, false, gg{1});
-gg{1}.Title.String = ['Mean Correlation by Days Apart (' pvNames{cellCritUse} ')'];
-ylim([-0.3 0.4])
-gg{2} = subplot(1,3,2);
-[gg{2}, statsOut{2}] = PlotMeanPVcorrsDaysApart(CSpooledMeanPVcorrsHalfFirstARM{cellCritUse}, CSpooledPVdaysApart{cellCritUse},...
-    'none', condSetColors, condSetLabels, false, gg{2});
-gg{2}.Title.String = ['Mean Correlation by Days Apart 1st 2 bins (' pvNames{cellCritUse} ')'];
-ylim([-0.3 0.4])
-gg{3} = subplot(1,3,3);
-[gg{3}, statsOut{3}] = PlotMeanPVcorrsDaysApart(CSpooledMeanPVcorrsHalfSecondARM{cellCritUse}, CSpooledPVdaysApart{cellCritUse},...
-    'none', condSetColors, condSetLabels, false, gg{3});
-gg{3}.Title.String = ['Mean Correlation by Days Apart last 2 bins (' pvNames{cellCritUse} ')'];
-ylim([-0.3 0.4])
-suptitleSL('Mean correlation by days apart ARM')
-
 
 %% Change and separation of PV corrs
 %Stem
@@ -752,45 +834,7 @@ ggt{3}.Title.String = ['Last 2 bins'];
 xlabel('Days Apart'); ylabel('Change in mean PV corr'); ylim([-0.4 0.4])
 suptitleSL('Change of Within-Day Separation of PV corrs ARM')
 
-%% Center-of-mass
 
-figure; histogram(pooledCOMlrEx,1:0.5:8,'FaceColor',[0.8510    0.3294    0.1020])
-hold on
-histogram(pooledCOMstEx,1:0.5:8,'FaceColor',[0    0.4510    0.7412])
-plot([1 1]*mean(pooledCOMlrEx),[0 200],'--r','LineWidth',2)
-plot([1 1]*mean(pooledCOMstEx),[0 200],'--b','LineWidth',2)
-title('STEM COM distributions (exclusive, no both), r = lr b = st')
-xlim([1 8])
-ylabel('Number of cells')
-yyaxis right
-[f,x] = ecdf(pooledCOMlrRx);
-plot(x,f,'-','Color','r','LineWidth',2)
-[f,x] = ecdf(pooledCOMstEx);
-plot(x,f,'-','Color','b','LineWidth',2)
-ylabel('Cumulative portion')
-xlabel('All trials Firing COM')
-[statsOut.ranksum.pVal,statsOut.ranksum.hVal] = ranksum(pooledCOMlrEx,pooledCOMstEx);
-[statsOut.ksTest.hVal,statsOut.ksTest.pVal] = kstest2(pooledCOMlrEx,pooledCOMstEx);
-
-
-figure; histogram(pooledCOMlrARMex,1:0.5:8,'FaceColor',[0.8510    0.3294    0.1020])
-hold on
-histogram(pooledCOMstARMex,1:0.5:8,'FaceColor',[0    0.4510    0.7412])
-plot([1 1]*mean(pooledCOMlrARMex),[0 450],'--r','LineWidth',2)
-plot([1 1]*mean(pooledCOMstARMex),[0 450],'--b','LineWidth',2)
-title('ARM COM distributions (exclusive, no both), r = lr b = st')
-xlim([1 8])
-ylabel('Number of cells')
-yyaxis right
-[f,x] = ecdf(pooledCOMlrARMex);
-plot(x,f,'-','Color','r','LineWidth',2)
-[f,x] = ecdf(pooledCOMstARMex);
-plot(x,f,'-','Color','b','LineWidth',2)
-ylabel('Cumulative portion')
-xlabel('All trials Firing COM')
-
-[statsOut.ranksum.pVal,statsOut.ranksum.hVal] = ranksum(pooledCOMlrARMex,pooledCOMstARMex);
-[statsOut.ksTest.hVal,statsOut.ksTest.pVal] = kstest2(pooledCOMlrARMex,pooledCOMstARMex);
 %% Stem vs Arms
 gg = figure; statsOut = [];
 for condI = 1:length(condSetLabels)
@@ -850,64 +894,6 @@ suptitleSL(['Difference between STEM (dark) and ARM (light) mean corrs (' pvName
 %decResults{2} = decodingResultsPooled{2}{dtI}
 %Within day decoding
 
-colors = {colorAssc{1} colorAssc{2}};
-axH = []; statsOut = [];
-for slI = 1:2
-    figure('Position',[725 217 340 406]); axH = axes;
-    [axH,statsOut] = PlotTraitProps({decodingResultsPooled{slI}{2}{1}(sessDayDiffs{slI}{2}{1}==0) decodingResultsPooled{slI}{2}{2}(sessDayDiffs{slI}{2}{2}==0)},...
-        [1 2],[1 2],colors,{'Traj. Dest.','Task Phase'},axH);
-    hold on
-    plot([0 3],[0.5 0.5],'--','Color',[0.6 0.6 0.6],'LineWidth',2)
-    title(['Within Day Decoding on ' decodeLoc{slI} ', thresh cells'])
-    ylabel('% Trials Decoded Correct')
-end
-
-%{
-for slI = 1:2
-    colors{1} = {colorAssc{1} colorAssc{2}}; colors{2} = {colorAssc{1} colorAssc{2}};
-    [axH,statsOut]=PlotWithinDayDecoding(decodingResultsPooled{slI},shuffledResultsPooled{slI},sessDayDiffs{slI},...
-        {'all','thresh'},{'LR','ST'},colors);
-    title(['Within-Day Decoding on ' decodeLoc{slI}])
-end
-%}
-%Need downsampled control
-
-%Does within-day decoding change
-statsOut = [];
-for dtI = 1:length(decodingType)
-    figure;
-    for slI = 1:2
-        subplot(1,2,slI)
-        [statsOut{dtI}{slI}] = PlotTraitChangeOverDaysOne(pooledWithinDayDecResChange{slI}{dtI},pooledRealDayDiffs,...
-            {colorAssc{1:2}},{'LR','ST'},'Change in Decoding Performance',[-0.5 0.5]);
-        title([decodeLoc{slI}])
-    end
-    suptitleSL(['Change in daily decoding performance using ' decodingType{dtI}]) 
-end
-
-%Reg vs. Downsampled
-dimCols = {[0.6392 0.0784 0.1804;1 0 0];[ 0 1 1;0 0 1]};
-decDim = {'Traj. Dest.','Task Phase'};
-lineType = {{'-','--'},{'-','--'}};
-transHere = {[0.6 1];[0.6 1]};
-dtI = 2
-statsOut = [];
-asd = figure('Position',[373 137 482 766]);%[723 305 574 461]
-axH = [];
-for slI = 1:length(decodeLoc)
-    axInd = slI;
-    axH(axInd) = subplot(length(decodeLoc),1,axInd);
-for ddI = 1:2%decoding Dimension
-    [axH(axInd), statsOut{slI}{ddI}] = PlotDecodingOneVSother3(...
-                                {decodingResultsPooled{slI}{dtI}{ddI} downsampledResultsPooled{slI}{dtI}{ddI}},...
-                                {shuffledResultsPooled{slI}{dtI}{ddI} shuffledResultsPooled{slI}{dtI}{ddI}},...
-                                {decodedWellPooled{slI}{dtI}{ddI} DSaboveShuffPpooled{slI}{dtI}{ddI}},...
-                                sessDayDiffs{slI}{dtI}{ddI},sessDayDiffs{slI}{dtI}{ddI},[],lineType{ddI},transHere{ddI},dimCols{ddI},axH(axInd));
-    title(['Decoding comparison, reg. vs. DS, decoding Cells on ' decodeLoc{slI} ])
-end
-end
-asd.Renderer = 'painters';
-suptitleSL(['Decoding with ' decodingType{dtI} ', solid = REG, dotted = DS, r = lr b = st'])
 
 
 %LvR vs. SvT comparison
