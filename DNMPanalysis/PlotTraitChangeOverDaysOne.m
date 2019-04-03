@@ -1,5 +1,4 @@
 function [statsOut] = PlotTraitChangeOverDaysOne(pooledTraitChanges,pooledDaysApart,colorsHere,labels,plotDots,lineType,yLabel,ylims)
-
 numConds = length(pooledTraitChanges);
 
 plot([0.5 max(pooledDaysApart)+0.5],[0 0],'k')
@@ -14,7 +13,7 @@ for condI = 1:numConds
     %pp(condI) = plot(pooledDaysApart+csMod(condI),pooledTraitChanges{condI},'.',...
     %    'Color',colorsHere{condI},'MarkerSize',12,'DisplayName',labels{condI});
     pp(condI) = scatter(pooledDaysApart+csMod(condI),pooledTraitChanges{condI},'filled','MarkerFaceColor',colorsHere{condI},...
-        'SizeData',15,'MarkerFaceAlpha',0.5,'DisplayName',labels{condI});
+        'SizeData',20,'MarkerFaceAlpha',0.6,'DisplayName',labels{condI});
     end
     
     for ddI = 1:length(daysHere)

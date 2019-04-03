@@ -124,6 +124,7 @@ for slI = 1:2
     text(1,3,['KS ANOVA: df groups, error, total    ' num2str([statsOut{slI}.ksANOVA.tbl{2:end,3}])])
        
     xlim([0 12]); ylim([0 5])
+    title(['Stats for splitter proportions on ' splitterLoc{slI}])
 end
 
 
@@ -134,16 +135,51 @@ for tgI = 1:numTraitGroups
 end
 
 %% Change in Proportion of Each splitter type by days apart
+changesPlot =[3 4 5 8];
 gh = [];
 statsOut = [];
 for slI = 1:2
-    gh{slI} = figure('Position',[593 273 559 501]);%[435 278 988 390]
+    gh{slI} = figure('Position',[593 316 660 458]);%[435 278 988 390][593 273 559 501]
     [gh{slI},statsOut{slI}] = PlotTraitChangeOverDays(pooledSplitNumChange{slI},pooledRealDayDiffs,...
-        {[3 4 5 8]},colorAsscAlt,traitLabels,gh{slI},true,'regress',[-0.25 0.25],'pct Change'); %Num in this case is diff in Pcts.
+        {changesPlot},colorAsscAlt,traitLabels,gh{slI},true,'regress',[-0.6 0.4],'pct Change'); %Num in this case is diff in Pcts.
     suptitleSL(['Change in Proportion of Splitters on ' splitterLoc{slI}])
+end
+for slI = 1:2
+    figure('Position',[680 558 730 420]);
+    for lineI = 1:length(changesPlot)
+        tl = changesPlot(lineI);
+        
+        text(1,lineI,['F test eqal var ' num2str(changesPlot(lineI))...
+            ': F= ' num2str(statsOut{slI}.slopeDiffZero(tl).Fval) ' df num/den = '...
+            num2str(statsOut{slI}.slopeDiffZero(tl).dfNum) ' / ' num2str(statsOut{slI}.slopeDiffZero(tl).dfDen)...
+            ', p= ' num2str(statsOut{slI}.slopeDiffZero(tl).pVal)...
+            ', rr= ' num2str(statsOut{slI}.slopeRR(tl).Ordinary)])
+    end
+    xlim([0 15]); ylim([0 5])
+    title(['stats for splitter prop changes on ' splitterLoc{slI}])
 end
 
 %% Prop of splitters that come back
+tgsPlot = [1 2 5];
+gh = [];
+statsOut = [];
+for slI = 1:2
+    gh{slI} = figure('Position',[360 169 435 444]);
+    [gh{slI},statsOut{slI}] = PlotTraitChangeOverDays(pooledSplitterComesBack{slI},pooledRealDayDiffs,...
+        tgsPlot,colorAssc,traitLabels,gh{slI},true,'mean',[0 0.8],'pct. Cells Return'); %Num in this case is diff in Pcts.
+    suptitleSL(['Change in Proportion of Splitters that Come Back on ' splitterLoc{slI}])
+end
+for slI = 1:2
+    figure('Position',[680 558 730 420]);
+    for lineI = 1:length(tgsPlot)
+        text(1,lineI,['comparison lines ' num2str(statsOut{slI}.comps{1}(lineI,:))...
+            ', num day lags diff sign test: ' num2str(sum([statsOut{slI}.signtests{1}(lineI).pVal]<0.05))])
+    end
+    xlim([0 15]); ylim([0 5])
+    title(['stats for splitter reactivation by day lag on ' splitterLoc{slI}])
+end
+
+% Old
 gh = [];
 statsOut = [];
 for slI = 1:2
@@ -161,17 +197,6 @@ for slI = 1:2
         {[1 2]; [3 4 5]},colorAssc,traitLabels,gh{slI},[0 1],'pct. Cells Return'); %Num in this case is diff in Pcts.
     suptitleSL(['Change in Proportion of Splitters that Come Back on ' splitterLoc{slI}])
 end
-
-tgsPlot = [1 2 5];
-gh = [];
-statsOut = [];
-for slI = 1:2
-    gh{slI} = figure('Position',[360 169 435 444]);
-    [gh{slI},statsOut{slI}] = PlotTraitChangeOverDays(pooledSplitterComesBack{slI},pooledRealDayDiffs,...
-        tgsPlot,colorAssc,traitLabels,gh{slI},true,'mean',[0 0.8],'pct. Cells Return'); %Num in this case is diff in Pcts.
-    suptitleSL(['Change in Proportion of Splitters that Come Back on ' splitterLoc{slI}])
-end
-
 
 hj = [];
 for slI = 1:2
@@ -303,14 +328,30 @@ end
 
 gj = [];
 statsOut = [];
-transColors = colorAssc([1 2 3 4 5 6]);
+transChangesPlot = 1:length(cellTransPropChanges{slI});
+transColors = colorAssc(transChangesPlot);
 for slI = 1:2
     gj{slI} = figure;%('Position',[258 350 1542 459]);
     [gj{slI},statsOut{slI}]=PlotTraitChangeOverDays(cellTransPropChanges{slI},sourceDayDiffsPooled{slI},...
-        1:length(cellTransPropChanges{slI}),transColors,transLabels,gj{slI},true,'regress',[-0.6 0.6],'pct. Change Transition Probability');
+        transChangesPlot,transColors,transLabels,gj{slI},true,'regress',[-0.6 0.6],'pct. Change Transition Probability');
     suptitleSL(['Transition likelihoods on ' splitterLoc{slI}])
 end
 
+for slI = 1:2
+    figure('Position',[680 558 730 420]);
+    for lineI = 1:length(transChangesPlot)
+        tl = transChangesPlot(lineI);
+        text(1,lineI,['F test eqal var ' num2str(transChangesPlot(lineI))...
+            ': F= ' num2str(statsOut{slI}.slopeDiffZero(tl).Fval) ' df num/den = '...
+            num2str(statsOut{slI}.slopeDiffZero(tl).dfNum) ' / ' num2str(statsOut{slI}.slopeDiffZero(tl).dfDen)...
+            ', p= ' num2str(statsOut{slI}.slopeDiffZero(tl).pVal)...
+            ', rr= ' num2str(statsOut{slI}.slopeRR(tl).Ordinary)])
+    end
+    
+    xlim([0 15]); ylim([0 8])
+    title(['stats for splitter prop changes on ' splitterLoc{slI}])
+end
+%{
 gj = [];
 statsOut = [];
 transColors = colorAssc([1 2 5 1 2 5 1 2 5]);
@@ -320,7 +361,7 @@ for slI = 1:2
         {1:3;4:6;7:9},transColors,transLabels,gj{slI},true,'regress',[-0.75 0.75],'pct. Change Transition Probability');
     suptitleSL(['Transition likelihoods on ' splitterLoc{slI}])
 end
-
+%}
 %% What are new cells?
 fg = [];
 statsOut = [];
@@ -370,12 +411,30 @@ for slI = 1:2
     figure; 
     for tcI = 1:length(cellCheck)
         subplot(1,length(cellCheck),tcI)
-        [statsOut{slI}{tcI}] = PlotBarWithData([pooledDailySources{slI}{tcI}{:}],sourceColors,sourceLabels);
+        [statsOut{slI}{tcI}] = PlotBarWithData([pooledDailySources{slI}{tcI}{:}],sourceColors,true,false,sourceLabels);
         title(['Sources for ' traitLabels{cellCheck(tcI)}])
         ylabel('Pct. of cells')
     end
     suptitleSL(['Sources for each type on ' mazeLocations{slI}])
 end
+
+for slI = 1:2
+    figure('Position',[257 92 1551 750]); 
+    for ccI = 1:length(cellCheck)
+        subplot(length(cellCheck),1,ccI)
+        text(1,1,'comparisons:'); text(3,0.5,num2str(statsOut{slI}{ccI}.signtest.comparisons'))
+        text(1,1.5,'sign test p'); text(3,1.5,num2str(statsOut{slI}{ccI}.signtest.pVal))
+        text(1,2,'KS ANOVA p tukey'); text(4,2,num2str(statsOut{slI}{ccI}.ksANOVA.multComps(:,6)'))
+        text(1,2.5,['KS ANOVA: Chi-sq    ' num2str(statsOut{slI}{ccI}.ksANOVA.tbl{2,5})]) 
+        text(1,3,['KS ANOVA: df groups, error, total    ' num2str([statsOut{slI}{ccI}.ksANOVA.tbl{2:end,3}])])
+
+        xlim([0 12]); ylim([0 5])
+        title(['Stats for splitter sources for ' traitLabels{cellCheck(ccI)} ' on ' splitterLoc{slI}])
+    end
+end
+
+
+
 
 %Changes 
 ff = []; statsOut = [];

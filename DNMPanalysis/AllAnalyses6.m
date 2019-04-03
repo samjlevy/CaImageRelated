@@ -28,6 +28,8 @@ cmperbin = (max(xlims)-min(xlims))/numBins;
 condPairs = [1 3; 2 4; 1 2; 3 4];
 mazeLocations = {'Stem','Arms'};
 performanceThreshold = 0.7;
+global dayLagLimit
+dayLagLimit = 16;
 
 disp('Loading stuff')
 for mouseI = 1:numMice
