@@ -2,6 +2,18 @@ function [axHand,statsOut] = PlotDecodingOneVSother3(decodingResults,shuffledRes
     dayDiffsDecoding,dayDiffsShuffled,titles,lineType,transHere,mainColors,axHand)
 statsOut = [];
 
+global dayLagLimit
+if any(dayLagLimit)
+    badLagsDec = abs(dayDiffsDecoding) > dayLagLimit;
+    badLagsShuff = abs(dayDiffsShuffled) > dayLagLimit;
+    for dd = 1:length(decodingResults)
+        decodingResults{dd}(badLagsDec,:,:) = [];
+        shuffledResults{dd}(badLagsShuff,:,:) = [];
+    end
+    dayDiffsDecoding(badLagsDec) = [];
+    dayDiffsShuffled(badLagsShuff) = [];
+end
+
 if isempty(mainColors)
     mainColors = [1 0 0; 0 0 1];
 end

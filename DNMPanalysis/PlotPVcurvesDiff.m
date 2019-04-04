@@ -47,6 +47,6 @@ xlim([0.75 numBins+0.25])
 xlabel('Spatial Bin')
 ylabel('Sensitivity Index')
 
-statsOut.pVal = pVal;
+statsOut.permTest.pVal = pVal;
 
 end

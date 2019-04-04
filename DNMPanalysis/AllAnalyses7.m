@@ -474,7 +474,6 @@ for slI = 1:2
     pooledCOMBiases{slI} = cell(numTraitGroups,1);
     for mouseI = 1:numMice
         [logicalCOMgroupout{slI}{mouseI}] = RunGroupFunction('LogicalTraitCenterofMass',traitGroups{slI}{mouseI},dayUseFilter{slI}{mouseI});%ones(size(dayUse{mouseI}))
-        %[dayCOMsignpVal(mouseI,tgI),dayCOMsignpVal(mouseI,tgI)] = signtest(logicalCOMgroupout{slI}{mouseI}(tgI).dayBias.Early
         
         for tgI = 1:numTraitGroups
             pooledSplitDayCOM{slI}{tgI} = [pooledSplitDayCOM{slI}{tgI}; logicalCOMgroupout{slI}{mouseI}(tgI).dayCOM];
@@ -485,7 +484,6 @@ for slI = 1:2
         end        
     end
 end
-
 
 %What are new cells?
 pooledNewCellProps = [];
@@ -518,16 +516,6 @@ for slI = 1:2
             pooledNewCellProps{slI}{tgI} = [pooledNewCellProps{slI}{tgI}; traitFirstPcts{slI}{mouseI}{tgI}(:)];
             pooledNewCellPropChanges{slI}{tgI} = [pooledNewCellPropChanges{slI}{tgI}; newCellChanges{slI}{mouseI}{tgI}(:)];
         end
-        
-        %{
-        for pcI = 1:size(pairsCompareInd,1)
-            traitFirstDiffs{mouseI}{pcI} = traitFirstPcts{slI}{mouseI}{pairsCompareInd(pcI,2)} - traitFirstPcts{slI}{mouseI}{pairsCompareInd(pcI,1)};
-            [traitFirstDiffsChanges{mouseI}{pcI},~] = TraitChangeDayPairs(traitFirstDiffs{mouseI}{pcI},compDayPairsFWD{mouseI});
-
-            traitFirstDiffsPooled{slI}{pcI} = [traitFirstDiffsPooled{slI}{pcI}; traitFirstDiffs{mouseI}{pcI}(:)];
-            traitFirstDiffsPooledChanges{{slI}pcI} = [traitFirstDiffsPooledChanges{slI}{pcI}; traitFirstDiffsChanges{mouseI}{pcI}(:)];
-        end
-        %}
     end
 end
 disp('Done when do splitters show up')
@@ -592,549 +580,6 @@ end
 
 disp('Done cell sources and sinks')
 
-
-
-%old, probably doesn't work
-%{
-for slI = 1:2
-    %figure;
-    for tgI = 1:3
-        %Source of cells
-        for scI = 1:length(sources)
-            sourceChangePooled{slI}{tgI}{scI} = [];
-            for mouseI = 1:numMice
-                sourceChangePooled{slI}{tgI}{scI} = [sourceChangePooled{slI}{tgI}{scI}; sourceChange{slI}{scI}{tgI}{mouseI}(:)];
-            end
-        end
-        
-        %Where cells going
-        for scK = 1:length(sinks)
-            sinkChangePooled{slI}{tgI}{scK} = [];
-            for mouseI = 1:numMice
-                sinkChangePooled{slI}{tgI}{scK} = [sinkChangePooled{slI}{tgI}{scK}; sinkChange{slI}{scK}{tgI}{mouseI}(:)];
-            end
-        end
-        
-    end
-    
-    %Where are cells coming from
-    dfg = figure('Position',[468 122 1132 609]);
-       
-    sourceColors = {[0.9294    0.6902    0.1294];colorAssc{1}; colorAssc{2}; colorAssc{5}; colorAssc{8}};
-    sourceColorsAll = {sourceColors{:} sourceColors{:} sourceColors{:}};
-    scPooledAll = {sourceChangePooled{slI}{1}{:} sourceChangePooled{slI}{2}{:} sourceChangePooled{slI}{3}{:}};
-    compsAll = [1 2 3 4 5; 6 7 8 9 10; 11 12 13 14 15];
-    sourceLabelsAll = {sourceLabels{:} sourceLabels{:} sourceLabels{:}};
-        
-    [figHand,statsOut] = PlotTraitChangeOverDays(scPooledAll,abbrevDayDiffsPooled,compsAll,...
-        sourceColorsAll,sourceLabelsAll,dfg,true,'regress',[-1 1],'change pct This Source');
-    for tgI = 1:3
-        dfg.Children((3+1)*2-tgI*2).Title.String = ['sources for: ' traitLabels{cellCheck(tgI)}];%
-    end
-    suptitleSL(['Where are these cells coming from? ' upper(mazeLocations{slI})])
-    
-    %Where are cells going
-    dfh = figure('Position',[468 122 1132 609]);
-       
-    sourceColors = {[0.9294    0.6902    0.1294];colorAssc{1}; colorAssc{2}; colorAssc{5}; colorAssc{8}};
-    sourceColorsAll = {sourceColors{:} sourceColors{:} sourceColors{:}};
-    scPooledAllK = {sinkChangePooled{slI}{1}{:} sinkChangePooled{slI}{2}{:} sinkChangePooled{slI}{3}{:}};
-    compsAll = [1 2 3 4 5; 6 7 8 9 10; 11 12 13 14 15];
-    sinkLabelsAll = {sinkLabels{:} sinkLabels{:} sinkLabels{:}};
-        
-    [figHand,statsOut] = PlotTraitChangeOverDays(scPooledAllK,abbrevDayDiffsPooledJ,compsAll,...
-        sourceColorsAll,sinkLabelsAll,dfh,true,'regress',[-1 1],'change pct This Source');
-    for tgI = 1:3
-        dfh.Children((3+1)*2-tgI*2).Title.String = ['sinks for: ' traitLabels{cellCheck(tgI)}];
-    end        
-    suptitleSL(['Where are these cells going? ' upper(mazeLocations{slI})])
-    
-end
-
-
-sourceLabels = {'newCells','LRonly','STonly','both'};
-figure;
-for scI = 1:4
-    for tgI = 1:3
-        %subplot(4,3,tgI+3*(scI-1))
-        for mouseI = 1:4
-            %plot(thisSourceSumNorm{1}{mouseI}{tgI}(scI,:))
-            hold on
-        end
-        %plot(mean(thisSourceSumNormSC{1}{scI}{tgI}(:,1:8),1),'k','LineWidth',2)
-        
-        dataKeep{1}{tgI}(scI,:) = mean(thisSourceSumNormSC{1}{scI}{tgI}(:,1:8),1);
-        ylim([0 1])
-        
-        %title([traitLabels{sourceCheck(tgI)} ' from ' sourceLabels{scI}])
-    end
-end
-
-figure;
-scColors = {[0.9294    0.6902    0.1294];colorAssc{1}; colorAssc{2}; colorAssc{5}};
-for tgI = 1:3
-    barDataAll = [];
-    pp = [];
-    subplot(1,3,tgI)
-    for dayI = 1:8
-        dataHere = dataKeep{1}{tgI}(:,dayI);
-        barData = dataHere/sum(dataHere);
-        barDataAll = [barDataAll; barData(:)'];
-    end
-    
-    for scI = 1:4
-        pp(scI) = plot(barDataAll(:,scI),'LineWidth',2,'Color',scColors{scI},'DisplayName',sourceLabels{scI});
-        hold on
-    end
-    ylim([0 1])
-    title([traitLabels{cellCheck(tgI)} ' sources'])   
-    legend(pp,'location','nw')
-    xlabel('DayN+1/DayN')
-end
-%}
-%% Overlap in both
-pctTraitBothPooled = cell(numTraitGroups,1);
-for mouseI = 1:numMice
-    activeTodayStem{mouseI} = sum(dayUse{mouseI},1)/numCells(mouseI);
-    activeTodayArm{mouseI} = sum(dayUseArm{mouseI},1)/numCells(mouseI);
-    activeARMandSTEM{mouseI} = dayUse{mouseI} + dayUseArm{mouseI}==2;
-    activeEither{mouseI} = dayUse{mouseI} + dayUseArm{mouseI} >0;
-    %pctActiveBoth{mouseI} = sum(activeARMandSTEM{mouseI},1) / size(dayUse{mouseI},1);
-    %pctActiveBoth{mouseI} = sum(activeARMandSTEM{mouseI},1) ./ sum(cellSSI{mouseI}>0,1);
-    pctActiveBoth{mouseI} = sum(activeARMandSTEM{mouseI},1) ./ sum(activeEither{mouseI},1);
-    
-    for tgI = 1:numTraitGroups
-        traitARMandSTEM{mouseI}{tgI} = traitGroups{1}{mouseI}{tgI} + traitGroups{2}{mouseI}{tgI}==2;
-        %pctTraitBoth{mouseI}{tgI} = sum(traitARMandSTEM{mouseI}{tgI},1) / numCells(mouseI);
-        pctTraitBoth{mouseI}{tgI} = sum(traitARMandSTEM{mouseI}{tgI},1) ./ sum(activeARMandSTEM{mouseI},1);
-        pctTraitBothPooled{tgI} = [pctTraitBothPooled{tgI}; pctTraitBoth{mouseI}{tgI}(:)];
-    end
-end
-
-
-%Splits the same
-pooledPctSamePref = cell(2,1);
-pooledPctSamePrefSTEM = cell(2,1);
-pooledPctSamePrefARM = cell(2,1);
-for stI = 1:length(splitterType)
-    for mouseI = 1:numMice
-        splitNeg = (meanRateDiff{1}{stI}{mouseI} < 0) + (meanRateDiff{2}{stI}{mouseI} < 0) == 2;
-        splitPos = (meanRateDiff{1}{stI}{mouseI} > 0) + (meanRateDiff{2}{stI}{mouseI} > 0) == 2;
-        
-        splitSame = splitNeg + splitPos;
-        
-        samePrefSTEMandARM{stI}{mouseI} = splitSame;  
-        
-        pctSamePref{stI}{mouseI} = sum(samePrefSTEMandARM{stI}{mouseI}.*activeARMandSTEM{mouseI},1) ./ sum(activeARMandSTEM{mouseI},1);
-        pooledPctSamePref{stI} = [pooledPctSamePref{stI}; pctSamePref{stI}{mouseI}(:)];
-        
-        pctSamePrefSTEM{stI}{mouseI} = sum(samePrefSTEMandARM{stI}{mouseI}.*activeARMandSTEM{mouseI},1) ./ sum(dayUse{mouseI},1);
-        pooledPctSamePrefSTEM{stI} = [pooledPctSamePref{stI}; pctSamePrefSTEM{stI}{mouseI}(:)];
-        pctSamePrefARM{stI}{mouseI} = sum(samePrefSTEMandARM{stI}{mouseI}.*activeARMandSTEM{mouseI},1) ./ sum(dayUseArm{mouseI},1);
-        pooledPctSamePrefARM{stI} = [pooledPctSamePrefARM{stI}; pctSamePrefARM{stI}{mouseI}(:)];
-    end
-end
-        
-%Filter by each splitting type
-pooledPctSamePrefByTG = []; samePrefByTG = []; numSamePrefByTG = []; pctSamePreByTG = [];
-for stI = 1:length(splitterType)
-    for slI = 1:2
-        pooledPctSamePrefByTG{stI}{slI} = cell(numTraitGroups,1);
-        for tgI = 1:numTraitGroups
-            for mouseI = 1:numMice
-                samePrefByTG{slI}{stI}{tgI}{mouseI} = samePrefSTEMandARM{stI}{mouseI}.*traitGroups{slI}{mouseI}{tgI};
-                
-                numSamePrefByTG{slI}{stI}{tgI}{mouseI} = sum(samePrefByTG{slI}{stI}{tgI}{mouseI},1);
-                
-                pctSamePreByTG{slI}{stI}{tgI}{mouseI} = numSamePrefByTG{slI}{stI}{tgI}{mouseI} ./ sum(traitGroups{slI}{mouseI}{tgI},1);
-                pooledPctSamePrefByTG{stI}{slI}{tgI} = [pooledPctSamePrefByTG{stI}{slI}{tgI}; pctSamePreByTG{slI}{stI}{tgI}{mouseI}(:)];
-            end
-        end
-    end
-end
-disp('Done arm/stem splitter overlap')
-
-%% Change in accuracy, speed, time to run down arm
-pooledAccuracyChange = []; accuracyChange = [];
-for mouseI = 1:numMice
-    for dpI = 1:size(dayPairs{mouseI},1)
-        accuracyChange{mouseI}(dpI,1) = accuracy{mouseI}(dayPairs{mouseI}(dpI,2)) - accuracy{mouseI}(dayPairs{mouseI}(dpI,1));
-    end
-    pooledAccuracyChange = [pooledAccuracyChange; accuracyChange{mouseI}];    
-end
-
-[accuracyFval,accuracydfNum,accuracydfDen,accuracypVal] = slopeDiffFromZeroFtest(pooledAccuracyChange,pooledRealDayDiffs);
-[~, ~, accuracyFitLine, ~,~,~] = fitLinRegSL(pooledAccuracyChange, pooledRealDayDiffs);
-
-%time down arm: 
-%cellfun(@(x) sum(x,2),cellTBT{mouseI}(condI).trialPSAbool,'UniformOutput',false)
-
-
-
-%% Pop vector corr differences by cells included (Do Work here)
-
-pooledCondPairs = condPairs;
-poolLabels = {'Left','Right','Study','Test'};
-condSet = {[1:4]; [5 6]; [7 8]};
-condSetComps = [1 2; 1 3; 2 3];
-condSetLabels = {'VS Self', 'Left vs. Right', 'Study vs. Test'}; csLabelsShort = {'VSelf','LvR','SvT'};
-condSetColors = {'b' 'r' 'g'};
-for cscI = 1:size(condSetComps,1)
-    cscLabels{cscI} = [csLabelsShort{condSetComps(cscI,1)} ' - ' csLabelsShort{condSetComps(cscI,2)}];
-end
-condSetInds = [1*ones(length(condSet{1}),1); 2*ones(length(condSet{2}),1); 3*ones(length(condSet{3}),1)];
-pooledCompPairs = {[1 1]; [2 2]; [3 3]; [4 4]; [1 2]; [2 1]; [3 4]; [4 3]}; %PFs from half tmap1/2 to use
-
-%Set up different trait logicals
-traitLogical = threshAndConsec;
-pooledTraitLogicalA = [];
-for mouseI = 1:numMice; for cc = 1:size(pooledCondPairs,1)
-        pooledTraitLogicalA{mouseI}(:,:,cc) = sum(traitLogical{mouseI}(:,:,pooledCondPairs(cc,:)),3) > 0;
-end; end
-
-traitLogical = trialReli;
-pooledTraitLogicalB = [];
-for mouseI = 1:numMice; for cc = 1:size(pooledCondPairs,1)
-        pooledTraitLogicalB{mouseI}(:,:,cc) = sum(traitLogical{mouseI}(:,:,pooledCondPairs(cc,:)),3) > 0;
-end; end
-pooledTraitLogicalC = cellfun(@(x) repmat(x>0,1,1,4),cellSSI,'UniformOutput',false);
-
-pvNames = {'includeSilent', 'aboveThreshBoth', 'aboveThreshEither', 'cellPresentBoth'}
-traitLogUse{1} = {cellfun(@(x) ones(size(x)),cellSSI,'UniformOutput',false) }
-
-%To do: function that predetermines cellsUse for each day pair/cond pair,
-%(needed to aboveThreshOne but present both)
-%Also need a toggle in pvcorrswrapper to check to use this
-
-pvNames = {'aboveThreshEither',       'includeSilent',       'activeBoth',     'firesEither',       'cellPresentBoth', 'cellPresentEither'};
-traitLogUse = {pooledTraitLogicalA, pooledTraitLogicalA, pooledTraitLogicalB, pooledTraitLogicalB, pooledTraitLogicalC, pooledTraitLogicalC};
-cellsUseAll = {'activeEither',        'includeSilent',    'activeBoth',       'activeEither',        'activeBoth',       'activeEither'};
-
-
-%Make (or check for) PV corrs
-for pvtI = 1:length(pvNames)
-    for mouseI = 1:numMice
-        pvBasicFile = fullfile(mainFolder,mice{mouseI},'corrs',['basic_corrs_' pvNames{pvtI} '.mat']);
-        %Make the pv corrs
-        if exist(pvBasicFile,'file') == 0
-            disp(['Did not find basic corrs ' pvNames{pvtI} ' for mouse ' num2str(mouseI) ', making it now'])
-            [tpvCorrs, tmeanCorr, ~, ~, ~, ~, tPVdayPairs]=...
-                MakePVcorrsWrapper2(cellTBT{mouseI}, [], [], 0, pooledCompPairs,...
-                pooledCondPairs, poolLabels, traitLogUse{pvtI}{mouseI}, stemBinEdges, minspeed,cellsUseAll{pvtI});
-            save(pvBasicFile,'tpvCorrs','tmeanCorr','tPVdayPairs','pooledCompPairs')
-        end
-    end
-end
-
-for pvtI = 1:length(pvNames)
-    for mouseI = 1:numMice
-        pvBasicFile = fullfile(mainFolder,mice{mouseI},'corrs',['basic_corrs_' pvNames{pvtI} '.mat']);
-
-        load(pvBasicFile)
-
-        pvCorrs{pvtI}{mouseI} = tpvCorrs;
-        meanCorr{pvtI}{mouseI} = cell2mat(tmeanCorr);
-        PVdayPairs{pvtI}{mouseI} = tPVdayPairs;
-        PVdayPairs{pvtI}{mouseI} = cellRealDays{mouseI}(PVdayPairs{pvtI}{mouseI});
-        PVdaysApart{pvtI}{mouseI} = diff(PVdayPairs{pvtI}{mouseI},[],2);
-
-        %meanCorrHalfFirst{pvtI}{mouseI} = cell2mat(cellfun(@(x) mean(x(:,1:numBins/2),2),tpvCorrs,'UniformOutput',false));
-        %meanCorrHalfSecond{pvtI}{mouseI} = cell2mat(cellfun(@(x) mean(x(:,numBins/2+1:numBins),2),tpvCorrs,'UniformOutput',false));
-        meanCorrHalfFirst{pvtI}{mouseI} = cell2mat(cellfun(@(x) mean(x(:,1:2),2),tpvCorrs,'UniformOutput',false));
-        meanCorrHalfSecond{pvtI}{mouseI} = cell2mat(cellfun(@(x) mean(x(:,numBins-1:numBins),2),tpvCorrs,'UniformOutput',false));
-
-        disp(['Done basic corrs ' pvNames{pvtI} ' for mouse ' num2str(mouseI)])
-    end
-    
-    %Pool Corrs across mice
-    pooledPVcorrs{pvtI} = PoolCorrsAcrossMice(pvCorrs{pvtI});
-    pooledMeanPVcorrs{pvtI} = PoolCorrsAcrossMice(meanCorr{pvtI});
-    pooledMeanPVcorrsHalfFirst{pvtI} = PoolCorrsAcrossMice(meanCorrHalfFirst{pvtI});
-    pooledMeanPVcorrsHalfSecond{pvtI} = PoolCorrsAcrossMice(meanCorrHalfSecond{pvtI});
-
-    pooledPVdayPairsTemp{pvtI} = PoolCorrsAcrossMice(PVdayPairs{pvtI});
-    pooledPVdayPairs{pvtI} = [pooledPVdayPairsTemp{pvtI}{1} pooledPVdayPairsTemp{pvtI}{2}];
-    %pooledPVDaysApart{pvtI} = cellfun(@(x) abs(diff(x,[],2)),pooledPVdayPairs{pvtI},'UniformOutput',false);
-    pooledPVDaysApart{pvtI} = abs(diff(pooledPVdayPairs{pvtI},[],2));
-    
-    %Pool by condset
-    CSpooledPVcorrs{pvtI} = PoolCellArr(pooledPVcorrs{pvtI},condSet);
-    CSpooledMeanPVcorrs{pvtI} = PoolCellArr(pooledMeanPVcorrs{pvtI},condSet);
-    CSpooledMeanPVcorrsHalfFirst{pvtI} = PoolCellArr(pooledMeanPVcorrsHalfFirst{pvtI},condSet);
-    CSpooledMeanPVcorrsHalfSecond{pvtI} = PoolCellArr(pooledMeanPVcorrsHalfSecond{pvtI},condSet);
-
-    %CSpooledPVdaysApart{pvtI} = PoolCellArr(pooledPVDaysApart{pvtI},condSet);
-    CSpooledPVdaysApart{pvtI} = cellfun(@(x) repmat(pooledPVDaysApart{pvtI},length(x),1),condSet,'UniformOutput',false);
-end
-
-%Change of each corr over time
-sameDayDayDiffsPooled = cell(length(pvNames),1);
-for pvtI = 1:length(pvNames)
-    for mouseI = 1:numMice
-        sameDayDayDiffsPooled{pvtI} = [sameDayDayDiffsPooled{pvtI}; realDayDiffs{mouseI}];
-    end
-    
-    [withinCSdayChangeMean{pvtI},cscDiffsChangeMeanPooled{pvtI},sameDayCompsPooled{pvtI}] = CorrChangeOverDays(meanCorr{pvtI},PVdayPairs{pvtI},dayPairs,condSet,condSetComps);
-    [withinCSdayChangeMeanHalfFirst{pvtI},cscDiffsChangeMeanHalfFirstPooled{pvtI},~] = CorrChangeOverDays(meanCorrHalfFirst{pvtI},PVdayPairs{pvtI},dayPairs,condSet,condSetComps);
-    [withinCSdayChangeMeanHalfSecond{pvtI},cscDiffsChangeMeanHalfSecondPooled{pvtI},~] = CorrChangeOverDays(meanCorrHalfSecond{pvtI},PVdayPairs{pvtI},dayPairs,condSet,condSetComps);
-end
-
-
-%% Pop vector corr differences by cells included STEM
-
-pooledCondPairs = condPairs;
-poolLabels = {'Left','Right','Study','Test'};
-condSet = {[1:4]; [5 6]; [7 8]};
-condSetComps = [1 2; 1 3; 2 3];
-condSetLabels = {'VS Self', 'Left vs. Right', 'Study vs. Test'}; csLabelsShort = {'VSelf','LvR','SvT'};
-condSetColors = {'g' 'r' 'b'};
-for cscI = 1:size(condSetComps,1)
-    cscLabels{cscI} = [csLabelsShort{condSetComps(cscI,1)} ' - ' csLabelsShort{condSetComps(cscI,2)}];
-end
-condSetInds = [1*ones(length(condSet{1}),1); 2*ones(length(condSet{2}),1); 3*ones(length(condSet{3}),1)];
-pooledCompPairs = {[1 1]; [2 2]; [3 3]; [4 4]; [1 2]; [2 1]; [3 4]; [4 3]}; %PFs from half tmap1/2 to use
-
-%Set up different trait logicals
-traitLogical = threshAndConsec;
-pooledTraitLogicalA = [];
-for mouseI = 1:numMice; for cc = 1:size(pooledCondPairs,1)
-        pooledTraitLogicalA{mouseI}(:,:,cc) = sum(traitLogical{mouseI}(:,:,pooledCondPairs(cc,:)),3) > 0;
-end; end
-
-traitLogical = trialReli;
-pooledTraitLogicalB = [];
-for mouseI = 1:numMice; for cc = 1:size(pooledCondPairs,1)
-        pooledTraitLogicalB{mouseI}(:,:,cc) = sum(traitLogical{mouseI}(:,:,pooledCondPairs(cc,:)),3) > 0;
-end; end
-pooledTraitLogicalC = cellfun(@(x) repmat(x>0,1,1,4),cellSSI,'UniformOutput',false);
-
-pvNames = {'aboveThreshEither',       'includeSilent',       'activeBoth',     'firesEither',       'cellPresentBoth', 'cellPresentEither'};
-traitLogUse = {pooledTraitLogicalA, pooledTraitLogicalA, pooledTraitLogicalB, pooledTraitLogicalB, pooledTraitLogicalC, pooledTraitLogicalC};
-cellsUseAll = {'activeEither',        'includeSilent',    'activeBoth',       'activeEither',        'activeBoth',       'activeEither'};
-
-
-%Make (or check for) PV corrs
-for pvtI = 1:length(pvNames)
-    for mouseI = 1:numMice
-        pvBasicFile = fullfile(mainFolder,mice{mouseI},'corrs',['basic_corrs_' pvNames{pvtI} '.mat']);
-        %Make the pv corrs
-        if exist(pvBasicFile,'file') == 0
-            disp(['Did not find basic corrs ' pvNames{pvtI} ' for mouse ' num2str(mouseI) ', making it now'])
-            [tpvCorrs, tmeanCorr, ~, ~, ~, ~, tPVdayPairs]=...
-                MakePVcorrsWrapper2(cellTBT{mouseI}, [], [], 0, pooledCompPairs,...
-                pooledCondPairs, poolLabels, traitLogUse{pvtI}{mouseI}, stemBinEdges, minspeed,cellsUseAll{pvtI});
-            save(pvBasicFile,'tpvCorrs','tmeanCorr','tPVdayPairs','pooledCompPairs')
-        end
-    end
-end
-
-for pvtI = 1:length(pvNames)
-    for mouseI = 1:numMice
-        pvBasicFile = fullfile(mainFolder,mice{mouseI},'corrs',['basic_corrs_' pvNames{pvtI} '.mat']);
-
-        load(pvBasicFile)
-
-        pvCorrs{pvtI}{mouseI} = tpvCorrs;
-        meanCorr{pvtI}{mouseI} = cell2mat(tmeanCorr);
-        PVdayPairs{pvtI}{mouseI} = tPVdayPairs;
-        PVdayPairs{pvtI}{mouseI} = cellRealDays{mouseI}(PVdayPairs{pvtI}{mouseI});
-        PVdaysApart{pvtI}{mouseI} = diff(PVdayPairs{pvtI}{mouseI},[],2);
-
-        %meanCorrHalfFirst{pvtI}{mouseI} = cell2mat(cellfun(@(x) mean(x(:,1:numBins/2),2),tpvCorrs,'UniformOutput',false));
-        %meanCorrHalfSecond{pvtI}{mouseI} = cell2mat(cellfun(@(x) mean(x(:,numBins/2+1:numBins),2),tpvCorrs,'UniformOutput',false));
-        meanCorrHalfFirst{pvtI}{mouseI} = cell2mat(cellfun(@(x) mean(x(:,1:2),2),tpvCorrs,'UniformOutput',false));
-        meanCorrHalfSecond{pvtI}{mouseI} = cell2mat(cellfun(@(x) mean(x(:,numBins-1:numBins),2),tpvCorrs,'UniformOutput',false));
-
-        disp(['Done basic corrs ' pvNames{pvtI} ' for mouse ' num2str(mouseI)])
-    end
-    
-    %Pool Corrs across mice
-    pooledPVcorrs{pvtI} = PoolCorrsAcrossMice(pvCorrs{pvtI});
-    pooledMeanPVcorrs{pvtI} = PoolCorrsAcrossMice(meanCorr{pvtI});
-    pooledMeanPVcorrsHalfFirst{pvtI} = PoolCorrsAcrossMice(meanCorrHalfFirst{pvtI});
-    pooledMeanPVcorrsHalfSecond{pvtI} = PoolCorrsAcrossMice(meanCorrHalfSecond{pvtI});
-
-    pooledPVdayPairsTemp{pvtI} = PoolCorrsAcrossMice(PVdayPairs{pvtI});
-    pooledPVdayPairs{pvtI} = [pooledPVdayPairsTemp{pvtI}{1} pooledPVdayPairsTemp{pvtI}{2}];
-    %pooledPVDaysApart{pvtI} = cellfun(@(x) abs(diff(x,[],2)),pooledPVdayPairs{pvtI},'UniformOutput',false);
-    pooledPVDaysApart{pvtI} = abs(diff(pooledPVdayPairs{pvtI},[],2));
-    
-    %Pool by condset
-    CSpooledPVcorrs{pvtI} = PoolCellArr(pooledPVcorrs{pvtI},condSet);
-    CSpooledMeanPVcorrs{pvtI} = PoolCellArr(pooledMeanPVcorrs{pvtI},condSet);
-    CSpooledMeanPVcorrsHalfFirst{pvtI} = PoolCellArr(pooledMeanPVcorrsHalfFirst{pvtI},condSet);
-    CSpooledMeanPVcorrsHalfSecond{pvtI} = PoolCellArr(pooledMeanPVcorrsHalfSecond{pvtI},condSet);
-
-    %Diff from VS self
-    
-    
-    %CSpooledPVdaysApart{pvtI} = PoolCellArr(pooledPVDaysApart{pvtI},condSet);
-    CSpooledPVdaysApart{pvtI} = cellfun(@(x) repmat(pooledPVDaysApart{pvtI},length(x),1),condSet,'UniformOutput',false);
-end
-
-%Change of each corr over time
-sameDayDayDiffsPooled = cell(length(pvNames),1);
-for pvtI = 1:length(pvNames)
-    for mouseI = 1:numMice
-        sameDayDayDiffsPooled{pvtI} = [sameDayDayDiffsPooled{pvtI}; realDayDiffs{mouseI}];
-    end
-    
-    [withinCSdayChangeMean{pvtI},cscDiffsChangeMeanPooled{pvtI},sameDayCompsPooled{pvtI}] = CorrChangeOverDays(meanCorr{pvtI},PVdayPairs{pvtI},dayPairs,condSet,condSetComps);
-    [withinCSdayChangeMeanHalfFirst{pvtI},cscDiffsChangeMeanHalfFirstPooled{pvtI},~] = CorrChangeOverDays(meanCorrHalfFirst{pvtI},PVdayPairs{pvtI},dayPairs,condSet,condSetComps);
-    [withinCSdayChangeMeanHalfSecond{pvtI},cscDiffsChangeMeanHalfSecondPooled{pvtI},~] = CorrChangeOverDays(meanCorrHalfSecond{pvtI},PVdayPairs{pvtI},dayPairs,condSet,condSetComps);
-end
-
-%Discrimination index of PV results
-tic
-CSpooledPVcorrsDPrime = [];
-CSpooledPVcorrsDPrimePval = [];
-CSpooledPVcorrsDiff = [];
-for pvtI = 1:length(pvNames)
-    for pvpoolI = 2:3
-        dayDiffsHere = unique([CSpooledPVdaysApart{pvtI}{1}; CSpooledPVdaysApart{pvtI}{pvpoolI}]);
-        for ddI = 1:length(dayDiffsHere)
-            daysUseSig = CSpooledPVdaysApart{pvtI}{pvpoolI}==dayDiffsHere(ddI);
-            daysUseNoise = CSpooledPVdaysApart{pvtI}{1}==dayDiffsHere(ddI);
-            
-            [CSpooledPVcorrsDPrime{pvtI}{pvpoolI-1}(ddI),CSpooledPVcorrsDPrimePval{pvtI}{pvpoolI-1}(ddI)] =...
-                SensitivityIndexSL(CSpooledPVcorrs{pvtI}{pvpoolI}(daysUseSig),CSpooledPVcorrs{pvtI}{1}(daysUseNoise),1000);
-            [CSpooledPVcorrsDPrimeHalfFirst{pvtI}{pvpoolI-1}(ddI),CSpooledPVcorrsDPrimePvalHalfFirst{pvtI}{pvpoolI-1}(ddI)] =...
-                SensitivityIndexSL(CSpooledPVcorrsHalfFirst{pvtI}{pvpoolI}(daysUseSig),CSpooledPVcorrsHalfFirst{pvtI}{1}(daysUseNoise),1000);
-            [CSpooledPVcorrsDPrimeHalfSecond{pvtI}{pvpoolI-1}(ddI),CSpooledPVcorrsDPrimePvalHalfSecond{pvtI}{pvpoolI-1}(ddI)] =...
-                SensitivityIndexSL(CSpooledPVcorrsHalfSecond{pvtI}{pvpoolI}(daysUseSig),CSpooledPVcorrsHalfSecond{pvtI}{1}(daysUseNoise),1000);
-            
-            CSpooledPVcorrsDiff{pvtI}{pvpoolI-1}(ddI) = mean(CSpooledPVcorrs{pvtI}{1}(daysUseNoise)) - mean(CSpooledPVcorrs{pvtI}{pvpoolI}(daysUseSig)); 
-            CSpooledPVcorrsDiffHalfFirst{pvtI}{pvpoolI-1}(ddI) = mean(CSpooledPVcorrsHalfFirst{pvtI}{1}(daysUseNoise)) - mean(CSpooledPVcorrsHalfFirst{pvtI}{pvpoolI}(daysUseSig)); 
-            CSpooledPVcorrsDiffHalfSecond{pvtI}{pvpoolI-1}(ddI) = mean(CSpooledPVcorrsHalfSecond{pvtI}{1}(daysUseNoise)) - mean(CSpooledPVcorrsHalfSecond{pvtI}{pvpoolI}(daysUseSig)); 
-        end
-    end
-end
-toc
-
-disp('Done PV corrs STEM')
-
-%% Pop vector corr differences by cells included ARMS
-
-pooledCondPairs = condPairs;
-poolLabels = {'Left','Right','Study','Test'};
-condSet = {[1:4]; [5 6]; [7 8]};
-condSetComps = [1 2; 1 3; 2 3];
-condSetLabels = {'VS Self', 'Left vs. Right', 'Study vs. Test'}; csLabelsShort = {'VSelf','LvR','SvT'};
-condSetInds = [1*ones(length(condSet{1}),1); 2*ones(length(condSet{2}),1); 3*ones(length(condSet{3}),1)];
-pooledCompPairs = {[1 1]; [2 2]; [3 3]; [4 4]; [1 2]; [2 1]; [3 4]; [4 3]}; %PFs from half tmap1/2 to use
-
-%Set up different trait logicals
-traitLogical = threshAndConsecArm;
-pooledTraitLogicalA = [];
-for mouseI = 1:numMice; for cc = 1:size(pooledCondPairs,1)
-        pooledTraitLogicalA{mouseI}(:,:,cc) = sum(traitLogical{mouseI}(:,:,pooledCondPairs(cc,:)),3) > 0;
-end; end
-
-traitLogical = trialReliArm;
-pooledTraitLogicalB = [];
-for mouseI = 1:numMice; for cc = 1:size(pooledCondPairs,1)
-        pooledTraitLogicalB{mouseI}(:,:,cc) = sum(traitLogical{mouseI}(:,:,pooledCondPairs(cc,:)),3) > 0;
-end; end
-
-pooledTraitLogicalC = cellfun(@(x) repmat(x>0,1,1,4),cellSSI,'UniformOutput',false);
-
-pvNames = {'aboveThreshEither',       'includeSilent',       'activeBoth',     'firesEither',       'cellPresentBoth', 'cellPresentEither'};
-traitLogUse = {pooledTraitLogicalA, pooledTraitLogicalA, pooledTraitLogicalB, pooledTraitLogicalB, pooledTraitLogicalC, pooledTraitLogicalC};
-cellsUseAll = {'activeEither',        'includeSilent',    'activeBoth',       'activeEither',        'activeBoth',       'activeEither'};
-
-
-%Make (or check for) PV corrs
-for pvtI = 1:length(pvNames)
-    for mouseI = 1:numMice
-        pvBasicFile = fullfile(mainFolder,mice{mouseI},'corrs',['ARMbasic_corrs_' pvNames{pvtI} '.mat']);
-        %Make the pv corrs
-        if exist(pvBasicFile,'file') == 0
-            disp(['Did not find basic corrs ' pvNames{pvtI} ' for mouse ' num2str(mouseI) ', making it now'])
-            [tpvCorrs, tmeanCorr, ~, ~, ~, ~, tPVdayPairs]=...
-                MakePVcorrsWrapper2(cellTBTarm{mouseI}, [], [], 0, pooledCompPairs,...
-                pooledCondPairs, poolLabels, traitLogUse{pvtI}{mouseI}, armBinEdges, minspeed, cellsUseAll{pvtI});
-            save(pvBasicFile,'tpvCorrs','tmeanCorr','tPVdayPairs','pooledCompPairs')
-        end
-    end
-end
-
-for pvtI = 1:length(pvNames)
-    for mouseI = 1:numMice
-        pvBasicFile = fullfile(mainFolder,mice{mouseI},'corrs',['ARMbasic_corrs_' pvNames{pvtI} '.mat']);
-
-        load(pvBasicFile)
-        
-        ARMpvCorrs{pvtI}{mouseI} = cellfun(@fliplr,tpvCorrs,'UniformOutput',false);
-        ARMmeanCorr{pvtI}{mouseI} = cell2mat(tmeanCorr);
-
-        ARMmeanCorrHalfFirst{pvtI}{mouseI} = cell2mat(cellfun(@(x) mean(x(:,1:numBins/2),2),ARMpvCorrs{pvtI}{mouseI},'UniformOutput',false));
-        ARMmeanCorrHalfSecond{pvtI}{mouseI} = cell2mat(cellfun(@(x) mean(x(:,numBins/2+1:numBins),2),ARMpvCorrs{pvtI}{mouseI},'UniformOutput',false));
-
-        disp(['Done basic corrs ' pvNames{pvtI} ' for mouse ' num2str(mouseI)])
-    end
-    
-    %Pool Corrs across mice
-    ARMpooledPVcorrs{pvtI} = PoolCorrsAcrossMice(ARMpvCorrs{pvtI});
-    ARMpooledMeanPVcorrs{pvtI} = PoolCorrsAcrossMice(ARMmeanCorr{pvtI});
-    ARMpooledMeanPVcorrsHalfFirst{pvtI} = PoolCorrsAcrossMice(ARMmeanCorrHalfFirst{pvtI});
-    ARMpooledMeanPVcorrsHalfSecond{pvtI} = PoolCorrsAcrossMice(ARMmeanCorrHalfSecond{pvtI});
-    
-    %Pool by condset
-    CSpooledPVcorrsARM{pvtI} = PoolCellArr(ARMpooledPVcorrs{pvtI},condSet);
-    CSpooledMeanPVcorrsARM{pvtI} = PoolCellArr(ARMpooledMeanPVcorrs{pvtI},condSet);
-    CSpooledMeanPVcorrsHalfFirstARM{pvtI} = PoolCellArr(ARMpooledMeanPVcorrsHalfFirst{pvtI},condSet);
-    CSpooledMeanPVcorrsHalfSecondARM{pvtI} = PoolCellArr(ARMpooledMeanPVcorrsHalfSecond{pvtI},condSet);
-end
-
-%Change of each corr over time
-for pvtI = 1:length(pvNames)
-    [withinCSdayChangeMeanARM{pvtI},cscDiffsChangeMeanPooledARM{pvtI},sameDayCompsPooledARM{pvtI}] = CorrChangeOverDays(ARMmeanCorr{pvtI},PVdayPairs{pvtI},dayPairs,condSet,condSetComps);
-    [withinCSdayChangeMeanHalfFirstARM{pvtI},cscDiffsChangeMeanHalfFirstPooledARM{pvtI},~] = CorrChangeOverDays(ARMmeanCorrHalfFirst{pvtI},PVdayPairs{pvtI},dayPairs,condSet,condSetComps);
-    [withinCSdayChangeMeanHalfSecondARM{pvtI},cscDiffsChangeMeanHalfSecondPooledARM{pvtI},~] = CorrChangeOverDays(ARMmeanCorrHalfSecond{pvtI},PVdayPairs{pvtI},dayPairs,condSet,condSetComps);
-end
-
-disp('Done PV corrs ARMS')
-
-%% Center of mass, change over time
-
-for mouseI = 1:numMice
-    [allCondsTMap{mouseI}, ~, ~, ~, ~, ~, ~] =...
-        PFsLinTBTdnmp(cellTBT{mouseI}, stemBinEdges, minspeed, [], false,[1 2 3 4]);
-
-    [allCondsTMapARM{mouseI}, ~, ~, ~, ~, ~, ~] =...
-        PFsLinTBTdnmp(cellTBTarm{mouseI}, armBinEdges, minspeed, [], false,[1 2 3 4]);
-
-    allFiringCOM{mouseI} = TMapFiringCOM(allCondsTMap{mouseI});
-    allFiringCOMarm{mouseI} = TMapFiringCOM(allCondsTMapARM{mouseI});
-end
-
-pooledCOMlr = [];
-pooledCOMst = [];
-pooledCOMlrEx = [];
-pooledCOMstEx = [];
-pooledCOMboth = [];
-pooledCOMlrARM = [];
-pooledCOMstARM = [];
-pooledCOMlrARMex = [];
-pooledCOMstARMex = [];
-pooledCOMbothARM = [];
-for mouseI = 1:numMice
-    for dayI = 1:numDays(mouseI)
-        pooledCOMlr = [pooledCOMlr; allFiringCOM{mouseI}(traitGroups{1}{mouseI}{1}(:,dayI),dayI)];
-        pooledCOMst = [pooledCOMst; allFiringCOM{mouseI}(traitGroups{1}{mouseI}{2}(:,dayI),dayI)];
-        pooledCOMlrEx = [pooledCOMlrEx; allFiringCOM{mouseI}(traitGroups{1}{mouseI}{3}(:,dayI),dayI)];
-        pooledCOMstEx = [pooledCOMstEx; allFiringCOM{mouseI}(traitGroups{1}{mouseI}{4}(:,dayI),dayI)];
-        pooledCOMboth = [pooledCOMboth; allFiringCOM{mouseI}(traitGroups{1}{mouseI}{5}(:,dayI),dayI)];
-        
-        pooledCOMlrARM = [pooledCOMlrARM; allFiringCOMarm{mouseI}(traitGroups{2}{mouseI}{1}(:,dayI),dayI)];
-        pooledCOMstARM = [pooledCOMstARM; allFiringCOMarm{mouseI}(traitGroups{2}{mouseI}{2}(:,dayI),dayI)];
-        pooledCOMlrARMex = [pooledCOMlrARMex; allFiringCOMarm{mouseI}(traitGroups{2}{mouseI}{3}(:,dayI),dayI)];
-        pooledCOMstARMex = [pooledCOMstARMex; allFiringCOMarm{mouseI}(traitGroups{2}{mouseI}{4}(:,dayI),dayI)];
-        pooledCOMbothARM = [pooledCOMbothARM; allFiringCOMarm{mouseI}(traitGroups{2}{mouseI}{5}(:,dayI),dayI)];
-    end
-end
-
-disp('Done getting COM')
 %% Decoder analysis
 numShuffles = 100;
 numDownsamples = 100;
@@ -1250,104 +695,202 @@ end
 
 disp('Done decoding analysis')
 
-%% PV shuffles
+%% Pop vector corr differences by cells included (Do Work here)
 
-%Shuffle dimensions only
-tic
-numPerms = 1000
-pooledCompPairs = {[1 2], [2 1]; [3 4], [4 3]}; 
-pooledShuffleDim = {'leftright'; 'studytest'};
-%pvCorrs = cell(numMice,1); numCellsUsed = cell(numMice,1); numNans = cell(numMice,1); meanCorr = cell(numMice,1);
-for mouseI = 1:numMice
-    shuffleWhat = 'dimOnly';
-    %shuffleWhat = 'dayOnly';
-    tic
-    for sdI = 1:length(pooledShuffleDim)
-        %Make the pv corrs
-        compPairsHere = pooledCompPairs(sdI,:);
-        shuffleDimHere = pooledShuffleDim{sdI};
-        [pvCorrs, meanCorr, numCellsUsed, numNans, shuffPVcorrs, shuffMeanCorr, PVdayPairs]=...
-        MakePVcorrsWrapper2(cellTBT{mouseI}, shuffleWhat, shuffleDimHere, numPerms, compPairsHere,...
-                           pooledCondPairs, poolLabels, pooledTraitLogical{mouseI}, stemBinEdges, minspeed);
-            save(fullfile(mainFolder,mice{mouseI},'corrs',[pooledShuffleDim{sdI} '_corrs.mat']),'pvCorrs','meanCorr',...
-                'numCellsUsed','numNans','shuffPVcorrs','shuffMeanCorr','PVdayPairs','compPairsHere','shuffleDimHere')
-    
-    %Do some processing
-    %[meanCorrOutOfShuff{mouseI},pvCorrsOutOfShuff{mouseI},meanCorrsOutShuff{mouseI},numCorrsOutShuff{mouseI},corrsOutCOM{mouseI},lims95] =...
-    %      ProcessPVcorrs(numPerms,pThresh,shuffMeanCorr{mouseI},meanCorr{mouseI},shuffPVcorrs{mouseI},pvCorrs{mouseI});
-    disp(['Done making shuffled corrs *' shuffleWhat '*, *' shuffleDimHere '*, for mouse ' num2str(mouseI)])
+pooledCondPairs = condPairs;
+poolLabels = {'Left','Right','Study','Test'};
+condSet = {[1:4]; [5 6]; [7 8]};
+condSetComps = [1 2; 1 3; 2 3];
+condSetLabels = {'VS Self', 'Left vs. Right', 'Study vs. Test'}; csLabelsShort = {'VSelf','LvR','SvT'};
+condSetColors = {'b' 'r' 'g'};
+for cscI = 1:size(condSetComps,1)
+    cscLabels{cscI} = [csLabelsShort{condSetComps(cscI,1)} ' - ' csLabelsShort{condSetComps(cscI,2)}];
+end
+condSetInds = [1*ones(length(condSet{1}),1); 2*ones(length(condSet{2}),1); 3*ones(length(condSet{3}),1)];
+pooledCompPairs = {[1 1]; [2 2]; [3 3]; [4 4]; [1 2]; [2 1]; [3 4]; [4 3]}; %PFs from half tmap1/2 to use
+
+%Set up different trait logicals
+traitLogicalsUse{1}{1} = threshAndConsec;
+traitLogicalsUse{2}{1} = threshAndConsecArm;
+traitLogicalsUse{1}{2} = trialReli;
+traitLogicalsUse{2}{2} = trialReliArm;
+pooledTraitLogicalA = []; pooledTraitLogicalB = []; pooledTraitLogicalC = [];
+for slI = 1:2
+    pooledTraitLogicalA{slI} = [];
+    pooledTraitLogicalB{slI} = [];
+    for mouseI = 1:numMice 
+        for cc = 1:size(pooledCondPairs,1)
+            tluI = 1;
+            pooledTraitLogicalA{slI}{mouseI}(:,:,cc) =...
+                sum(traitLogicalsUse{slI}{tluI}{mouseI}(:,:,pooledCondPairs(cc,:)),3) > 0;
+            tluI = 2;
+            pooledTraitLogicalB{slI}{mouseI}(:,:,cc) =...
+                sum(traitLogicalsUse{slI}{tluI}{mouseI}(:,:,pooledCondPairs(cc,:)),3) > 0;
+        end
     end
-    toc
+    pooledTraitLogicalC{slI} = cellfun(@(x) repmat(x>0,1,1,4),cellSSI,'UniformOutput',false);
 end
-toc
-save(fullfile(mainFolder,'dimCorrs.mat'),'pvCorrs','meanCorr','numCellsUsed','numNans','shuffPVcorrs','shuffMeanCorr','PVdayPairs',...
-            'meanCorrOutOfShuff','pvCorrsOutOfShuff','meanCorrsOutShuff','numCorrsOutShuff','corrsOutCOM','lims95')
-        
-%Pool across animals
-[pooledMeanCorr,pooledMeanCorrOutofShuff,pooledPVcorrs,pooledPVcorrsOutShuff,...
-          pooledMeanPVcorrsOutShuff,pooledNumPVcorrsOutShuff,pooledCorrsOutCOM,pooledPVdayDiffs] =...
-          PoolProcessedPVcorrs(pooledCompPairs,meanCorr,meanCorrOutOfShuff,pvCorrs,pvCorrsOutOfShuff,...
-          meanCorrsOutShuff,numCorrsOutShuff,corrsOutCOM,PVdayPairs);
 
 
+pvNames = {'aboveThreshEither',       'includeSilent',       'activeBoth',     'firesEither',       'cellPresentBoth', 'cellPresentEither'};
+for slI = 1:2
+    traitLogUse{slI} = {pooledTraitLogicalA{slI}, pooledTraitLogicalA{slI}, pooledTraitLogicalB{slI}, pooledTraitLogicalB{slI}, pooledTraitLogicalC{slI}, pooledTraitLogicalC{slI}};
+end
+cellsUseAll = {'activeEither',        'includeSilent',    'activeBoth',       'activeEither',        'activeBoth',       'activeEither'};
 
-%Shuffle days only
+fNamePref = {'','ARM'}; cTBT = {cellTBT; cellTBTarm}; binEdgesBoth = {stemBinEdges; armBinEdges};
+
+%Make (or check for) PV corrs
+for slI = 1:2
+for pvtI = 1:length(pvNames)
+    for mouseI = 1:numMice
+        pvBasicFile = fullfile(mainFolder,mice{mouseI},'corrs',[fNamePref{slI} 'basic_corrs_' pvNames{pvtI} '.mat']);
+        %Make the pv corrs
+        if exist(pvBasicFile,'file') == 0
+            disp(['Did not find basic corrs ' pvNames{pvtI} ' for mouse ' num2str(mouseI) ' on ' mazeLocations{slI} ', making it now'])
+            [tpvCorrs, tmeanCorr, ~, ~, ~, ~, tPVdayPairs]=...
+                MakePVcorrsWrapper2(cTBT{slI}{mouseI}, [], [], 0, pooledCompPairs,...
+                pooledCondPairs, poolLabels, traitLogUse{slI}{pvtI}{mouseI}, binEdgesBoth{slI}, minspeed,cellsUseAll{pvtI});
+            save(pvBasicFile,'tpvCorrs','tmeanCorr','tPVdayPairs','pooledCompPairs')
+        end
+    end
+end
+end
+
+pvCorrs = []; meanCorr = []; PVdayPairs = []; PVdaysApart = [];
+for slI = 1:2
+for pvtI = 1:length(pvNames)
+    for mouseI = 1:numMice
+        pvBasicFile = fullfile(mainFolder,mice{mouseI},'corrs',[fNamePref{slI} 'basic_corrs_' pvNames{pvtI} '.mat']);
+
+        load(pvBasicFile)
+
+        pvCorrs{slI}{pvtI}{mouseI} = tpvCorrs;
+        meanCorr{slI}{pvtI}{mouseI} = cell2mat(tmeanCorr);
+        PVdayPairs{slI}{pvtI}{mouseI} = tPVdayPairs;
+        PVdayPairs{slI}{pvtI}{mouseI} = cellRealDays{mouseI}(PVdayPairs{slI}{pvtI}{mouseI});
+        PVdaysApart{slI}{pvtI}{mouseI} = diff(PVdayPairs{slI}{pvtI}{mouseI},[],2);
+
+        meanCorrHalfFirst{slI}{pvtI}{mouseI} = cell2mat(cellfun(@(x) mean(x(:,1:2),2),tpvCorrs,'UniformOutput',false));
+        meanCorrHalfSecond{slI}{pvtI}{mouseI} = cell2mat(cellfun(@(x) mean(x(:,numBins-1:numBins),2),tpvCorrs,'UniformOutput',false));
+
+        disp(['Done basic corrs ' pvNames{pvtI} ' for mouse ' num2str(mouseI) ' on ' mazeLocations{slI}])
+    end
+    
+    %Pool Corrs across mice
+    pooledPVcorrs{slI}{pvtI} = PoolCorrsAcrossMice(pvCorrs{slI}{pvtI});
+    pooledMeanPVcorrs{slI}{pvtI} = PoolCorrsAcrossMice(meanCorr{slI}{pvtI});
+    pooledMeanPVcorrsHalfFirst{slI}{pvtI} = PoolCorrsAcrossMice(meanCorrHalfFirst{slI}{pvtI});
+    pooledMeanPVcorrsHalfSecond{slI}{pvtI} = PoolCorrsAcrossMice(meanCorrHalfSecond{slI}{pvtI});
+
+    pooledPVdayPairsTemp{slI}{pvtI} = PoolCorrsAcrossMice(PVdayPairs{slI}{pvtI});
+    pooledPVdayPairs{slI}{pvtI} = [pooledPVdayPairsTemp{slI}{pvtI}{1} pooledPVdayPairsTemp{slI}{pvtI}{2}];
+    pooledPVDaysApart{slI}{pvtI} = abs(diff(pooledPVdayPairs{slI}{pvtI},[],2));
+    
+    %Pool by condset
+    CSpooledPVcorrs{slI}{pvtI} = PoolCellArr(pooledPVcorrs{slI}{pvtI},condSet);
+    CSpooledMeanPVcorrs{slI}{pvtI} = PoolCellArr(pooledMeanPVcorrs{slI}{pvtI},condSet);
+    CSpooledMeanPVcorrsHalfFirst{slI}{pvtI} = PoolCellArr(pooledMeanPVcorrsHalfFirst{slI}{pvtI},condSet);
+    CSpooledMeanPVcorrsHalfSecond{slI}{pvtI} = PoolCellArr(pooledMeanPVcorrsHalfSecond{slI}{pvtI},condSet);
+
+    CSpooledPVdaysApart{slI}{pvtI} = cellfun(@(x) repmat(pooledPVDaysApart{slI}{pvtI},length(x),1),condSet,'UniformOutput',false);
+end
+end
+
+%Change of each corr over time
+sameDayDayDiffsPooled = [];
+for slI = 1:2
+    sameDayDayDiffsPooled{slI} = cell(length(pvNames),1);
+    for pvtI = 1:length(pvNames)
+        for mouseI = 1:numMice
+            sameDayDayDiffsPooled{slI}{pvtI} = [sameDayDayDiffsPooled{slI}{pvtI}; realDayDiffs{mouseI}];
+        end
+
+        [withinCSdayChangeMean{slI}{pvtI},cscDiffsChangeMeanPooled{slI}{pvtI},sameDayCompsPooled{slI}{pvtI}] =...
+            CorrChangeOverDays(meanCorr{slI}{pvtI},PVdayPairs{slI}{pvtI},dayPairs,condSet,condSetComps);
+        [withinCSdayChangeMeanHalfFirst{slI}{pvtI},cscDiffsChangeMeanHalfFirstPooled{slI}{pvtI},~] =...
+            CorrChangeOverDays(meanCorrHalfFirst{slI}{pvtI},PVdayPairs{slI}{pvtI},dayPairs,condSet,condSetComps);
+        [withinCSdayChangeMeanHalfSecond{slI}{pvtI},cscDiffsChangeMeanHalfSecondPooled{slI}{pvtI},~] =...
+            CorrChangeOverDays(meanCorrHalfSecond{slI}{pvtI},PVdayPairs{slI}{pvtI},dayPairs,condSet,condSetComps);
+    end
+end
+
+disp('Done PV corrs') 
+
+%{
+%% Discrimination index of PV results
+
 tic
-pooledCompPairs = [1 1; 2 2; 3 3; 4 4; 1 2; 2 1; 3 4; 4 3];
-pooledShuffleDim = {'leftright', 'leftright', 'studytest','studytest'};
-pvCorrs = cell(numMice,1); numCellsUsed = cell(numMice,1); numNans = cell(numMice,1); meanCorr = cell(numMice,1);
-parfor mouseI = 1:numMice
-    shuffleWhat = 'dayOnly';
-    %Make the pv corrs
-    [pvCorrs{mouseI}, meanCorr{mouseI}, numCellsUsed{mouseI}, numNans{mouseI}, shuffPVcorrs{mouseI}, shuffMeanCorr{mouseI}, PVdayPairs{mouseI}]=...
-    MakePVcorrsWrapper(cellTBT{mouseI}, shuffleWhat, numPerms, pooledCompPairs, pooledShuffleDim,...
-                       pooledCondPairs, poolLabels, pooledTraitLogical{mouseI}, xlims, cmperbin, minspeed);
-    %Do some processing
-    [meanCorrOutOfShuff{mouseI},pvCorrsOutOfShuff{mouseI},meanCorrsOutShuff{mouseI},numCorrsOutShuff{mouseI},corrsOutCOM{mouseI},lims95] =...
-          ProcessPVcorrs(numPerms,pThresh,shuffMeanCorr{mouseI},meanCorr{mouseI},shuffPVcorrs{mouseI},pvCorrs{mouseI});
+for slI = 1:2
+    CSpooledPVcorrsDPrime{slI} = [];
+    CSpooledPVcorrsDPrimePval{slI} = [];
+    CSpooledPVcorrsDiff{slI} = [];
+    for pvtI = 1:length(pvNames)
+        for pvpoolI = 2:3
+            dayDiffsHere = unique([CSpooledPVdaysApart{slI}{pvtI}{1}; CSpooledPVdaysApart{slI}{pvtI}{pvpoolI}]);
+            for ddI = 1:length(dayDiffsHere)
+                daysUseSig = CSpooledPVdaysApart{slI}{pvtI}{pvpoolI}==dayDiffsHere(ddI);
+                daysUseNoise = CSpooledPVdaysApart{slI}{pvtI}{1}==dayDiffsHere(ddI);
+
+                [CSpooledPVcorrsDPrime{slI}{pvtI}{pvpoolI-1}(ddI),CSpooledPVcorrsDPrimePval{slI}{pvtI}{pvpoolI-1}(ddI)] =...
+                    SensitivityIndexSL(CSpooledPVcorrs{slI}{pvtI}{pvpoolI}(daysUseSig),CSpooledPVcorrs{slI}{pvtI}{1}(daysUseNoise),1000);
+                [CSpooledPVcorrsDPrimeHalfFirst{slI}{pvtI}{pvpoolI-1}(ddI),CSpooledPVcorrsDPrimePvalHalfFirst{slI}{pvtI}{pvpoolI-1}(ddI)] =...
+                    SensitivityIndexSL(CSpooledMeanPVcorrsHalfFirst{slI}{pvtI}{pvpoolI}(daysUseSig),CSpooledMeanPVcorrsHalfFirst{slI}{pvtI}{1}(daysUseNoise),1000);
+                [CSpooledPVcorrsDPrimeHalfSecond{slI}{pvtI}{pvpoolI-1}(ddI),CSpooledPVcorrsDPrimePvalHalfSecond{slI}{pvtI}{pvpoolI-1}(ddI)] =...
+                    SensitivityIndexSL(CSpooledMeanPVcorrsHalfSecond{slI}{pvtI}{pvpoolI}(daysUseSig),CSpooledMeanPVcorrsHalfSecond{slI}{pvtI}{1}(daysUseNoise),1000);
+
+                CSpooledPVcorrsDiff{slI}{pvtI}{pvpoolI-1}(ddI) = mean(CSpooledPVcorrs{slI}{pvtI}{1}(daysUseNoise)) - mean(CSpooledPVcorrs{slI}{pvtI}{pvpoolI}(daysUseSig)); 
+                CSpooledPVcorrsDiffHalfFirst{slI}{pvtI}{pvpoolI-1}(ddI) =...
+                    mean(CSpooledMeanPVcorrsHalfFirst{slI}{pvtI}{1}(daysUseNoise)) - mean(CSpooledMeanPVcorrsHalfFirst{slI}{pvtI}{pvpoolI}(daysUseSig)); 
+                CSpooledPVcorrsDiffHalfSecond{slI}{pvtI}{pvpoolI-1}(ddI) =...
+                    mean(CSpooledMeanPVcorrsHalfSecond{slI}{pvtI}{1}(daysUseNoise)) - mean(CSpooledMeanPVcorrsHalfSecond{slI}{pvtI}{pvpoolI}(daysUseSig)); 
+            end
+        end
+    end
 end
 toc
-save(fullfile(mainFolder,'dayCorrs.mat'),'pvCorrs','meanCorr','numCellsUsed','numNans','shuffPVcorrs','shuffMeanCorr','PVdayPairs',...
-            'meanCorrOutOfShuff','pvCorrsOutOfShuff','meanCorrsOutShuff','numCorrsOutShuff','corrsOutCOM','lims95')
-        
-%Pool across animals
-[pooledMeanCorr,pooledMeanCorrOutofShuff,pooledPVcorrs,pooledPVcorrsOutShuff,...
-          pooledMeanPVcorrsOutShuff,pooledNumPVcorrsOutShuff,pooledCorrsOutCOM,pooledPVdayDiffs] =...
-          PoolProcessedPVcorrs(pooledCompPairs,meanCorr,meanCorrOutOfShuff,pvCorrs,pvCorrsOutOfShuff,...
-          meanCorrsOutShuff,numCorrsOutShuff,corrsOutCOM,PVdayPairs);
 
+disp('Done PV corr sensitivity index')
+%}
+%% Center of mass, change over time
 
-%Shuffle days and dimensions
-tic
-pooledCompPairs = [1 2; 2 1; 3 4; 4 3]; 
-pooledShuffleDim = {'leftright', 'leftright', 'studytest','studytest'};
-pvCorrs = cell(numMice,1); numCellsUsed = cell(numMice,1); numNans = cell(numMice,1); meanCorr = cell(numMice,1);
-parfor mouseI = 1:numMice
-    shuffleWhat = 'dayAndDim';
-    %Make the pv corrs
-    [pvCorrs{mouseI}, meanCorr{mouseI}, numCellsUsed{mouseI}, numNans{mouseI}, shuffPVcorrs{mouseI}, shuffMeanCorr{mouseI}, PVdayPairs{mouseI}]=...
-    MakePVcorrsWrapper(cellTBT{mouseI}, shuffleWhat, numPerms, pooledCompPairs, pooledShuffleDim,...
-                       pooledCondPairs, poolLabels, pooledTraitLogical{mouseI}, xlims, cmperbin, minspeed);
-    %Do some processing
-    [meanCorrOutOfShuff{mouseI},pvCorrsOutOfShuff{mouseI},meanCorrsOutShuff{mouseI},numCorrsOutShuff{mouseI},corrsOutCOM{mouseI},lims95] =...
-          ProcessPVcorrs(numPerms,pThresh,shuffMeanCorr{mouseI},meanCorr{mouseI},shuffPVcorrs{mouseI},pvCorrs{mouseI});
+for mouseI = 1:numMice
+    [allCondsTMap{mouseI}, ~, ~, ~, ~, ~, ~] =...
+        PFsLinTBTdnmp(cellTBT{mouseI}, stemBinEdges, minspeed, [], false,[1 2 3 4]);
+
+    [allCondsTMapARM{mouseI}, ~, ~, ~, ~, ~, ~] =...
+        PFsLinTBTdnmp(cellTBTarm{mouseI}, armBinEdges, minspeed, [], false,[1 2 3 4]);
+
+    allFiringCOM{mouseI} = TMapFiringCOM(allCondsTMap{mouseI});
+    allFiringCOMarm{mouseI} = TMapFiringCOM(allCondsTMapARM{mouseI});
 end
-toc
-save(fullfile(mainFolder,'dayAndDimCorrs.mat'),'pvCorrs','meanCorr','numCellsUsed','numNans','shuffPVcorrs','shuffMeanCorr','PVdayPairs',...
-            'meanCorrOutOfShuff','pvCorrsOutOfShuff','meanCorrsOutShuff','numCorrsOutShuff','corrsOutCOM','lims95')
+
+pooledCOMlr = [];
+pooledCOMst = [];
+pooledCOMlrEx = [];
+pooledCOMstEx = [];
+pooledCOMboth = [];
+pooledCOMlrARM = [];
+pooledCOMstARM = [];
+pooledCOMlrARMex = [];
+pooledCOMstARMex = [];
+pooledCOMbothARM = [];
+for mouseI = 1:numMice
+    for dayI = 1:numDays(mouseI)
+        pooledCOMlr = [pooledCOMlr; allFiringCOM{mouseI}(traitGroups{1}{mouseI}{1}(:,dayI),dayI)];
+        pooledCOMst = [pooledCOMst; allFiringCOM{mouseI}(traitGroups{1}{mouseI}{2}(:,dayI),dayI)];
+        pooledCOMlrEx = [pooledCOMlrEx; allFiringCOM{mouseI}(traitGroups{1}{mouseI}{3}(:,dayI),dayI)];
+        pooledCOMstEx = [pooledCOMstEx; allFiringCOM{mouseI}(traitGroups{1}{mouseI}{4}(:,dayI),dayI)];
+        pooledCOMboth = [pooledCOMboth; allFiringCOM{mouseI}(traitGroups{1}{mouseI}{5}(:,dayI),dayI)];
         
-%Pool across animals
-[pooledMeanCorr,pooledMeanCorrOutofShuff,pooledPVcorrs,pooledPVcorrsOutShuff,...
-          pooledMeanPVcorrsOutShuff,pooledNumPVcorrsOutShuff,pooledCorrsOutCOM,pooledPVdayDiffs] =...
-          PoolProcessedPVcorrs(pooledCompPairs,meanCorr,meanCorrOutOfShuff,pvCorrs,pvCorrsOutOfShuff,...
-          meanCorrsOutShuff,numCorrsOutShuff,corrsOutCOM,PVdayPairs);
+        pooledCOMlrARM = [pooledCOMlrARM; allFiringCOMarm{mouseI}(traitGroups{2}{mouseI}{1}(:,dayI),dayI)];
+        pooledCOMstARM = [pooledCOMstARM; allFiringCOMarm{mouseI}(traitGroups{2}{mouseI}{2}(:,dayI),dayI)];
+        pooledCOMlrARMex = [pooledCOMlrARMex; allFiringCOMarm{mouseI}(traitGroups{2}{mouseI}{3}(:,dayI),dayI)];
+        pooledCOMstARMex = [pooledCOMstARMex; allFiringCOMarm{mouseI}(traitGroups{2}{mouseI}{4}(:,dayI),dayI)];
+        pooledCOMbothARM = [pooledCOMbothARM; allFiringCOMarm{mouseI}(traitGroups{2}{mouseI}{5}(:,dayI),dayI)];
+    end
+end
 
-
-
-%% Variance of diff types of cell
-
-[b,r,stats, MSE] = GetCellVarianceSource(trialbytrial,pooledUnpooled)
-
-
+disp('Done getting COM')
 
 

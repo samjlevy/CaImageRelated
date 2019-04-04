@@ -4,7 +4,7 @@ function [figHandOut, statsOut] = PlotMeanPVcorrsDaysApart(meanPVcorrs, daysApar
 
 titleText = {['Mean correlation change by days with ' fitLineType ' line']};
 numConds = length(meanPVcorrs);
-condSetComps = combnk(1:numConds,2);
+condSetComps = combnk(1:numConds,2); statsOut.comparisons = condSetComps;
 maxDay = max(cell2mat(cellfun(@max,daysApart,'UniformOutput',false)));
 if isempty(figHand)
     figHandOut = figure('Position',[680 305 968 673]);

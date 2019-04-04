@@ -1,4 +1,13 @@
 function [statsOut] = PlotTraitChangeOverDaysOne(pooledTraitChanges,pooledDaysApart,colorsHere,labels,plotDots,lineType,yLabel,ylims)
+global dayLagLimit
+if any(dayLagLimit)
+    badDayLags = pooledDaysApart > dayLagLimit;
+    for ttI = 1:length(pooledTraitChanges)
+        pooledTraitChanges{ttI}(badDayLags) = [];
+    end
+    pooledDaysApart(badDayLags) = [];
+end
+
 numConds = length(pooledTraitChanges);
 
 plot([0.5 max(pooledDaysApart)+0.5],[0 0],'k')
@@ -77,4 +86,11 @@ for compI = 1:size(comps,1)
     end
 end
 statsOut.comps = comps;
+
+for tgI = 1:length(pooledTraitChanges)
+    [statsOut.slopeDiffZero(tgI).Fval,statsOut.slopeDiffZero(tgI).dfNum,...
+     statsOut.slopeDiffZero(tgI).dfDen,statsOut.slopeDiffZero(tgI).pVal] =...
+        slopeDiffFromZeroFtest(pooledTraitChanges{tgI}, pooledDaysApart);
+end
+
 end

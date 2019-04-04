@@ -3,6 +3,7 @@ function [dPrime, pVal] = SensitivityIndexSL(vSignal,vNoise,nPerms)
 %       square root ( 1/2 * (std(signal)^2 - std(noise)^2) )
 
 dPrime = SensFunc(vSignal,vNoise);
+dPrime = abs(dPrime);
 
 %Get p-val from permutation test
 allData = [vSignal(:); vNoise(:)];
@@ -13,7 +14,7 @@ for permI = 1:nPerms
     dShuff(permI) = SensFunc(allData(newMarker==0),allData(newMarker==1));
 end
 
-pVal = sum(dShuff < dPrime);
+pVal = sum(abs(dShuff) > dPrime)/nPerms;
      
 end
 
