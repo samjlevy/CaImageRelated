@@ -1,5 +1,8 @@
-function EditDailyTrialSheet(refSheetLocation)%,options,cellStarts,cellStops
+function EditDailyTrialSheet(startPattern)%,options,cellStarts,cellStops
 %Assumes equal number of each type
+[ff,dd] = uigetfile('*.xlsx');
+refSheetLocation = fullfile(dd,ff);
+
 
 cellStarts = {'D4','J4'};
 cellStops = {'D33','J33'};
@@ -50,6 +53,25 @@ for csJ = 1:length(cellStarts)
     indsHere = (1:trialsHere(csJ+1))+trialsHere(csJ);
     T = table(choiceCell(indsHere),'VariableNames',{'Start    '});
     writetable(T,refSheetLocation,'Sheet',3,'Range',cellStarts{csJ});
+end
+
+%Write pattern of start trials
+switch startPattern
+    case {'aaa','AAA'}
+        startInds = ones(nTrials,1);
+    case {'aba','ABA'}
+        startInds = [ones(nTrials/3,1); 2*ones(nTrials/3,1); ones(nTrials/3,1)]; 
+    case {'abc','ABC'}
+        startInds = [ones(nTrials/3,1); 2*ones(nTrials/3,1); 3*ones(nTrials/3,1)];
+end
+startOrder = options(randperm(length(options)));
+startCell = startOrder(startInds)';
+
+startStarts = {'C3','I3'};
+for ssI = 1:length(startStarts)
+    indsHere = (1:trialsHere(ssI+1))+trialsHere(ssI);
+    T = table(startCell(indsHere),'VariableNames',{'Ends    '});
+    writetable(T,refSheetLocation,'Sheet',3,'Range',startStarts{ssI});
 end
 
 end
