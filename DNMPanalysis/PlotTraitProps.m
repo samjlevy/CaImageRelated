@@ -51,7 +51,11 @@ for pcI = 1:size(comparisons,1)
     %comps = combnk(compHere,2);
     %for compI = 1:size(comps,1)
     splitPropDiffs{pcI} = pooledSplitProp{plotWhich(compHere(2))} - pooledSplitProp{plotWhich(compHere(1))};
-    [statsOut.pPropDiffs(pcI),statsOut.hPropDiffs(pcI)] = signtest(splitPropDiffs{pcI}); %h = 1 reject (different)
+    [statsOut.signtest.pVal(pcI),statsOut.signtest.hVal(pcI)] = signtest(splitPropDiffs{pcI}); %h = 1 reject (different)
+    
+    [statsOut.signrank(pcI).pVal,statsOut.signrank(pcI).hVal,stats] =...
+        signrank(pooledSplitProp{plotWhich(compHere(1))}, pooledSplitProp{plotWhich(compHere(2))});
+    statsOut.signrank(pcI).zVal = stats.zval;
     
     %plot a bar across the pair of compare inds
     possibleHeight = max(round(cell2mat(cellfun(@max,pooledSplitProp(plotWhich(compHere)),'UniformOutput',false)),1));
@@ -70,17 +74,25 @@ for pcI = 1:size(comparisons,1)
    
     plot(barXpos(compHere),[possibleHeight possibleHeight],'k','LineWidth',2)
     
-    switch statsOut.hPropDiffs(pcI)
+    switch statsOut.signrank(pcI).hVal
         case 1
-            if statsOut.pPropDiffs(pcI) < 0.001
-                textPlot = 'p < 0.001';
-            else
-                textPlot = ['p = ' num2str(statsOut.pPropDiffs(pcI))];
+            if statsOut.signrank(pcI).pVal < 0.05
+                textPlot = '*';
+                if statsOut.signrank(pcI).pVal < 0.01
+                    textPlot = '**';
+                    if statsOut.signrank(pcI).pVal < 0.001
+                        textPlot = '***';
+                    end
+                end
             end
+            %else
+            %    textPlot = ['p = ' num2str(statsOut.signrank(pcI).pVal)];
+            %end
+            text(mean(possibleX),possibleHeight+0.03,textPlot,'Color','k','HorizontalAlignment','center')
         case 0
             textPlot = 'n.s.';
     end
-    text(mean(possibleX),possibleHeight+0.03,textPlot,'Color','k','HorizontalAlignment','center')
+    
 end
 
 [statsOut.ksANOVA.p,statsOut.ksANOVA.tbl,statsOut.ksANOVA.stats] = kruskalwallis(dataHere,grps,'off');

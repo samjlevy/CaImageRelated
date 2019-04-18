@@ -1044,5 +1044,111 @@ suptitleSL(['Decoding with ' decodingType{dtI} ', solid = REG, dotted = DS, r = 
 end
             
 
+%% Within day d-prime sensitivity index
+cellCritUse = 5;
+limsHere = [0 4.5; 0 7];
+jj = []; statsOut = [];
+for slI = 1:2
+    [jj{slI},statsOut{slI}] = PlotPVcurvesDiff(CSpooledPVcorrs{slI}{cellCritUse},CSpooledPVdaysApart{slI}{cellCritUse},...
+        condSetColors,condSetLabels,false,[]);
+    title(['Within-Day Sensitivity Index (dPrime) ' upper(mazeLocations{slI}) ' (' pvNames{cellCritUse} ')'])
+    ylim(limsHere(slI,:))
+end
 
+cellCritUse = 5;
+limsHere = [0 4.5; 0 7];
+jj = []; statsOut = [];
+for slI = 1:2
+    [jj{slI},statsOut{slI}] = PlotPVcurvesDPrime(CSpooledPVcorrs{slI}{cellCritUse},CSpooledPVdaysApart{slI}{cellCritUse},...
+        condSetColors,condSetLabels,[]);
+    title(['Within-Day Sensitivity Index (dPrime) ' upper(mazeLocations{slI}) ' (' pvNames{cellCritUse} ')'])
+    ylim(limsHere(slI,:))
+end
+for slI = 1:2
+    figure;
+    text(1,1,['sensitivity index perm test, ' condSetLabels{2} ', p: ' num2str([statsOut{slI}.permTest.pVal(1,:)])])
+    text(1,2,['sensitivity index perm test, ' condSetLabels{3} ', p: ' num2str([statsOut{slI}.permTest.pVal(2,:)])])
+    xlim([0 12]); ylim([0 4])
+    title(['Stats for d-prime pv corrs within day on ' mazeLocations{slI}])
+end
+
+    %% Population D-prime sensitivity index by days apart
+cellCritUse = 5;
+statsOut = [];
+dr = [];
+for slI = 1:2
+    figure('Position',[317 403 1448 417]);
     
+    dr{slI}{1} = subplot(1,3,1);
+    [dr{slI}{1}, statsOut{slI}{1}] = PlotMeanPVcorrsDiffDaysApart(CSpooledMeanPVcorrs{slI}{cellCritUse}, CSpooledPVdaysApart{slI}{cellCritUse},...
+        condSetColors, condSetLabels, dr{slI}{1});
+    title('Sensitivity Index by Days Apart, mean all bins')
+    
+    dr{slI}{2} = subplot(1,3,2);
+    [dr{slI}{2}, statsOut{slI}{2}] = PlotMeanPVcorrsDiffDaysApart(CSpooledMeanPVcorrsHalfFirst{slI}{cellCritUse}, CSpooledPVdaysApart{slI}{cellCritUse},...
+        condSetColors, condSetLabels, dr{slI}{2});
+    title('Sensitivity Index by Days Apart, mean 1st 2 bins')
+    
+    dr{slI}{3} = subplot(1,3,3);
+    [dr{slI}{3}, statsOut{slI}{3}] = PlotMeanPVcorrsDiffDaysApart(CSpooledMeanPVcorrsHalfSecond{slI}{cellCritUse}, CSpooledPVdaysApart{slI}{cellCritUse},...
+        condSetColors, condSetLabels, dr{slI}{3});
+    title('Sensitivity Index by Days Apart, mean Last 2 bins')
+    
+    suptitleSL(upper(mazeLocations{slI}))
+end
+%Stats text
+for slI = 1:2
+    figure('Position',[411 89 661 844]);
+    subplot(3,1,1);
+    text(1,1,[condSetLabels{2} ' vs VSelf pVal: ' num2str(statsOut{slI}{1}.reg.pVal{1})])
+    text(1,2,[condSetLabels{3} ' vs VSelf pVal: ' num2str(statsOut{slI}{1}.reg.pVal{2})])
+    text(1,3,[condSetLabels{statsOut{1}{1}.comp.comparisons(1)} ' vs ' condSetLabels{statsOut{1}{1}.comp.comparisons(2)}...
+        ' pVal: ' num2str(statsOut{slI}{1}.comp.pVal{1})])
+    xlim([0 12]); ylim([0 4]); title('Sensitivity index stats on all bins')
+    
+    subplot(3,1,2);
+    text(1,1,[condSetLabels{2} ' vs VSelf pVal: ' num2str(statsOut{slI}{2}.reg.pVal{1})])
+    text(1,2,[condSetLabels{3} ' vs VSelf pVal: ' num2str(statsOut{slI}{2}.reg.pVal{2})])
+    text(1,3,[condSetLabels{statsOut{1}{2}.comp.comparisons(1)} ' vs ' condSetLabels{statsOut{1}{2}.comp.comparisons(2)}...
+        ' pVal: ' num2str(statsOut{slI}{2}.comp.pVal{1})])
+    xlim([0 12]); ylim([0 4]); title('Sensitivity index stats on 1st 2 bins')
+    
+    subplot(3,1,3);
+    text(1,1,[condSetLabels{2} ' vs VSelf pVal: ' num2str(statsOut{slI}{3}.reg.pVal{1})])
+    text(1,2,[condSetLabels{3} ' vs VSelf pVal: ' num2str(statsOut{slI}{3}.reg.pVal{2})])
+    text(1,3,[condSetLabels{statsOut{1}{3}.comp.comparisons(1)} ' vs ' condSetLabels{statsOut{1}{3}.comp.comparisons(2)}...
+        ' pVal: ' num2str(statsOut{slI}{3}.comp.pVal{1})])
+    xlim([0 12]); ylim([0 4]); title('Sensitivity index stats on Last 2 bins')
+    
+    suptitleSL(upper(mazeLocations{slI}))
+end
+
+
+
+%% PV corr by days apart
+%{
+cellCritUse = 5;
+statsOut = []; gg = []; 
+for slI = 1:2
+    figure('Position',[317 403 1448 417]);
+    
+    gg{slI}{1} = subplot(1,3,1);
+    [gg{slI}{1}, statsOut{slI}{1}] = PlotMeanPVcorrsDaysApart(CSpooledMeanPVcorrs{slI}{cellCritUse}, CSpooledPVdaysApart{slI}{cellCritUse},...
+        'none', condSetColors, condSetLabels, false, gg{slI}{1});
+    gg{slI}{1}.Title.String = ['Mean All Bins (' pvNames{cellCritUse} ')'];
+    ylim([-0.1 1])
+    
+    gg{slI}{2} = subplot(1,3,2);
+    [gg{slI}{2}, statsOut{slI}{2}] = PlotMeanPVcorrsDaysApart(CSpooledMeanPVcorrsHalfFirst{slI}{cellCritUse}, CSpooledPVdaysApart{slI}{cellCritUse},...
+        'none', condSetColors, condSetLabels, false, gg{slI}{2});
+    gg{slI}{2}.Title.String = ['Mean 1st 2 bins (' pvNames{cellCritUse} ')'];
+    ylim([-0.1 1])
+
+    gg{slI}{3} = subplot(1,3,3);
+    [gg{slI}{3}, statsOut{slI}{3}] = PlotMeanPVcorrsDaysApart(CSpooledMeanPVcorrsHalfSecond{slI}{cellCritUse}, CSpooledPVdaysApart{slI}{cellCritUse},...
+    'none', condSetColors, condSetLabels, false, gg{slI}{3});
+    ylim([-0.1 1])
+    gg{3}.Title.String = ['Mean Last 2 bins (' pvNames{cellCritUse} ')'];
+    suptitleSL(['Mean correlation by days apart ' mazeLocations{slI}])
+end
+%}

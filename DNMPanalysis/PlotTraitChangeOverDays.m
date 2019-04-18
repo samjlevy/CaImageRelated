@@ -1,4 +1,4 @@
-function [figHand,statsOut] = PlotTraitChangeOverDays(pooledTraitChanges,pooledDaysApart,comparisons,colorsUse,labels,figHand,plotDots,lineType,ylims,yLabel)
+function [figHand,statsOut] = PlotTraitChangeOverDays(pooledTraitChanges,pooledDaysApart,comparisons,colorsUse,labels,figHand,plotDots,lineType,ylims,yLabel,csOffset)
 %Comparisons is actually just a list of indices of which traitchanges to plot
 global dayLagLimit
 if any(dayLagLimit)
@@ -26,12 +26,17 @@ end
 for compI = 1:numComps
     subplot(1,numComps,compI)
     [statsOutTemp] = PlotTraitChangeOverDaysOne(pooledTraitChanges(comparisons{compI}),pooledDaysApart,...
-        colorsUse(comparisons{compI}),labels(comparisons{compI}),plotDots,lineType,yLabel,ylims);
+        colorsUse(comparisons{compI}),labels(comparisons{compI}),plotDots,lineType,yLabel,ylims,csOffset);
     
     statsOut.slopeDiffComp{compI} = statsOutTemp.slopeDiffComp;
+    statsOut.signranktests{compI} = statsOutTemp.signranktests;
     statsOut.signtests{compI} = statsOutTemp.signtests;
     statsOut.rankSumAll{compI} = statsOutTemp.rankSumAll;
     statsOut.comps{compI} = statsOutTemp.comps;
+    
+    %Anova (for when sign/signed-rank tests fail?)
+    %[statsOut.ksANOVA.p,statsOut.ksANOVA.tbl,statsOut.ksANOVA.stats] = kruskalwallis(dataHere,grps,'off');
+    %statsOut.ksANOVA.multComps = multcompare(statsOut.ksANOVA.stats,'Display','off');
 end
 
 % Slopes of each of these lines

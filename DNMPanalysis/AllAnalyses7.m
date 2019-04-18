@@ -206,55 +206,6 @@ traitLabels = {'splitLR' 'splitST'  'splitLRonly' 'splitSTonly' 'splitBOTH' 'spl
 
 disp('Done all setup stuff')
 
-%% New cells/lost cells
-numNewCellsPooled = [];
-pctNewCellsChangePooled = [];
-numLostCellsPooled = [];
-pctLostCellsChangePooled = [];
-dayPairsHerePooled = [];
-for mouseI = 1:numMice
-    cellPresent = cellSSI{mouseI} > 0;
-    for dayI = 2:length(cellRealDays{mouseI})
-        newCells = cellPresent(:,dayI) == (cellPresent(:,dayI-1)==0);
-        numNewCells{mouseI}(dayI-1) = sum(newCells);
-        newOutofTotal{mouseI}(dayI-1) = numNewCells{mouseI}(dayI-1) / sum(cellPresent(:,dayI));
-        
-        lostCells = (cellPresent(:,dayI)==0) == cellPresent(:,dayI-1);
-        numLostCells{mouseI}(dayI-1) = sum(lostCells);
-        lostOutofTotal{mouseI}(dayI-1) = numLostCells{mouseI}(dayI-1) / sum(cellPresent(:,dayI-1));
-    end
-    
-    dayPairsHere = combnk(1:length(cellRealDays{mouseI})-1,2);
-    realDaysHere = cellRealDays{mouseI}(2:end);
-    realDayPairsHere = realDaysHere(dayPairsHere);
-    realDayDiffsHere = diff(realDayPairsHere,1,2);
-    dayPairsHerePooled = [dayPairsHerePooled; realDayDiffsHere];
-    
-    [~, numNewCellsPctChange{mouseI}] = TraitChangeDayPairs(numNewCells{mouseI},dayPairsHere);
-    [pctNewCellsChange{mouseI}, ~] = TraitChangeDayPairs(newOutofTotal{mouseI},dayPairsHere);
-    
-    numNewCellsPooled = [numNewCellsPooled; numNewCellsPctChange{mouseI}];
-    pctNewCellsChangePooled = [pctNewCellsChangePooled; pctNewCellsChange{mouseI}];
-    
-    [~, numLostCellsPctChange{mouseI}] = TraitChangeDayPairs(numLostCells{mouseI},dayPairsHere);
-    [pctLostCellsChange{mouseI}, ~] = TraitChangeDayPairs(lostOutofTotal{mouseI},dayPairsHere);
-    
-    numLostCellsPooled = [numLostCellsPooled; numLostCellsPctChange{mouseI}];
-    pctLostCellsChangePooled = [pctLostCellsChangePooled; pctLostCellsChange{mouseI}];
-end
-
-figure; plot(dayPairsHerePooled,pctNewCellsChangePooled,'.')
-hold on
-[fitVal,daysPlot] = FitLineForPlotting(pctNewCellsChangePooled,dayPairsHerePooled);
-plot(daysPlot,fitVal,'k'); plot([0 16],[0 0],'k')
-title('Pct change in new cells as pct of present that day')
-
-figure; plot(dayPairsHerePooled,pctLostCellsChangePooled,'.')
-hold on
-[fitVal,daysPlot] = FitLineForPlotting(pctLostCellsChangePooled,dayPairsHerePooled);
-plot(daysPlot,fitVal,'k'); plot([0 16],[0 0],'k')
-title('Pct change in lost cells as pct of present previous day')
-
 %% Splitter cells: Shuffle versions, pooled
 numShuffles = 1000;
 shuffThresh = 1 - pThresh;
@@ -531,6 +482,22 @@ cellCheck = [3 4 5];
 transCheck = [1 3;          1 4;          2 2;     2 4;               3 2;        3 3];
 transLabels = {'LR to ST','LR to BOTH','ST to LR','ST to BOTH','BOTH to LR','BOTH to ST'};
 
+%What are new cells?
+
+firstDayLogical = [];
+for slI = 1:2
+    for mouseI = 1:numMice
+        firstDays{slI}{mouseI} = GetFirstDayTrait(dayUseFilter{slI}{mouseI});
+        
+        firstDayLogical{slI}{mouseI} = false(size(cellSSI{mouseI}));
+        for cellI = 1:size(cellSSI{mouseI},1)
+            if ~isnan(firstDays{slI}{mouseI}(cellI))
+            firstDayLogical{slI}{mouseI}(cellI,firstDays{slI}{mouseI}(cellI)) = true;
+            end
+        end
+        
+    end
+end
 
 pooledSourceChanges = []; 
 pooledDailySources = [];
@@ -702,7 +669,7 @@ poolLabels = {'Left','Right','Study','Test'};
 condSet = {[1:4]; [5 6]; [7 8]};
 condSetComps = [1 2; 1 3; 2 3];
 condSetLabels = {'VS Self', 'Left vs. Right', 'Study vs. Test'}; csLabelsShort = {'VSelf','LvR','SvT'};
-condSetColors = {'b' 'r' 'g'};
+condSetColors = {'g' 'r' 'b'};
 for cscI = 1:size(condSetComps,1)
     cscLabels{cscI} = [csLabelsShort{condSetComps(cscI,1)} ' - ' csLabelsShort{condSetComps(cscI,2)}];
 end
@@ -758,6 +725,7 @@ end
 end
 
 pvCorrs = []; meanCorr = []; PVdayPairs = []; PVdaysApart = [];
+withinMouseCSpooledPVcorrs = [];
 for slI = 1:2
 for pvtI = 1:length(pvNames)
     for mouseI = 1:numMice
@@ -774,6 +742,7 @@ for pvtI = 1:length(pvNames)
         meanCorrHalfFirst{slI}{pvtI}{mouseI} = cell2mat(cellfun(@(x) mean(x(:,1:2),2),tpvCorrs,'UniformOutput',false));
         meanCorrHalfSecond{slI}{pvtI}{mouseI} = cell2mat(cellfun(@(x) mean(x(:,numBins-1:numBins),2),tpvCorrs,'UniformOutput',false));
 
+        %withinMouseCSpooledPVcorrs{slI}{pvtI}{mouseI} = PoolCellArr(pvCorrs{slI}{pvtI}{mouseI},condSet);
         disp(['Done basic corrs ' pvNames{pvtI} ' for mouse ' num2str(mouseI) ' on ' mazeLocations{slI}])
     end
     
@@ -815,6 +784,35 @@ for slI = 1:2
     end
 end
 
+%Mean pv corrs for each unique day pair
+pvCorrsDPpooled = []; uniqueDayPairs = []; cellArrMeanByCS = []; CSpooledPVcorrs2 = []; 
+CSpooledPVdaysApart2 = []; CSpooledMeanPVcorrsHalfFirst2 = []; CSpooledMeanPVcorrsHalfSecond2 = [];
+for slI = 1:2
+    for pvtI = 1:length(pvNames)
+        for mouseI = 1:numMice
+            pvCorrsDPpooled{slI}{pvtI}{mouseI} = [];
+            for corrI = 1:size(pvCorrs{slI}{pvtI}{mouseI},2)
+                pvsHere = pvCorrs{slI}{pvtI}{mouseI}(:,corrI);
+                [pvsOut,daysOut] = PoolPVcorrByDayPair(pvsHere,PVdayPairs{slI}{pvtI}{mouseI});
+                pvCorrsDPpooled{slI}{pvtI}{mouseI} = [pvCorrsDPpooled{slI}{pvtI}{mouseI},pvsOut];
+                uniqueDayPairs{slI}{pvtI}{mouseI} = daysOut;
+                uniqueDayDiffs{slI}{pvtI}{mouseI} = diff(daysOut,1,2);
+            end
+            cellArrMeanByCS{slI}{pvtI}{mouseI} = MeanCellArr(pvCorrsDPpooled{slI}{pvtI}{mouseI},condSet);
+        end
+        CSpooledPVcorrs2{slI}{pvtI} = PoolCorrsAcrossMice(cellArrMeanByCS{slI}{pvtI});
+        CSpooledPVdaysApartTemp{slI}{pvtI} = PoolCorrsAcrossMice(uniqueDayDiffs{slI}{pvtI});
+        
+        for csI = 1:length(condSet)
+            CSpooledMeanPVcorrs2{slI}{pvtI}{csI,1} = mean(CSpooledPVcorrs2{slI}{pvtI}{csI,1},2);
+            CSpooledMeanPVcorrsHalfFirst2{slI}{pvtI}{csI,1} = mean(CSpooledPVcorrs2{slI}{pvtI}{csI,1}(:,1:2),2);
+            CSpooledMeanPVcorrsHalfSecond2{slI}{pvtI}{csI,1} = mean(CSpooledPVcorrs2{slI}{pvtI}{csI,1}(:,end-1:end),2);
+            CSpooledPVdaysApart2{slI}{pvtI}{csI,1} = CSpooledPVdaysApartTemp{slI}{pvtI}{1};
+        end
+    end
+end
+                
+                
 disp('Done PV corrs') 
 
 %{
@@ -894,3 +892,51 @@ end
 disp('Done getting COM')
 
 
+%% New cells/lost cells
+numNewCellsPooled = [];
+pctNewCellsChangePooled = [];
+numLostCellsPooled = [];
+pctLostCellsChangePooled = [];
+dayPairsHerePooled = [];
+for mouseI = 1:numMice
+    cellPresent = cellSSI{mouseI} > 0;
+    for dayI = 2:length(cellRealDays{mouseI})
+        newCells = cellPresent(:,dayI) == (cellPresent(:,dayI-1)==0);
+        numNewCells{mouseI}(dayI-1) = sum(newCells);
+        newOutofTotal{mouseI}(dayI-1) = numNewCells{mouseI}(dayI-1) / sum(cellPresent(:,dayI));
+        
+        lostCells = (cellPresent(:,dayI)==0) == cellPresent(:,dayI-1);
+        numLostCells{mouseI}(dayI-1) = sum(lostCells);
+        lostOutofTotal{mouseI}(dayI-1) = numLostCells{mouseI}(dayI-1) / sum(cellPresent(:,dayI-1));
+    end
+    
+    dayPairsHere = combnk(1:length(cellRealDays{mouseI})-1,2);
+    realDaysHere = cellRealDays{mouseI}(2:end);
+    realDayPairsHere = realDaysHere(dayPairsHere);
+    realDayDiffsHere = diff(realDayPairsHere,1,2);
+    dayPairsHerePooled = [dayPairsHerePooled; realDayDiffsHere];
+    
+    [~, numNewCellsPctChange{mouseI}] = TraitChangeDayPairs(numNewCells{mouseI},dayPairsHere);
+    [pctNewCellsChange{mouseI}, ~] = TraitChangeDayPairs(newOutofTotal{mouseI},dayPairsHere);
+    
+    numNewCellsPooled = [numNewCellsPooled; numNewCellsPctChange{mouseI}];
+    pctNewCellsChangePooled = [pctNewCellsChangePooled; pctNewCellsChange{mouseI}];
+    
+    [~, numLostCellsPctChange{mouseI}] = TraitChangeDayPairs(numLostCells{mouseI},dayPairsHere);
+    [pctLostCellsChange{mouseI}, ~] = TraitChangeDayPairs(lostOutofTotal{mouseI},dayPairsHere);
+    
+    numLostCellsPooled = [numLostCellsPooled; numLostCellsPctChange{mouseI}];
+    pctLostCellsChangePooled = [pctLostCellsChangePooled; pctLostCellsChange{mouseI}];
+end
+
+figure; plot(dayPairsHerePooled,pctNewCellsChangePooled,'.')
+hold on
+[fitVal,daysPlot] = FitLineForPlotting(pctNewCellsChangePooled,dayPairsHerePooled);
+plot(daysPlot,fitVal,'k'); plot([0 16],[0 0],'k')
+title('Pct change in new cells as pct of present that day')
+
+figure; plot(dayPairsHerePooled,pctLostCellsChangePooled,'.')
+hold on
+[fitVal,daysPlot] = FitLineForPlotting(pctLostCellsChangePooled,dayPairsHerePooled);
+plot(daysPlot,fitVal,'k'); plot([0 16],[0 0],'k')
+title('Pct change in lost cells as pct of present previous day')

@@ -1,4 +1,8 @@
-function [figg] = PlotSplittingDotPlot(daybyday,trialbytrial,cellI,presentDays,mazeLoc,trajPlotType)
+function [figg] = PlotSplittingDotPlot(daybyday,trialbytrial,cellI,presentDays,mazeLoc,trajPlotType,spikesPlot)
+
+if isempty(spikesPlot)
+    spikesPlot = 'limited';
+end
 
 %cellI = 14
 conds = {'study_l','study_r','test_l','test_r'};
@@ -7,12 +11,13 @@ for dayI = 1:length(presentDays)
     dayJ = presentDays(dayI);
     
     switch mazeLoc
-        case 'stem'
+        case {'stem','STEM'}
             %[framesWanted, colNum ] = CondExcelParseout( daybyday.frames{dayJ}, daybyday.txt{dayJ}, 'Start on maze', 0 )
             [start_stop_struct, include_struct, ~, pooled, correct, ~]...
                 = GetBlockDNMPbehavior2( daybyday.frames{dayJ}, daybyday.txt{dayJ}, 'stem_extended', length(daybyday.all_x_adj_cm{dayJ}));
-        case 'arm'
-            
+        case {'arm','ARM'}
+            [start_stop_struct, include_struct, ~, pooled, correct, ~]...
+                = GetBlockDNMPbehavior2( daybyday.frames{dayJ}, daybyday.txt{dayJ}, 'side_arm', length(daybyday.all_x_adj_cm{dayJ}));
     end
     
     [trajLaps, ~, ~, ~, trajLapsCorrect, ~]...
@@ -22,7 +27,7 @@ for dayI = 1:length(presentDays)
     for condI = 1:4
         gg = subplot(2,2,condI);
         
-        lapsPlot = trialbytrial(condI).sessID == dayJ;
+        lapsPlot = trialbytrial(condI).sessID == dayJ;    
         
         switch trajPlotType
             case 'dots'
@@ -75,7 +80,6 @@ for dayI = 1:length(presentDays)
                         goodLaps(:,1) = goodLaps(:,1)-10;
                         goodLaps(:,2) = goodLaps(:,2)-85;
                 end
-               
                 
                 for trialI = 1:size(goodLaps,1) 
                     framesPlot = goodLaps(trialI,1):goodLaps(trialI,2);
@@ -91,12 +95,21 @@ for dayI = 1:length(presentDays)
                 xlim([-22 22])
                 ylim([-20 52])
         end
-                
-        spikeX = [trialbytrial(condI).trialsY{lapsPlot}];
-        spikeY = [trialbytrial(condI).trialsX{lapsPlot}];
-        spikePSA = [trialbytrial(condI).trialPSAbool{lapsPlot}];
-        spikePSA = spikePSA(cellI,:);
-        plot(-1*spikeX(spikePSA),spikeY(spikePSA),'.r','MarkerSize',9)
+        
+        switch spikesPlot
+            case 'limited'
+                spikeX = [trialbytrial(condI).trialsY{lapsPlot}];
+                spikeY = [trialbytrial(condI).trialsX{lapsPlot}];
+                spikePSA = [trialbytrial(condI).trialPSAbool{lapsPlot}];
+                spikePSA = spikePSA(cellI,:);
+                plot(-1*spikeX(spikePSA),spikeY(spikePSA),'.r','MarkerSize',9)
+            case 'wholeLap'
+                spikeX = -1*daybyday.all_y_adj_cm{dayJ}(include_struct.(conds{condI}));
+                spikeY = daybyday.all_x_adj_cm{dayJ}(include_struct.(conds{condI}));
+                spikePSA = daybyday.PSAbool{dayJ}(cellI,:);
+                spikePSA = spikePSA(include_struct.(conds{condI}));
+                plot(spikeX(spikePSA),spikeY(spikePSA),'.r','MarkerSize',9)
+        end
         
         title(conds{condI})
     end

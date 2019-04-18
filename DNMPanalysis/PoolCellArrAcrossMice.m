@@ -3,7 +3,7 @@ function pooledCellArr = PoolCellArrAcrossMice(cellArr)
 
 pooledCellArr = [];
 for aa = 1:length(cellArr)
-    pooledCellArr = [pooledCellArr; cellArr{aa}];
+    pooledCellArr = [pooledCellArr; cellArr{aa}(:)];
 end
 
 end

@@ -1,4 +1,4 @@
-function [statsOut] = PlotTraitChangeOverDaysOne(pooledTraitChanges,pooledDaysApart,colorsHere,labels,plotDots,lineType,yLabel,ylims)
+function [statsOut] = PlotTraitChangeOverDaysOne(pooledTraitChanges,pooledDaysApart,colorsHere,labels,plotDots,lineType,yLabel,ylims,csOffset)
 global dayLagLimit
 if any(dayLagLimit)
     badDayLags = pooledDaysApart > dayLagLimit;
@@ -16,7 +16,12 @@ hold on
 daysHere = unique(pooledDaysApart);
 
 pp = []; qq = [];
-csMod = linspace(1,numConds,numConds); csMod = (csMod - mean(csMod))/10;
+if isempty(csOffset)
+    csMod = linspace(1,numConds,numConds); csMod = (csMod - mean(csMod))/10;
+else
+    csMod = (1:numConds)*csOffset; csMod = csMod - mean(csMod);
+end
+    
 for condI = 1:numConds   
     if plotDots==true
     %pp(condI) = plot(pooledDaysApart+csMod(condI),pooledTraitChanges{condI},'.',...
@@ -70,6 +75,14 @@ for compI = 1:size(comps,1)
      statsOut.signtests(compI).whichWon,statsOut.signtests(compI).eachDayPair] =...
         SignTestAllDayPairs(pooledTraitChanges{comps(compI,1)},...
         pooledTraitChanges{comps(compI,2)},pooledDaysApart);
+    
+    %Wilcoxon signed-rank test each day
+    [statsOut.signranktests(compI).pVal,statsOut.signranktests(compI).hVal,...
+     stats,statsOut.signranktests(compI).whichWon,...
+     statsOut.signranktests(compI).eachDayPair] =...
+        SignRankTestAllDayPairs(pooledTraitChanges{comps(compI,1)},...
+        pooledTraitChanges{comps(compI,2)},pooledDaysApart);
+    statsOut.signranktests(compI).zVal = stats.zval;
     
     %Rank sum all
     [statsOut.rankSumAll(compI).pVal, statsOut.rankSumAll(compI).hVal] = ...
