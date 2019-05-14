@@ -479,11 +479,11 @@ cellCheck = [3 4 5];
 %transLabels = {'LR to BOTH','ST to BOTH', 'BOTH to LR', 'BOTH to ST'};
 %transCheck = [1 2; 1 3; 1 4; 2 2; 2 3; 2 4; 3 2; 3 3; 3 4];
 %transLabels = {'LR to LR','LR to ST','LR to BOTH','ST to LR','ST to ST','ST to BOTH','BOTH to LR','BOTH to ST','BOTH to BOTH'};
+
 transCheck = [1 3;          1 4;          2 2;     2 4;               3 2;        3 3];
 transLabels = {'LR to ST','LR to BOTH','ST to LR','ST to BOTH','BOTH to LR','BOTH to ST'};
 
 %What are new cells?
-
 firstDayLogical = [];
 for slI = 1:2
     for mouseI = 1:numMice
@@ -580,7 +580,7 @@ for slI = 1:length(decodeLoc)
                 disp(['Running downsampled decoding ' decodingType{dtI} ' for mouse ' num2str(mouseI)])
             tic
             [DSdecodingResults, DSdownsampledResults, DStestConds, DStitles, DSsessPairs, cellDownsamples] =...
-                DecoderWrapper3downsampling(cellTBT{mouseI},traitLogUse{dtI}{mouseI},numDownsamples,'transientDur','pooled','bayes');
+                DecoderWrapper3downsampling(cellTBT{mouseI},traitLogUse{dtI}{mouseI},numDownsamples,'transientDur','pooled',cellRealDays{mouseI},'bayes');
             toc
             save(dsdcFileName,'DSdecodingResults', 'DSdownsampledResults', 'DStestConds', 'DStitles', 'DSsessPairs', 'cellDownsamples')
             clear('DSdecodingResults', 'DSdownsampledResults', 'DStestConds', 'DStitles', 'DSsessPairs', 'cellDownsamples')
@@ -852,6 +852,7 @@ disp('Done PV corr sensitivity index')
 %}
 %% Center of mass, change over time
 
+disp('Generating maps for center of mass')
 for mouseI = 1:numMice
     [allCondsTMap{mouseI}, ~, ~, ~, ~, ~, ~] =...
         PFsLinTBTdnmp(cellTBT{mouseI}, stemBinEdges, minspeed, [], false,[1 2 3 4]);
@@ -862,6 +863,7 @@ for mouseI = 1:numMice
     allFiringCOM{mouseI} = TMapFiringCOM(allCondsTMap{mouseI});
     allFiringCOMarm{mouseI} = TMapFiringCOM(allCondsTMapARM{mouseI});
 end
+disp('done')
 
 pooledCOMlr = [];
 pooledCOMst = [];
@@ -890,7 +892,6 @@ for mouseI = 1:numMice
 end
 
 disp('Done getting COM')
-
 
 %% New cells/lost cells
 numNewCellsPooled = [];

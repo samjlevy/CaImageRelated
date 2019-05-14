@@ -67,8 +67,11 @@ for csI = 1:length(condSetColors)
         
         [statsOut.eachCond{csI}.diffFromZeroSign(dayI).pVal,statsOut.eachCond{csI}.diffFromZeroSign(dayI).hVal,stt]=...
             signtest(CSpooledPVcorrs{csI}(daysUse));
-        try statsOut.eachCond{csI}.diffFromZeroSign(dayI).zVal = stt.zval; 
-        catch statsOut.eachCond{csI}.diffFromZeroSign(dayI).zVal = []; end
+        try 
+            statsOut.eachCond{csI}.diffFromZeroSign(dayI).zVal = stt.zval; 
+        catch
+            statsOut.eachCond{csI}.diffFromZeroSign(dayI).zVal = []; 
+        end
     end
 end  
     

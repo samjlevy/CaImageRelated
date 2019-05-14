@@ -52,33 +52,55 @@ xlim([0.75 20.25])
 title('Performance of Individual Mice')
 
 %% Ziv figure
+slidingWindowSize = 5; %cm
+slidingWindowNbins = 80;
 %Get smoother Firing likelihood maps
+disp('Making smoother maps...')
 for mouseI = 1:numMice
     edgesHere = linspace(stemBinEdges(1),stemBinEdges(end),20);
-    [TMap_extra{mouseI}, ~, ~, ~, ~, ~, ~] =...
-    PFsLinTBTdnmp(cellTBT{mouseI}, edgesHere, [], [], false,condPairs);
+    %[TMap_extra{mouseI}, ~, ~, ~, ~, ~, ~] =...
+    %PFsLinTBTdnmp(cellTBT{mouseI}, edgesHere, [], [], false,condPairs);
+    [TMap_extra{mouseI}, ~, ~, ~, ~] =...
+            PFsLinTBTdnmpSliding(cellTBT{mouseI}, [stemBinEdges(1) stemBinEdges(end)], slidingWindowNbins, slidingWindowSize, [], false,[1;2;3;4]);% condPairs
 end
+disp('Done making maps')
 
-%Pool Across mice
+%Pool Across mice; also COM
 daysZiv = [4 5 19; 3 4 18; 4 5 19]; 
 zivMice = [1 2 4];
-TMap_expanded = [];
+TMap_expanded = []; expandedCOM = [];
 for mouseJ = 1:length(zivMice)
     zm = zivMice(mouseJ);
     dz = find(sum(cellRealDays{zm}==daysZiv(mouseJ,:),2));
     TMap_here = TMap_extra{zm}(:,dz,:);
     TMap_expanded = [TMap_expanded; TMap_here];
+    
+    %Center of mass
+    [allCondsTMap{mouseJ}, ~, ~, ~, ~] =...
+            PFsLinTBTdnmpSliding(cellTBT{zm}, [stemBinEdges(1) stemBinEdges(end)], slidingWindowNbins, slidingWindowSize, [], false,[1 2 3 4]);
+        
+    %[allCondsTMap{mouseJ}, ~, ~, ~, ~, ~, ~] =...
+    %    PFsLinTBTdnmp(cellTBT{zm}, stemBinEdges, minspeed, [], false,[1 2 3 4]);
+    allFiringCOM{mouseJ} = TMapFiringCOM(allCondsTMap{mouseJ},'maxBin');
+    COMhere = allFiringCOM{mouseJ}(:,dz);
+    expandedCOM = [expandedCOM; COMhere];
 end
 
 %Decide which cells to use, adjust for later mice
 cellsUse = [];
 for mouseJ = 1:length(zivMice)
     dzz = find(cellRealDays{zivMice(mouseJ)}==daysZiv(mouseJ,1));
+    %cells above activity threshold
     cellsUse = [cellsUse; dayUse{zivMice(mouseJ)}(:,dzz)];
+    %cells that fired
+    %cellsUse = [cellsUse; (sum(trialReli{zivMice(mouseJ)}(:,dzz,:),3)>0)];
+    %cells here at all
+    %cellsUse = [cellsUse; cellSSI{zivMice(mouseJ)}(:,dzz)>0];
 end
 
 %Plot the thing
-[figHand] = PlotZivStyleFigure(TMap_expanded,cellsUse,'withinCell');
+[figHand] = PlotZivStyleFigure(TMap_expanded,cellsUse,expandedCOM,'day1EachCond');%day1AllConds
+suptitleSL([num2str(slidingWindowNbins) ' bins that are ' num2str(slidingWindowSize) ' cm'])
 
 %% Example cell plots
 
@@ -95,10 +117,17 @@ for mouseI = 1:numMice
     if any(splittersPlot{mouseI})
         load(fullfile(mouseDefaultFolder{mouseI},'daybyday.mat'))
         for cellI = 1:length(splittersPlot{mouseI})
+            figg = [];
             cellPlot = splittersPlot{mouseI}(cellI);
             presentDays = find(cellSSI{mouseI}(cellPlot,:)>0);
             [figg] = PlotSplittingDotPlot(daybyday,cellTBTarm{mouseI},cellPlot,presentDays,'stem','line','wholeLap');
             %cellOutLinePlot...
+             
+            figHd = [];
+            figHd = PlotCellOutline(cellAllFiles{mouseI}(presentDays),cellSSI{mouseI}(cellPlot,presentDays),50);
+            %title has that cell's number on that day, and the session number (not real day)
+            %Also one to combine all these across days? Will have to load
+            %the all file, or at least the aligned files from each day
         end
     end
 end
@@ -335,7 +364,7 @@ for slI = 1:2
             ', num day lags diff sign rank test: ' num2str(sum(sigTests)) ', from day lags ' num2str(find(sigTests))])
     end
     for lineI = 1:length(tgsPlot)
-        sigTests = statsOut{slI}.signranktests{1}(lineI).pVal<0.05/(max(cell2mat(cellfun(@length,cellRealDays,'UniformOutput',false))-1));
+        sigTests = statsOut{slI}.signranktests{1}(lineI).pVal<(0.05/(max(cell2mat(cellfun(@length,cellRealDays,'UniformOutput',false))-1)));
         text(1,lineI+length(tgsPlot),['mult comp bonferroni comparison lines ' num2str(statsOut{slI}.comps{1}(lineI,:))...
             ', num day lags diff sign rank test: ' num2str(sum(sigTests)) ', from day lags ' num2str(find(sigTests))])
     end
@@ -453,7 +482,63 @@ for slI = 1:2
 end
 
 %New cells prop Raw
-statsOut = PlotRawTraitEachMouse(traitProps,realDays,normalization,mouseColors,regColor)
+%statsOut = PlotRawTraitEachMouse(traitProps,realDays,normalization,mouseColors,regColor)
+
+thingsNow = [3     4     5     8];
+
+ylimsuse = {[0 0.5],[0 0.5],[0.1 0.9],[0 0.5];[0.1 0.7],[-0.01 0.4],[0.1 0.7],[-0.01 0.4]};
+for slI = 1:2
+    figure('Position',[695 118 819 674]);
+    for ii = 1:4
+        pooledHere = [];
+        daysHere = [];
+        aaa = subplot(2,2,ii);
+        for mouseI = 1:4
+            
+            dayss = cellRealDays{mouseI} - (cellRealDays{mouseI}(1)-1);
+            dayss = dayss(2:end);
+            %dayss = cellRealDays{mouseI};
+            splitPropHere = traitFirstPcts{slI}{mouseI}{thingsNow(ii)};
+            pkgForSlope{mouseI} = splitPropHere;
+            %splitPropHere = splitPropHere - mean(splitPropHere);
+            plot(dayss,splitPropHere)
+            pooledHere = [pooledHere; splitPropHere(:)];
+            daysHere = [daysHere; dayss];
+            daysPkg{mouseI} = dayss;
+            hold on
+        end
+        
+        ylabel('Proportion of cells')
+        xlabel('Recording day')
+
+        [fitVal,daysPlot] = FitLineForPlotting(pooledHere,daysHere);
+        plot(daysPlot,fitVal,'k','LineWidth',2)
+        [~, ~, ~, RR(ii), Pval(ii), ~] =...
+                    fitLinRegSL(pooledHere,daysHere);
+                [Fval(ii),dfNum(ii),dfDen(ii),pVal(ii)] =...
+                slopeDiffFromZeroFtest(pooledHere,daysHere);
+        [slopePermP(ii)] = slopePermutationTest(pkgForSlope,daysPkg,1000);
+        %title([traitLabels{thingsNow(ii)} ', R=' num2str(sqrt(abs(RR.Ordinary))) ', p=' num2str(Pval)])
+        title([traitLabels{thingsNow(ii)}])
+
+        xlim([min(daysHere)-0.5 max(daysHere)+0.5])
+        ylim(ylimsuse{slI,ii})
+        xticks([2 6 12 18])
+        aaa = MakePlotPrettySL(aaa);
+    end
+    
+    suptitleSL(['Raw splitting pcts of new cells across all mice, and regression on ' mazeLocations{slI}])
+    
+    figure('Position',[322 269 1255 420]);
+    for ii = 1:4
+    text(1,ii,[traitLabelsAlt{thingsNow(ii)} ' LinReg R=' num2str(sqrt(abs(RR(ii).Ordinary))) ', p=' num2str(Pval(ii))...
+        ',F diff zero F dfNum dfDen p: ' num2str([Fval(ii) dfNum(ii) dfDen(ii) pVal(ii)])...
+        ', slopePermP= ' num2str(slopePermP(ii))]) 
+    end
+    title(['stats for raw data new cell splitter prop changes on ' mazeLocations{slI}])
+    xlim([0 15])
+    ylim([0 6])
+end
 
 %% Decoding by days apart
 %Reg vs. Downsampled
@@ -465,6 +550,7 @@ dtI = 2;
 statsOut = [];
 asd = figure('Position',[373 137 482 766]);%[723 305 574 461]
 axH = [];
+runPermTest = true;
 for slI = 1:length(decodeLoc)
     axInd = slI;
     axH(axInd) = subplot(length(decodeLoc),1,axInd);
@@ -473,12 +559,15 @@ for slI = 1:length(decodeLoc)
                                     {decodingResultsPooled{slI}{dtI}{ddI} downsampledResultsPooled{slI}{dtI}{ddI}},...
                                     {shuffledResultsPooled{slI}{dtI}{ddI} shuffledResultsPooled{slI}{dtI}{ddI}},...
                                     {decodedWellPooled{slI}{dtI}{ddI} DSaboveShuffPpooled{slI}{dtI}{ddI}},...
-                                    sessDayDiffs{slI}{dtI}{ddI},sessDayDiffs{slI}{dtI}{ddI},[],lineType{ddI},transHere{ddI},dimCols{ddI},axH(axInd));
+                                    sessDayDiffs{slI}{dtI}{ddI},sessDayDiffs{slI}{dtI}{ddI},[],lineType{ddI},transHere{ddI},dimCols{ddI},runPermTest,axH(axInd));
         title(['Decoding comparison, reg. vs. DS, decoding Cells on ' decodeLoc{slI} ])
     end
+    xticks([1 4 8 12 16])
 end
 asd.Renderer = 'painters';
 suptitleSL(['Decoding with ' decodingType{dtI} ', solid = REG, dotted = DS, r = lr b = st'])
+for chI = 1:length(asd.Children); if strcmpi(class(asd.Children(chI)),'matlab.graphics.axis.Axes'); 
+        asd.Children(chI) = MakePlotPrettySL(asd.Children(chI)); end; end
 
 %Stats text
 for slI = 1:2
@@ -497,7 +586,10 @@ for slI = 1:2
             num2str(statsOut{slI}{ddI}.slopeDiffZero.dfDen(2)) ' ' num2str(statsOut{slI}{ddI}.slopeDiffZero.pVal(2)) ])
         text(1,4,['ranksum test each day reg. vs. ds. pVals : ' num2str(statsOut{slI}{ddI}.ranksums.pVal)])
         
-        ylim([0 5])
+        text(1,5,['slopeDiffZero reg permutation pVal: ' num2str(statsOut{slI}{ddI}.slopeDiffZeroPerm.pVal(1))])
+        text(1,6,['slopeDiffZero downsampled permutation pVal: ' num2str(statsOut{slI}{ddI}.slopeDiffZeroPerm.pVal(2))])
+        
+        ylim([0 7])
         
         title(['reg vs. ds decoding stats for ' dimsDecoded{ddI}])
     end
@@ -516,7 +608,7 @@ for slI = 1:length(decodeLoc)
                                     decodingResultsPooled{slI}{dtI},...
                                     shuffledResultsPooled{slI}{dtI},...
                                     decodedWellPooled{slI}{dtI},...
-                                    sessDayDiffs{slI}{dtI}{ddI},sessDayDiffs{slI}{dtI}{ddI},[],[],[],[1 0 0;0 0 1],axHH(axInd));
+                                    sessDayDiffs{slI}{dtI}{ddI},sessDayDiffs{slI}{dtI}{ddI},[],[],[],[1 0 0;0 0 1],false,axHH(axInd));
     title(['Decoding comparison, reg. across dims, decoding Cells on ' decodeLoc{slI} ])
     %Downsampled dim comparison
     axInd = 2;
@@ -525,7 +617,7 @@ for slI = 1:length(decodeLoc)
                                           downsampledResultsPooled{slI}{dtI},...
                                           shuffledResultsPooled{slI}{dtI},...
                                           DSaboveShuffPpooled{slI}{dtI},...
-                                          sessDayDiffs{slI}{dtI}{ddI},sessDayDiffs{slI}{dtI}{ddI},[],[],[],[1 0 0;0 0 1],axHH(axInd));
+                                          sessDayDiffs{slI}{dtI}{ddI},sessDayDiffs{slI}{dtI}{ddI},[],[],[],[1 0 0;0 0 1],false,axHH(axInd));
     title(['Decoding comparison, downsampled across dims, decoding Cells on ' decodeLoc{slI} ])
 end
 %close(asdd)
@@ -571,18 +663,18 @@ for slI = 1:2
     title(['Ensemble state separation on ' mazeLocations{slI}])
     legend off
     
-    
     for binI = 1:numBins
         if statsOut{slI}.signranktests{1}(binI).pVal < 0.05
             plot([-0.5 0.5]+binI,[-0.05 -0.05],'r','LineWidth',2)
         end
         for csI = 1:length(condSet)-1
             if statsOut{slI}.eachCond{csI}.diffFromZeroSign(binI).pVal < 0.05
-                plot(+binI,-0.05-0.05*csI,'*','Color',condSetColors{csI+1},'MarkerSize',6)
+                plot(binI,-0.05-0.05*csI,'*','Color',condSetColors{csI+1},'MarkerSize',6)
             end
         end
     end
     ylim([-0.05-0.05*(csI+1) axHand{slI}.YLim(2)])
+    axHand{slI} = MakePlotPrettySL(axHand{slI});
 end
 %stats
 for slI = 1:2
@@ -602,6 +694,53 @@ for slI = 1:2
     title(['stats for within day pv state separation on ' mazeLocations{slI}])
 end
 
+%% Population state separation over days
+figHand = [];
+statsOut = [];
+binsUse = {[1:2];[7:8]};
+%ylimsHere = {{0 0.5}{0 1};{0 1}{0 1]
+for bI = 1:length(binsUse)
+for slI = 1:2
+    [figHand{slI},statsOut{slI}] = PlotPVcurvesDiffRawDays(...
+        cellArrMeanByCS{slI}{cellCritUse},uniqueDayDiffs{slI}{cellCritUse},cellRealDays,binsUse{bI},condSetColors(2:end));
+    figHand{slI}.Children.YLabel.String = 'Ensemble State Separation';
+    figHand{slI}.Children.XLim = [1 figHand{slI}.Children.XLim(2)];
+   
+    figHand{slI}.Children.XTick = [6 12 18];
+    figHand{slI}.Children.XTickLabel ={'6'; '12'; '18'}; 
+    
+    figHand{slI}.Children.YLim = [0 1];
+    figHand{slI}.Children.Title.String = ['Corr Over days on ' mazeLocations{slI} ', bins ' num2str([binsUse{bI}])];
+    
+    %for dpI = 1:length(statsOut{slI}.signranks{1}.eachDayPair)
+    %    if statsOut{slI}.signranks{1}.pVal(dpI) < 0.05
+    %        plot([-0.5 0.5]+statsOut{slI}.signranks{1}.eachDayPair(dayI),[-0.05 -0.05],'m','LineWidth',2)
+    %    end 
+    %end
+    %figHand{slI}.Children.YLim = [-0.1 1];
+    figHand{slI}.Children = MakePlotPrettySL(figHand{slI}.Children);
+end
+%stats
+for slI = 1:2
+    figure('Position',[75 129 1816 420]);
+    for cdI = 1:2
+        subplot(2,1,cdI)
+        text(1,1,['slope R, pVal: ' num2str([statsOut{slI}.slope.RR(cdI) statsOut{slI}.slope.pVal(cdI)])])
+        text(1,2,['slope diff Zero F, dfNum, dfDen, p: ' num2str([statsOut{slI}.slopeDiffZero.Fval(cdI)...
+           statsOut{slI}.slopeDiffZero.dfNum(cdI) statsOut{slI}.slopeDiffZero.dfDen(cdI)...
+           statsOut{slI}.slopeDiffZero.pVal(cdI)])])
+       
+        text(1,3,['line separation signed rank p,z : ' num2str([statsOut{slI}.signrankall{1}.pVal statsOut{slI}.signrankall{1}.zVal])])
+
+        xlim([0 8])
+        ylim([0 4])
+        title(['stats for within day pv state over time bins' num2str([binsUse{bI}]) ', on ' mazeLocations{slI}...
+            ' ' condSetLabels{cdI+1}])
+    end
+end
+end
+
+
 %% Day diffs population state separation
 
 binsUse = {[1:2];[7:8]};
@@ -615,16 +754,17 @@ for slI=1:2
     axHand{slI}.XTick = [1 4:4:16];
     legend off
     for dayI = 1:dayLagLimit
-        if statsOut{slI}.signranktests{1}(binI).pVal < 0.05
+        if statsOut{slI}.signranktests{1}(dayI).pVal < 0.05
             plot([-0.5 0.5]+dayI,[-0.05 -0.05],'m','LineWidth',2)
         end
         for csI = 1:length(condSet)-1
             if statsOut{slI}.eachCond{csI}.diffFromZeroSign(dayI).pVal < 0.05
-                plot([-0.5 0.5]+dayI,-0.05-0.05*csI*[1 1],'*','Color',condSetColors{csI+1},'MarkerSize',6)
+                plot(dayI,-0.05-0.05*csI*1,'*','Color',condSetColors{csI+1},'MarkerSize',6)
             end
         end
     end
     ylim([-0.05-0.05*(csI+1) axHand{slI}.YLim(2)])
+    axHand{slI} = MakePlotPrettySL(axHand{slI});
 end
 %stats
 for slI = 1:2
@@ -647,7 +787,8 @@ end
 
 %% Center-of-mass
 
-figure; histogram(pooledCOMlrEx,1:0.5:8,'FaceColor',[0.8510    0.3294    0.1020])
+statsOut = [];
+qq = figure; histogram(pooledCOMlrEx,1:0.5:8,'FaceColor',[0.8510    0.3294    0.1020])
 hold on
 histogram(pooledCOMstEx,1:0.5:8,'FaceColor',[0    0.4510    0.7412])
 plot([1 1]*mean(pooledCOMlrEx),[0 200],'--r','LineWidth',2)
@@ -656,17 +797,23 @@ title('STEM COM distributions (exclusive, no both), r = lr b = st')
 xlim([1 8])
 ylabel('Number of cells')
 yyaxis right
-[f,x] = ecdf(pooledCOMlrRx);
+[f,x] = ecdf(pooledCOMlrEx);
 plot(x,f,'-','Color','r','LineWidth',2)
 [f,x] = ecdf(pooledCOMstEx);
 plot(x,f,'-','Color','b','LineWidth',2)
 ylabel('Cumulative portion')
 xlabel('All trials Firing COM')
+qq.Children = MakePlotPrettySL(qq.Children);
 [statsOut.ranksum.pVal,statsOut.ranksum.hVal] = ranksum(pooledCOMlrEx,pooledCOMstEx);
 [statsOut.ksTest.hVal,statsOut.ksTest.pVal] = kstest2(pooledCOMlrEx,pooledCOMstEx);
 
+figure;
+text(1,1,['ranksum p,h = ' num2str([statsOut.ranksum.pVal,statsOut.ranksum.hVal])])
+text(1,2,['ksTest p,h = ' num2str([statsOut.ksTest.pVal,statsOut.ksTest.hVal])])
+ylim([0 3]); xlim([0 8]); title('stats text for COMs on STEM')
 
-figure; histogram(pooledCOMlrARMex,1:0.5:8,'FaceColor',[0.8510    0.3294    0.1020])
+statsOut = [];
+ww = figure; histogram(pooledCOMlrARMex,1:0.5:8,'FaceColor',[0.8510    0.3294    0.1020])
 hold on
 histogram(pooledCOMstARMex,1:0.5:8,'FaceColor',[0    0.4510    0.7412])
 plot([1 1]*mean(pooledCOMlrARMex),[0 450],'--r','LineWidth',2)
@@ -681,10 +828,13 @@ plot(x,f,'-','Color','r','LineWidth',2)
 plot(x,f,'-','Color','b','LineWidth',2)
 ylabel('Cumulative portion')
 xlabel('All trials Firing COM')
-
+ww.Children = MakePlotPrettySL(ww.Children);
 [statsOut.ranksum.pVal,statsOut.ranksum.hVal] = ranksum(pooledCOMlrARMex,pooledCOMstARMex);
 [statsOut.ksTest.hVal,statsOut.ksTest.pVal] = kstest2(pooledCOMlrARMex,pooledCOMstARMex);
 
-
+figure;
+text(1,1,['ranksum p,h = ' num2str([statsOut.ranksum.pVal,statsOut.ranksum.hVal])])
+text(1,2,['ksTest p,h = ' num2str([statsOut.ksTest.pVal,statsOut.ksTest.hVal])])
+ylim([0 3]); xlim([0 8]); title('stats text for COMs on ARMS')
 %Stats text
     

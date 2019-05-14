@@ -12,7 +12,7 @@ for sessPairI = 1:numSessPairs
     sharedCellsHere(sessPairI) = sum(sharedCellsLog);
 end
 
-minSharedCells = min(sharedCellsHere);
+[minSharedCells,idx] = min(sharedCellsHere);
 
 for sessPairI = 1:numSessPairs
     %Find how many cells are shared in the day pair

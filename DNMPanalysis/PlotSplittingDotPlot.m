@@ -1,4 +1,7 @@
 function [figg] = PlotSplittingDotPlot(daybyday,trialbytrial,cellI,presentDays,mazeLoc,trajPlotType,spikesPlot)
+coloring = 'dynamic';
+radiusLimit = 1.5;
+colorNormAll=true;
 
 if isempty(spikesPlot)
     spikesPlot = 'limited';
@@ -81,6 +84,7 @@ for dayI = 1:length(presentDays)
                         goodLaps(:,2) = goodLaps(:,2)-85;
                 end
                 
+               
                 for trialI = 1:size(goodLaps,1) 
                     framesPlot = goodLaps(trialI,1):goodLaps(trialI,2);
                     plot(-1*daybyday.all_y_adj_cm{dayJ}(framesPlot),daybyday.all_x_adj_cm{dayJ}(framesPlot),'k')
@@ -98,20 +102,62 @@ for dayI = 1:length(presentDays)
         
         switch spikesPlot
             case 'limited'
-                spikeX = [trialbytrial(condI).trialsY{lapsPlot}];
+                spikeX = -1*[trialbytrial(condI).trialsY{lapsPlot}];
                 spikeY = [trialbytrial(condI).trialsX{lapsPlot}];
                 spikePSA = [trialbytrial(condI).trialPSAbool{lapsPlot}];
                 spikePSA = spikePSA(cellI,:);
-                plot(-1*spikeX(spikePSA),spikeY(spikePSA),'.r','MarkerSize',9)
+                
+                if strcmpi(coloring,'dynamic')
+                    eachSpikeColor = DynamicColorMap(spikeX(spikePSA),spikeY(spikePSA),spikeX,spikeY,spikePDA,1,normLimit);
+                    %now plot
+                else
+                    plot(spikeX(spikePSA),spikeY(spikePSA),'.r','MarkerSize',9)
+                end
+                
             case 'wholeLap'
                 spikeX = -1*daybyday.all_y_adj_cm{dayJ}(include_struct.(conds{condI}));
                 spikeY = daybyday.all_x_adj_cm{dayJ}(include_struct.(conds{condI}));
                 spikePSA = daybyday.PSAbool{dayJ}(cellI,:);
                 spikePSA = spikePSA(include_struct.(conds{condI}));
-                plot(spikeX(spikePSA),spikeY(spikePSA),'.r','MarkerSize',9)
+                
+                saveSpikesX{condI} = spikeX(spikePSA);
+                saveSpikesY{condI} = spikeY(spikePSA);
+                savePtsX{condI} = spikeX;
+                savePtsY{condI} = spikeY;
+                saveSpikesPSA{condI} = spikePSA;
+                
+                if strcmpi(coloring,'dynamic')
+                    if colorNormAll==false
+                if sum(spikePSA>0)
+                    eachSpikeColor = DynamicColorMap(spikeX(spikePSA),spikeY(spikePSA),spikeX,spikeY,spikePSA,radiusLimit,[]);
+                    %now plot
+                    spikeXX = spikeX(spikePSA);
+                    spikeYY = spikeY(spikePSA);
+                    for ptI = 1:length(spikeXX)
+                        plot(spikeXX(ptI),spikeYY(ptI),'.','Color',eachSpikeColor(ptI,:),'MarkerSize',9)
+                    end
+                end
+                    end
+                else
+                    plot(spikeX(spikePSA),spikeY(spikePSA),'.r','MarkerSize',9)
+                end
+                
+                
         end
         
         title(conds{condI})
+    end
+    
+    if colorNormAll==true
+        maxClose = DynamicNormAll(saveSpikesX,saveSpikesY,savePtsX,savePtsY,saveSpikesPSA,radiusLimit);
+        for condI = 1:4
+            subplot(2,2,condI)
+            
+            [eachSpikeColor,oc(condI)] = DynamicColorMap(saveSpikesX{condI},saveSpikesY{condI},savePtsX{condI},savePtsY{condI},saveSpikesPSA{condI},radiusLimit,maxClose);
+            for ptI = 1:length(saveSpikesX{condI})
+                plot(saveSpikesX{condI}(ptI),saveSpikesY{condI}(ptI),'.','Color',eachSpikeColor(ptI,:),'MarkerSize',9)
+            end
+        end
     end
     
     suptitleSL(['Cell ' num2str(cellI) ', Day ' num2str(dayJ) ' on ' mazeLoc])

@@ -1,5 +1,5 @@
 function [decodingResults, downsampledResults, testConds, titles, sessPairs, cellDownsamples] =...
-    DecoderWrapper3downsampling(trialbytrial,traitLogical,numDownsamples,activityType,pooledUnpooled,discType)
+    DecoderWrapper3downsampling(trialbytrial,traitLogical,numDownsamples,activityType,pooledUnpooled,realDays,discType)
 %This function is built as a wrapper for looking at decoding results by
 %splitting. Pretty much the only thing that needs to be given is basic
 %data and parameters, testing for significance, etc., is handled here
@@ -29,6 +29,16 @@ numDays = length(unique(trialbytrial(1).sessID));
 trainingSessions = 1:numDays;
 testingSessions = 1:numDays;
 sessPairs = GetAllCombs(trainingSessions, testingSessions);
+
+global dayLagLimit
+if any(dayLagLimit)
+    realDayPairs = realDays(sessPairs);
+    realDayDiffs = abs(diff(realDayPairs,1,2));
+    badDays = realDayDiffs > dayLagLimit;
+    
+    sessPairs(badDays,:) = [];
+end
+
 numSessPairs = size(sessPairs,1);
 
 %Lap Combinations (leave one out)

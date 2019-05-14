@@ -1,5 +1,5 @@
 function [axHand,statsOut] = PlotDecodingOneVSother3(decodingResults,shuffledResults,decodedWell,...
-    dayDiffsDecoding,dayDiffsShuffled,titles,lineType,transHere,mainColors,axHand)
+    dayDiffsDecoding,dayDiffsShuffled,titles,lineType,transHere,mainColors,runPermTest,axHand)
 statsOut = [];
 
 global dayLagLimit
@@ -125,6 +125,12 @@ for dirI = 1:length(FWDorREV)
     [~, ~, ~, statsOut(dirI).slope.RR(2), statsOut(dirI).slope.pVal(2), ~] =...
         fitLinRegSL(dataTwo,dayDiffsTwo);
     
+    if runPermTest==true
+    statsOut(dirI).slopeDiffZeroPerm.pVal(1) = slopePermutationTest(dataOne,dayDiffsOne,1000);
+    statsOut(dirI).slopeDiffZeroPerm.pVal(2) = slopePermutationTest(dataTwo,dayDiffsTwo,1000);
+    else
+        statsOut(dirI).slopeDiffZeroPerm.pVal(1:2) = [];
+    end
     %Slopes different from each other?
     [statsOut(dirI).slopeDiffComp.Fval,statsOut(dirI).slopeDiffComp.dfNum,...
          statsOut(dirI).slopeDiffComp.dfDen,statsOut(dirI).slopeDiffComp.pVal] =...
@@ -135,6 +141,10 @@ for dirI = 1:length(FWDorREV)
     [statsOut(dirI).signtests.pVal, statsOut(dirI).signtests.hVal,...
      statsOut(dirI).signtests.whichWon, statsOut(dirI).signtests.eachDayPair] =...
         SignTestAllDayPairs(dataOne,dataTwo,dayDiffs);
+    
+    [statsOut(dirI).signRankTests.pVal,statsOut(dirI).signRankTests.hVal,...
+        ~,statsOut(dirI).signRankTests.whichWon,statsOut(dirI).signRankTests.eachDayPair] =...
+        SignRankTestAllDayPairs(dataOne,dataTwo,dayDiffs);
     end
         
     %Ranksum each day
@@ -145,7 +155,6 @@ for dirI = 1:length(FWDorREV)
     %Ranksum
     [statsOut(dirI).rankSumAll.pVal, statsOut(dirI).rankSumAll.hVal] = ...
         ranksum(dataOne,dataTwo);
-    %}
 end
 
 end

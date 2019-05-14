@@ -51,8 +51,12 @@ if ~isempty(decodingRes)
     end
     
     for ddI = 1:length(eachDayDiffs)
-        statsOut.meanLine(ddI) = mean(dcRes(dcResDays==eachDayDiffs(ddI) & fitMod));
-        statsOut.errorLine(ddI) = standarderrorSL(dcRes(dcResDays==eachDayDiffs(ddI) & fitMod));
+        dataWork = dcRes(dcResDays==eachDayDiffs(ddI) & fitMod);
+        statsOut.meanLine(ddI) = mean(dataWork);
+        statsOut.errorLine(ddI) = standarderrorSL(dataWork);
+        dataWorkSorted = sort(dataWork,'ascend');
+        statsOut.CIupper(ddI) = dataWorkSorted(round(length(dataWorkSorted)*0.975));
+        statsOut.CIlower(ddI) = dataWorkSorted(max([round(length(dataWorkSorted)*0.025) 1]));
     end
     statsOut.eachDayDiffs = eachDayDiffs;
     if any(dcResDays>0)
@@ -70,6 +74,19 @@ if ~isempty(decodingRes)
         case 'mean'    
             aa = errorbar(eachDayDiffs+xLineShift,statsOut.meanLine,statsOut.errorLine,lineType,'Color',[useColors(1,:) transparency],'LineWidth',2);
         case 'meanNoErr'
+            aa = plot(eachDayDiffs+xLineShift,statsOut.meanLine,lineType,'Color',[useColors(1,:) transparency],'LineWidth',2);
+        case 'meanErrPatch' 
+            xCorners = [eachDayDiffs(:); flipud(eachDayDiffs(:))];
+            yCorners = [statsOut.meanLine(:) + statsOut.errorLine(:);...
+                        flipud(statsOut.meanLine(:) - statsOut.errorLine(:))];
+            patch(xCorners,yCorners,useColors(1,:),'FaceAlpha',transparency-0.15,'EdgeColor','none')
+                    
+            aa = plot(eachDayDiffs+xLineShift,statsOut.meanLine,lineType,'Color',[useColors(1,:) transparency],'LineWidth',2);
+        case 'meanCI'
+            xCorners = [eachDayDiffs(:); flipud(eachDayDiffs(:))];%; eachDayDiffs(1)
+            yCorners = [statsOut.CIupper(:); flipud(statsOut.CIlower(:))];%; CIupperLine(1)
+            patch(xCorners,yCorners,useColors(1,:),'FaceAlpha',transparency-0.15,'EdgeColor','none')
+            
             aa = plot(eachDayDiffs+xLineShift,statsOut.meanLine,lineType,'Color',[useColors(1,:) transparency],'LineWidth',2);
         case 'regress'
             if any(dcResDays>0)
@@ -101,9 +118,23 @@ elseif ~isempty(shuffledRes)
     if plotDots==false
         dotTrans = 0;
         for ddI = 1:length(eachDayDiffs)
-            meanLine(ddI) = mean(allShuffledData(shuffledDataDays==eachDayDiffs(ddI)));
+            dataHere = allShuffledData(shuffledDataDays==eachDayDiffs(ddI));
+            meanLine(ddI) = mean(dataHere);
+            
+            dataHereSorted = sort(dataHere,'ascend');
+            CIupperLine(ddI) = dataHereSorted(round(length(dataHereSorted)*0.975));
+            CIlowerLine(ddI) = dataHereSorted(round(length(dataHereSorted)*0.025));
         end
-        plot(eachDayDiffs+xLineShift,meanLine,'LineStyle','--','Color',[0.6 0.6 0.6],'LineWidth',2)
+        
+        switch fitType
+            case 'meanNoErr'
+                plot(eachDayDiffs+xLineShift,meanLine,'LineStyle','--','Color',[0.6 0.6 0.6],'LineWidth',2)
+            case 'meanCI'
+                plot(eachDayDiffs+xLineShift,meanLine,'LineStyle','--','Color',[0.6 0.6 0.6],'LineWidth',2)
+                xCorners = [eachDayDiffs(:); flipud(eachDayDiffs(:))];%; eachDayDiffs(1)
+                yCorners = [CIupperLine(:); flipud(CIlowerLine(:))];%; CIupperLine(1)
+                patch(xCorners,yCorners,[0.6 0.6 0.6],'FaceAlpha',0.5,'EdgeColor','none')
+        end
     end
     scatterBoxSL(allShuffledData,shuffledDataDays+xDotShift,'xLabels',daylabels,'transparency',dotTrans,'plotBox',false,'plotHand',axHand)
 end    
