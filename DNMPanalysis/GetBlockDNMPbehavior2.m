@@ -59,7 +59,7 @@ end
 
 %Make include/exclude arrays
 switch block_type
-    case {'stem_only', 'arm_min', 'whole_arm', 'stem_extended','whole_lap'}
+    case {'stem_only', 'arm_min', 'whole_arm', 'stem_extended','whole_lap','side_arm'}
         start_stop_struct.study_l = [forced_starts(left_forced), forced_stops(left_forced)];
         start_stop_struct.study_r = [forced_starts(right_forced), forced_stops(right_forced)];
         start_stop_struct.test_l = [free_starts(left_free), free_stops(left_free)];

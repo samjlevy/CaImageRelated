@@ -55,8 +55,8 @@ for dayI = 1:numDays
     %Get just the chunk of the image from this cell center to box edges
     cellCenters = getAllCellCenters(cellImages.NeuronImage);
     targetCenter = round(cellCenters(cellNum(dayI),:));
-    plotImage = allCellsImage(targetCenter(2)-squareRadius:targetCenter(2)+squareRadius,... 
-                              targetCenter(1)-squareRadius:targetCenter(1)+squareRadius, :);  
+    plotImage = allCellsImage(max([1 targetCenter(2)-squareRadius]):min([size(allCellsImage,1) targetCenter(2)+squareRadius]),... 
+                              max([1 targetCenter(1)-squareRadius]):min([size(allCellsImage,2) targetCenter(1)+squareRadius]), :);  
     
     %Plot this thing
     figHand{dayI} = figure('Position',[702 332 506 405]);

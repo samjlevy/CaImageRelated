@@ -1,5 +1,11 @@
 function [statsOut] = PlotBarWithData(dataMat,plotColors,plotError,plotIndiv,xLabels)
 
+global realDatMarkerSize
+
+if isempty(realDatMarkerSize)
+    realDatMarkerSize = 8;
+end
+
 %Plot the bar graph
 b = bar(1:size(dataMat,2),nanmean(dataMat,1),'LineWidth',1.2,'BarWidth',1,'FaceColor','flat');
 b.CData = plotColors;
@@ -14,7 +20,7 @@ end
 %Overlay the raw data
 if plotIndiv==true
 for scI = 1:size(dataMat,2)
-    plot(scI*ones(size(dataMat,1),1),dataMat(:,scI),'o','Color',[0.6 0.6 0.6],'LineWidth',1.5)
+    plot(scI*ones(size(dataMat,1),1),dataMat(:,scI),'.','Color',[0.4 0.4 0.4],'MarkerSize',realDatMarkerSize)
 end
 end
 b.Parent.XTickLabel = xLabels;

@@ -55,7 +55,7 @@ for mouseI = 1:numMice
             for dayJ = 1:length(cellRealDays{mouseI})-1
                cellsHereJ = targets{mouseI}{tgI}(:,dayJ);
 
-               for scJ = 1:length(sinks)
+               for scJ = 1:length(sinks{1})%Sinks first ind is mouseI
                    sinkCells = sinks{mouseI}{scJ}(:,dayJ+1);
 
                    thisSink{mouseI}{tgI}{scJ} = cellsHereJ + sinkCells == 2;
@@ -64,7 +64,7 @@ for mouseI = 1:numMice
                end    
             end
 
-            for scJ = 1:length(sinks)
+            for scJ = 1:length(sinks{1})
                 [sinkChange{tgI}{scJ}{mouseI}, sinkPctChange{tgI}{scJ}{mouseI}] =...
                     TraitChangeDayPairs(thisSinkSumNorm{mouseI}{tgI}{scJ},sinkDayPairs);
 

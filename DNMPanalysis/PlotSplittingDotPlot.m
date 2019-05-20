@@ -1,5 +1,6 @@
-function [figg] = PlotSplittingDotPlot(daybyday,trialbytrial,cellI,presentDays,mazeLoc,trajPlotType,spikesPlot)
+function [figg] = PlotSplittingDotPlot(daybyday,trialbytrial,cellJ,presentDays,mazeLoc,trajPlotType,spikesPlot)
 coloring = 'dynamic';
+colorOrderSpikes = true;
 radiusLimit = 1.5;
 colorNormAll=true;
 
@@ -7,10 +8,17 @@ if isempty(spikesPlot)
     spikesPlot = 'limited';
 end
 
+if length(cellJ)==1
+    cellJ = cellJ*ones(length(presentDays),1);
+end
+
 %cellI = 14
+eachSpikeColor = []; ptsClose = []; maxRate = [];
 conds = {'study_l','study_r','test_l','test_r'};
 figg = [];
 for dayI = 1:length(presentDays)
+    
+    cellI = cellJ(dayI);
     dayJ = presentDays(dayI);
     
     switch mazeLoc
@@ -23,7 +31,7 @@ for dayI = 1:length(presentDays)
                 = GetBlockDNMPbehavior2( daybyday.frames{dayJ}, daybyday.txt{dayJ}, 'side_arm', length(daybyday.all_x_adj_cm{dayJ}));
     end
     
-    [trajLaps, ~, ~, ~, trajLapsCorrect, ~]...
+    [trajLaps, lapInclude, ~, ~, trajLapsCorrect, ~]...
                 = GetBlockDNMPbehavior2( daybyday.frames{dayJ}, daybyday.txt{dayJ}, 'whole_lap', length(daybyday.all_x_adj_cm{dayJ}));
         
     figg{dayI} = figure('Position',[785 344 302 368]);%[785 265 399 447]
@@ -115,10 +123,10 @@ for dayI = 1:length(presentDays)
                 end
                 
             case 'wholeLap'
-                spikeX = -1*daybyday.all_y_adj_cm{dayJ}(include_struct.(conds{condI}));
-                spikeY = daybyday.all_x_adj_cm{dayJ}(include_struct.(conds{condI}));
+                spikeX = -1*daybyday.all_y_adj_cm{dayJ}(lapInclude.(conds{condI}));
+                spikeY = daybyday.all_x_adj_cm{dayJ}(lapInclude.(conds{condI}));
                 spikePSA = daybyday.PSAbool{dayJ}(cellI,:);
-                spikePSA = spikePSA(include_struct.(conds{condI}));
+                spikePSA = spikePSA(lapInclude.(conds{condI}));
                 
                 saveSpikesX{condI} = spikeX(spikePSA);
                 saveSpikesY{condI} = spikeY(spikePSA);
@@ -127,35 +135,52 @@ for dayI = 1:length(presentDays)
                 saveSpikesPSA{condI} = spikePSA;
                 
                 if strcmpi(coloring,'dynamic')
-                    if colorNormAll==false
-                if sum(spikePSA>0)
-                    eachSpikeColor = DynamicColorMap(spikeX(spikePSA),spikeY(spikePSA),spikeX,spikeY,spikePSA,radiusLimit,[]);
-                    %now plot
-                    spikeXX = spikeX(spikePSA);
-                    spikeYY = spikeY(spikePSA);
-                    for ptI = 1:length(spikeXX)
-                        plot(spikeXX(ptI),spikeYY(ptI),'.','Color',eachSpikeColor(ptI,:),'MarkerSize',9)
-                    end
-                end
+                    if sum(spikePSA)>0
+                        [eachSpikeColor{condI},ptsClose{condI},maxRate(condI)] = DynamicColorMap(spikeX(spikePSA),spikeY(spikePSA),spikeX,spikeY,spikePSA,radiusLimit,[]);
+                        if colorNormAll==false
+                        
+                        %now plot
+                        spikeXX = spikeX(spikePSA);
+                        spikeYY = spikeY(spikePSA);
+                        for ptI = 1:length(spikeXX)
+                            plot(spikeXX(ptI),spikeYY(ptI),'.','Color',eachSpikeColor{condI}(ptI,:),'MarkerSize',9)
+                        end
+                        end
+                    else
+                        eachSpikeColor{condI} = {};
+                        ptsClose{condI} = {};
+                        maxRate(condI) = 0;
                     end
                 else
                     plot(spikeX(spikePSA),spikeY(spikePSA),'.r','MarkerSize',9)
                 end
-                
-                
         end
         
         title(conds{condI})
     end
     
     if colorNormAll==true
-        maxClose = DynamicNormAll(saveSpikesX,saveSpikesY,savePtsX,savePtsY,saveSpikesPSA,radiusLimit);
+        %maxClose = DynamicNormAll(saveSpikesX,saveSpikesY,savePtsX,savePtsY,saveSpikesPSA,radiusLimit);
+        maxClose = max(maxRate);
         for condI = 1:4
             subplot(2,2,condI)
             
-            [eachSpikeColor,oc(condI)] = DynamicColorMap(saveSpikesX{condI},saveSpikesY{condI},savePtsX{condI},savePtsY{condI},saveSpikesPSA{condI},radiusLimit,maxClose);
-            for ptI = 1:length(saveSpikesX{condI})
-                plot(saveSpikesX{condI}(ptI),saveSpikesY{condI}(ptI),'.','Color',eachSpikeColor(ptI,:),'MarkerSize',9)
+            %[eachSpikeColor,oc(condI)] = DynamicColorMap(saveSpikesX{condI},saveSpikesY{condI},savePtsX{condI},savePtsY{condI},saveSpikesPSA{condI},radiusLimit,maxClose);
+            if ~isempty(ptsClose{condI})
+                if colorOrderSpikes == true
+                    eachSpikeColor{condI} = rateColorMap(ptsClose{condI},'jet',maxClose);
+                    [~,rateIndexOrder] = sort(ptsClose{condI},'ascend');
+                    reorderedX = saveSpikesX{condI}(rateIndexOrder);
+                    reorderedY = saveSpikesY{condI}(rateIndexOrder);
+                    reorderedColors = eachSpikeColor{condI}(rateIndexOrder,:);
+                    for ptI = 1:length(saveSpikesX{condI})
+                        plot(reorderedX(ptI),reorderedY(ptI),'.','Color',reorderedColors(ptI,:),'MarkerSize',9)
+                    end
+                else
+                    for ptI = 1:length(saveSpikesX{condI})
+                        plot(saveSpikesX{condI}(ptI),saveSpikesY{condI}(ptI),'.','Color',eachSpikeColor{condI}(ptI,:),'MarkerSize',9)
+                    end
+                end
             end
         end
     end

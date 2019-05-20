@@ -118,13 +118,13 @@ for mouseI = 1:numMice
         load(fullfile(mouseDefaultFolder{mouseI},'daybyday.mat'))
         for cellI = 1:length(splittersPlot{mouseI})
             figg = [];
-            cellPlot = splittersPlot{mouseI}(cellI);
-            presentDays = find(cellSSI{mouseI}(cellPlot,:)>0);
-            [figg] = PlotSplittingDotPlot(daybyday,cellTBTarm{mouseI},cellPlot,presentDays,'stem','line','wholeLap');
+            cp = splittersPlot{mouseI}(cellI);
+            pd = find(cellSSI{mouseI}(cp,:)>0);
+            [figg] = PlotSplittingDotPlot(daybyday,cellTBTarm{mouseI},cp,pd,'stem','line','wholeLap');
             %cellOutLinePlot...
              
             figHd = [];
-            figHd = PlotCellOutline(cellAllFiles{mouseI}(presentDays),cellSSI{mouseI}(cellPlot,presentDays),50);
+            figHd = PlotCellOutline(cellAllFiles{mouseI}(pd),cellSSI{mouseI}(44,pd),250);
             %title has that cell's number on that day, and the session number (not real day)
             %Also one to combine all these across days? Will have to load
             %the all file, or at least the aligned files from each day
@@ -205,12 +205,13 @@ end
 %% Splitter proportion changes raw
 thingsNow = [3     4     5     8];
 
+ylimsuse = {[0 0.4],[0 0.4],[0.2 0.8],[0 0.4];[0.2 0.6],[0 0.2],[0.2 0.8],[0 0.2]}; 
 for slI = 1:2
     figure('Position',[695 118 819 674]);
     for ii = 1:4
         pooledHere = [];
         daysHere = [];
-        subplot(2,2,ii)
+        aff(ii)=subplot(2,2,ii);
         for mouseI = 1:4
             
             dayss = cellRealDays{mouseI} - (cellRealDays{mouseI}(1)-1);
@@ -221,7 +222,19 @@ for slI = 1:2
             pooledHere = [pooledHere; splitPropHere(:)];
             daysHere = [daysHere; dayss];
             hold on
+            
+            outputForMarc(ii).indivMice(mouseI).props = splitPropHere;
+            outputForMarc(ii).indivMice(mouseI).days = dayss;
+            
+            outputForMarc(ii).earlyDat(mouseI) = mean(splitPropHere(1:2));
+            outputForMarc(ii).lateDat(mouseI) = mean(splitPropHere(end-1:end));
         end
+        
+    outputForMarc(ii).earlyMean = mean(outputForMarc(ii).earlyDat);
+    outputForMarc(ii).lateMean = mean(outputForMarc(ii).lateDat);
+    outputForMarc(ii).props = pooledHere;
+    outputForMarc(ii).days = daysHere;
+
     ylabel('Proportion of cells')
     xlabel('Recording day')
     
@@ -231,11 +244,16 @@ for slI = 1:2
                 fitLinRegSL(pooledHere,daysHere);
             [Fval(ii),dfNum(ii),dfDen(ii),pVal(ii)] =...
             slopeDiffFromZeroFtest(pooledHere,daysHere);
+    [propsRho(ii),propsCorrPval(ii)] = corr(pooledHere,daysHere,'Type','Spearman');
+    
     %title([traitLabels{thingsNow(ii)} ', R=' num2str(sqrt(abs(RR.Ordinary))) ', p=' num2str(Pval)])
     title([traitLabels{thingsNow(ii)}])
     
     xlim([min(daysHere)-0.5 max(daysHere)+0.5])
-    xticks([6 12 18])
+    ylim(ylimsuse{slI,ii})
+    xticks([1 6 12 18])
+    
+    aff(ii) = MakePlotPrettySL(aff(ii));
     end
     
     suptitleSL(['Raw splitting pcts across all mice, and regression on ' mazeLocations{slI}])
@@ -243,10 +261,11 @@ for slI = 1:2
     figure('Position',[735 209 910 420]);
     for ii = 1:4
     text(1,ii,['LinReg R=' num2str(sqrt(abs(RR(ii).Ordinary))) ', p=' num2str(Pval(ii))...
-        ',F diff zero F dfNum dfDen p: ' num2str([Fval(ii) dfNum(ii) dfDen(ii) pVal(ii)])]) 
+        ', F diff zero F dfNum dfDen p: ' num2str([Fval(ii) dfNum(ii) dfDen(ii) pVal(ii)])...
+        ', spearman corr rho pval: ' num2str([propsRho(ii) propsCorrPval(ii)])]) 
     end
     title(['stats for raw data splitter prop changes on ' mazeLocations{slI}])
-    xlim([0 15])
+    xlim([0 18])
     ylim([0 6])
 end
 
@@ -379,8 +398,8 @@ for slI = 1:2
     figure; 
     for tcI = 1:length(cellCheck)
         subplot(1,length(cellCheck),tcI)
-        [statsOut{slI}{tcI}] = PlotBarWithData([pooledDailySources{slI}{tcI}{:}],sourceColors,true,false,sourceLabels);
-        ylim([0 0.8])
+        [statsOut{slI}{tcI}] = PlotBarWithData([pooledDailySources{slI}{tcI}{:}],sourceColors,false,true,sourceLabels);
+        ylim([0 1.05])
         title(['Sources for ' traitLabels{cellCheck(tcI)}])
         ylabel('Pct. of cells')
     end

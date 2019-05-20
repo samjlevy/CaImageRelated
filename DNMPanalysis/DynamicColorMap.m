@@ -1,4 +1,4 @@
-function [ptColors,outputClose] = DynamicColorMap(ptsX,ptsY,normX,normY,indexIntoNorm,radiusLimit,maxClose)
+function [ptColors,ptsClose,outputClose] = DynamicColorMap(ptsX,ptsY,normX,normY,indexIntoNorm,radiusLimit,maxClose)
 %Index into norm has to fit normX(indexIntoNorm) = ptsX
 %Can leave normX and normY empty to not normlize by another occupancy vector
 
@@ -7,6 +7,7 @@ ptsX = ptsX(:)';
 ptsY = ptsY(:)';
 
 %Get distances: arrangement is row is anchor point, Y is to this pt
+%{
 for ptI = 1:length(ptsX)
     distances(ptI,:) = cell2mat(arrayfun(@(x,y) hypot(ptsX(ptI)-x,ptsY(ptI)-y),ptsX,ptsY,'UniformOutput',false));
 end
@@ -18,6 +19,12 @@ minDist = min(min(distances(distances>0)));
 for ptI = 1:length(ptsX)
     ptsClose(ptI,1) = sum(distances(ptI,:) <= radiusLimit) - 1;
 end
+%}
+[distances,ptsClose] = GetAllPtToPtDistances(ptsX,ptsY,radiusLimit);
+if length(ptsX)==1 && isempty(distances)
+    distances = 0;
+    ptsClose = 1;
+end
 
 %Repeat for occupancy normalizing
 if any(normX) && any(normY)
@@ -28,6 +35,7 @@ if any(normX) && any(normY)
     normX = normX(:)';
     normY = normY(:)';
     
+    %{
     for ptJ = 1:length(normX)
         distancesNorm(ptJ,:) = cell2mat(arrayfun(@(x,y) hypot(normX(ptJ)-x,normY(ptJ)-y),normX,normY,'UniformOutput',false));
     end
@@ -35,17 +43,26 @@ if any(normX) && any(normY)
     for ptJ = 1:length(normX)
         ptsCloseNorm(ptJ,1) = sum(distancesNorm(ptJ,:) <= radiusLimit,2) - 1;
     end
+    %}
+    
+    [distancesNorm, ptsCloseNorm] = GetAllPtToPtDistances(normX,normY,radiusLimit);
     
     if any(indexIntoNorm)
         ptsCloseNorm = ptsCloseNorm(indexIntoNorm);
     end
+    
     
     %These should now be the same size
     ptsClose = ptsClose./ptsCloseNorm;
     
 end
 
+if isempty(maxClose)
+    maxClose = max(ptsClose);
+end
+ptColors = rateColorMap(ptsClose,'jet',maxClose);
 outputClose = max(ptsClose);
+%{
 if isempty(maxClose)
     maxClose = max(ptsClose);
     %outputClose = maxClose;
@@ -63,5 +80,6 @@ for bdStops = 1:64
     thesePts = ptsClose > boundaries(bdStops);
     ptColors(thesePts,:) = repmat(cc(bdStops,:),sum(thesePts),1);
 end
+%}
     
 end

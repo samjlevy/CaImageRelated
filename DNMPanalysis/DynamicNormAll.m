@@ -25,8 +25,8 @@ for ptI = 1:length(ptsX{condI})
 end
 end
 
-maxDist = max(max(distances{condI}));
-minDist = min(min(distances{condI}(distances{condI}>0)));
+%maxDist = max(max(distances{condI}));
+%minDist = min(min(distances{condI}(distances{condI}>0)));
     
 %radiusLimit = 1;
 for condI = 1:numConds
@@ -63,6 +63,9 @@ if ~isempty(normX) && ~isempty(normY)
 
         %These should now be the same size
         ptsClose{condI} = ptsClose{condI}./ptsCloseNorm{condI};
+        
+        %if isempty(ptsClose{condI}
+        %ptsClose{1}
     end 
 end
 

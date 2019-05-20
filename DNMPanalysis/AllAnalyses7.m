@@ -30,6 +30,8 @@ mazeLocations = {'Stem','Arms'};
 performanceThreshold = 0.7;
 global dayLagLimit
 dayLagLimit = 16;
+global realDatMarkerSize
+realDatMarkerSize = 16;
 
 disp('Loading stuff')
 for mouseI = 1:numMice
@@ -473,6 +475,7 @@ disp('Done when do splitters show up')
 
 %% Splitter sources and sinks
 cellCheck = [3 4 5];
+anyCheck = [7];
 %transCheck = [3 3; 3 4; 3 5; 4 4; 4 3; 4 5; 5 5; 5 3; 5 4];
 %transCheck = [3 5; 4 5; 5 3; 5 4]; %sources: [starts as, becomes]
 %transCheck = [1 3; 2 3; 3 1; 3 2]; %in cellCheck indices
@@ -482,6 +485,7 @@ cellCheck = [3 4 5];
 
 transCheck = [1 3;          1 4;          2 2;     2 4;               3 2;        3 3];
 transLabels = {'LR to ST','LR to BOTH','ST to LR','ST to BOTH','BOTH to LR','BOTH to ST'};
+
 
 %What are new cells?
 firstDayLogical = [];
@@ -509,6 +513,9 @@ newCellProps = [];
 newCellPropChanges = [];
 cellTransProps = [];
 cellTransPropChanges = [];
+
+%To look at all, sinks has to be traitGroups{7} (any split), sources are
+%any split, non split, and new cells
 
 sourceColors = [0 1 0; colorAssc{1}; colorAssc{2}; colorAssc{5}; 0.6 0.6 0.6]; 
 sourceLabels = {'New Cells',traitLabels{[1 2 5 8]}};
@@ -546,6 +553,44 @@ for slI = 1:2
 end
 
 disp('Done cell sources and sinks')
+
+
+%% To look at all, sinks has to be traitGroups{7} (any split), sources are
+%any split, non split, and new cells
+%{
+anyCheck = 7;
+
+sourceColorsA = [0 1 0; colorAssc{5}; 0.6 0.6 0.6];
+sourceLabelsA = {'New cells','Splitter','Non-splitter'};
+for slI = 1:2
+    for mouseI = 1:numMice
+        firstDaySourceA{slI}{mouseI} = [firstDayLogical{slI}{mouseI}(:,2:end) zeros(size(cellSSI{mouseI},1),1)];
+            %new cell that day, shifted to get matched as dayI-1
+        targetsA{mouseI} = traitGroups{slI}{mouseI}(7);
+        sourcesA{mouseI} = [firstDaySourceA{slI}{mouseI}; traitGroups{slI}{mouseI}([7 8])]; %dayUseFilter{slI}{mouseI}==0; 
+        sinksA{mouseI} = sourcesA{mouseI};
+    end
+    
+    [pooledSourceChangesA{slI}, pooledDailySourcesA{slI}, pooledSinkChangesA{slI}, pooledDailySinksA{slI}, sourceDayDiffsPooledA{slI}, sinkDayDiffsPooledA{slI}] =...
+        CheckLogicalSinksAndSources(targetsA,sourcesA,sinksA,cellRealDays);
+    
+    for tcI = 1:length(anyCheck) %target
+        for scI = 1:length(sourcesA{1}) %source
+            dailySourcesMeanA{slI}(tcI,scI) = nanmean(pooledDailySourcesA{slI}{tcI}{scI});
+        end
+    end
+    
+    
+    %Reorganize new cell (previously inactive) destinations (what pct of
+    %ccI was previously inactive)
+    for ccI = 1:length(anyCheck)
+        newCellPropsA{slI}{ccI} = pooledDailySourcesA{slI}{ccI}{1};
+        newCellPropChangesA{slI}{ccI} = pooledSourceChangesA{slI}{ccI}{1};
+    end
+end
+
+disp('done cell sources for all splitters pooled')
+%}
 
 %% Decoder analysis
 numShuffles = 100;
