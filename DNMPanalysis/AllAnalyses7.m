@@ -30,8 +30,8 @@ mazeLocations = {'Stem','Arms'};
 performanceThreshold = 0.7;
 global dayLagLimit
 dayLagLimit = 16;
-global realDatMarkerSize
-realDatMarkerSize = 16;
+%global realDatMarkerSize
+%realDatMarkerSize = 16;
 
 disp('Loading stuff')
 for mouseI = 1:numMice
@@ -475,7 +475,7 @@ disp('Done when do splitters show up')
 
 %% Splitter sources and sinks
 cellCheck = [3 4 5];
-anyCheck = [7];
+
 %transCheck = [3 3; 3 4; 3 5; 4 4; 4 3; 4 5; 5 5; 5 3; 5 4];
 %transCheck = [3 5; 4 5; 5 3; 5 4]; %sources: [starts as, becomes]
 %transCheck = [1 3; 2 3; 3 1; 3 2]; %in cellCheck indices
@@ -556,6 +556,7 @@ disp('Done cell sources and sinks')
 
 
 %% To look at all, sinks has to be traitGroups{7} (any split), sources are
+anyCheck = [7];
 %any split, non split, and new cells
 %{
 anyCheck = 7;

@@ -9,6 +9,7 @@ if any(dayLagLimit)
     for dd = 1:length(decodingResults)
         decodingResults{dd}(badLagsDec,:,:) = [];
         shuffledResults{dd}(badLagsShuff,:,:) = [];
+        decodedWell{dd}(badLagsDec,:,:) = [];
     end
     dayDiffsDecoding(badLagsDec) = [];
     dayDiffsShuffled(badLagsShuff) = [];
@@ -99,17 +100,19 @@ for dirI = 1:length(FWDorREV)
     dayDiffs = dayDiffsHere(dayDiffsUse);
     if iscell(decodedWell{1})
         [dataOne,dayDiffsOne,dcWellOne] = LinearizeCell(decodingResults{1}(dayDiffsUse,:,:),dayDiffs,decodedWell{1}(dayDiffsUse));
+        [dataOneAll,dayDiffsOneAll,dcWellOneAll] = LinearizeCell(decodingResults{1},dayDiffsHere,decodedWell{1});
     else
-        dataOne = decodingResults{1}(dayDiffsUse);
-        dcWellOne = decodedWell{1}(dayDiffsUse);
-        dayDiffsOne = dayDiffs;
+        dataOne = decodingResults{1}(dayDiffsUse);  dataOneAll = decodingResults{1};
+        dcWellOne = decodedWell{1}(dayDiffsUse);    dcWellOneAll = decodedWell{1};
+        dayDiffsOne = dayDiffs;                     dayDiffsOneAll = dayDiffsHere;
     end
     if iscell(decodedWell{2})
         [dataTwo,dayDiffsTwo,dcWellTwo] = LinearizeCell(decodingResults{2}(dayDiffsUse,:,:),dayDiffs,decodedWell{2}(dayDiffsUse));
+        [dataTwoAll,dayDiffsTwoAll,dcWellTwoAll] = LinearizeCell(decodingResults{2},dayDiffsHere,decodedWell{2});
     else
-        dataTwo = decodingResults{2}(dayDiffsUse);
-        dcWellTwo = decodedWell{2}(dayDiffsUse);
-        dayDiffsTwo = dayDiffs;
+        dataTwo = decodingResults{2}(dayDiffsUse);  dataTwoAll = decodingResults{2};
+        dcWellTwo = decodedWell{2}(dayDiffsUse);    dcWellTwoAll = decodedWell{2};
+        dayDiffsTwo = dayDiffs;                     dayDiffsTwoAll = dayDiffsHere;
     end
     
     %Each line's stuff
@@ -118,6 +121,11 @@ for dirI = 1:length(FWDorREV)
         slopeDiffFromZeroFtest(dataOne,dayDiffsOne);
     [~, ~, ~, statsOut(dirI).slope.RR(1), statsOut(dirI).slope.pVal(1), ~] =...
         fitLinRegSL(dataOne,dayDiffsOne);
+    
+    [statsOut(dirI).slopeDiffFromZeroCorr.rho(1),statsOut(dirI).slopeDiffFromZeroCorr.pVal(1)] =...
+        corr(dataOne,dayDiffsOne,'Type','Spearman');
+    [statsOut(dirI).slopeDiffFromZeroCorr.rho(2),statsOut(dirI).slopeDiffFromZeroCorr.pVal(2)] =...
+        corr(dataTwo,dayDiffsTwo,'Type','Spearman');
     
     [statsOut(dirI).slopeDiffZero.Fval(2), statsOut(dirI).slopeDiffZero.dfNum(2),...
         statsOut(dirI).slopeDiffZero.dfDen(2), statsOut(dirI).slopeDiffZero.pVal(2)] =...
@@ -129,8 +137,29 @@ for dirI = 1:length(FWDorREV)
     statsOut(dirI).slopeDiffZeroPerm.pVal(1) = slopePermutationTest(dataOne,dayDiffsOne,1000);
     statsOut(dirI).slopeDiffZeroPerm.pVal(2) = slopePermutationTest(dataTwo,dayDiffsTwo,1000);
     else
-        statsOut(dirI).slopeDiffZeroPerm.pVal(1:2) = [];
+        statsOut(dirI).slopeDiffZeroPerm.pVal = [NaN NaN];
     end
+    
+    %Decoding performance diff from day 0
+    [statsOutTemp,sotDayDiffs,~] = ComparisonToDayN(dataOneAll,dayDiffsOneAll,0); 
+    statsOut(dirI).diffFromDayZero(1).signRanks = statsOutTemp.signRanks;
+    statsOut(dirI).diffFromDayZero(1).rankSums = statsOutTemp.rankSums;
+    statsOut(dirI).diffFromDayZero(1).dayDiffs = sotDayDiffs;
+    [statsOutTemp,sotDayDiffs,~] = ComparisonToDayN(dataTwoAll,dayDiffsTwoAll,0); 
+    statsOut(dirI).diffFromDayZero(2).signRanks = statsOutTemp.signRanks;
+    statsOut(dirI).diffFromDayZero(2).rankSums = statsOutTemp.rankSums;
+    statsOut(dirI).diffFromDayZero(2).dayDiffs = sotDayDiffs;
+    
+    %Decoding performance diff from day 1
+    [statsOutTemp,sotDayDiffs,~] = ComparisonToDayN(dataOne,dayDiffsOne,1); 
+    statsOut(dirI).diffFromDayOne(1).signRanks = statsOutTemp.signRanks;
+    statsOut(dirI).diffFromDayOne(1).rankSums = statsOutTemp.rankSums;
+    statsOut(dirI).diffFromDayOne(1).dayDiffs = sotDayDiffs;
+    [statsOutTemp,sotDayDiffs,~] = ComparisonToDayN(dataTwo,dayDiffsTwo,1); 
+    statsOut(dirI).diffFromDayOne(2).signRanks = statsOutTemp.signRanks;
+    statsOut(dirI).diffFromDayOne(2).rankSums = statsOutTemp.rankSums;
+    statsOut(dirI).diffFromDayOne(2).dayDiffs = sotDayDiffs;
+    
     %Slopes different from each other?
     [statsOut(dirI).slopeDiffComp.Fval,statsOut(dirI).slopeDiffComp.dfNum,...
          statsOut(dirI).slopeDiffComp.dfDen,statsOut(dirI).slopeDiffComp.pVal] =...

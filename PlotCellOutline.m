@@ -64,6 +64,7 @@ for dayI = 1:numDays
     imagesc(plotImage)
     axis off
     box off
+    axis equal
     title(['Cell Outline, plot day ' num2str(dayI) ', cell ' num2str(cellNum(dayI))])
 end
 
