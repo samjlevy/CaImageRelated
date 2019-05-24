@@ -772,7 +772,7 @@ for slI = 1:2
 end
 %stats
 for slI = 1:2
-    figure('Position',[75 129 1816 420]);
+    figure('Position',[655 101 890 420]);
     for cdI = 1:2
         subplot(2,1,cdI)
         text(1,1,['slope R, pVal: ' num2str([statsOut{slI}.slope.RR(cdI) statsOut{slI}.slope.pVal(cdI)])])
@@ -781,9 +781,9 @@ for slI = 1:2
            statsOut{slI}.slopeDiffZero.pVal(cdI)])])
        
         text(1,3,['line separation signed rank p,z : ' num2str([statsOut{slI}.signrankall{1}.pVal statsOut{slI}.signrankall{1}.zVal])])
-
+        text(1,4, ['spearman rho, pval :' num2str([statsOut{slI}.spearmanSlope.rho(cdI) statsOut{slI}.spearmanSlope.pVal(cdI)])])
         xlim([0 8])
-        ylim([0 4])
+        ylim([0 5])
         title(['stats for within day pv state over time bins' num2str([binsUse{bI}]) ', on ' mazeLocations{slI}...
             ' ' condSetLabels{cdI+1}])
     end
@@ -796,7 +796,7 @@ end
 binsUse = {[1:2];[7:8]};
 for bI = 1:length(binsUse)
 axHand = []; statsOut = [];
-for slI=1:2
+for slI=1:1
     [axHand{slI},statsOut{slI}] = PlotPVcurvesDiffDayDiffs(CSpooledPVcorrs2{slI}{cellCritUse},CSpooledPVdaysApart2{slI}{cellCritUse},...
         binsUse{bI},1,condSetColors,condSetLabels,{true,0.2},[]);
     ylabel('Ensemble State Separation')
@@ -804,7 +804,7 @@ for slI=1:2
     axHand{slI}.XTick = [1 4:4:16];
     legend off
     for dayI = 1:dayLagLimit
-        if statsOut{slI}.signranktests{1}(dayI).pVal < 0.05
+        if statsOut{slI}.signranktests{1}.pVal(dayI) < 0.05
             plot([-0.5 0.5]+dayI,[-0.05 -0.05],'m','LineWidth',2)
         end
         for csI = 1:length(condSet)-1
@@ -817,20 +817,23 @@ for slI=1:2
     axHand{slI} = MakePlotPrettySL(axHand{slI});
 end
 %stats
-for slI = 1:2
+for slI = 1:1
     figure('Position',[75 129 1816 420]);
     text(1,1,['sign rank tests p: ' num2str([statsOut{slI}.signranktests{1}.pVal])])
     text(1,2,['sign rank tests z: ' num2str([statsOut{slI}.signranktests{1}.zVal])])
     text(1,3,['rankrum tests p: ' num2str([statsOut{slI}.ranksumtests{1}.pVal])])
     text(1,4,['ranksum tests z: ' num2str([statsOut{slI}.ranksumtests{1}.zVal])])
     
+    text(1,5,['spearman rho, pval: ' num2str([statsOut{slI}.slopeSpearman.rho(1) statsOut{slI}.slopeSpearman.pVal(1)])])
+    text(1,6,['spearman rho, pval: ' num2str([statsOut{slI}.slopeSpearman.rho(2) statsOut{slI}.slopeSpearman.pVal(2)])])
+    
     for csI = 1:length(condSet)-1
-        text(1,5+csI,['cond ' num2str(csI) ': sign test diff 0 p :' num2str([statsOut{slI}.eachCond{csI}.diffFromZeroSign.pVal])])
-        text(1,5.5+csI,['cond ' num2str(csI) ': sign test diff 0 z :' num2str([statsOut{slI}.eachCond{csI}.diffFromZeroSign.pVal])])
+        text(1,7+csI,['cond ' num2str(csI) ': sign test diff 0 p :' num2str([statsOut{slI}.eachCond{csI}.diffFromZeroSign.pVal])])
+        text(1,7.5+csI,['cond ' num2str(csI) ': sign test diff 0 z :' num2str([statsOut{slI}.eachCond{csI}.diffFromZeroSign.zVal])])
     end
     
     xlim([0 15])
-    ylim([0 8])
+    ylim([0 11])
     title(['stats for within day pv state separation bins ' num2str([binsUse{bI}]) ', on ' mazeLocations{slI}])
 end
 end

@@ -73,6 +73,8 @@ for csI = 1:length(condSetColors)
             statsOut.eachCond{csI}.diffFromZeroSign(dayI).zVal = []; 
         end
     end
+    
+    [statsOut.slopeSpearman.rho(csI),statsOut.slopeSpearman.pVal(csI)]=corr(CSpooledPVdaysApart{csI},CSpooledPVcorrs{csI},'Type','Spearman');
 end  
     
 pp = [];
@@ -99,17 +101,19 @@ for compI = 1:size(comparisons,1)
         datB = CSpooledPVcorrs{comparisons(compI,2)}(withinDayB);
         try
             [p,h,stats] = signrank(datA,datB);
-            statsOut.signranktests{compI}(dayI).pVal = p;
-            statsOut.signranktests{compI}(dayI).hVal = h;
-            statsOut.signranktests{compI}(dayI).zVal = [];
+            statsOut.signranktests{compI}.pVal(dayI) = p;
+            statsOut.signranktests{compI}.hVal(dayI) = h;
+            statsOut.signranktests{compI}.zVal(dayI) = NaN;
             try
-                statsOut.signranktests{compI}(dayI).zVal = stats.zval;
+                statsOut.signranktests{compI}.zVal(dayI) = stats.zval;
             end
         end
-        [statsOut.ranksumtests{compI}(dayI).pVal,statsOut.ranksumtests{compI}(dayI).hVal,sstats]=...
-            ranksum(datA,datB);
-        statsOut.ranksumtests{compI}(dayI).zVal = [];
-        try statsOut.ranksumtests{compI}(dayI).zVal = sstats.zval; end
+        
+        [pp,hh,sstats]=ranksum(datA,datB);
+        statsOut.ranksumtests{compI}.pVal(dayI)=pp;
+        statsOut.ranksumtests{compI}.hVal(dayI)=hh;
+        statsOut.ranksumtests{compI}.zVal(dayI) = NaN;
+        try statsOut.ranksumtests{compI}.zVal(dayI) = sstats.zval; end
     end
 end
 
