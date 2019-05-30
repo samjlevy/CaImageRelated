@@ -7,6 +7,9 @@ if isempty('corrType')
     disp('Using Spearman corr')
 end
 
+%binComb = 'self';
+binComb = 'allToAll';
+
 numCells = size(TMapA, 1);
 numBins = length(TMapA{1});
 
@@ -29,18 +32,31 @@ numNans = 0;
 Corrs = nan(1,numBins);
 meanCorr = NaN;
 if sum(cellsUse) > 1
-    for binI = 1:numBins
-        Corrs(1,binI) = corr(TRatesA(:,binI),TRatesB(:,binI),'type',corrType);
-        
-        if any(isnan(Corrs(1,binI)))
-            numNans = numNans + 1;
-            Corrs(1,binI) = 0;
+    switch binComb
+        case 'self'
+            for binI = 1:numBins
+                Corrs(1,binI) = corr(TRatesA(:,binI),TRatesB(:,binI),'type',corrType);
+
+                if any(isnan(Corrs(1,binI)))
+                    numNans = numNans + 1;
+                    Corrs(1,binI) = 0;
+                end
+            end
+        if sum(sum(TRatesA))==0 || sum(sum(TRatesB))==0
+            numNans = 100;
         end
+        case 'allToAll'
+            Corrs = nan(1,numBins);
+            for binI = 1:numBins
+                for binJ = 1:numBins
+                    Corrs(binJ,binI) = corr(TRatesA(:,binI),TRatesB(:,binJ),'type',corrType);
+                end
+                if any(isnan(Corrs(1,binI)))
+                    numNans = numNans + 1;
+                    Corrs(1,binI) = 0;
+                end
+            end
     end
-    if sum(sum(TRatesA))==0 || sum(sum(TRatesB))==0
-        numNans = 100;
-    end
-    
     meanCorr = nanmean(Corrs);
     %if isnan(meanCorr)
     %    keyboard

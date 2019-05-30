@@ -409,13 +409,13 @@ for slI = 1:2
     figure('Position',[729 513 497 340]); 
     for tcI = 1:length(cellCheck)
         sps{tcI} = subplot(1,length(cellCheck),tcI);
-        [statsOut{slI}{tcI}] = PlotBarWithData([pooledDailySources{slI}{tcI}{:}],sourceColors,true,'jitter',sourceLabels);
+        [statsOut{slI}{tcI}] = PlotBarWithData([pooledDailySources2{slI}{tcI}{:}],sourceColors,true,'jitter',sourceLabels);
         ylim([0 1.05])
         title(['Sources for ' traitLabels{cellCheck(tcI)}])
         ylabel('Pct. of cells')
         sps{tcI} = MakePlotPrettySL(sps{tcI});
     end
-    suptitleSL(['Sources for each type on ' mazeLocations{slI}])
+    %suptitleSL(['Sources for each type on ' mazeLocations{slI}])
 end
 
 for slI = 1:2

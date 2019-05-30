@@ -38,6 +38,7 @@ for mouseI = 1:numMice
     load(fullfile(mainFolder,mice{mouseI},'trialbytrial.mat'))
     cellTBT{mouseI} = trialbytrial;
     cellSSI{mouseI} = sortedSessionInds;
+    cellPresent{mouseI} = cellSSI{mouseI} > 0;
     cellAllFiles{mouseI} = allfiles;
     cellRealDays{mouseI} = realdays;
     
@@ -95,12 +96,14 @@ for mouseI = 1:numMice
     reliability{mouseI} = load(saveName);
     
     dayUse{mouseI} = reliability{mouseI}.dayUse;
+    presentInactive{mouseI} = (dayUse{mouseI} + (cellSSI{mouseI}>0)) == 1;
     threshAndConsec{mouseI} = reliability{mouseI}.threshAndConsec;
     cellsActiveToday{mouseI} = sum(dayUse{mouseI},1);
     daysEachCellActive{mouseI} = sum(dayUse{mouseI},2);
     trialReli{mouseI} = reliability{mouseI}.trialReli;
     
     dayUseArm{mouseI} = reliability{mouseI}.dayUseArm;
+    presentInactiveArm{mouseI} = (dayUseArm{mouseI} + (cellSSI{mouseI}>0)) == 1;
     threshAndConsecArm{mouseI} = reliability{mouseI}.threshAndConsecArm;
     cellsActiveTodayArm{mouseI} = sum(dayUseArm{mouseI},1);    
     daysEachCellActiveArm{mouseI} = sum(dayUseArm{mouseI},2);
@@ -486,8 +489,7 @@ cellCheck = [3 4 5];
 transCheck = [1 3;          1 4;          2 2;     2 4;               3 2;        3 3];
 transLabels = {'LR to ST','LR to BOTH','ST to LR','ST to BOTH','BOTH to LR','BOTH to ST'};
 
-
-%What are new cells?
+%What are new cells? (Move to setup)
 firstDayLogical = [];
 for slI = 1:2
     for mouseI = 1:numMice
@@ -517,21 +519,26 @@ cellTransPropChanges = [];
 %To look at all, sinks has to be traitGroups{7} (any split), sources are
 %any split, non split, and new cells
 
-sourceColors = [0 1 0; colorAssc{1}; colorAssc{2}; colorAssc{5}; 0.6 0.6 0.6]; 
-sourceLabels = {'New Cells',traitLabels{[1 2 5 8]}};
+sourceColors = [ colorAssc{1}; colorAssc{2}; colorAssc{5}; 0.6 0.6 0.6; 0.8196    0.4118    0.1216; 0 1 0;]; 
+sourceLabels = {traitLabels{[1 2 5 8]},'Inactive','New Cells'};
 for slI = 1:2
     for mouseI = 1:numMice
-        firstDaySource{slI}{mouseI} = [firstDayLogical{slI}{mouseI}(:,2:end) zeros(size(cellSSI{mouseI},1),1)];
+        %firstDaySource{slI}{mouseI} = [firstDayLogical{slI}{mouseI}(:,2:end) zeros(size(cellSSI{mouseI},1),1)];
             %new cell that day, shifted to get matched as dayI-1
-        targets{mouseI} = traitGroups{slI}{mouseI}(cellCheck);
-        sources{mouseI} = [firstDaySource{slI}{mouseI}; traitGroups{slI}{mouseI}([cellCheck 8])]; %dayUseFilter{slI}{mouseI}==0; 
         
-        sinks{mouseI} = sources{mouseI};
+        targets{mouseI} = traitGroups{slI}{mouseI}(cellCheck);
+        %sources{mouseI} = [firstDaySource{slI}{mouseI}; traitGroups{slI}{mouseI}([cellCheck 8])]; %dayUseFilter{slI}{mouseI}==0; 
+        switch slI; case 1; pI = presentInactive{mouseI}; case 2; pI = presentInactiveArm{mouseI}; end
+        sources{mouseI} = [traitGroups{slI}{mouseI}([cellCheck 8]); pI];
+        sinks{mouseI} = sources{mouseI}; 
     end
     
     [pooledSourceChanges{slI}, pooledDailySources{slI}, pooledSinkChanges{slI}, pooledDailySinks{slI}, sourceDayDiffsPooled{slI}, sinkDayDiffsPooled{slI}] =...
         CheckLogicalSinksAndSources(targets,sources,sinks,cellRealDays);
     
+    [pooledDailySources2{slI}, pooledDailySinks2{slI}, sourceDayDiffsPooled2{slI}, sinkDayDiffsPooled2{slI}] =...
+        CheckLogicalSinksAndSources2(targets,sources,sinks,cellPresent);
+
     for tcI = 1:length(cellCheck) %target
         for scI = 1:length(sources{1}) %source
             dailySourcesMean{slI}(tcI,scI) = nanmean(pooledDailySources{slI}{tcI}{scI});
@@ -743,7 +750,6 @@ for slI = 1:2
     end
     pooledTraitLogicalC{slI} = cellfun(@(x) repmat(x>0,1,1,4),cellSSI,'UniformOutput',false);
 end
-
 
 pvNames = {'aboveThreshEither',       'includeSilent',       'activeBoth',     'firesEither',       'cellPresentBoth', 'cellPresentEither'};
 for slI = 1:2
