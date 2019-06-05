@@ -410,12 +410,12 @@ for slI = 1:2
     for tcI = 1:length(cellCheck)
         sps{tcI} = subplot(1,length(cellCheck),tcI);
         [statsOut{slI}{tcI}] = PlotBarWithData([pooledDailySources2{slI}{tcI}{:}],sourceColors,true,'jitter',sourceLabels);
-        ylim([0 1.05])
+        ylim([0 0.81])
         title(['Sources for ' traitLabels{cellCheck(tcI)}])
         ylabel('Pct. of cells')
         sps{tcI} = MakePlotPrettySL(sps{tcI});
     end
-    %suptitleSL(['Sources for each type on ' mazeLocations{slI}])
+    suptitleSL(['Sources for each type on ' mazeLocations{slI}])
 end
 
 for slI = 1:2
@@ -890,4 +890,48 @@ text(1,1,['ranksum p,h = ' num2str([statsOut.ranksum.pVal,statsOut.ranksum.hVal]
 text(1,2,['ksTest p,h = ' num2str([statsOut.ksTest.pVal,statsOut.ksTest.hVal])])
 ylim([0 3]); xlim([0 8]); title('stats text for COMs on ARMS')
 %Stats text
+
+
+%% PV corrs confusion mats
+
+%Within day self-corr
+withinDays = CSpooledPVdaysApartTempATA{slI}{pvtI}{1} == 0;
+figure;
+for condI = 1:4
+    thisConfusionMat = mean(CSpooledPVcorrsEachATA{slI}{pvtI}{condI}(:,:,withinDays),3);
+    subplot(2,2,condI)
+    imagesc(thisConfusionMat)
+    colorbar
+    title(cellTBT{1}(condI).name)
+    xlabel('Bin i')
+    ylabel('Bin j')
+    axis equal
+    xlim([0.5 numBins+0.5])
+    ylim([0.5 numBins+0.5])
+end
+suptitleSL('Within condition bin vs. bin PV corrs')
+
+figure;
+for cscI = 1:length(condSet)
+    thisConfusionMat = mean(CSpooledPVcorrs2ATA{slI}{pvtI}{cscI}(:,:,withinDays),3);
+    subplot(1,3,cscI)
+    imagesc(thisConfusionMat)
+    colorbar
+    title(condSetLabels{cscI})
+    xlabel('Bin i')
+    ylabel('Bin j')
+    axis equal
+    xlim([0.5 numBins+0.5])
+    ylim([0.5 numBins+0.5])
+end
+suptitleSL('Across dimension bin vs. bin PV corrs')
+    
+
+
+
+
+
+
+
+
     

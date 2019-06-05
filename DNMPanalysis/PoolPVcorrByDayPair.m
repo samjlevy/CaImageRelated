@@ -4,6 +4,7 @@ function [pvPooledByDayPair,dayPairList] = PoolPVcorrByDayPair(pvCorrs,dayPairs)
 
 dayPairs = sort(dayPairs,2);
 numDayPairs = size(dayPairs,1);
+numBins = size(pvCorrs{1},2);
 
 %Get unique day pairs (this could be a callable function)
 dayPairList = dayPairs(1,:);
@@ -27,8 +28,16 @@ pvPooledByDayPair = [];
 for dplI = 1:size(dayPairList,1)
     dpHere = dayPairList(dplI,:);
     theseDPs = sum(dayPairs==dpHere,2)==2;
-    pvsHere = cell2mat(pvCorrs(theseDPs));
-    pvPooledByDayPair{dplI,1} = mean(pvsHere,1);
+    
+    if size(pvCorrs{1},1)==size(pvCorrs{1},2)
+        %It's bin i x bin j
+        pvsHere = cell2mat(pvCorrs(theseDPs)');
+        pvsHere = reshape(pvsHere,numBins,numBins,sum(theseDPs));
+        pvPooledByDayPair{dplI,1} = mean(pvsHere,3);
+    else
+        pvsHere = cell2mat(pvCorrs(theseDPs));
+        pvPooledByDayPair{dplI,1} = mean(pvsHere,1);
+    end     
 end   
 
 end

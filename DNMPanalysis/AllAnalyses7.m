@@ -945,6 +945,59 @@ end
 
 disp('Done getting COM')
 
+%% PV corrs all to all bins
+
+fNamePref = {'','ARM'}; cTBT = {cellTBT; cellTBTarm}; binEdgesBoth = {stemBinEdges; armBinEdges};
+
+for slI = 1:2
+pvtI = 5;
+    for mouseI = 1:numMice
+        pvBasicFile = fullfile(mainFolder,mice{mouseI},'corrs',[fNamePref{slI} 'basic_corrs_all_' pvNames{pvtI} '.mat']);
+        %Make the pv corrs
+        if exist(pvBasicFile,'file') == 0
+            disp(['Did not find basic corrs ' pvNames{pvtI} ' for mouse ' num2str(mouseI) ' on ' mazeLocations{slI} ', making it now'])
+            [tpvCorrsAll, tmeanCorrAll, ~, ~, ~, ~, tPVdayPairsAll]=...
+                MakePVcorrsWrapper2allToAll(cTBT{slI}{mouseI}, [], [], 0, pooledCompPairs,...
+                pooledCondPairs, poolLabels, traitLogUse{slI}{pvtI}{mouseI}, binEdgesBoth{slI}, minspeed,cellsUseAll{pvtI});
+            save(pvBasicFile,'tpvCorrsAll','tmeanCorrAll','tPVdayPairsAll','pooledCompPairs')
+        end
+        
+        load(pvBasicFile)
+        pvCorrsATA{slI}{pvtI}{mouseI} = tpvCorrsAll;
+        PVdayPairsATA{slI}{pvtI}{mouseI} = tPVdayPairsAll;
+    end
+end
+
+pvCorrsDPpooled = []; uniqueDayPairs = []; cellArrMeanByCS = []; CSpooledPVcorrs2 = []; 
+CSpooledPVdaysApart2 = []; CSpooledMeanPVcorrsHalfFirst2 = []; CSpooledMeanPVcorrsHalfSecond2 = [];
+
+for slI = 1:2
+    pvtI = 5;
+        for mouseI = 1:numMice
+            pvCorrsDPpooledATA{slI}{pvtI}{mouseI} = [];
+            for corrI = 1:size(pvCorrsATA{slI}{pvtI}{mouseI},2)
+                pvsHere = pvCorrsATA{slI}{pvtI}{mouseI}(:,corrI);
+                [pvsOutATA,daysOutATA] = PoolPVcorrByDayPair(pvsHere,PVdayPairsATA{slI}{pvtI}{mouseI});
+                pvCorrsDPpooledATA{slI}{pvtI}{mouseI} = [pvCorrsDPpooledATA{slI}{pvtI}{mouseI},pvsOutATA];
+                uniqueDayPairsATA{slI}{pvtI}{mouseI} = daysOutATA;
+                uniqueDayDiffsATA{slI}{pvtI}{mouseI} = diff(daysOutATA,1,2);
+            end
+            cellArrMeanByCSata{slI}{pvtI}{mouseI} = MeanCellArr(pvCorrsDPpooledATA{slI}{pvtI}{mouseI},condSet);
+            cellArrMeanEachCondATA{slI}{pvtI}{mouseI} = MeanCellArr(pvCorrsDPpooledATA{slI}{pvtI}{mouseI},{1;2;3;4});
+        end
+        CSpooledPVcorrs2ATA{slI}{pvtI} = PoolCorrsAcrossMice(cellArrMeanByCSata{slI}{pvtI});
+        CSpooledPVcorrsEachATA{slI}{pvtI} = PoolCorrsAcrossMice(cellArrMeanEachCondATA{slI}{pvtI});
+        CSpooledPVdaysApartTempATA{slI}{pvtI} = PoolCorrsAcrossMice(uniqueDayDiffs{slI}{pvtI});
+        
+        %Work from here
+        for csI = 1:length(condSet)
+            CSpooledMeanPVcorrs2ATA{slI}{pvtI}{csI,1} = mean(CSpooledPVcorrs2ATA{slI}{pvtI}{csI,1},3);
+            %CSpooledMeanPVcorrsHalfFirst2{slI}{pvtI}{csI,1} = mean(CSpooledPVcorrs2{slI}{pvtI}{csI,1}(:,1:2),2);
+            %CSpooledMeanPVcorrsHalfSecond2{slI}{pvtI}{csI,1} = mean(CSpooledPVcorrs2{slI}{pvtI}{csI,1}(:,end-1:end),2);
+            CSpooledPVdaysApart2{slI}{pvtI}{csI,1} = CSpooledPVdaysApartTempATA{slI}{pvtI}{1};
+        end
+end
+
 %% New cells/lost cells
 numNewCellsPooled = [];
 pctNewCellsChangePooled = [];
