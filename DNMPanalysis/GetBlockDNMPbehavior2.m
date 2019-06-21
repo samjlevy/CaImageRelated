@@ -114,31 +114,31 @@ switch block_type
         pooled = PoolDNMPbehavior(start_stop_struct, include_struct);    
     
     case 'delay'
-        start_stop_struct.starts_pre_l = starts(left_free);
-        start_stop_struct.starts_pre_r = starts(right_free);
-        start_stop_struct.stops_pre_l = stops(left_free);
-        start_stop_struct.stops_pre_r = stops(right_free);
+        start_stop_struct.post_study_r = [starts(left_free), stops(left_free)];
+        start_stop_struct.post_study_l = [starts(right_free), stops(right_free)];
+        %start_stop_struct.stops_pre_l = 
+        %start_stop_struct.stops_pre_r = 
         
-        lapNumber.pre_l = frames(left_free,1);
-        lapNumber.pre_r = frames(right_free,1);
+        lapNumber.post_study_r = frames(left_free,1);
+        lapNumber.post_study_l = frames(right_free,1);
         
-        include_struct.pre_l = includeBlank;
-        for dd = 1:length(start_stop_struct.starts_pre_l)
-            include_struct.pre_l(start_stop_struct.starts_pre_l(dd,1):start_stop_struct.stops_pre_l(dd,1)) = 1;
+        include_struct.post_study_r = includeBlank;
+        for dd = 1:length(start_stop_struct.post_study_r)
+            include_struct.post_study_r(start_stop_struct.post_study_r(dd,1):start_stop_struct.post_study_r(dd,2)) = 1;
         end    
-        include_struct.pre_l = logical(include_struct.pre_l);
-        exclude_struct.pre_l = logical(double(include_struct.pre_l == 0));
+        include_struct.post_study_r = logical(include_struct.post_study_r);
+        exclude_struct.post_study_r = logical(double(include_struct.post_study_r == 0));
         
-        include_struct.pre_r = includeBlank;
-        for dd = 1:length(start_stop_struct.starts_pre_r)
-            include_struct.pre_r(start_stop_struct.starts_pre_r(dd,1):start_stop_struct.stops_pre_r(dd,1)) = 1;
-        end
-        include_struct.pre_r = logical(include_struct.pre_r);
-        exclude_struct.pre_r = logical(double(include_struct.pre_r == 0));
+        include_struct.post_study_l = includeBlank;
+        for dd = 1:length(start_stop_struct.post_study_l)
+            include_struct.post_study_l(start_stop_struct.post_study_l(dd,1):start_stop_struct.post_study_l(dd,2)) = 1;
+        end    
+        include_struct.post_study_l = logical(include_struct.post_study_l);
+        exclude_struct.post_study_l = logical(double(include_struct.post_study_l == 0));
         
         correct.all = (left_forced & right_free) | (right_forced & left_free);
-        correct.pre_l = correct.all(left_free);
-        correct.pre_r = correct.all(right_free);
+        correct.post_study_r = correct.all(left_free);
+        correct.post_study_l = correct.all(right_free);
         
         pooled = PoolDNMPbehavior(start_stop_struct, include_struct);
         

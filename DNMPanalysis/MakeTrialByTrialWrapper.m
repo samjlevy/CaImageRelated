@@ -12,7 +12,19 @@ accuracyThresh = 0.7;
 getFluoresence = 1;
 deleteSilentCells = 1;
               
-taskSegment = 'stem_only';
+mazeRegion = 'delay';
+switch mazeRegion
+    case 'stem'
+        taskSegment = 'stem_only';
+        tbtname = 'trialbytrial.mat';
+    case 'arm'
+        taskSegment = 'side_arm';
+        tbtname = 'armTrialbytrial.mat';
+    case 'delay'
+        taskSegment = 'delay';
+        tbtname = 'trialbytrialDELAY.mat';
+end
+    
 correctOnly = true;
 
 %First assess all the data that exists
@@ -33,9 +45,11 @@ for mouseI = 1:numMice
 end
     
 %Now refine that struct into a trialbytrial
+%tbtName = 'trialbytrial.mat';
+tbtname = 'trialbytrialDELAY.mat';
 for mouseI = 1:numMice 
     makeTBT = 1;
-    if exist(fullfile(MouseRefFolder{mouseI},'trialbytrial.mat'),'file')==2
+    if exist(fullfile(MouseRefFolder{mouseI},tbtname),'file')==2
         makeTBT = 0;
         ssa = input('Found existing trialbytrial, replace? (y/n) > ','s')
         if strcmpi(ssa,'y')
@@ -47,7 +61,7 @@ for mouseI = 1:numMice
         [trialbytrial, allfiles, sortedSessionInds, realdays] = MakeTrialByTrial2(MouseRefFolder{mouseI},taskSegment,correctOnly);
         savedir = uigetdir(cd,'Choose directory to save trialbytrial');
         %cd(savedir)
-        save('trialbytrial.mat','trialbytrial','allfiles','sortedSessionInds','realdays')
+        save(tbtname,'trialbytrial','allfiles','sortedSessionInds','realdays','-v7.3')
     end
     
 end

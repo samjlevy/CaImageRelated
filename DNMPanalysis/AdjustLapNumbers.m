@@ -7,11 +7,16 @@ ss = fieldnames(lapNumber(1).(condss{1}));
 
 for ln = 1:length(lapNumber)
     for aa = 1:length(ss)
-        fixedLapNumber(ln).study_l.(ss{aa}) = fixedLapNumber(ln).study_l.(ss{aa})*2-1;
-        fixedLapNumber(ln).study_r.(ss{aa}) = fixedLapNumber(ln).study_r.(ss{aa})*2-1;
-    
-        fixedLapNumber(ln).test_l.(ss{aa}) = fixedLapNumber(ln).test_l.(ss{aa})*2;
-        fixedLapNumber(ln).test_r.(ss{aa}) = fixedLapNumber(ln).test_r.(ss{aa})*2;
+        if any(strcmpi(ss,'study_l'))
+            fixedLapNumber(ln).study_l.(ss{aa}) = fixedLapNumber(ln).study_l.(ss{aa})*2-1;
+            fixedLapNumber(ln).study_r.(ss{aa}) = fixedLapNumber(ln).study_r.(ss{aa})*2-1;
+
+            fixedLapNumber(ln).test_l.(ss{aa}) = fixedLapNumber(ln).test_l.(ss{aa})*2;
+            fixedLapNumber(ln).test_r.(ss{aa}) = fixedLapNumber(ln).test_r.(ss{aa})*2;
+        elseif any(strcmpi(ss,'post_study_l'))
+            fixedLapNumber(ln).post_study_l(ss{aa}) = fixedLapNumber(ln).post_study_l.(ss{aa})*2-1;
+            fixedLapNumber(ln).post_study_r(ss{aa}) = fixedLapNumber(ln).post_study_r.(ss{aa})*2-1;
+        end
     end
     %{
     fixedLapNumber(ln).study_l.correct = fixedLapNumber(ln).study_l.correct*2-1;

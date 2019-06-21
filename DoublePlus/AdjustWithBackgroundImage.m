@@ -22,6 +22,17 @@ elseif ~exist('v0','var') || any(v0(:))==0 %need the any since declaring as glob
 else
     makebackground=0;
     backgroundImage=v0;
+    backgroundFrame=figure('name','backgroundFrame'); imagesc(backgroundImage); title('Background Image')
+        makeChoice = questdlg('Found a background image; use or make a new one?','bkg',...
+            'Use','Remake','Use');
+            switch makeChoice
+                case 'Use'
+                    makebackground=0;
+                    backgroundImage=v0;
+                case 'Remake'
+                    makebackground=1;
+            end
+        close backgroundFrame
 end
 
 if makebackground==1

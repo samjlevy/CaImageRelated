@@ -41,7 +41,6 @@ for sessI = 1:numSess
     end
     
     %Reorganize it
-    
     for block = 1:length(ss)
         correctBounds(sessI).(ss{block}) =...
             [bounds(sessI).(ss{block})(correct.(ss{block}),1)...
@@ -75,6 +74,7 @@ end
 %And put it all together
 trialbytrial = PoolTrialsAcrossSessions(correctBounds,daybyday.all_x_adj_cm,...
     daybyday.all_y_adj_cm,daybyday.PSAbool,daybyday.RawTrace,[],fixedLapNumber);
+    %no sortedSessionInds, already organized in daybyday
 
 rootPath = strsplit(basePath,'\'); rootPath = fullfile(rootPath{1:end-1});
 allfiles = cellfun(@(x) fullfile(rootPath,x),useDataTable.FolderName,'UniformOutput',false);

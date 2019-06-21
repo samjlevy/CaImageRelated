@@ -75,11 +75,8 @@ while doneDVTs == 0
         doneDVTs = 1;
     else
         dd = dd+1;
-    end
-
-    
+    end 
 end
-
 end
 
 if startFresh == 1
@@ -132,113 +129,15 @@ v0r = v0r.*onMazeMask;
 
 nBrightPoints = 5;
 if brightnessCalibrated==1
-    reca = questdlg('Brightness is calibrated. Use or recalibrate?','Recal','Use','Recalibrate','Use');
+    reca = questdlg(['Brightness is calibrated, r = ' num2str(howRedThresh), 'g = ' num2str(howGreenThresh) '. Use or recalibrate?'],'Recal','Use','Recalibrate','Use');
     if strcmpi(reca,'Recalibrate')
         brightnessCalibrated = 0;
     end
 end
 
 if brightnessCalibrated == 0
-    %Get frames with mouse on the maze, ideally throughout the session
-    nTestFrames = 8;
-    tfEdges = linspace(1,nFrames,nTestFrames+1);
-    %Look at the brightness value for red and green leds
-    for tfI = 1:nTestFrames
-        %Get the random frame
-        mouseInFrame = 0;
-        while mouseInFrame == 0
-            rFrameNum = randi(round(tfEdges(tfI+1) - (tfEdges(tfI)-1))) + tfEdges(tfI);
-            obj.CurrentTime = (rFrameNum-1)/aviSR;
-            uFrame = readFrame(obj);
-            gg = figure; imagesc(uFrame)
-            ss = input('Is the mouse somewhere good in this frame? (y/n, m movie) >>','s') %#ok<NOPRT>
-            switch ss
-                case 'y'
-                mouseInFrame=1;
-                case 'm'
-                    h1 = implay(avi_filepath);
-                    rFrameNum = 0;
-                    while rFrameNum > length(xAVI) || rFrameNum < 1
-                        rFrameNum = round(str2double(input(['Please give a frame number between ' num2str(tfEdges(tfI)) ' and '...
-                            num2str(tfEdges(tfI+1)) '. >>'],'s')));
-                    end
-                    mouseInFrame = 1;
-                    close(h1);
-                    obj.CurrentTime = (rFrameNum-1)/aviSR;
-                    uFrame = readFrame(obj);
-            end
-            close(gg);
-        end
-        gg = figure; imagesc(uFrame)
-
-        [rfRsub, rfGsub] =  GetSelfSubFrame(uFrame, v0r, v0g, onMazeMask);
-
-        [allIndR,redX,redY] = GetBrightBlobPixels(rfRsub,nBrightPoints); %#ok<ASGLU>
-        [allIndG,greenX,greenY] = GetBrightBlobPixels(rfGsub,nBrightPoints); %#ok<ASGLU>
-
-        %Check it's ok, if not do it manually
-        [Rrind,Rcind] = ind2sub(frameSize,allIndR);
-        redGood = 0;
-        while redGood==0
-            redF = figure; imagesc(uFrame); title(['Red Frame number ' num2str(rFrameNum)]); hold on
-            plot(Rcind,Rrind,'og'); plot(Rcind,Rrind,'.g')
-            sss = input('is this good?','s');
-            if strcmpi(sss,'y')
-                redGood = 1;
-            elseif strcmpi(sss,'n')
-                doneZoom = input('type Y when done zooming in for manual at pixel level','s');  %#ok<NASGU>
-                for pnR = 1:nBrightPoints
-                    [xx,yy] = ginput(1);
-                    Rcind(pnR) = round(xx); Rrind(pnR) = round(yy);
-                    plot(Rcind(pnR),Rrind(pnR),'og');plot(Rcind(pnR),Rrind(pnR),'.g')
-                end
-            end
-            close(redF);
-        end      
-
-        greenGood = 0;
-        [Grind,Gcind] = ind2sub(frameSize,allIndG);
-        while greenGood==0
-            greenF = figure; imagesc(uFrame); title(['Green Frame number ' num2str(rFrameNum)]); hold on
-            plot(Gcind,Grind,'or'); plot(Gcind,Grind,'.r')
-            sss = input('is this good?','s');
-            if strcmpi(sss,'y')
-                greenGood = 1;
-            elseif strcmpi(sss,'n')
-                doneZoom = input('type Y when done zooming in for manual at pixel level','s'); %#ok<NASGU>
-                for pnG = 1:nBrightPoints
-                    [xx,yy] = ginput(1);
-                    Gcind(pnG) = round(xx); Grind(pnG) = round(yy);
-                    plot(Gcind(pnG),Rrind(pnG),'or');plot(Gcind(pnG),Grind(pnG),'.r')
-                end
-            end
-            close(greenF);
-        end             
-
-        close(gg);
-
-        Rbrightness{tfI,1} = rfRsub(allIndR);  %#ok<AGROW>
-        Gbrightness{tfI,1} = rfGsub(allIndG);  %#ok<AGROW>
-
-        calibrateFrames(tfI,1) = rFrameNum;  %#ok<AGROW>
-
-        for uh = 1:length(Rrind)
-            howRed{tfI,1}(uh,1) = double(uFrame(Rrind(uh),Rcind(uh),1));  %#ok<AGROW>
-        end
-        for rg = 1:length(Grind)
-            howGreen{tfI,1}(rg,1) = double(uFrame(Grind(rg),Gcind(rg),2));  %#ok<AGROW>
-        end
-
-        brightnessCalibrated = 1;
-    end
-
-    rMeans = cell2mat(cellfun(@mean,howRed,'UniformOutput',false));
-    gMeans = cell2mat(cellfun(@mean,howGreen,'UniformOutput',false));
-
-    howRedThresh =  mean(rMeans) - 1.5*std(rMeans); %Use in raw frame
-    howGreenThresh = mean(gMeans) - 2*std(gMeans); %Use in raw frame
-
-
+    [howRedThresh,howGreenThresh,calibrateFrames] = CelibrateLEDbrightness(nFrames,obj,aviSR,avi_filepath,xAVI,v0r, v0g, onMazeMask,frameSize,nBrightPoints);
+    brightnessCalibrated = 1;
 end
 
 %if howRedThresh < 175
@@ -262,84 +161,13 @@ mcfCurrentSize(3:4) = mcfCurrentSize(3:4)*mcfScaleFactor;
 manCorrFig = figure('Position',mcfCurrentSize,'name','manCorrFig');
 imagesc(v0); 
 SaveTemp;
+%{
 firstPass = questdlg('Want to do auto tracking by LEDs?','Auto track?','Yes','No','Yes');
 if strcmpi(firstPass,'Yes')
-manCorrFig = CheckManCorrFig(mcfCurrentSize,manCorrFig,v0);
-%imagesc(v0)
-rawColorThresh = 1;
-%First pass just correct all the frames
-p = ProgressBar(nFrames);
-for corrFrame = 1:nFrames
-    [redX, redY, greenX, greenY, allIndR, allIndG, anyRpix, anyGpix] = AutoCorrByLED(...
-    manCorrFig, obj, corrFrame, onMazeX, onMazeY, onMazeMask, v0r, v0g, rawColorThresh,...
-    howRedThresh, howGreenThresh, nBrightPoints);
-
-    subMultRedX(corrFrame) = redX;
-    subMultRedY(corrFrame) = redY;
-    subMultGreenX(corrFrame) = greenX;
-    subMultGreenY(corrFrame) = greenY;
-    nRed(corrFrame) = length(allIndR);
-    nGreen(corrFrame) = length(allIndG);
-    redPix{corrFrame} = allIndR;
-    greenPix{corrFrame} = allIndG;
-    
-    p.progress;
-end
-p.stop;
-
-haveRedX = ~isnan(subMultRedX);
-haveRedY = ~isnan(subMultRedY);
-haveRedBoth = (haveRedX+haveRedY)==2;
-
-haveGreenX = ~isnan(subMultGreenX);
-haveGreenY = ~isnan(subMultGreenY);
-haveGreenBoth = (haveGreenX+haveGreenY)==2;
-
-haveBothColors = (haveRedBoth + haveGreenBoth) == 2;
-
-%Check dist between red and green isn't too high
-rgDistMax = 20;
-bothColorDist = hypot(diff([subMultRedX subMultGreenX],1,2),diff([subMultRedY subMultGreenY],1,2));
-badDist = bothColorDist > rgDistMax;
-haveBothColors(badDist) = 0;
-subInGreen = badDist & haveGreenBoth;
-
-haveRedOnly = ((haveRedBoth + haveGreenBoth) == 1) & haveRedBoth;
-haveGreenOnly = ((haveRedBoth + haveGreenBoth) == 1) & haveGreenBoth;
-
-haveColorData = haveRedBoth | haveGreenBoth;
-missingPoints = haveColorData == 0; %#ok<NASGU>
-%sum([sum(haveBothColors) sum(haveRedOnly) sum(haveGreenOnly)]) == sum((haveRedBoth + haveGreenBoth) > 0)
-
-velRed = hypot(diff(subMultRedX,1),diff(subMultRedY,1)); %#ok<NASGU>
-velGreen = hypot(diff(subMultGreenX,1),diff(subMultGreenY,1)); %#ok<NASGU>
-
-%Fill in where we have color information
-xAVI(haveBothColors) = mean([subMultRedX(haveBothColors) subMultGreenX(haveBothColors)],2);
-yAVI(haveBothColors) = mean([subMultRedY(haveBothColors) subMultGreenY(haveBothColors)],2);
-xAVI(subInGreen) = subMultGreenX(subInGreen);
-yAVI(subInGreen) = subMultGreenY(subInGreen);
-
-
-%Check points aren't off maze
-goodPts = inpolygon(xAVI,yAVI,[onMazeX; onMazeX(1)],[onMazeY; onMazeY(1)]);
-badPts = goodPts==0;
-badPts(xAVI==0 & yAVI==0) = 0;
-xAVI(badPts & haveGreenBoth) = subMultGreenX(badPts & haveGreenBoth);
-yAVI(badPts & haveGreenBoth) = subMultGreenY(badPts & haveGreenBoth);
-
-
-%Fill in the rest
-goodRed = inpolygon(subMultRedX,subMultRedY,[onMazeX; onMazeX(1)],[onMazeY; onMazeY(1)]);
-xAVI(haveRedOnly & goodRed) = subMultRedX(haveRedOnly & goodRed);
-yAVI(haveRedOnly & goodRed) = subMultRedY(haveRedOnly & goodRed);
-goodGreen = inpolygon(subMultGreenX,subMultGreenY,[onMazeX; onMazeX(1)],[onMazeY; onMazeY(1)]);
-xAVI(haveGreenOnly & goodGreen) = subMultGreenX(haveGreenOnly & goodGreen);
-yAVI(haveGreenOnly & goodGreen) = subMultGreenY(haveGreenOnly & goodGreen);
 
 SaveTemp;
 end
-
+%}
 optionsText = {'m - mark off maze time';...
     'z - fix (0,0) frames';...
     'b - parse onMaze time';...
@@ -348,6 +176,9 @@ optionsText = {'m - mark off maze time';...
     'v - correct by velocity';...
     't - reset velocity threshold';...
     'n - edit by frame number';...
+    'f - make new background frame';...
+    'a - correct frames auto';...
+    'g - reset brightness thresholds';...
     ' ';...
     's - save';...
     'q - save and quit';...
@@ -363,6 +194,54 @@ while stillEditing == 1
     mcfCurrentSize = manCorrFig.Position;
     editChoice = input('How would you like to edit? >>','s');
     switch editChoice
+        case 'w'
+            h1 = implay(avi_filepath);
+            ddd = input('Input y when done with video: ','s');
+            while ~strcmpi(ddd,'y')
+                ddd = input('Input y when done with video: ','s');
+            end
+            if strcmpi(ddd,'y')
+                try
+                    close(h1);
+                end
+            end
+        case 'a' 
+            [manCorrFig, obj, xAVI, yAVI, nRed,nGreen,redPix,greenPix,...
+                subMultRedX,subMultRedY,subMultGreenX,subMultGreenY,anyRpix,anyGpix]...
+                = AutoCorrByLEDWrapper(...
+                manCorrFig, mcfCurrentSize, obj, onMazeX, onMazeY, onMazeMask, v0r, v0g, v0,...
+                howRedThresh, howGreenThresh, nBrightPoints, xAVI, yAVI, nFrames,...
+                nRed,nGreen,redPix,greenPix,subMultRedX,subMultRedY,subMultGreenX,subMultGreenY,anyRpix,anyGpix);
+        case 'f'
+            [v0] = AdjustWithBackgroundImage(avi_filepath, obj, v0);
+
+            v0r = double(v0(:,:,1) - v0(:,:,3));
+            v0g = double(v0(:,:,2));  
+
+            %Find the onmaze area
+            bb = figure; imagesc(v0); hold on
+            drawOMB = 0;
+            if any(onMazeX)
+                plot([onMazeX; onMazeX(1)],[onMazeY; onMazeY(1)],'r')
+                usomb = questdlg('Found on maze mask, redraw?','Redraw onmaze','Keep','Redraw','Keep');
+                if strcmpi(usomb,'Redraw')
+                    drawOMB = 1;
+                end
+            else
+                drawOMB = 1;
+            end
+            if drawOMB == 1
+                figure(bb); imagesc(v0)
+                title('Draw onMaze boundary')
+                [onMazeMask,onMazeX,onMazeY] = roipoly;
+            end
+            close(bb);
+
+            v0g = v0g.*onMazeMask;
+            v0r = v0r.*onMazeMask;
+        case 'g'
+            [howRedThresh,howGreenThresh,calibrateFrames] = CelibrateLEDbrightness(nFrames,obj,aviSR,avi_filepath,xAVI,v0r, v0g, onMazeMask,frameSize,nBrightPoints);
+            brightnessCalibrated = 1;
         case 'z'
             zero_frames = xAVI==0 & yAVI==0;
             disp(['Found ' num2str(sum(zero_frames)) ' zero frames'])
@@ -588,7 +467,7 @@ uFrame = readFrame(obj);
 %Do some friendly UI stuff
 
 imagesc(manCorrFig.Children,uFrame);
-title(['Frame# ' num2str(corrFrame)])
+title(manCorrFig,['Frame# ' num2str(corrFrame)])
 
 boundaryX = onMazeX; boundaryX = [boundaryX; boundaryX(1)];
 boundaryY = onMazeY; boundaryY = [boundaryY; boundaryY(1)];
@@ -689,3 +568,212 @@ secondRepVel = hypot(diff([xRep(2) origX(1)]),diff([yRep(2) origY(1)]));
 velNow = [firstRepVel; secondRepVel];
 end
 %%
+function [howRedThresh,howGreenThresh,calibrateFrames] = CelibrateLEDbrightness(nFrames,obj,aviSR,avi_filepath,xAVI,v0r, v0g, onMazeMask,frameSize,nBrightPoints)
+
+%Get frames with mouse on the maze, ideally throughout the session
+nTestFrames = 8;
+framesUseForCalibrate = [1 nFrames];
+frameIn = input(['Current frames for calibration are ' num2str(framesUseForCalibrate) ', enter y to use or enter 2 numbers to set new: '],'s')
+if strcmpi(frameIn,'y')
+    fStart = framesUseForCalibrate(1);
+    fStop = framesUseForCalibrate(end);
+elseif length(str2num(frameIn))==2
+    ffs = str2num(frameIn);
+    fStart = ffs(1);
+    fStop = ffs(end);
+end
+
+tfEdges = linspace(fStart,fStop,nTestFrames+1);
+%Look at the brightness value for red and green leds
+for tfI = 1:nTestFrames
+    %Get the random frame
+    mouseInFrame = 0;
+    while mouseInFrame == 0
+        rFrameNum = randi(round(tfEdges(tfI+1) - (tfEdges(tfI)-1))) + tfEdges(tfI);
+        obj.CurrentTime = (rFrameNum-1)/aviSR;
+        uFrame = readFrame(obj);
+        gg = figure; imagesc(uFrame)
+        ss = input('Is the mouse somewhere good in this frame? (y/n, m movie) >>','s') %#ok<NOPRT>
+        switch ss
+            case 'y'
+                mouseInFrame=1;
+            case 'm'
+                h1 = implay(avi_filepath);
+                rFrameNum = 0;
+                while rFrameNum > length(xAVI) || rFrameNum < 1
+                    rFrameNum = round(str2double(input(['Please give a frame number between ' num2str(tfEdges(tfI)) ' and '...
+                        num2str(tfEdges(tfI+1)) '. >>'],'s')));
+                end
+                mouseInFrame = 1;
+                close(h1);
+                obj.CurrentTime = (rFrameNum-1)/aviSR;
+                uFrame = readFrame(obj);
+        end
+        close(gg);
+    end
+    gg = figure; imagesc(uFrame)
+
+    [rfRsub, rfGsub] =  GetSelfSubFrame(uFrame, v0r, v0g, onMazeMask);
+    
+    [allIndR,redX,redY] = GetBrightBlobPixels(rfRsub,nBrightPoints); %#ok<ASGLU>
+    [allIndG,greenX,greenY] = GetBrightBlobPixels(rfGsub,nBrightPoints); %#ok<ASGLU>
+
+    %Check it's ok, if not do it manually
+    [Rrind,Rcind] = ind2sub(frameSize,allIndR);
+    redGood = 0;
+    while redGood==0
+        redF = figure; imagesc(uFrame); title(['Red Frame number ' num2str(rFrameNum)]); hold on
+        plot(Rcind,Rrind,'og'); plot(Rcind,Rrind,'.g')
+        sss = input('is this good?','s');
+        if strcmpi(sss,'y')
+            redGood = 1;
+        elseif strcmpi(sss,'n')
+            doneZoom = input('type Y when done zooming in for manual at pixel level','s');  %#ok<NASGU>
+            for pnR = 1:nBrightPoints
+                [xx,yy] = ginput(1);
+                Rcind(pnR) = round(xx); Rrind(pnR) = round(yy);
+                plot(Rcind(pnR),Rrind(pnR),'og');plot(Rcind(pnR),Rrind(pnR),'.g')
+            end
+        end
+        close(redF);
+    end
+    
+    greenGood = 0;
+    [Grind,Gcind] = ind2sub(frameSize,allIndG);
+    while greenGood==0
+        greenF = figure; imagesc(uFrame); title(['Green Frame number ' num2str(rFrameNum)]); hold on
+        plot(Gcind,Grind,'or'); plot(Gcind,Grind,'.r')
+        sss = input('is this good?','s');
+        if strcmpi(sss,'y')
+            greenGood = 1;
+        elseif strcmpi(sss,'n')
+            doneZoom = input('type Y when done zooming in for manual at pixel level','s'); %#ok<NASGU>
+            for pnG = 1:nBrightPoints
+                [xx,yy] = ginput(1);
+                Gcind(pnG) = round(xx); Grind(pnG) = round(yy);
+                plot(Gcind(pnG),Rrind(pnG),'or');plot(Gcind(pnG),Grind(pnG),'.r')
+            end
+        end
+        close(greenF);
+    end
+    
+    close(gg);
+    
+    Rbrightness{tfI,1} = rfRsub(allIndR);  %#ok<AGROW>
+    Gbrightness{tfI,1} = rfGsub(allIndG);  %#ok<AGROW>
+    
+    calibrateFrames(tfI,1) = rFrameNum;  %#ok<AGROW>
+    
+    for uh = 1:length(Rrind)
+        howRed{tfI,1}(uh,1) = double(uFrame(Rrind(uh),Rcind(uh),1));  %#ok<AGROW>
+    end
+    for rg = 1:length(Grind)
+        howGreen{tfI,1}(rg,1) = double(uFrame(Grind(rg),Gcind(rg),2));  %#ok<AGROW>
+    end
+    
+    brightnessCalibrated = 1;
+end
+
+rMeans = cell2mat(cellfun(@mean,howRed,'UniformOutput',false));
+gMeans = cell2mat(cellfun(@mean,howGreen,'UniformOutput',false));
+
+howRedThresh =  mean(rMeans) - 1.5*std(rMeans); %Use in raw frame
+howGreenThresh = mean(gMeans) - 2*std(gMeans); %Use in raw frame
+
+end
+
+%%
+function [manCorrFig, obj, xAVI, yAVI, nRed,nGreen,redPix,greenPix,...
+    subMultRedX,subMultRedY,subMultGreenX,subMultGreenY,anyRpix,anyGpix]...
+    = AutoCorrByLEDWrapper(...
+    manCorrFig, mcfCurrentSize, obj, onMazeX, onMazeY, onMazeMask, v0r, v0g, v0,...
+    howRedThresh, howGreenThresh, nBrightPoints, xAVI, yAVI, nFrames,...
+    nRed,nGreen,redPix,greenPix,subMultRedX,subMultRedY,subMultGreenX,subMultGreenY,anyRpix,anyGpix)
+    
+manCorrFig = CheckManCorrFig(mcfCurrentSize,manCorrFig,v0);
+
+framesUseForAuto = [1 nFrames];
+frameIn = input(['Current frames for auto correction are ' num2str(framesUseForAuto) ', enter y to use or enter 2 numbers to set new: '],'s')
+if strcmpi(frameIn,'y')
+    fStart = framesUseForAuto(1);
+    fStop = framesUseForAuto(end);
+elseif length(str2num(frameIn))==2
+    ffs = str2num(frameIn);
+    fStart = ffs(1);
+    fStop = ffs(end);
+end
+
+fixTheseFrames = fStart:fStop;
+
+%imagesc(v0)
+rawColorThresh = 1;
+%First pass just correct all the frames
+p = ProgressBar(length(fixTheseFrames));
+for corrFrameI = 1:length(fixTheseFrames)
+    corrFrame = fixTheseFrames(corrFrameI);
+    [redX, redY, greenX, greenY, allIndR, allIndG, anyRpix, anyGpix] = AutoCorrByLED(...
+    manCorrFig, obj, corrFrame, onMazeX, onMazeY, onMazeMask, v0r, v0g, rawColorThresh,...
+    howRedThresh, howGreenThresh, nBrightPoints);
+
+    subMultRedX(corrFrame) = redX;
+    subMultRedY(corrFrame) = redY;
+    subMultGreenX(corrFrame) = greenX;
+    subMultGreenY(corrFrame) = greenY;
+    nRed(corrFrame) = length(allIndR);
+    nGreen(corrFrame) = length(allIndG);
+    redPix{corrFrame} = allIndR;
+    greenPix{corrFrame} = allIndG;
+    
+    p.progress;
+end
+p.stop;
+
+haveRedX = ~isnan(subMultRedX(fixTheseFrames));
+haveRedY = ~isnan(subMultRedY(fixTheseFrames));
+haveRedBoth = (haveRedX+haveRedY)==2;
+
+haveGreenX = ~isnan(subMultGreenX(fixTheseFrames));
+haveGreenY = ~isnan(subMultGreenY(fixTheseFrames));
+haveGreenBoth = (haveGreenX+haveGreenY)==2;
+
+haveBothColors = (haveRedBoth + haveGreenBoth) == 2;
+
+%Check dist between red and green isn't too high
+rgDistMax = 20;
+bothColorDist = hypot(diff([subMultRedX(fixTheseFrames) subMultGreenX(fixTheseFrames)],1,2),diff([subMultRedY(fixTheseFrames) subMultGreenY(fixTheseFrames)],1,2));
+badDist = bothColorDist > rgDistMax;
+haveBothColors(badDist) = 0;
+subInGreen = badDist & haveGreenBoth;
+
+haveRedOnly = ((haveRedBoth + haveGreenBoth) == 1) & haveRedBoth;
+haveGreenOnly = ((haveRedBoth + haveGreenBoth) == 1) & haveGreenBoth;
+
+haveColorData = haveRedBoth | haveGreenBoth;
+missingPoints = haveColorData == 0; %#ok<NASGU>
+%sum([sum(haveBothColors) sum(haveRedOnly) sum(haveGreenOnly)]) == sum((haveRedBoth + haveGreenBoth) > 0)
+
+velRed = hypot(diff(subMultRedX,1),diff(subMultRedY,1)); %#ok<NASGU>
+velGreen = hypot(diff(subMultGreenX,1),diff(subMultGreenY,1)); %#ok<NASGU>
+
+%Fill in where we have color information
+xAVI(fixTheseFrames(haveBothColors)) = mean([subMultRedX(fixTheseFrames(haveBothColors)) subMultGreenX(fixTheseFrames(haveBothColors))],2);
+yAVI(fixTheseFrames(haveBothColors)) = mean([subMultRedY(fixTheseFrames(haveBothColors)) subMultGreenY(fixTheseFrames(haveBothColors))],2);
+xAVI(fixTheseFrames(subInGreen)) = subMultGreenX(fixTheseFrames(subInGreen));
+yAVI(fixTheseFrames(subInGreen)) = subMultGreenY(fixTheseFrames(subInGreen));
+
+%Check points aren't off maze
+goodPts = inpolygon(xAVI(fixTheseFrames),yAVI(fixTheseFrames),[onMazeX; onMazeX(1)],[onMazeY; onMazeY(1)]);
+badPts = goodPts==0;
+badPts(xAVI(fixTheseFrames)==0 & yAVI(fixTheseFrames)==0) = 0;
+xAVI(fixTheseFrames(badPts & haveGreenBoth)) = subMultGreenX(fixTheseFrames(badPts & haveGreenBoth));
+yAVI(fixTheseFrames(badPts & haveGreenBoth)) = subMultGreenY(fixTheseFrames(badPts & haveGreenBoth));
+
+%Fill in the rest
+goodRed = inpolygon(subMultRedX(fixTheseFrames),subMultRedY(fixTheseFrames),[onMazeX; onMazeX(1)],[onMazeY; onMazeY(1)]);
+xAVI(fixTheseFrames(haveRedOnly & goodRed)) = subMultRedX(fixTheseFrames(haveRedOnly & goodRed));
+yAVI(fixTheseFrames(haveRedOnly & goodRed)) = subMultRedY(fixTheseFrames(haveRedOnly & goodRed));
+goodGreen = inpolygon(subMultGreenX(fixTheseFrames),subMultGreenY(fixTheseFrames),[onMazeX; onMazeX(1)],[onMazeY; onMazeY(1)]);
+xAVI(fixTheseFrames(haveGreenOnly & goodGreen)) = subMultGreenX(fixTheseFrames(haveGreenOnly & goodGreen));
+yAVI(fixTheseFrames(haveGreenOnly & goodGreen)) = subMultGreenY(fixTheseFrames(haveGreenOnly & goodGreen));
+
+end

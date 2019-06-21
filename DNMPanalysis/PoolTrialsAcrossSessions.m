@@ -17,7 +17,7 @@ switch class(bounds)
         ss = fieldnames(bounds(1)); %should always be 4
 end
 
-for fn = 1:4 %condition
+for fn = 1:length(ss) %condition
     row = 0;
     for sess = 1:length(all_x_adj_cm)
         switch class(bounds)
