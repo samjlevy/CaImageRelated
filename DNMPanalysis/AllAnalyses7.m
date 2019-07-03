@@ -96,14 +96,14 @@ for mouseI = 1:numMice
     reliability{mouseI} = load(saveName);
     
     dayUse{mouseI} = reliability{mouseI}.dayUse;
-    presentInactive{mouseI} = (dayUse{mouseI} + (cellSSI{mouseI}>0)) == 1;
+    presentInactive{1}{mouseI} = (dayUse{mouseI} + (cellSSI{mouseI}>0)) == 1;
     threshAndConsec{mouseI} = reliability{mouseI}.threshAndConsec;
     cellsActiveToday{mouseI} = sum(dayUse{mouseI},1);
     daysEachCellActive{mouseI} = sum(dayUse{mouseI},2);
     trialReli{mouseI} = reliability{mouseI}.trialReli;
     
     dayUseArm{mouseI} = reliability{mouseI}.dayUseArm;
-    presentInactiveArm{mouseI} = (dayUseArm{mouseI} + (cellSSI{mouseI}>0)) == 1;
+    presentInactive{2}{mouseI} = (dayUseArm{mouseI} + (cellSSI{mouseI}>0)) == 1;
     threshAndConsecArm{mouseI} = reliability{mouseI}.threshAndConsecArm;
     cellsActiveTodayArm{mouseI} = sum(dayUseArm{mouseI},1);    
     daysEachCellActiveArm{mouseI} = sum(dayUseArm{mouseI},2);
@@ -441,15 +441,24 @@ for slI = 1:2
     end
 end
 
-%What are new cells?
+%What are new cells? 
+%but also what were previously inactive cells
 pooledNewCellProps = [];
 pooledNewCellPropChanges = [];
+pooledNewlyActiveCellProps = [];
+pooledNewlyActiveCellPropChanges = [];
 firstDayGroupout = []; firstDays = [];
+inactiveTraitPcts = [];
 for slI = 1:2
     pooledNewCellProps{slI} = cell(numTraitGroups,1);
     pooledNewCellPropChanges{slI} = cell(numTraitGroups,1);
+    pooledNewlyActiveCellProps{slI} = cell(numTraitGroups,1);
+    pooledNewlyActiveCellPropChanges{slI} = cell(numTraitGroups,1);
+    pooledNewlyActiveAndNewCellProps{slI} = cell(numTraitGroups,1);
+    pooledNewlyActiveAndNewCellPropsChanges{slI} = cell(numTraitGroups,1);
     for mouseI = 1:numMice
-        firstDays{slI}{mouseI} = GetFirstDayTrait(dayUseFilter{slI}{mouseI});
+        %firstDays{slI}{mouseI} = GetFirstDayTrait(dayUseFilter{slI}{mouseI}); %This is first day active
+        firstDays{slI}{mouseI} = GetFirstDayTrait(cellSSI{mouseI}>0);
         %[firstDayGroupout{slI}{mouseI}] = RunGroupFunction('GetFirstDayTrait',traitGroups{slI}{mouseI},[]);
         
         firstDayLogical{slI}{mouseI} = false(size(cellSSI{mouseI}));
@@ -458,23 +467,63 @@ for slI = 1:2
             firstDayLogical{slI}{mouseI}(cellI,firstDays{slI}{mouseI}(cellI)) = true;  %NEED to eliminate day 1 after performing this
             end
         end
+        %New Cells
         firstDayLogicalUse{slI}{mouseI} = firstDayLogical{slI}{mouseI};
-        firstDayLogicalUse{slI}{mouseI}(:,1) = [];
+        firstDayLogicalUse{slI}{mouseI}(:,1) = []; 
         firstDayNums{slI}{mouseI} = sum(firstDayLogicalUse{slI}{mouseI},1);
         
+        %Previously inactive cells
+        previouslyInactiveLogicalUse{slI}{mouseI} = presentInactive{slI}{mouseI};
+        previouslyInactiveLogicalUse{slI}{mouseI}(:,end) = []; 
+        previouslyInactiveNums{slI}{mouseI} = sum(previouslyInactiveLogicalUse{slI}{mouseI},1);
+        
+        
+        firstDayNowActive{slI}{mouseI} = firstDayLogical{slI}{mouseI} .* dayUseFilter{slI}{mouseI};
+        firstDayNowActiveNums{slI}{mouseI} = sum(firstDayNowActive{slI}{mouseI},1);
+        firstDayNowActiveNums{slI}{mouseI}(1) = [];
+        
+        prevInactiveNowActive{slI}{mouseI} = presentInactive{slI}{mouseI}(:,1:end-1) .* dayUseFilter{slI}{mouseI}(:,2:end);
+        prevInactiveNowActiveNums{slI}{mouseI} = sum(prevInactiveNowActive{slI}{mouseI},1);
+        
+        prevInactiveNowActive2{slI}{mouseI} = (dayUseFilter{slI}{mouseI}(:,1:end-1)==0) .* dayUseFilter{slI}{mouseI}(:,2:end);
+        prevInactiveNowActiveNums2{slI}{mouseI} = sum(prevInactiveNowActive2{slI}{mouseI},1);
+        
         for tgI = 1:numTraitGroups
+            %New Cells
             traitFirst{slI}{mouseI}{tgI} = traitGroups{slI}{mouseI}{tgI}(:,2:end).*firstDayLogicalUse{slI}{mouseI};
             traitFirstNums{slI}{mouseI}{tgI} = sum(traitFirst{slI}{mouseI}{tgI},1);
 
-            traitFirstPcts{slI}{mouseI}{tgI} = traitFirstNums{slI}{mouseI}{tgI}./ firstDayNums{slI}{mouseI};
+            %traitFirstPcts{slI}{mouseI}{tgI} = traitFirstNums{slI}{mouseI}{tgI} ./ firstDayNums{slI}{mouseI};
+            traitFirstPcts{slI}{mouseI}{tgI} = traitFirstNums{slI}{mouseI}{tgI} ./ firstDayNowActiveNums{slI}{mouseI};
             [newCellChanges{slI}{mouseI}{tgI},~] = TraitChangeDayPairs(traitFirstPcts{slI}{mouseI}{tgI},combnk(1:length(cellRealDays{mouseI})-1,2));%
 
             pooledNewCellProps{slI}{tgI} = [pooledNewCellProps{slI}{tgI}; traitFirstPcts{slI}{mouseI}{tgI}(:)];
             pooledNewCellPropChanges{slI}{tgI} = [pooledNewCellPropChanges{slI}{tgI}; newCellChanges{slI}{mouseI}{tgI}(:)];
+            
+            %Previously inactive cells
+            inactiveTrait{slI}{mouseI}{tgI} = traitGroups{slI}{mouseI}{tgI}(:,2:end).*prevInactiveNowActive2{slI}{mouseI};
+            inactiveTraitNums{slI}{mouseI}{tgI} = sum(inactiveTrait{slI}{mouseI}{tgI},1); %Was inactive, now coding
+
+            %inactiveTraitPcts{slI}{mouseI}{tgI} = inactiveTraitNums{slI}{mouseI}{tgI} ./ previouslyInactiveNums{slI}{mouseI}; %out of total prev. inactive
+            inactiveTraitPcts{slI}{mouseI}{tgI} = inactiveTraitNums{slI}{mouseI}{tgI} ./ prevInactiveNowActiveNums2{slI}{mouseI};
+            [inactiveTraitChanges{slI}{mouseI}{tgI},~] = TraitChangeDayPairs(inactiveTraitPcts{slI}{mouseI}{tgI},combnk(1:length(cellRealDays{mouseI})-1,2));%
+
+            pooledNewlyActiveCellProps{slI}{tgI} = [pooledNewlyActiveCellProps{slI}{tgI}; inactiveTraitPcts{slI}{mouseI}{tgI}(:)];
+            pooledNewlyActiveCellPropChanges{slI}{tgI} = [pooledNewlyActiveCellPropChanges{slI}{tgI}; inactiveTraitChanges{slI}{mouseI}{tgI}(:)];
+            
+            %Pooled newly active and new
+            inactiveAndNewNums{slI}{mouseI}{tgI} = mean([inactiveTraitNums{slI}{mouseI}{tgI}; traitFirstNums{slI}{mouseI}{tgI}],1);
+            inactiveAndNewPcts{slI}{mouseI}{tgI} = inactiveAndNewNums{slI}{mouseI}{tgI} ./ mean([prevInactiveNowActiveNums{slI}{mouseI}; firstDayNowActiveNums{slI}{mouseI}],1);
+            %inactiveAndNewNums{slI}{mouseI}{tgI} = inactiveTraitNums{slI}{mouseI}{tgI} + traitFirstNums{slI}{mouseI}{tgI};
+            %inactiveAndNewPcts{slI}{mouseI}{tgI} = inactiveAndNewNums{slI}{mouseI}{tgI} ./ (prevInactiveNowActiveNums{slI}{mouseI} + firstDayNowActiveNums{slI}{mouseI});
+            [inactiveAndNewChanges{slI}{mouseI}{tgI},~] = TraitChangeDayPairs(inactiveAndNewPcts{slI}{mouseI}{tgI},combnk(1:length(cellRealDays{mouseI})-1,2));
+            
+            pooledNewlyActiveAndNewCellProps{slI}{tgI} = [pooledNewlyActiveAndNewCellProps{slI}{tgI}; inactiveAndNewPcts{slI}{mouseI}{tgI}(:)];
+            pooledNewlyActiveAndNewCellPropsChanges{slI}{tgI} = [pooledNewlyActiveAndNewCellPropsChanges{slI}{tgI}; inactiveAndNewChanges{slI}{mouseI}{tgI}(:)];
         end
     end
 end
-disp('Done when do splitters show up')
+disp('Done what are new cells')
 
 %% Splitter sources and sinks
 cellCheck = [3 4 5];
@@ -491,15 +540,20 @@ transLabels = {'LR to ST','LR to BOTH','ST to LR','ST to BOTH','BOTH to LR','BOT
 
 %What are new cells? (Move to setup)
 firstDayLogical = [];
+firstDayPresent = [];
 for slI = 1:2
     for mouseI = 1:numMice
         firstDays{slI}{mouseI} = GetFirstDayTrait(dayUseFilter{slI}{mouseI});
         
+        firstDayPresent{mouseI} = GetFirstDayTrait(cellSSI{mouseI}>0);
+        
         firstDayLogical{slI}{mouseI} = false(size(cellSSI{mouseI}));
+        firstDayPresentLogical{mouseI} = false(size(cellSSI{mouseI}));
         for cellI = 1:size(cellSSI{mouseI},1)
             if ~isnan(firstDays{slI}{mouseI}(cellI))
             firstDayLogical{slI}{mouseI}(cellI,firstDays{slI}{mouseI}(cellI)) = true;
             end
+            firstDayPresentLogical{mouseI}(cellI,firstDayPresent{mouseI}(cellI)) = true;
         end
         
     end
@@ -519,17 +573,21 @@ cellTransPropChanges = [];
 %To look at all, sinks has to be traitGroups{7} (any split), sources are
 %any split, non split, and new cells
 
-sourceColors = [ colorAssc{1}; colorAssc{2}; colorAssc{5}; 0.6 0.6 0.6; 0.8196    0.4118    0.1216; 0 1 0;]; 
+sourceColors = [ colorAssc{1}; colorAssc{2}; colorAssc{5}; 0.6 0.6 0.6; 0 1 0];% ; ;0.8196    0.4118    0.1216
 sourceLabels = {traitLabels{[1 2 5 8]},'Inactive','New Cells'};
 for slI = 1:2
     for mouseI = 1:numMice
-        %firstDaySource{slI}{mouseI} = [firstDayLogical{slI}{mouseI}(:,2:end) zeros(size(cellSSI{mouseI},1),1)];
+        firstDaySource{slI}{mouseI} = [firstDayLogical{slI}{mouseI}(:,2:end) zeros(size(cellSSI{mouseI},1),1)];
             %new cell that day, shifted to get matched as dayI-1
         
         targets{mouseI} = traitGroups{slI}{mouseI}(cellCheck);
         %sources{mouseI} = [firstDaySource{slI}{mouseI}; traitGroups{slI}{mouseI}([cellCheck 8])]; %dayUseFilter{slI}{mouseI}==0; 
-        switch slI; case 1; pI = presentInactive{mouseI}; case 2; pI = presentInactiveArm{mouseI}; end
-        sources{mouseI} = [traitGroups{slI}{mouseI}([cellCheck 8]); pI];
+        pI = presentInactive{slI}{mouseI}; 
+        pIorNew = pI + [firstDayPresentLogical{mouseI}(:,2:end) zeros(size(cellSSI{mouseI},1),1)] > 0;
+        switch slI; case 1; inactiveAtAll = dayUse{mouseI}==0; case 2; inactiveAtAll = dayUseArm{mouseI}==0; end
+        %pIorNew = pI + firstDayPresentLogical{mouseI} > 0;
+        %sources{mouseI} = [traitGroups{slI}{mouseI}([cellCheck 8]); pI];
+        sources{mouseI} = [traitGroups{slI}{mouseI}([cellCheck 8]); inactiveAtAll];
         sinks{mouseI} = sources{mouseI}; 
     end
     
@@ -537,7 +595,7 @@ for slI = 1:2
         CheckLogicalSinksAndSources(targets,sources,sinks,cellRealDays);
     
     [pooledDailySources2{slI}, pooledDailySinks2{slI}, sourceDayDiffsPooled2{slI}, sinkDayDiffsPooled2{slI}] =...
-        CheckLogicalSinksAndSources2(targets,sources,sinks,cellPresent);
+        CheckLogicalSinksAndSources2(targets,sources,sinks,cellPresent,[]);
 
     for tcI = 1:length(cellCheck) %target
         for scI = 1:length(sources{1}) %source

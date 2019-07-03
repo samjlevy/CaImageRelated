@@ -195,7 +195,7 @@ statsOut = [];
 for slI = 1:2
     gh{slI} = figure('Position',[593 316 660 458]);%[435 278 988 390][593 273 559 501]
     [gh{slI},statsOut{slI}] = PlotTraitChangeOverDays(pooledSplitNumChange{slI},pooledRealDayDiffs,...
-        {changesPlot},colorAsscAlt,traitLabels,gh{slI},true,'regress',[-0.6 0.4],'pct Change'); %Num in this case is diff in Pcts.
+        {changesPlot},colorAsscAlt,traitLabels,gh{slI},true,'regress',[-0.6 0.4],'pct Change',[]); %Num in this case is diff in Pcts.
     suptitleSL(['Change in Proportion of Splitters on ' splitterLoc{slI}])
 end
 for slI = 1:2
@@ -406,14 +406,14 @@ end
 c = categorical({'Turn','Phase','Conjunctive'});
 statsOut = []; sps = [];
 for slI = 1:2
-    figure('Position',[729 513 497 340]); 
-    for tcI = 1:length(cellCheck)
-        sps{tcI} = subplot(1,length(cellCheck),tcI);
-        [statsOut{slI}{tcI}] = PlotBarWithData([pooledDailySources2{slI}{tcI}{:}],sourceColors,true,'jitter',sourceLabels);
-        ylim([0 0.81])
-        title(['Sources for ' traitLabels{cellCheck(tcI)}])
+    figure('Position',[470 342 913 394]); %[729 513 497 340]
+    for ccI = 1:length(cellCheck)
+        sps{ccI} = subplot(1,length(cellCheck),ccI);
+        [statsOut{slI}{ccI}] = PlotBarWithData([pooledDailySources{slI}{ccI}{:}],sourceColors,true,'jitter',sourceLabels);
+        ylim([0 1.01])
+        title(['Sources for ' traitLabels{cellCheck(ccI)}])
         ylabel('Pct. of cells')
-        sps{tcI} = MakePlotPrettySL(sps{tcI});
+        sps{ccI} = MakePlotPrettySL(sps{ccI});
     end
     suptitleSL(['Sources for each type on ' mazeLocations{slI}])
 end
@@ -429,7 +429,8 @@ for slI = 1:2
         text(1,3,['KS ANOVA: df groups, error, total    ' num2str([statsOut{slI}{ccI}.ksANOVA.tbl{2:end,3}])])
         text(1,4,'KS ANOVA: groups :'); text(3,4,num2str(statsOut{slI}{ccI}.ksANOVA.multComps(:,1:2)'),'VerticalAlignment','middle')
         text(1,5,['Pct. days where category is majority contributor: ' num2str([statsOut{slI}{ccI}.pctMoreThanAllOthers])])
-        xlim([0 12]); ylim([0 6])
+        text(1,6,['means ' num2str([statsOut{slI}{ccI}.means])])
+        xlim([0 12]); ylim([0 7])
         title(['Stats for splitter sources for ' traitLabels{cellCheck(ccI)} ' on ' splitterLoc{slI}])
     end
 end
@@ -462,16 +463,19 @@ for slI = 1:2
     title(['stats for splitter prop changes on ' splitterLoc{slI}])
 end
 
-%% What are new cells?
+%% What are newly active cells?
+%newProps = pooledNewCellProps; newPcts = traitFirstPcts; %new cells 
+newProps = pooledNewlyActiveCellProps; newPcts = inactiveTraitPcts;
+%newProps = pooledNewlyActiveAndNewCellProps; newPcts = inactiveAndNewPcts;
 fg = [];
 statsOut = [];
 figure('Position',[477 83 324 803]);
 for slI = 1:2
     fg{slI} = subplot(2,1,slI);
     % fg{slI} = axes;
-    [fg{slI}, statsOut{slI}] = PlotTraitProps(pooledNewCellProps{slI},[3 4 5 8],{[1 2];[2 3];[1 3];[3 4];[2 4];[1 4]},colorAsscAlt,traitLabels,fg{slI}); 
-    ylabel('Proportion of New Cells')
-    title(['Proportion of new cells that go to each type on ' mazeLocations{slI}])
+    [fg{slI}, statsOut{slI}] = PlotTraitProps(newProps{slI},[3 4 5 8],{[1 2];[2 3];[1 3];[3 4];[2 4];[1 4]},colorAsscAlt,traitLabels,fg{slI}); 
+    ylabel('Proportion of Newly Active Cells')
+    title(['Proportion of newly Active cells that go to each type on ' mazeLocations{slI}])
 end
 figure('Position',[680 558 1055 420]); 
 for slI = 1:2
@@ -485,18 +489,76 @@ for slI = 1:2
     text(1,7,'KS ANOVA groups: ') ; text(3,7.5,num2str([statsOut{1}.ksANOVA.multComps(:,1:2)]'))
        
     xlim([0 12]); ylim([0 9])
-    title(['Stats for new cell proportions on ' splitterLoc{slI}])
+    title(['Stats for newly active cell proportions on ' splitterLoc{slI}])
 end
 
-% New cells prop changes
+% New cells prop changes individual
+thingsNow = [3     4     5     8];
+ylimsuse = {[0 0.5],[0 0.5],[0.1 0.9],[0 0.5];[0.1 0.7],[-0.01 0.4],[0.1 0.7],[-0.01 0.4]};
+for slI = 1:2
+    figure('Position',[695 118 819 674]);
+    for ii = 1:4
+        pooledHere = [];
+        daysHere = [];
+        aaa = subplot(2,2,ii);
+        for mouseI = 1:4
+            
+            dayss = cellRealDays{mouseI} - (cellRealDays{mouseI}(1)-1);
+            dayss = dayss(2:end);
+            %dayss = cellRealDays{mouseI};
+            splitPropHere = newPcts{slI}{mouseI}{thingsNow(ii)};
+            pkgForSlope{mouseI} = splitPropHere;
+            %splitPropHere = splitPropHere - mean(splitPropHere);
+            plot(dayss,splitPropHere)
+            pooledHere = [pooledHere; splitPropHere(:)];
+            daysHere = [daysHere; dayss];
+            daysPkg{mouseI} = dayss;
+            hold on
+        end
+        
+        ylabel('Proportion of cells')
+        xlabel('Recording day')
+
+        [fitVal,daysPlot] = FitLineForPlotting(pooledHere,daysHere);
+        plot(daysPlot,fitVal,'k','LineWidth',2)
+        [~, ~, ~, RR(ii), Pval(ii), ~] =...
+                    fitLinRegSL(pooledHere,daysHere);
+                [Fval(ii),dfNum(ii),dfDen(ii),pVal(ii)] =...
+                slopeDiffFromZeroFtest(pooledHere,daysHere);
+        slopePermP(ii) = NaN;
+        [slopePermP(ii)] = slopePermutationTest(pkgForSlope,daysPkg,1000);
+        [rhoPropsRaw(ii),pValPropsRaw(ii)] = corr(daysHere,pooledHere,'Type','Spearman');
+        %title([traitLabels{thingsNow(ii)} ', R=' num2str(sqrt(abs(RR.Ordinary))) ', p=' num2str(Pval)])
+        title([traitLabels{thingsNow(ii)}])
+
+        xlim([min(daysHere)-0.5 max(daysHere)+0.5])
+        ylim(ylimsuse{slI,ii})
+        xticks([2 6 12 18])
+        aaa = MakePlotPrettySL(aaa);
+    end
+    
+    suptitleSL(['Raw splitting pcts of newly active cells across all mice, and regression on ' mazeLocations{slI}])
+    
+    figure('Position',[322 269 1255 420]);
+    for ii = 1:4
+    text(1,ii,[traitLabelsAlt{thingsNow(ii)} ' LinReg R=' num2str(sqrt(abs(RR(ii).Ordinary))) ', p=' num2str(Pval(ii))...
+        ',F diff zero F dfNum dfDen p: ' num2str([Fval(ii) dfNum(ii) dfDen(ii) pVal(ii)])...
+        ', slopePermP= ' num2str(slopePermP(ii)) ', spearman rho, p ' num2str([rhoPropsRaw(ii) pValPropsRaw(ii)])]) 
+    end
+    title(['stats for raw data new cell splitter prop changes on ' mazeLocations{slI}])
+    xlim([0 15])
+    ylim([0 6])
+end
+
+
+%Aggregated
 gh = [];
 statsOut = [];
 for slI = 1:2
     gh{slI} = figure;%('Position',[435 278 988 390]);
-    [gh{slI},statsOut{slI}] = PlotTraitChangeOverDays(pooledNewCellPropChanges{slI},sourceDayDiffsPooled{slI},...
-        [3 4 5 8],colorAsscAlt,traitLabels,gh{slI},true,'regress',[-0.75 0.4],'Change in Pct. New Cells this Type'); %Num in this case is diff in Pcts.
+    [gh{slI},statsOut{slI}] = PlotTraitChangeOverDays(pooledNewlyActiveCellPropChanges{slI},sourceDayDiffsPooled{slI},...
+        [3 4 5 8],colorAsscAlt,traitLabels,gh{slI},true,'regress',[-0.75 0.4],'Change in Pct. New Cells this Type',[]); %Num in this case is diff in Pcts.
     %(pooledTraitChanges,pooledDaysApart,comparisons,colorsUse,labels,figHand,plotDots,lineType,ylims,yLabel)
-
     suptitleSL(['Change in Proportion of New Cells that are a splitting type ' splitterLoc{slI}])
 end
 for slI = 1:2
@@ -517,62 +579,6 @@ end
 %New cells prop Raw
 %statsOut = PlotRawTraitEachMouse(traitProps,realDays,normalization,mouseColors,regColor)
 
-thingsNow = [3     4     5     8];
-
-ylimsuse = {[0 0.5],[0 0.5],[0.1 0.9],[0 0.5];[0.1 0.7],[-0.01 0.4],[0.1 0.7],[-0.01 0.4]};
-for slI = 1:2
-    figure('Position',[695 118 819 674]);
-    for ii = 1:4
-        pooledHere = [];
-        daysHere = [];
-        aaa = subplot(2,2,ii);
-        for mouseI = 1:4
-            
-            dayss = cellRealDays{mouseI} - (cellRealDays{mouseI}(1)-1);
-            dayss = dayss(2:end);
-            %dayss = cellRealDays{mouseI};
-            splitPropHere = traitFirstPcts{slI}{mouseI}{thingsNow(ii)};
-            pkgForSlope{mouseI} = splitPropHere;
-            %splitPropHere = splitPropHere - mean(splitPropHere);
-            plot(dayss,splitPropHere)
-            pooledHere = [pooledHere; splitPropHere(:)];
-            daysHere = [daysHere; dayss];
-            daysPkg{mouseI} = dayss;
-            hold on
-        end
-        
-        ylabel('Proportion of cells')
-        xlabel('Recording day')
-
-        [fitVal,daysPlot] = FitLineForPlotting(pooledHere,daysHere);
-        plot(daysPlot,fitVal,'k','LineWidth',2)
-        [~, ~, ~, RR(ii), Pval(ii), ~] =...
-                    fitLinRegSL(pooledHere,daysHere);
-                [Fval(ii),dfNum(ii),dfDen(ii),pVal(ii)] =...
-                slopeDiffFromZeroFtest(pooledHere,daysHere);
-        [slopePermP(ii)] = slopePermutationTest(pkgForSlope,daysPkg,1000);
-        [rhoPropsRaw(ii),pValPropsRaw(ii)] = corr(daysHere,pooledHere,'Type','Spearman');
-        %title([traitLabels{thingsNow(ii)} ', R=' num2str(sqrt(abs(RR.Ordinary))) ', p=' num2str(Pval)])
-        title([traitLabels{thingsNow(ii)}])
-
-        xlim([min(daysHere)-0.5 max(daysHere)+0.5])
-        ylim(ylimsuse{slI,ii})
-        xticks([2 6 12 18])
-        aaa = MakePlotPrettySL(aaa);
-    end
-    
-    suptitleSL(['Raw splitting pcts of new cells across all mice, and regression on ' mazeLocations{slI}])
-    
-    figure('Position',[322 269 1255 420]);
-    for ii = 1:4
-    text(1,ii,[traitLabelsAlt{thingsNow(ii)} ' LinReg R=' num2str(sqrt(abs(RR(ii).Ordinary))) ', p=' num2str(Pval(ii))...
-        ',F diff zero F dfNum dfDen p: ' num2str([Fval(ii) dfNum(ii) dfDen(ii) pVal(ii)])...
-        ', slopePermP= ' num2str(slopePermP(ii)) ', spearman rho, p ' num2str([rhoPropsRaw(ii) pValPropsRaw(ii)])]) 
-    end
-    title(['stats for raw data new cell splitter prop changes on ' mazeLocations{slI}])
-    xlim([0 15])
-    ylim([0 6])
-end
 
 %% Decoding by days apart
 %Reg vs. Downsampled
@@ -628,14 +634,14 @@ for slI = 1:2
         text(1,8,['downsampled slope Spearman corr reg rho, pVal: ' num2str([statsOut{slI}{ddI}.slopeDiffFromZeroCorr.rho(2) ...
             statsOut{slI}{ddI}.slopeDiffFromZeroCorr.pVal(2)])])
         
-        text(1,9,['reg diff from lag zero ranksum pVals' num2str([statsOut{slI}{ddI}.diffFromDayZero(1).rankSums.pVal]) ...
+        text(1,9,['reg diff from lag zero ranksum pVals ' num2str([statsOut{slI}{ddI}.diffFromDayZero(1).rankSums.pVal]) ...
             ', num diff: ' num2str(sum(statsOut{slI}{ddI}.diffFromDayZero(1).rankSums.pVal<0.05))])
-        text(1,10,['downsampled diff from lag zero ranksum pVals' num2str([statsOut{slI}{ddI}.diffFromDayZero(2).rankSums.pVal]) ...
+        text(1,10,['downsampled diff from lag zero ranksum pVals ' num2str([statsOut{slI}{ddI}.diffFromDayZero(2).rankSums.pVal]) ...
             ', num diff: ' num2str(sum(statsOut{slI}{ddI}.diffFromDayZero(2).rankSums.pVal<0.05))])
         
-         text(1,11,['reg diff from lag one ranksum pVals' num2str([statsOut{slI}{ddI}.diffFromDayOne(1).rankSums.pVal]) ...
+         text(1,11,['reg diff from lag one ranksum pVals ' num2str([statsOut{slI}{ddI}.diffFromDayOne(1).rankSums.pVal]) ...
             ', num diff: ' num2str(sum(statsOut{slI}{ddI}.diffFromDayOne(1).rankSums.pVal<0.05))])
-        text(1,12,['downsampled diff from lag one ranksum pVals' num2str([statsOut{slI}{ddI}.diffFromDayOne(2).rankSums.pVal]) ...
+        text(1,12,['downsampled diff from lag one ranksum pVals ' num2str([statsOut{slI}{ddI}.diffFromDayOne(2).rankSums.pVal]) ...
             ', num diff: ' num2str(sum(statsOut{slI}{ddI}.diffFromDayOne(2).rankSums.pVal<0.05))])
         
         ylim([0 13])
@@ -680,12 +686,19 @@ for slI = 1:2
         text(1,1,['slopeDifference LR vs ST: F,dfNum,dfDen,pVal : '...
             num2str(statsOutDim{slI}{regdsI}.slopeDiffComp.Fval) ' ' num2str(statsOutDim{slI}{regdsI}.slopeDiffComp.dfNum) ' '...
             num2str(statsOutDim{slI}{regdsI}.slopeDiffComp.dfDen) ' ' num2str(statsOutDim{slI}{regdsI}.slopeDiffComp.pVal) ])
+         
         text(1,2,['slopeDiffFromZero LR: F,dfNum,dfDen,pVal : '...
             num2str(statsOutDim{slI}{regdsI}.slopeDiffZero.Fval(1)) ' ' num2str(statsOutDim{slI}{regdsI}.slopeDiffZero.dfNum(1)) ' '...
             num2str(statsOutDim{slI}{regdsI}.slopeDiffZero.dfDen(1)) ' ' num2str(statsOutDim{slI}{regdsI}.slopeDiffZero.pVal(1)) ])
+        text(1,2.5,['slope spearman corr rho, pval: ' ...
+            num2str(statsOutDim{slI}{regdsI}.slopeDiffFromZeroCorr.rho(1)) ' '...
+            num2str(statsOutDim{slI}{regdsI}.slopeDiffFromZeroCorr.pVal(1))]);
         text(1,3,['slopeDiffFromZero ST: F,dfNum,dfDen,pVal : '...
             num2str(statsOutDim{slI}{regdsI}.slopeDiffZero.Fval(2)) ' ' num2str(statsOutDim{slI}{regdsI}.slopeDiffZero.dfNum(2)) ' '...
             num2str(statsOutDim{slI}{regdsI}.slopeDiffZero.dfDen(2)) ' ' num2str(statsOutDim{slI}{regdsI}.slopeDiffZero.pVal(2)) ])
+        text(1,3.5,['slope spearman corr rho, pval: ' ...
+            num2str(statsOutDim{slI}{regdsI}.slopeDiffFromZeroCorr.rho(2)) ' '...
+            num2str(statsOutDim{slI}{regdsI}.slopeDiffFromZeroCorr.pVal(2))]);
         text(1,4,['ranksum test each day LR vs ST pVals : ' num2str(statsOutDim{slI}{regdsI}.ranksums.pVal)])
         text(1,5,['sign test each day LR vs ST pVals : ' num2str(statsOutDim{slI}{regdsI}.signtests.pVal)])
         text(1,6,['sign rank test each day LR vs ST pVals : ' num2str(statsOutDim{slI}{regdsI}.signRankTests.pVal)])

@@ -14,6 +14,7 @@ if ischar(plotIndiv) || isstring(plotIndiv)
     end
 end
     
+statsOut.means = nanmean(dataMat,1);
 %Plot the bar graph
 b = bar(1:size(dataMat,2),nanmean(dataMat,1),'LineWidth',1.2,'BarWidth',1,'FaceColor','flat');
 b.CData = plotColors;

@@ -1,9 +1,11 @@
 function [pooledDailySources, pooledDailySinks, sourceDayDiffsPooled, sinkDayDiffsPooled] =...
-    CheckLogicalSinksAndSources2(targets,sources,sinks,cellPresent)
+    CheckLogicalSinksAndSources2(targets,sources,sinks,cellPresent,poolNewWith)
 %looks at what cells come from and what they change into
 %This is an overhaul and output is reformatted slightly compared to
 %original. Will include all possible days, so both sources and sinks will
 %now be one day too long
+%poolNewWith means if a cell is labeled new, can instead pool that count
+%with one of the other source/sink groups
 
 numMice = length(cellPresent);
 numTargets = length(targets{1});
@@ -47,9 +49,13 @@ for mouseI = 1:numMice
                                 dailySource{mouseI}{tgI}(cellI,targetDay) = scI;
                             end
                         end
-                    else 
-                        %If no previous days, it's a new cell
-                        dailySource{mouseI}{tgI}(cellI,targetDay) = numSources+1;
+                    else
+                        if any(poolNewWith)
+                            dailySource{mouseI}{tgI}(cellI,targetDay) = poolNewWith;
+                            %If no previous days, it's a new cell
+                        else
+                            dailySource{mouseI}{tgI}(cellI,targetDay) = numSources+1;
+                        end
                     end
                 end                     
             end
