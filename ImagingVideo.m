@@ -7,11 +7,29 @@ framesWorking = 'C:\Users\Sam\Desktop\ImagingDemo\Frames';
 fps = 20;
 frameStart = 301;
 playbackSpeed = 1;
-timeRaw = 15; %seconds of imaging
-timeFiltered = 15;
-timeTransientOverlay = 15; %seconds of imaging
-timeTransientOverlayFiltered = 15; %seconds of imaging
+timeRaw = 25; %seconds of imaging
+timeFiltered = 25;
+timeTransientOverlay = 25; %seconds of imaging
+timeTransientOverlayFiltered = 25; %seconds of imaging
 transientFile = 'D:\Nix\Nix180503\FinalOutput.mat';
+activityPlayback = false;
+
+hdFfileGet = 'I:\Calisto\Calisto_161102\motCorrTemp_fixed-Objects\Obj_1 - motCorrTemp_fixed.h5';
+hdFfileGetFiltered = 'I:\Calisto\Calisto_161102\BPDFF.h5';
+transientFile = 'I:\Calisto\Calisto_161102\FinalOutput.mat';
+
+hdFfileGet = 'D:\DoublePlus\Marble07\Marble07_180625\motCorrMovie-Objects\Obj_2 - motCorrMovie.h5';
+hdFfileGetFiltered = 'D:\DoublePlus\Marble07\Marble07_180625\BPDFF.h5';
+transientFile = 'D:\DoublePlus\Marble07\Marble07_180625\FinalOutput.mat';
+workingDir = 'C:\Users\Sam\Desktop\ImagingDemo\two';
+framesWorking = 'C:\Users\Sam\Desktop\ImagingDemo\two\Frames';
+fps = 25;
+frameStart = 301;
+playbackSpeed = 1;
+timeRaw = 25; %seconds of imaging
+timeFiltered = 25;
+timeTransientOverlay = 25; %seconds of imaging
+timeTransientOverlayFiltered = 25; %seconds of imaging
 activityPlayback = false;
 
 
@@ -44,12 +62,13 @@ if timeTransientOverlay > 0
     framesOverlay(timeRaw*fps+1:length(framesPlot)) = 1;
 end
 
-videoname = 'C:\Users\Sam\Desktop\ImagingDemo\imaging.avi';
+videoname = fullfile(workingDir,'imaging5.avi');
 v = VideoWriter(videoname);
 v.FrameRate = fps;
+v.Quality = 100;
 open(v);
 
-gg = figure('Position', [312 337 560 420]); hh = axis;
+gg = figure('Position', [312 337 560 420]); hh = axis; axis equal; axis off
 
 if activityPlayback == true
     ii = figure('Position',[1031 379 560 420]); hh = axis;
@@ -73,7 +92,7 @@ if activityPlayback == true
     activityPlot = logical([framesOverlay(1)*ones(framesLookBack,1); framesOverlay; framesOverlay(end)*ones(framesLookAhead,1)]);
 end
 
-
+disp('Writing video...')
 for frameI = 1:getFrames
     fI = framesPlot(frameI);
     if framesOverlay(frameI)==0
@@ -133,4 +152,34 @@ for frameI = 1:getFrames
 end
     
 close(v);
+close(gg);
+disp('Done making video')
+
+
+%% Same but for demo of mouse running in maze
+vidFileUse = 'G:\SLIDE\Processed Data\Nix\Nix_180428\Nix042818001.AVI';
+framesUse = 901:2541;
+workingDir = 'C:\Users\Sam\Desktop\ImagingDemo\two';
+framesWorking = 'C:\Users\Sam\Desktop\ImagingDemo\two\Frames';
+
+video = VideoReader(vidFileUse);
+
+videoname = fullfile(workingDir,'DNMPbehavior.avi');
+v = VideoWriter(videoname);
+v.FrameRate = video.FrameRate;
+v.Quality = 100;
+open(v);
+
+gg = figure('Position', [312 337 560 420]); hh = axis; axis equal; axis off
+
+frameNum = 1;
+for frameI = 1:length(framesUse)
+    video.CurrentTime = (framesUse(frameI)-1)/video.FrameRate;
+    frame = readFrame(video);
+    writeVideo(v,frame);
+end
+
+close(v);
+%imagesc(gg.Children,hFile(:,:,fI));
+%hold(gg.Children,'off')
 
