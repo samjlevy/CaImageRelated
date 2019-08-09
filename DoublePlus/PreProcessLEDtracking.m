@@ -418,7 +418,7 @@ end
             'howRedThresh','howGreenThresh','anyRpix','anyGpix',...
             'nRed','nGreen','redPix','greenPix','brightnessCalibrated',...
             'onMazeMask','onMazeX','onMazeY',...
-            'onMaze','behTable','velThresh','DVTtime','nFrames')
+            'onMaze','behTable','velThresh','DVTtime','nFrames','avi_filepath')
         disp('Saved!')
     end
 
@@ -483,7 +483,7 @@ uFrame = readFrame(obj);
 %Do some friendly UI stuff
 
 imagesc(manCorrFig.Children,uFrame);
-title(manCorrFig,['Frame# ' num2str(corrFrame)])
+title(manCorrFig.Children,['Frame# ' num2str(corrFrame)])
 
 boundaryX = onMazeX; boundaryX = [boundaryX; boundaryX(1)];
 boundaryY = onMazeY; boundaryY = [boundaryY; boundaryY(1)];
