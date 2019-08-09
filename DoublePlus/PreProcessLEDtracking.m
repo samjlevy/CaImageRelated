@@ -33,10 +33,15 @@ lapParsed = []; scalingX = []; v0anchor = [];
 numOffmaze = []; scalingY = []; xAlign = []; yAlign = [];
 
 startFresh = 0;
-posFiles = ls('%PosLED_temp.mat');
+posFiles = ls('*PosLED_temp.mat');
 %posFile =fullfile(cd,'*PosLED_temp.mat');
-if length(posFiles)==1
+if size(posFiles,1)==1
     posFile = posFiles;
+elseif length(posFiles)==0
+    disp('Did not find a posLED file')
+elseif size(posFiles,1)>1
+    disp('found more than one pos file?')
+    dbstop
 end
 if exist(posFile,'file')==2
     loadedFilepath = load(posFile,'avi_filepath');
