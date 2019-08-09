@@ -33,17 +33,25 @@ lapParsed = []; scalingX = []; v0anchor = [];
 numOffmaze = []; scalingY = []; xAlign = []; yAlign = [];
 
 startFresh = 0;
-posFile =fullfile(cd,'PosLED_temp.mat');
+posFiles = ls('%PosLED_temp.mat');
+%posFile =fullfile(cd,'*PosLED_temp.mat');
+if length(posFiles)==1
+    posFile = posFiles;
+end
 if exist(posFile,'file')==2
-    usePos = questdlg('Found a PosLED_temp.mat, want to use it?','Use found pos',...
+    loadedFilepath = load(posFile,'avi_filepath');
+    usePos = questdlg(['Found a PosLED_temp.mat, - ' posFile '-, associated AVI is - ' loadedFilepath.avi_filepath...
+        '-; want to use it?'],'Use found pos',...
                     'Yes','No, start over','Yes');
     if strcmp(usePos,'Yes')
-        load('PosLED_temp.mat') %#ok<LOAD>
+        load(posFile) %#ok<LOAD>
     else 
         startFresh = 1;
     end
 else
-    disp('Did not find existing PosLED_temp.mat, starting fresh')
+    disp('Did not find existing xxxxxx_PosLED_temp.mat, starting fresh')
+    filePrefix = input('Enter a name (prefix) for this file (animal, date): ','s');
+    posFile = [filePrefix '_PosLED_temp.mat'];
     startFresh = 1;
 end
 
@@ -101,6 +109,8 @@ if startFresh == 1
 end
 
 [v0] = AdjustWithBackgroundImage(avi_filepath, obj, v0);
+
+SaveTemp;
 
 v0r = double(v0(:,:,1) - v0(:,:,3));
 v0g = double(v0(:,:,2));  
@@ -397,13 +407,13 @@ while stillEditing == 1
 end
 
     function SaveTemp
-        save PosLED_temp.mat xAVI yAVI definitelyGood v0 dvtPos... 
-            subMultRedX subMultRedY subMultGreenX subMultGreenY...
-            Rbrightness Gbrightness calibrateFrames howRed howGreen...
-            howRedThresh howGreenThresh anyRpix anyGpix...
-            nRed nGreen redPix greenPix brightnessCalibrated...
-            onMazeMask onMazeX onMazeY...
-            onMaze behTable velThresh DVTtime nFrames
+        save(posFile, 'xAVI', 'yAVI', 'definitelyGood', 'v0', 'dvtPos',... 
+            'subMultRedX','subMultRedY','subMultGreenX','subMultGreenY',...
+            'Rbrightness','Gbrightness','calibrateFrames','howRed','howGreen',...
+            'howRedThresh','howGreenThresh','anyRpix','anyGpix',...
+            'nRed','nGreen','redPix','greenPix','brightnessCalibrated',...
+            'onMazeMask','onMazeX','onMazeY',...
+            'onMaze','behTable','velThresh','DVTtime','nFrames')
         disp('Saved!')
     end
 
