@@ -37,29 +37,31 @@ posFiles = ls('*PosLED_temp.mat');
 %posFile =fullfile(cd,'*PosLED_temp.mat');
 if size(posFiles,1)==1
     posFile = posFiles;
-elseif length(posFiles)==0
-    disp('Did not find a posLED file')
-elseif size(posFiles,1)>1
-    disp('found more than one pos file?')
-    dbstop
-end
-if exist(posFile,'file')==2
-    loadedFilepath = load(posFile,'avi_filepath');
-    usePos = questdlg(['Found a PosLED_temp.mat, - ' posFile '-, associated AVI is - ' loadedFilepath.avi_filepath...
-        '-; want to use it?'],'Use found pos',...
-                    'Yes','No, start over','Yes');
-    if strcmp(usePos,'Yes')
-        load(posFile) %#ok<LOAD>
-    else 
+    if exist(posFile,'file')==2
+        loadedFilepath = load(posFile,'avi_filepath');
+        usePos = questdlg(['Found a PosLED_temp.mat, - ' posFile '-, associated AVI is - ' loadedFilepath.avi_filepath...
+            '-; want to use it?'],'Use found pos',...
+                        'Yes','No, start over','Yes');
+        if strcmp(usePos,'Yes')
+            load(posFile) %#ok<LOAD>
+        else 
+            startFresh = 1;
+        end
+    else
+        disp('Did not find existing xxxxxx_PosLED_temp.mat, starting fresh')
+        filePrefix = input('Enter a name (prefix) for this file (animal, date): ','s');
+        posFile = [filePrefix '_PosLED_temp.mat'];
         startFresh = 1;
     end
-else
+elseif length(posFiles)==0
     disp('Did not find existing xxxxxx_PosLED_temp.mat, starting fresh')
     filePrefix = input('Enter a name (prefix) for this file (animal, date): ','s');
     posFile = [filePrefix '_PosLED_temp.mat'];
     startFresh = 1;
+elseif size(posFiles,1)>1
+    disp('found more than one pos file?')
+    dbstop
 end
-
 
 if isempty(dvtPos)
 doneDVTs = 0; dd = 1;
@@ -108,11 +110,13 @@ if startFresh == 1
     greenPix = cell(nFrames,1);
     onMazeX = []; onMazeY = []; onMazeMask = [];
     Rbrightness = []; Gbrightness = [];
-    howRed = []; howGreen = [];
+    howRed = []; howGreen = []; redPix = []; greenPix = []; brightnessCalibrated = [];
+    howRedThresh = 175; howGreenThresh = 210;
     anyRpix = []; anyGpix = [];
     onMaze = ones(size(xAVI,1),size(xAVI,2)); behTable = [];
+    calibrateFrames = [];
 end
-
+            
 [v0] = AdjustWithBackgroundImage(avi_filepath, obj, v0);
 
 SaveTemp;
@@ -601,7 +605,7 @@ function [howRedThresh,howGreenThresh,calibrateFrames] = CelibrateLEDbrightness(
 nTestFrames = 8;
 framesUseForCalibrate = [1 nFrames];
 frameIn = input(['Current frames for calibration are ' num2str(framesUseForCalibrate) ', enter y to use or enter 2 numbers to set new: '],'s')
-if strcmpi(frameIn,'y')
+if strcmpi(frameIn,'y') || isempty(frameIn)
     fStart = framesUseForCalibrate(1);
     fStop = framesUseForCalibrate(end);
 elseif length(str2num(frameIn))==2
