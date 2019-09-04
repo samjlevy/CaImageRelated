@@ -94,6 +94,13 @@ while doneDVTs == 0
 end
 end
 
+%Check this file might be ok
+if abs(obj.Duration*obj.FrameRate - length(dvtPos{1}.redX)) > 10
+    disp('More than 10 frames difference between video length and steps in DVT')
+    disp('Please check that these files go together')
+    dbstop
+end
+
 if startFresh == 1
     xAVI = zeros(nFrames,1);
     yAVI = zeros(nFrames,1);

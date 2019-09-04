@@ -7,6 +7,12 @@ function ParsedFramesToBrainFrames( xls_file)
 if ~exist('xls_file','var')
     try
         xls_file = ls('*.xlsx');
+        if size(xls_file,1)>1
+            openFiles = cell2mat(cellfun(@(x) any(x),strfind(string(xls_file),'~$'),'UniformOutput',false));
+            xls_file = string(xls_file);
+            xls_file(openFiles) = [];
+            xlsFile
+        end
         [frames, txt] = xlsread(xls_file, 1);
     catch
         disp('auto finding xls file did not work; rerun with file name as input')

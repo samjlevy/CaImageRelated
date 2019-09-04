@@ -49,6 +49,9 @@ for mouseI = 1:numMice
     
     clear armtrialbytrial realdays allfiles sortedSessionInds
     
+    load(fullfile(mainFolder,mice{mouseI},'trialbytrialDELAY.mat'))
+    cellTBTdelay{mouseI} = trialbytrial;
+    
     disp(['Mouse ' num2str(mouseI) ' completed'])
 end
 
@@ -144,9 +147,13 @@ end
 %}
 
 %Place fields
+stemPFs = 'PFsLinPooled.mat';
+armPFs = 'PFsLinPooledArm.mat';
 for mouseI = 1:numMice
-    saveName = fullfile(mainFolder,mice{mouseI},'PFsLinPooled.mat');
-    switch exist(fullfile(mainFolder,mice{mouseI},'PFsLinPooled.mat'),'file')
+    saveName = fullfile(mainFolder,mice{mouseI},stemPFs);
+    [~, ~, ~, ~, ~, ~, ~] =...
+            PFsLinTBTdnmp(cellTBT{mouseI}, stemBinEdges, minspeed, saveName, false,condPairs);
+    switch exist(saveName,'file')
         case 0
             disp(['no pooled placefields found for ' mice{mouseI} ', making now'])
             [~, ~, ~, ~, ~, ~, ~] =...
@@ -155,12 +162,17 @@ for mouseI = 1:numMice
             disp(['found pooled placefields for ' mice{mouseI} ', all good'])
     end
     
-    load(fullfile(mainFolder,mice{mouseI},'PFsLinPooled.mat'),'TMap_unsmoothed','TMap_zRates')
+    load(fullfile(mainFolder,mice{mouseI},'PFsLinPooled.mat'),'TMap_unsmoothed','TMap_zRates','TCounts','RunOccMap')
     cellPooledTMap_unsmoothed{1}{mouseI} = TMap_unsmoothed;
     %cellPooledTMap_firesAtAll{1}{mouseI} = TMap_firesAtAll;
     cellPooledTMap_zRates{1}{mouseI} = TMap_unsmoothed; 
+    cellTCounts{1}{mouseI} = TCounts;
+    cellRunOccMap{1}{mouseI} = RunOccMap;
     
-    saveName = fullfile(mainFolder,mice{mouseI},'PFsLinPooledArm.mat');
+    
+    saveName = fullfile(mainFolder,mice{mouseI},armPFs);
+     [~, ~, ~, ~, ~, ~, ~] =...
+            PFsLinTBTdnmp(cellTBTarm{mouseI}, armBinEdges, minspeed, saveName, false,condPairs);
     switch exist(saveName,'file')
         case 0
             disp(['no pooled placefields for arms found for ' mice{mouseI} ', making now'])
@@ -174,6 +186,8 @@ for mouseI = 1:numMice
     cellPooledTMap_unsmoothedArm{1}{mouseI} = TMap_unsmoothed;
     %cellPooledTMap_firesAtAllArm{1}{mouseI} = TMap_firesAtAll;
     cellPooledTMap_zRatesArm{1}{mouseI} = TMap_unsmoothed; 
+    cellTCounts{2}{mouseI} = TCounts;
+    cellRunOccMap{2}{mouseI} = RunOccMap;
 end
 
 

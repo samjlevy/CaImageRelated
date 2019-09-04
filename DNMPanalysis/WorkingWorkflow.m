@@ -3,19 +3,23 @@
 %Mostly-validated sequence
 Pix2Cm = 0.0874;
 RoomStr = '201a - 2015';
+anchor_path = 'G:\SLIDE\Processed Data\Bellatrix\Bellatrix_160831';
 
+%DNMPtimestampsValidator
 JustFToffset 
     %Produces FToffsetSam.mat, Sam's verison which adjusts PSAbool 
     %around usable tracking data
 AlignImagingToTracking2_SL
     %Uses FToffset to produce PSAbool and X and Y all adjusted to the same
     %time scale.
+    %Inputs are: FToffset, Pos.mat; Output is Pos_brain
 AlignPositions2_SL
     %Load results from AlignImagingToTracking2_SL
     %Uses user-defined maze corners to align all sessions to an 'ideal'
     %base, which is horizontally straightened, start-choice positive,
     %scaled to actual cm. Can handle multiple sessions
     %Right now this is hard-coded for DNMP, cheats a little bit
+    %Needs pos_anchor_ideal (   ) and Pos_brain, outputs Pos_align.mat
 ParsedFramesToBrainFrames
     %Translates a sheet (columnwise) of 
     %timestamps from an AVI into brain 
@@ -31,10 +35,12 @@ AdjustBehaviorTimes
     %Brings points across laps as close together as possible so always
     %comparing the same sections of the maze. Right now only works for
     %ginput to pick anchor point, other versions can be added
+    %Use on Pos_align.mat and a brainTime excel file
 FindBadLapsWrapper
     %calls FindBadLaps
     %used to find bad points in individual bad laps, writes a new
     %spreadsheet that has the fixed timestamps
+    %Use on Pos_align.mat and a brainTime excel file
 DNMPexcelCombiner(cd)
     %Combines all found Adjusted Sheets into a single one
 ExcelFinalizer(cd)

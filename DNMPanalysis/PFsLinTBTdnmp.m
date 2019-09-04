@@ -110,6 +110,8 @@ for condPairI = 1:numConds
         spikeCounts = cellfun(@(x) histcounts(x,linearEdges),spikePos,'UniformOutput',false); %counts of positions in bins
         TMap_unsmoothed(1:numCells,sessI,condPairI) = cellfun(@(x) x./RunOccMap{condPairI,sessI},spikeCounts,'UniformOutput',false); %normalize by occupancy
         
+        TCounts(1:numCells,sessI,condPairI) = spikeCounts;
+        
         %Version that just asks 'did the cell fire at all in this bin
         allBinHits = [];
         for chK = 1:numCondsHere

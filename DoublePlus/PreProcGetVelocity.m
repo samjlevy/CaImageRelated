@@ -2,7 +2,7 @@ function veloc = PreProcGetVelocity(xAVI,yAVI,windowSearch,onMaze)
 if isempty(onMaze)
     onMaze = ones(size(xAVI,1),size(xAVI,2));
 end
-if isempty(windowSearch)
+if isempty(windowSearch) %Only look at these frames
     windowSearch = ones(size(xAVI,1),size(xAVI,2));
 end
 onMazeWork = onMaze(1:end-1) | onMaze(2:end);
