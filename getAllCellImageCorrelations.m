@@ -13,6 +13,6 @@ imA2 = cellfun(@(x) x(:),imagesA,'UniformOutput',false);
 imA3 = cell2mat(imA2);
 imB2 = cellfun(@(x) x(:),imagesB,'UniformOutput',false);
 imB3 = cell2mat(imB2);
-imageCorrs = corr(imA3(:,1:506),imB3);
+imageCorrs = corr(imA3,imB3);
 
 end

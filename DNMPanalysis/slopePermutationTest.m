@@ -1,4 +1,4 @@
-function [pVal] = slopePermutationTest(proportions,cellRealDays,nPerms)
+function [pValSlope,pValRR] = slopePermutationTest(proportions,cellRealDays,nPerms)
 
 if iscell(proportions)
 numMice = length(cellRealDays);
@@ -15,12 +15,12 @@ numMice = length(cellRealDays);
     end
 elseif isnumeric(proportions)
     %original
-    [slope, ~, ~, ~, ~, ~] = fitLinRegSL(proportions(:), cellRealDays(:));
+    [slope, ~, ~, rr, ~, ~] = fitLinRegSL(proportions(:), cellRealDays(:));
     %Shuffle
     for permI = 1:nPerms
         shuffledProps = proportions(randperm(length(proportions)));
         
-        [slopeShuff(permI), ~, ~, ~, ~, ~] = fitLinRegSL(shuffledProps(:), cellRealDays(:));
+        [slopeShuff(permI), ~, ~, rrShuff(permI), ~, ~] = fitLinRegSL(shuffledProps(:), cellRealDays(:));
     end
 end
 
@@ -30,6 +30,8 @@ switch slope > mean(slopeShuff)
     case 0
         pVal = 1 - sum(slope<slopeShuff)/nPerms;
 end
+
+pValRR = 1- sum(rr>rrShuf)/nPerms;
 
 end
 

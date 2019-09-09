@@ -10,26 +10,40 @@ catch
     load(fullfile(frDir,'fullRegROIavg.mat'))
 end
 
-%regImageBufferUse = 'RegisteredImageSLbuffered2.mat';
-regImageBufferUse = 'RegisteredImageSL.mat';
-
 numRegSess = length(fullReg.RegSessions);
 %Pre allocate some stuff
+baseD = fullReg.RegSessions{1};
+baseDirSplit = strsplit(baseD,'\');
+baseDirLetter = baseDirSplit{1};
 for regI = 1:numRegSess
-    
-    baseDir = fullReg.RegSessions{regI};
-    if exist(fullfile(baseDir,regImageBufferUse),'file')==0
+    regDir = fullfile(baseDirLetter,fullReg.RegSessions{regI}(3:end));
+    if exist(regDir,'dir')==0
         disp('Seems like we can not load this: please direct us to the proper drive (any directory)')
-        baseDir = uigetdir('File not found, direct to correct folder');
+        disp(regDir)
+        regDir = uigetdir('File not found, direct to correct folder');
     end
     
-    baseDirSplit = strsplit(baseDir,'\');
+    baseDirSplit = strsplit(regDir,'\');
     baseDirLetter = baseDirSplit{1};
-    newBasePath = fullfile(baseDirLetter,fullReg.RegSessions{regI}(3:end));
-    regImage = load(fullfile(newBasePath,regImageBufferUse));
-    OriginalImage = load(fullfile(newBasePath,'FinalOutput.mat'),'NeuronImage');
+    regDir = fullfile(baseDirLetter,fullReg.RegSessions{regI}(3:end));
+    if exist(fullfile(regDir,'RegisteredImageSLbuffered2.mat'),'file')
+        regImageBufferUse = 'RegisteredImageSLbuffered2.mat';
+    else
+        if exist(fullfile(regDir,'RegisteredImageSLbuffered.mat'),'file')
+            regImageBufferUse = 'RegisteredImageSLbuffered.mat';
+        else 
+            if exist(fullfile(regDir,'RegisteredImageSL.mat'),'file')
+                regImageBufferUse = 'RegisteredImageSL.mat';
+            else
+                disp('No registeration data found')
+                dbstop
+            end
+        end
+    end
+    regImage = load(fullfile(regDir,regImageBufferUse));
+    OriginalImage = load(fullfile(regDir,'FinalOutput.mat'),'NeuronImage');
     regImage.OriginalImage = OriginalImage.NeuronImage;
-    OriginalAvg = load(fullfile(newBasePath,'FinalOutput.mat'),'NeuronAvg');
+    OriginalAvg = load(fullfile(regDir,'FinalOutput.mat'),'NeuronAvg');
     regImage.OriginalAvg = OriginalAvg.NeuronAvg;
     
     regImage.OriginalCenters = getAllCellCenters(regImage.OriginalImage);
@@ -43,7 +57,7 @@ for regI = 1:numRegSess
     lastCellUseBase = find(fullReg.sessionInds(:,regI),1,'last'); 
     cellsCheckBase = 1:lastCellUseBase;
     
-    numBaseCells = lastCellUseBase;
+    numBaseCells = lastCellUseBase; %lastCellUseBase
     numRegCells = length(regImage.reg_shift_centers);
     
     %start assigning cells
@@ -95,31 +109,57 @@ for regI = 1:numRegSess
     
     matchedBaseCells = allClosestCells(inRangeIndicesCells);
     numMatchedHere = length(matchedBaseCells);
-    
-    realRegColumn = fullReg.sessionInds(cellsCheckBase,regI+1);
     recreatedRegColumn = [];
     recreatedRegColumn(matchedBaseCells,1) = inRangeIndicesCells;
     
+    realRegColumn = fullReg.sessionInds(cellsCheckBase,regI+1);
+    
+    recreatedRegColumn = [recreatedRegColumn; zeros(lastCellUseBase - max(matchedBaseCells),1)];
     if length(realRegColumn) ~= length(recreatedRegColumn)
         disp('Some kind of size mismatch')
-        dbstop
+        recreatedRegColumn = [recreatedRegColumn; zeros(lastCellUseBase - max(matchedBaseCells),1)];
+        disp(['Added ' num2str(lastCellUseBase - max(matchedBaseCells)) ' zeros to regreated reg column, '...
+            'real registration had ' sum(realRegColum(max(matchedBaseCells)+1:lastCellUseBase)==0) ' zeros there, '...
+            'registration session ' num2str(regI)])
+        %dbstop
     end
     
     %Assess real and recreated mismatches
-    unexpectedReg = realRegColumn ~= recreatedRegColumn;
-    unexpectedRegCells = find(unexpectedReg);
+    unexpectedReg = realRegColumn ~= recreatedRegColumn; 
+    unexpectedRegCells = find(unexpectedReg); %Final registration indices
     
     %Manually rejected: when re-registered, found a match, but registered
     %says nothing
-    manualRejected = realRegColumn(unexpectedReg)~=0; %Indexes into uRegInds
+    manualRejected = realRegColumn(unexpectedReg)==0; %Indexes into uRegInds
     manRejInds = unexpectedRegCells(manualRejected);
-    manRejCells = recreatedRegColumn(manRejInds);
+    manRejCells = recreatedRegColumn(manRejInds); %Reg session indices
+    %if any(manRejCells)
+    %    disp('stop')
+    %end
     
-    %Swapped in: when re-registered, nothing, but there is a cellregistered there
-    swappedIn = realRegColumn(unexpectedReg)~=0; %Indexes into uRegInds
+    %Swapped in: when re-registered, nothing, but there is a cell registered there
+    wasNothing = recreatedRegColumn(unexpectedReg)==0;
+    wasSomething = recreatedRegColumn(unexpectedReg)~=0;
+    
+    diffCellThere = realRegColumn(unexpectedReg)~=0; %Indexes into uRegInds
+    %swappedIn = realRegColumn(unexpectedReg)~=0; %Indexes into uRegInds
+    addedIn = diffCellThere & wasNothing;
+    swappedIn = diffCellThere & wasSomething;
+    
+    addedInInds = unexpectedRegCells(addedIn);
+    addedInCells = realRegColumn(addedInInds); %Reg session indices
+    
     swappedInInds = unexpectedRegCells(swappedIn);
     swappedInCells = realRegColumn(swappedInInds); %Index in the reg session
-    
+    swappedOriginalCells = recreatedRegColumn(swappedInInds); %Index in the reg session    
+    %{
+    if length(swappedInCells)>0 && sum(swappedInCells==0)>0
+        disp('stop')
+    end
+    if length(addedInCells)>0 && sum(addedInCells==0)>0
+        disp('stop')
+    end
+    %}
     regCellsHere = sum(fullReg.sessionInds(:,[1 regI+1])>0,2)==2;
     regCellsBaseInds = fullReg.sessionInds(regCellsHere,1);
     regCellsFromReg = fullReg.sessionInds(regCellsHere,regI+1);
@@ -144,6 +184,7 @@ for regI = 1:numRegSess
     [imageCorrs] = getAllCellImageCorrelations(fullRegROIavg(cellsCheckBase),regImage.regAvg_shifted);
     
     %Cell major axis orientation
+    %{
     postShiftOrientations = cell2mat(cellfun(@(x) x.Orientation,cellfun(@(x) regionprops(x,'orientation'),...
         regImage.regImage_shifted...
         ,'UniformOutput',false),'UniformOutput',false));
@@ -159,6 +200,7 @@ for regI = 1:numRegSess
     
     preDiffs = abs(registeredCellOrientations(regCellsBaseInds) - preShiftOrientations(regFromRegInds));
     preDiffs(preDiffs > 90) = 180 - preDiffs(preDiffs > 90);
+    %}
     
     %Demo fig
     %{
@@ -177,7 +219,9 @@ for regI = 1:numRegSess
     
     outputs.manualCells.all{regI} = unexpectedRegCells; %all cells that are not purely translation, distance threshold, correlation
     outputs.manualCells.rejected{regI} = manRejCells; %Cells rejected manually
-    outputs.manualCells.added{regI} = swappedInCells; %Cells added manually
+    outputs.manualCells.added{regI} = addedInCells; %Cells added manually
+    outputs.manualCells.swapped{regI} = swappedInCells; %Rejected a cell and added a diff one
+    outputs.manualCells.swappedFrom{regI} = swappedOriginalCells;
     
     outputs.cellCenterDistances.preRegistration{regI} = preRegDistances;
     outputs.cellCenterDistances.postRegistration{regI} = postRegDistances;
