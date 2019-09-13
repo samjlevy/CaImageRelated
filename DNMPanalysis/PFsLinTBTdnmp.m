@@ -51,10 +51,21 @@ TCounts = cell(numCells, numSess, numConds);
 TMap_gauss = cell(numCells, numSess, numConds);
 TMap_zRates = cell(numCells, numSess, numConds);
 
-binEdges = sort(binEdges,'ascend');
-numBins = length(binEdges)-1;
-TMap_blank = zeros(1,numBins);
-cmperbin = mean(abs(diff(binEdges)));
+if strcmpi(minspeed,'numFrames')
+    %doing bin edges by number of frames, use those as time bins
+    binsBy = 'numFrames';
+    binEdges = sort(binEdges,'ascend');
+    numBins = length(binEdges)-1;
+    TMap_blank = zeros(1,numBins);
+    framesperbin = mean(abs(diff(binEdges)));
+else
+    binsBy = 'spatialBins';
+    binEdges = sort(binEdges,'ascend');
+    binEdges(end) = [];
+    numBins = length(binEdges)-1;
+    TMap_blank = zeros(1,numBins);
+    cmperbin = mean(abs(diff(binEdges)));
+end
 
 %if dispProgress
 %p = ProgressBar(numCells*numConds*numSess);
@@ -93,22 +104,49 @@ for condPairI = 1:numConds
         linearEdges = binEdges;
         linearEdges = sort(linearEdges,'ascend');
         
-        %Make an occupancy map
-        [OccMap{condPairI,sessI},RunOccMap{condPairI,sessI},xBin{condPairI,sessI}]...
-            = MakeOccMapLin(posUse,good,isrunning,linearEdges);
-            
         %Get spiking
         lapsSpiking = [];
+        trialLengths = [];
         for chK  = 1:numCondsHere
             lapsSpikingHere = logical([trialbytrial(condsHere(chK)).trialPSAbool{lapsUse{chK},1}]);
             lapsSpiking = [lapsSpiking lapsSpikingHere];
+            trialLengths = [trialLengths; cell2mat(cellfun(@length,trialbytrial(chK).trialsX(lapsUse{1}),'UniformOutput',false))]; 
         end
-        lapsSpiking = logical(lapsSpiking);   
+        lapsSpiking = logical(lapsSpiking);  
         
-        cellSpiking = mat2cell(lapsSpiking,ones(numCells,1),size(lapsSpiking,2)); %Indiv cellArr slot per cell
-        spikePos = cellfun(@(x) posUse(x),cellSpiking,'UniformOutput',false); %only positions by logical cell activity
-        spikeCounts = cellfun(@(x) histcounts(x,linearEdges),spikePos,'UniformOutput',false); %counts of positions in bins
-        TMap_unsmoothed(1:numCells,sessI,condPairI) = cellfun(@(x) x./RunOccMap{condPairI,sessI},spikeCounts,'UniformOutput',false); %normalize by occupancy
+        %Make an occupancy map
+        %Get spiking by that occupancy map
+        switch binsBy 
+            case 'spatialBins'
+                [OccMap{condPairI,sessI},RunOccMap{condPairI,sessI},xBin{condPairI,sessI}]...
+                    = MakeOccMapLin(posUse,good,isrunning,linearEdges);
+            
+                cellSpiking = mat2cell(lapsSpiking,ones(numCells,1),size(lapsSpiking,2)); %Indiv cellArr slot per cell
+                spikePos = cellfun(@(x) posUse(x),cellSpiking,'UniformOutput',false); %only positions by logical cell activity
+                spikeCounts = cellfun(@(x) histcounts(x,linearEdges),spikePos,'UniformOutput',false); %counts of positions in bins
+                TMap_unsmoothed(1:numCells,sessI,condPairI) = cellfun(@(x) x./RunOccMap{condPairI,sessI},spikeCounts,'UniformOutput',false); %normalize by occupancy
+            case 'numFrames'
+
+                
+                onesBlank = ones(1,numBins);
+                OccMap{condPairI,sessI} = framesperbin*onesBlank;
+                RunOccMap{condPairI,sessI} = framesperbin*onesBlank;
+                xBinTemp = repmat(1:numBins,framesperbin,1);
+                xBin{condPairI,sessI} = xBinTemp(:);
+                
+                %Laps spiking doesn't work, lines them all up in a row
+                %But could make a fake spike pos that assigns each to a
+                %bin...
+                spikeCountsMat = cell2mat(arrayfun(@(x) sum(lapsSpiking(:,x+1:x+framesperbin),2),linearEdges,'UniformOutput',false));
+                TMap_frames = spikeCountsMat/framesperbin;
+                TMap_frames_cell = mat2cell(TMap_frames,ones(numCells,1),length(linearEdges));
+                
+                
+        end
+            
+         
+        
+        
         
         TCounts(1:numCells,sessI,condPairI) = spikeCounts;
         

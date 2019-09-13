@@ -51,6 +51,12 @@ ylim([0.4 1.025])
 xlim([0.75 20.25])
 title('Performance of Individual Mice')
 
+allRealDays = vertcat(cellRealDays{:});
+allAccuracyUsed = vertcat(accuracy{:});
+[accRho, accpVal] = corr(allRealDays,allAccuracyUsed,'type','Spearman');
+
+allAccuracyAllRealDays = vertcat(allDaysAccuracy{:});
+[accRho, accpVal] = corr(allAccuracyAllRealDays(:,1),allAccuracyAllRealDays(:,2),'type','Spearman');
 %% Ziv figure
 slidingWindowSize = 5; %cm
 slidingWindowNbins = 80;
@@ -146,8 +152,6 @@ for slI = 1:2
         NonSplitterCell = find(traitGroups{slI}{mouseI}{8} .* splitLocRestrict);
         
         [cellPlot,presentDays] = ind2sub(size(cellSSI{mouseI}),LRonlyCell(1));
-        
-        
     end
 end
 
@@ -255,7 +259,7 @@ for slI = 1:2
                 fitLinRegSL(pooledHere,daysHere);
             [Fval(ii),dfNum(ii),dfDen(ii),pVal(ii)] =...
             slopeDiffFromZeroFtest(pooledHere,daysHere);
-    [propsRho(ii),propsCorrPval(ii)] = corr(pooledHere,daysHere,'Type','Spearman');
+    [propsRho(ii),propsCorrPval(ii)] = corr(daysHere,pooledHere,'type','Spearman');
     
     %title([traitLabels{thingsNow(ii)} ', R=' num2str(sqrt(abs(RR.Ordinary))) ', p=' num2str(Pval)])
     title([traitLabels{thingsNow(ii)}])
@@ -271,7 +275,7 @@ for slI = 1:2
     
     figure('Position',[735 209 910 420]);
     for ii = 1:4
-    text(1,ii,['LinReg R=' num2str(sqrt(abs(RR(ii).Ordinary))) ', p=' num2str(Pval(ii))...
+    text(1,ii,[traitLabels{thingsNow(ii)} ' LinReg R=' num2str(sqrt(abs(RR(ii).Ordinary))) ', p=' num2str(Pval(ii))...
         ', F diff zero F dfNum dfDen p: ' num2str([Fval(ii) dfNum(ii) dfDen(ii) pVal(ii)])...
         ', spearman corr rho pval: ' num2str([propsRho(ii) propsCorrPval(ii)])]) 
     end
@@ -280,6 +284,105 @@ for slI = 1:2
     ylim([0 6])
 end
 
+%Comparison to accuracy
+for slI = 1:2
+    figure('Position',[695 118 819 674]);
+    for ii = 1:4
+        pooledHere = [];
+        daysHere = [];
+        aff(ii)=subplot(2,2,ii);
+        for mouseI = 1:4
+            
+            dayss = accuracy{mouseI};
+            splitPropHere = splitPropEachDay{slI}{mouseI}{thingsNow(ii)};
+            plot(dayss,splitPropHere,'o','MarkerFaceColor',mouseColors(mouseI,:),'MarkerSize',8)
+            pooledHere = [pooledHere; splitPropHere(:)];
+            daysHere = [daysHere; dayss];
+            hold on
+        end
+        
+    ylabel('Proportion of cells')
+    xlabel('Accuracy')
+    
+    [fitVal,daysPlot] = FitLineForPlotting(pooledHere,daysHere);
+    plot(daysPlot,fitVal,'k','LineWidth',2)
+    [~, ~, ~, RR(ii), Pval(ii), ~] =...
+                fitLinRegSL(pooledHere,daysHere);
+            [Fval(ii),dfNum(ii),dfDen(ii),pVal(ii)] =...
+            slopeDiffFromZeroFtest(pooledHere,daysHere);
+    [propsRho(ii),propsCorrPval(ii)] = corr(daysHere,pooledHere,'type','Spearman');
+    
+    title([traitLabels{thingsNow(ii)}])
+    
+    %xlim([min(daysHere)-0.5 max(daysHere)+0.5])
+    ylim(ylimsuse{slI,ii})
+    xticks([1 6 12 18])
+    
+    aff(ii) = MakePlotPrettySL(aff(ii));
+    end
+    
+    suptitleSL(['Raw splitting pcts across all mice, and regression on ' mazeLocations{slI}])
+    
+    figure('Position',[735 209 910 420]);
+    for ii = 1:4
+    text(1,ii,[traitLabels{thingsNow(ii)} ' LinReg R=' num2str(sqrt(abs(RR(ii).Ordinary))) ', p=' num2str(Pval(ii))...
+        ', F diff zero F dfNum dfDen p: ' num2str([Fval(ii) dfNum(ii) dfDen(ii) pVal(ii)])...
+        ', spearman corr rho pval: ' num2str([propsRho(ii) propsCorrPval(ii)])]) 
+    end
+    title(['stats for raw data splitter prop changes on ' mazeLocations{slI}])
+    xlim([0 18])
+    ylim([0 6])
+end
+
+%Comparison to num trials
+for slI = 1:2
+    figure('Position',[695 118 819 674]);
+    for ii = 1:4
+        pooledHere = [];
+        daysHere = [];
+        aff(ii)=subplot(2,2,ii);
+        for mouseI = 1:4
+            
+            dayss = sum(numTrialsFull{mouseI},1);
+            splitPropHere = splitPropEachDay{slI}{mouseI}{thingsNow(ii)};
+            plot(dayss,splitPropHere,'o','MarkerFaceColor',mouseColors(mouseI,:),'MarkerSize',8)
+            pooledHere = [pooledHere; splitPropHere(:)];
+            daysHere = [daysHere; dayss(:)];
+            hold on
+        end
+        
+    ylabel('Proportion of cells')
+    xlabel('Number of trials')
+    
+    [fitVal,daysPlot] = FitLineForPlotting(pooledHere,daysHere);
+    plot(daysPlot,fitVal,'k','LineWidth',2)
+    [~, ~, ~, RR(ii), Pval(ii), ~] =...
+                fitLinRegSL(pooledHere,daysHere);
+            [Fval(ii),dfNum(ii),dfDen(ii),pVal(ii)] =...
+            slopeDiffFromZeroFtest(pooledHere,daysHere);
+    [propsRho(ii),propsCorrPval(ii)] = corr(daysHere,pooledHere,'type','Spearman');
+    
+    title([traitLabels{thingsNow(ii)}])
+    
+    %xlim([min(daysHere)-0.5 max(daysHere)+0.5])
+    ylim(ylimsuse{slI,ii})
+    %xticks([1 6 12 18])
+    
+    aff(ii) = MakePlotPrettySL(aff(ii));
+    end
+    
+    suptitleSL(['Raw splitting pcts across all mice, and regression on ' mazeLocations{slI}])
+    
+    figure('Position',[735 209 910 420]);
+    for ii = 1:4
+    text(1,ii,[traitLabels{thingsNow(ii)} ' LinReg R=' num2str(sqrt(abs(RR(ii).Ordinary))) ', p=' num2str(Pval(ii))...
+        ', F diff zero F dfNum dfDen p: ' num2str([Fval(ii) dfNum(ii) dfDen(ii) pVal(ii)])...
+        ', spearman corr rho pval: ' num2str([propsRho(ii) propsCorrPval(ii)])]) 
+    end
+    title(['stats for raw data splitter prop changes on ' mazeLocations{slI}])
+    xlim([0 18])
+    ylim([0 6])
+end
 %% Within day decoding results
 
 colors = {colorAssc{1} colorAssc{2}};
@@ -310,7 +413,7 @@ for dtI = 1:length(decodingType)
     for slI = 1:2
         subplot(1,2,slI)
         [statsOut{dtI}{slI}] = PlotTraitChangeOverDaysOne(pooledWithinDayDecResChange{slI}{dtI},pooledRealDayDiffs,...
-            {colorAssc{1:2}},{'LR','ST'},true,'regress','Change in Decoding Performance',[-0.5 0.5]);
+            {colorAssc{1:2}},{'LR','ST'},true,'regress','Change in Decoding Performance',[-0.5 0.5],[]);
         title([decodeLoc{slI}])
     end
     suptitleSL(['Change in daily decoding performance using ' decodingType{dtI}]) 
@@ -367,6 +470,7 @@ for slI = 1:2
             num2str(statsOut{slI}{ddI}.slopeDiffZero(1).Fval) ' ' num2str(statsOut{slI}{ddI}.slopeDiffZero(1).dfNum) ' '...
             num2str(statsOut{slI}{ddI}.slopeDiffZero(1).dfDen) ' ' num2str(statsOut{slI}{ddI}.slopeDiffZero(1).pVal)])
         text(1,2,['slope RR, pVa: ' num2str([statsOut{slI}{ddI}.slope.RR.Ordinary  statsOut{slI}{ddI}.slope.pVal])])
+        text(1,3,['slope spearman corr rho: ' num2str(statsOut{slI}{ddI}.corr.rho) ', pval: ' num2str(statsOut{slI}{ddI}.corr.rho)])
         xlim([0 15])
         ylim([0 4])
         title(['Stats for ' dimsDecoded{ddI}])

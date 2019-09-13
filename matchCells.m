@@ -341,7 +341,7 @@ for regsess = 1:numSessions
                         %xBase = xBase + zoomCenterAdjust(1); yBase = yBase + zoomCenterAdjust(2);
                         [baseCell, ~] = findclosest2D(fullReg.centers(unmatchedBaseCells,1),...
                             fullReg.centers(unmatchedBaseCells,2), xBase, yBase);
-                        matchingBaseCell = unmatchedBaseCells(baseCell);
+                        matchingBaseCell = unmatchedBaseCells(baseCell); %baseCell indexes into unmatchedBaseCells
                         hold on
                         plot(fullReg.centers(matchingBaseCell,1), fullReg.centers(matchingBaseCell,2),'*r');
 
