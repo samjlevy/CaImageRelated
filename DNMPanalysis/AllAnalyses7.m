@@ -197,24 +197,25 @@ for mouseI = 1:numMice
     %end
     %end
     
+    delayBinning = 0:20:320;
     saveName = fullfile(mainFolder,mice{mouseI},delayPFs);
-     [~, ~, ~, ~, ~, ~, ~] =...
-            PFsLinTBTdnmp(cellTBTdelay{mouseI}, 0:20:320, 'numFrames', saveName, false,[1; 2]);
+    [~, ~, ~, ~, ~, ~, ~] =...
+            PFsLinTBTdnmp(cellTBTdelay{mouseI}, delayBinning, 'numFrames', saveName, false,[1; 2]);
     switch exist(saveName,'file')
         case 0
-            disp(['no pooled placefields for arms found for ' mice{mouseI} ', making now'])
+            disp(['no placefields for delay found for ' mice{mouseI} ', making now'])
             [~, ~, ~, ~, ~, ~, ~] =...
             PFsLinTBTdnmp(cellTBTarm{mouseI}, armBinEdges, minspeed, saveName, false,condPairs);
        case 2
-            disp(['found pooled placefields for arms for ' mice{mouseI} ', all good'])
+            disp(['found placefields for delay for ' mice{mouseI} ', all good'])
     end
     
     load(saveName,'TMap_unsmoothed','TMap_zRates')
-    cellPooledTMap_unsmoothedArm{1}{mouseI} = TMap_unsmoothed;
+    cellPooledTMap_unsmoothedDelay{1}{mouseI} = TMap_unsmoothed;
     %cellPooledTMap_firesAtAllArm{1}{mouseI} = TMap_firesAtAll;
-    cellPooledTMap_zRatesArm{1}{mouseI} = TMap_unsmoothed; 
-    cellTCounts{2}{mouseI} = TCounts;
-    cellRunOccMap{2}{mouseI} = RunOccMap;
+    cellPooledTMap_zRatesDelay{1}{mouseI} = TMap_unsmoothed; 
+    cellTCounts{3}{mouseI} = TCounts;
+    cellRunOccMap{3}{mouseI} = RunOccMap;
 end
 
 numTrials = [];
@@ -294,7 +295,7 @@ traitLabels = {'splitLR' 'splitST'  'splitLRonly' 'splitSTonly' 'splitBOTH' 'spl
 disp('Done all setup stuff')
 
 %% Splitter cells: Shuffle versions, pooled
-numShuffles = 1000;
+numShuffles = 100;
 shuffThresh = 1 - pThresh;
 binsMin = 1;
 splitDir = 'splitters';
@@ -308,6 +309,7 @@ binsAboveShuffle = [];
 thisCellSplits = [];
 for mouseI = 1:numMice
     shuffleDir = fullfile(mainFolder,mice{mouseI},splitDir);
+    %{
     for stI = 1:length(splitterType)
         for slI = 1:length(splitterLoc)
             switch splitterLoc{slI}
@@ -350,6 +352,22 @@ for mouseI = 1:numMice
             disp(['done ' splitterType{stI} ' on ' splitterLoc{slI} ' splitting for mouse ' num2str(mouseI)])
         end
     end
+    %}
+    %Delay splitters
+    splitterFile = fullfile(shuffleDir,['splittersLRdelay.mat']);
+    if exist(splitterFile,'file')==0
+        disp(['did not find delay splitting for mouse ' num2str(mouseI) ', making now'])
+        tic
+        [binsAboveShuffle, thisCellSplits] = SplitterWrapper4(cellTBTdelay{mouseI}, cellPooledTMap_unsmoothedDelay{1}{mouseI},  [],...
+                'delayEpoch', numShuffles, delayBinning, 'numFrames', shuffThresh, binsMin);
+        save(splitterFile,'binsAboveShuffle','thisCellSplits')
+        toc
+    end
+    %loadedSplit = load(splitterFile);
+            
+    %binsAboveShuffle{3}{1}{mouseI} = loadedSplit.binsAboveShuffle;
+    %thisCellSplits{3}{1}{mouseI} = loadedSplit.thisCellSplits;
+            
 end
 disp('Done loading all splitting')
 
@@ -1009,7 +1027,24 @@ for slI = 1:2
         end
     end
 end
-                
+       
+%Pooled within mice
+CSpooledPVcorrWithinMouse = [];
+withinDayCSpooledPVcorrWithinMouse = [];
+withinDayCSpooledPVcorrWithinMouseMat = [];
+for slI = 1:2
+    for pvtI = 1:length(pvNames)
+        for mouseI = 1:numMice
+            for csI = 1:length(condSet)
+                CSpooledPVcorrWithinMouse{slI}{pvtI}{mouseI}{csI} = pvCorrs{slI}{pvtI}{mouseI}(:,condSet{csI});
+                withinDayCSpooledPVcorrWithinMouse{slI}{pvtI}{mouseI}{csI} = CSpooledPVcorrWithinMouse{slI}{pvtI}{mouseI}{csI}(PVdaysApart{slI}{pvtI}{mouseI}==0,:);
+                for ccI = 1:size(withinDayCSpooledPVcorrWithinMouse{slI}{pvtI}{mouseI}{csI},2)
+                    withinDayCSpooledPVcorrWithinMouseMat{slI}{pvtI}{mouseI}{csI}{1,ccI} = cell2mat(withinDayCSpooledPVcorrWithinMouse{slI}{pvtI}{mouseI}{csI}(:,ccI));
+                end
+            end
+        end
+    end
+end
                 
 disp('Done PV corrs') 
 

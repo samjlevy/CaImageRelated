@@ -16,6 +16,7 @@ switch numUnderscores
         Conds.Left = find(cell2mat(cellfun(@(x) any(strfind(x,'Left')),names,'UniformOutput',false)));
         Conds.Right = find(cell2mat(cellfun(@(x) any(strfind(x,'Right')),names,'UniformOutput',false)));
     otherwise
-        disp('couldnot pull out conds')
+        %disp('could not pull out conds, proceeding anyway')
+        Conds = [];
 end
 end
