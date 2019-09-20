@@ -129,3 +129,15 @@ dsImA = NeuronImage(dsAcells);
 dsB = randperm(numCells);
 dsBcells = dsB(1:round(numCells*dsPct));
 dsImB = NeuronImage(dsBcells);
+
+
+%Get all pt to pt distances
+%Get all pt to pt angles
+%Matrix of 1st tier voronoi neighbors
+%Matrix of 2nd tier voronoi neighbors
+% xcorr of 1st and 2nd tier angles/lengths to find best alignment
+%   finding angle: could just step in 1 degree increments
+%   could slide to next matched pair
+%   determine best fit by local mins of angle/length pt to pt distances,
+%      use circular mean approximation to get these pt distances.
+%   Could add optional limit at this step
