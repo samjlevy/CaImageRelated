@@ -14,7 +14,7 @@ for ptI = 1:nPts
         nextAdjInds = find(sum(nextAdj,1)>0);
         alreadyHave = ismember(nextAdjInds,adjHere);
         nextAdjInds(alreadyHave) = [];
-        adjHere = [adjHere; nextAdjInds];
+        adjHere = [adjHere(:); nextAdjInds(:)];
     end
     adjHere(adjHere==ptI) = [];
     tierNadj(ptI,adjHere) = true;

@@ -8,6 +8,6 @@ for cellI = 1:length(adjacentCells)
 end
 
 badPts = adjVerts==Inf | isnan(adjVerts);
-adjVerts(sum(badPts,2),:) = [];
+adjVerts(logical(sum(badPts,2)),:) = [];
 
 end
