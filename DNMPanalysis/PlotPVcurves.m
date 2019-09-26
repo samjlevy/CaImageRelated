@@ -1,8 +1,11 @@
-function [axHand,statsOut] = PlotPVcurves(CSpooledPVcorrs,CSpooledPVdaysApart,condSetColors,condSetLabels,plotRaw,axHand)
+function [axHand,statsOut] = PlotPVcurves(CSpooledPVcorrs,CSpooledPVdaysApart,condSetColors,condSetLabels,plotRaw,plotError,axHand)
 %Just plots within day
 if isempty(axHand)
     figure;
     axHand = axes;
+end
+if isempty(plotError)
+    plotError = 'sem'
 end
 
 numConds = length(CSpooledPVcorrs);
@@ -30,9 +33,14 @@ plot([0.5 numBins+0.5],[0 0],'k'); hold on
 
 for csI = 1:length(condSetColors)
     withinDay = CSpooledPVdaysApart{csI}==0;
+    aggDat = []; aggDay = [];
     for binI = 1:numBins
+        datH = CSpooledPVcorrs{csI}(withinDay,binI);
+        dayH = binI+csMod(csI)*ones(sum(withinDay),1);
+        aggDat = [aggDat; datH(:)];
+        aggDay = [aggDay; dayH(:)];
         if plotDots == true
-            scatter(binI+csMod(csI)*ones(sum(withinDay),1),CSpooledPVcorrs{csI}(withinDay,binI),'filled',...
+            scatter(dayH,datH,'filled',...
                 'MarkerFaceColor',condSetColors{csI},'SizeData',20,'MarkerFaceAlpha',0.4);
         end
         [statsOut.eachCond{csI}.diffFromZeroSign(binI).pVal,statsOut.eachCond{csI}.diffFromZeroSign(binI).hVal,stt]=...
@@ -40,23 +48,45 @@ for csI = 1:length(condSetColors)
         try statsOut.eachCond{csI}.diffFromZeroSign(binI).zVal = stt.zval;
         catch statsOut.eachCond{csI}.diffFromZeroSign(binI).zVal = []; end
     end
+    
+    [statsOut.eachCond{csI}.rankCorrs.rho,statsOut.eachCond{csI}.rankCorrs.pVal] = corr(aggDay,aggDat,'type','Spearman');
 end
 
-    
+if ~isempty(plotError)    
 pp = [];
 for csI = 1:length(condSetColors)
     errorHere = [];
     withinDay = CSpooledPVdaysApart{csI}==0;
     for binI = 1:numBins
-        errorHere(binI) = standarderrorSL(CSpooledPVcorrs{csI}(withinDay,binI)); hold on
+        datHere = sort(CSpooledPVcorrs{csI}(withinDay,binI));
+        meanHere(binI) = nanmean(datHere);
+        switch plotError
+            case {'sem','SEM'}
+                errorHere(binI) = standarderrorSL(datHere); hold on
+            case {'std','STD'}
+                errorHere(binI) = std(datHere); hold on
+            case {'bound'}
+                tInds = round(length(datHere)*[0.025 0.975]);
+                errorHere(:,binI) = datHere(tInds)';
+        end
     end
-    pp(csI) = errorbar(1:numBins,nanmean(CSpooledPVcorrs{csI}(withinDay,:),1),errorHere,'Color',condSetColors{csI},'LineWidth',2);
+    
+    if strcmpi(plotError,'STD')
+        patchY = [meanHere+errorHere fliplr(meanHere-errorHere)];
+        %patchY = [errorHere(1,:) fliplr(errorHere(2,:))];
+        patchX = [1:numBins fliplr(1:numBins)];
+        patch(patchX,patchY,condSetColors{csI},'EdgeColor','none','FaceAlpha',0.4)
+        pp(csI) = plot(1:numBins,meanHere,'Color',condSetColors{csI},'LineWidth',2);
+    else
+        pp(csI) = errorbar(1:numBins,nanmean(CSpooledPVcorrs{csI}(withinDay,:),1),errorHere,'Color',condSetColors{csI},'LineWidth',2);
+    end
 end
 
 if ~isempty(condSetLabels)
     legend(pp,condSetLabels,'location','southwest')
 end
-
+end
+ 
 xlim([0.5 numBins+0.5])
 xlabel('Spatial Bin')
 ylabel('Correlation')

@@ -50,16 +50,34 @@ TMap_unsmoothed = cell(numCells, numSess, numConds);
 TCounts = cell(numCells, numSess, numConds);
 TMap_gauss = cell(numCells, numSess, numConds);
 TMap_zRates = cell(numCells, numSess, numConds);
+TMap_firesAtAll = cell(numCells, numSess, numConds);
 
-binEdges = sort(binEdges,'ascend');
-numBins = length(binEdges)-1;
-TMap_blank = zeros(1,numBins);
-cmperbin = mean(abs(diff(binEdges)));
+if strcmpi(minspeed,'numFrames')
+    %doing bin edges by number of frames, use those as time bins
+    binsBy = 'numFrames';
+    binEdges = sort(binEdges,'ascend');
+    numBins = length(binEdges)-1;
+    TMap_blank = zeros(1,numBins);
+    framesperbin = mean(abs(diff(binEdges)));
+    % Generate alternative x pos for binning
+    for condI = 1:numConds
+        newTrialsX = cellfun(@(x) ceil([1:length(x)]/framesperbin),trialbytrial(condI).trialsX,'UniformOutput',false);
+        trialbytrial(condI).trialsX = newTrialsX;
+    end
+    binEdges = binEdges(2)/framesperbin-0.5:1:binEdges(end)/framesperbin+0.5; 
+else
+    binsBy = 'spatialBins';
+    binEdges = sort(binEdges,'ascend');
+    binEdges(end) = [];
+    numBins = length(binEdges)-1;
+    TMap_blank = zeros(1,numBins);
+    cmperbin = mean(abs(diff(binEdges)));
+end
 
 %if dispProgress
 %p = ProgressBar(numCells*numConds*numSess);
 %end 
-binHits = GenerateBinHitsTBT(trialbytrial,binEdges);
+%binHits = GenerateBinHitsTBT(trialbytrial,binEdges);
 
 for condPairI = 1:numConds
     for sessI = 1:numSess
@@ -93,24 +111,54 @@ for condPairI = 1:numConds
         linearEdges = binEdges;
         linearEdges = sort(linearEdges,'ascend');
         
-        %Make an occupancy map
-        [OccMap{condPairI,sessI},RunOccMap{condPairI,sessI},xBin{condPairI,sessI}]...
-            = MakeOccMapLin(posUse,good,isrunning,linearEdges);
-            
         %Get spiking
         lapsSpiking = [];
+        trialLengths = [];
         for chK  = 1:numCondsHere
             lapsSpikingHere = logical([trialbytrial(condsHere(chK)).trialPSAbool{lapsUse{chK},1}]);
             lapsSpiking = [lapsSpiking lapsSpikingHere];
+            %trialLengths = [trialLengths; cell2mat(cellfun(@length,trialbytrial(chK).trialsX(lapsUse{1}),'UniformOutput',false))]; 
         end
-        lapsSpiking = logical(lapsSpiking);   
+        lapsSpiking = logical(lapsSpiking);  
         
-        cellSpiking = mat2cell(lapsSpiking,ones(numCells,1),size(lapsSpiking,2)); %Indiv cellArr slot per cell
-        spikePos = cellfun(@(x) posUse(x),cellSpiking,'UniformOutput',false); %only positions by logical cell activity
-        spikeCounts = cellfun(@(x) histcounts(x,linearEdges),spikePos,'UniformOutput',false); %counts of positions in bins
-        TMap_unsmoothed(1:numCells,sessI,condPairI) = cellfun(@(x) x./RunOccMap{condPairI,sessI},spikeCounts,'UniformOutput',false); %normalize by occupancy
+        %Make an occupancy map
+        %Get spiking by that occupancy map
+        %switch binsBy 
+        %    case 'spatialBins'
+                [OccMap{condPairI,sessI},RunOccMap{condPairI,sessI},xBin{condPairI,sessI}]...
+                    = MakeOccMapLin(posUse,good,isrunning,linearEdges);
+            
+                cellSpiking = mat2cell(lapsSpiking,ones(numCells,1),size(lapsSpiking,2)); %Indiv cellArr slot per cell
+                spikePos = cellfun(@(x) posUse(x),cellSpiking,'UniformOutput',false); %only positions by logical cell activity
+                spikeCounts = cellfun(@(x) histcounts(x,linearEdges),spikePos,'UniformOutput',false); %counts of positions in bins
+                TMap_unsmoothed(1:numCells,sessI,condPairI) = cellfun(@(x) x./RunOccMap{condPairI,sessI},spikeCounts,'UniformOutput',false); %normalize by occupancy
+         %   case 'numFrames'
+%{
+                
+                onesBlank = ones(1,numBins);
+                OccMap{condPairI,sessI} = framesperbin*onesBlank;
+                RunOccMap{condPairI,sessI} = framesperbin*onesBlank;
+                xBinTemp = repmat(1:numBins,framesperbin,1);
+                xBin{condPairI,sessI} = xBinTemp(:);
+                
+                %Laps spiking doesn't work, lines them all up in a row
+                %But could make a fake spike pos that assigns each to a
+                %bin...
+                spikeCountsMat = cell2mat(arrayfun(@(x) sum(lapsSpiking(:,x+1:x+framesperbin),2),linearEdges,'UniformOutput',false));
+                TMap_frames = spikeCountsMat/framesperbin;
+                TMap_frames_cell = mat2cell(TMap_frames,ones(numCells,1),length(linearEdges));
+                
+                
+        end
+ %}           
+         
+        
+        
+        
+        TCounts(1:numCells,sessI,condPairI) = spikeCounts;
         
         %Version that just asks 'did the cell fire at all in this bin
+        %{
         allBinHits = [];
         for chK = 1:numCondsHere
             allBinHits = [allBinHits; binHits{condsHere(chK)}(lapsUse{chK})]; 
@@ -121,6 +169,7 @@ for condPairI = 1:numConds
         end
         cellBinHits = sum(binHitsAll,3)/sum(numLaps);
         TMap_firesAtAll(:,sessI,condPairI) = mat2cell(cellBinHits,ones(numCells,1),numBins);
+        %}
         
         %{
         lapX = cell(1,sum(numLaps));

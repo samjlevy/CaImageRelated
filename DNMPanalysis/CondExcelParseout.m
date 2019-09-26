@@ -26,8 +26,19 @@ if columnExists == 0
         case 'Start on maze'
             columnLabel = 'Start on maze (start of Forced';
             disp('Switched label')
+        case 'ChoiceEnter'
+            columnLabel = 'Choice enter';
+            disp('Switched label')
+        case 'Start on maze (start of Forced'
+            columnExists = any(cell2mat(cellfun(@(x) strcmpi(x,'Start on maze (start of Forced)'),txt(1,:),'UniformOutput',false)));
+            if columnExists==1
+                columnLabel = 'Start on maze (start of Forced)';
+                disp('Switched label')
+            else
+                disp(['Not going to find this starting column: ' columnLabel])
+            end
         otherwise
-            disp('Not going to find this column')
+            disp(['Not going to find this column: ' columnLabel])
     end
 end
 

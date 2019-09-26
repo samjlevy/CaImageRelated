@@ -16,7 +16,7 @@ switch block_type
         [ forced_stops ] = CondExcelParseout( frames, txt, 'ForcedChoiceEnter', 0 );
         [ free_starts ] = CondExcelParseout( frames, txt, 'Lift barrier (start of free choice)', 0);
         [ free_stops ] = CondExcelParseout( frames, txt, 'FreeChoiceEnter', 0 );
-    case 'stem_arm'
+    case 'stem_arm' %Start maze through reward
         [ forced_starts ] = CondExcelParseout( frames, txt, 'Start on maze (start of Forced', 0 );
         [ forced_stops ] = CondExcelParseout( frames, txt, 'Forced Reward', 0 );
         [ free_starts ] = CondExcelParseout( frames, txt, 'Lift barrier (start of free choice)', 0);
@@ -31,11 +31,6 @@ switch block_type
         [ forced_stops ] = CondExcelParseout( frames, txt, 'Enter Delay', 0 );
         [ free_starts ] = CondExcelParseout( frames, txt, 'Lift barrier (start of free choice)', 0);
         [ free_stops ] = CondExcelParseout( frames, txt, 'Leave Maze', 0 );
-    case 'arm_min' %choice made through reward get
-        [ forced_starts ] = CondExcelParseout( frames, txt, 'Start on maze (start of Forced', 0 );
-        [ forced_stops ] = CondExcelParseout( frames, txt, 'ForcedChoiceEnter', 0 );
-        [ free_starts ] = CondExcelParseout( frames, txt, 'Lift barrier (start of free choice)', 0);
-        [ free_stops ] = CondExcelParseout( frames, txt, 'FreeChoiceEnter', 0 );
     case 'side_arm'
         [ forced_starts ] = CondExcelParseout( frames, txt, 'Forced Choice', 0 );
         [ forced_stops ] = CondExcelParseout( frames, txt, 'Forced Reward', 0 );

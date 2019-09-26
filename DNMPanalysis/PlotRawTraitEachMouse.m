@@ -53,4 +53,6 @@ plot(daysPlot,fitVal,'Color',regColor,'LineWidth',2)
 statsOut.slopeDiffZero.dfDen,statsOut.slopeDiffZero.pVal] =...
     slopeDiffFromZeroFtest(pooledHere,daysHere);
 
+[statsOut.corr.pVal,statsOut.corr.rho] = corr(daysHere,pooledHere,'type','Spearman');
+
 end

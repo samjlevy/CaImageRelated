@@ -13,6 +13,8 @@ ss = fieldnames(trialbytrial);
 sessIDlong = [];
 shuffTBTassign = [];
 
+numConds = length(trialbytrial);
+
 %Figure out where trials need to go
 for sessI = 1:length(sessions)
     %moreTrials = max(cellfun(@length, {trialbytrial(:).trialPSAbool}));
@@ -21,7 +23,7 @@ for sessI = 1:length(sessions)
         whichTrials{aa} = find(trialbytrial(aa).sessID==sessions(sessI));
     end
     moreTrials = max(howManyTrials);
-    if size(dimShuffle,1)==1
+    if ischar(dimShuffle)
         switch dimShuffle
             case {'direction','leftright','LR'}
                 useSess = [lStudy rStudy lTest rTest];
@@ -43,6 +45,23 @@ for sessI = 1:length(sessions)
                     trialShuffAssign(tt,:) = useSess(randperm(4));
                 end
         end
+    elseif isnumeric(dimShuffle)
+        allNamesHere = {trialbytrial(:).name};
+        useSess = dimShuffle;
+        shuffleThis = round(rand(moreTrials,length(useSess)/2)); %Vector that indicates which trial to swap
+        
+        trialShuffAssign = [];  
+        for usI = 1:length(useSess)/2
+            trialShuffAssign = [trialShuffAssign, useSess(shuffleThis(:,usI)+1+2*(usI-1))' useSess(~shuffleThis(:,1)+1+2*(usI-1))'];
+        end
+        
+        finalColOrder = [];
+        for nameI = 1:length(allNamesHere)
+            finalColOrder(nameI) = find(useSess==nameI);
+        end
+        
+        %shuffTBTassign = [shuffTBTassign; trialShuffAssign];
+        trialShuffAssign = trialShuffAssign(:, finalColOrder);
     else
         %custom shuffling pairs
         useSess = [];
@@ -51,25 +70,29 @@ for sessI = 1:length(sessions)
             for shuffThisI = 1:size(dimShuffle,2)
                 useSess = [useSess,  find(strcmpi({trialbytrial(:).name},dimShuffle{shuffPairI,shuffThisI}))];
             end
-        end        
+        end
         
-        shuffleThis = round(rand(moreTrials,2));
-        trialShuffAssign = [useSess(shuffleThis(:,1)+1)' useSess(~shuffleThis(:,1)+1)' ...
+        
+        shuffleThis = round(rand(moreTrials,length(useSess)/2));
+        trialShuffAssign = [];  
+        for usI = 1:length(useSess)/2
+            trialShuffAssign = [trialShuffAssign, useSess(shuffleThis(:,usI)+1)' useSess(~shuffleThis(:,1)+1)' ...
                             useSess(shuffleThis(:,2)+3)' useSess(~shuffleThis(:,2)+3)'];
+        end
 
         finalColOrder = [];
         for nameI = 1:length(allNamesHere)
             finalColOrder(nameI) = find(useSess==nameI);
         end
-                        
+              
         trialShuffAssign = trialShuffAssign(:, finalColOrder);
     end
     
     %Mod assignments to better index
-    for cc = 1:4
+    for cc = 1:numConds
         if howManyTrials(cc) < moreTrials
             zeroOut = trialShuffAssign(howManyTrials(cc)+1:end,:) == cc;
-            zeroOutA = [zeros(howManyTrials(cc),4); zeroOut];
+            zeroOutA = [zeros(howManyTrials(cc),numConds); zeroOut];
             trialShuffAssign(logical(zeroOutA)) = 0;
         end
     end
@@ -79,7 +102,7 @@ for sessI = 1:length(sessions)
 end
 
 %Preallocate
-for condJ = 1:4
+for condJ = 1:numConds
     shuffledTBT(condJ).trialsX = cell(length(sessIDlong),1);
     shuffledTBT(condJ).trialsY = cell(length(sessIDlong),1);
     shuffledTBT(condJ).trialPSAbool = cell(length(sessIDlong),1);
@@ -95,8 +118,8 @@ end
 for sessJ = 1:length(sessions)
     for fn = 1:length(ss)
         if iscell(trialbytrial(1).(ss{fn})) || isnumeric(trialbytrial(1).(ss{fn}))
-            for condType = 1:4
-                for condDraw = 1:4
+            for condType = 1:numConds
+                for condDraw = 1:numConds
                     %Get the indices to fill
                     allDeal = shuffTBTassign(:,condType)==condDraw;
                     indDealTo = allDeal & (sessIDlong==sessJ);
@@ -113,7 +136,7 @@ for sessJ = 1:length(sessions)
 end
 
 if size(dimShuffle,1)>1
-    condShuffles = mat2cell(shuffTBTassign,size(shuffTBTassign,1),ones(1,4));
+    condShuffles = mat2cell(shuffTBTassign,size(shuffTBTassign,1),ones(1,length(trialbytrial)));
     shuffConds = [];
     allNamesHere = {trialbytrial(:).name};
     for shuffPairI = 1:size(dimShuffle,1)
@@ -121,7 +144,7 @@ if size(dimShuffle,1)>1
             shuffConds(shuffPairI,shuffThisI) = find(strcmpi({trialbytrial(:).name},dimShuffle{shuffPairI,shuffThisI}));
         end
     end
-    for condI = 1:4 
+    for condI = 1:numConds 
         [shuffPair,~] = ind2sub([2,2],find(shuffConds==condI));
         for shuffR = 1:size(condShuffles{condI},1)
             if condI~=condShuffles{condI}(shuffR)
@@ -143,7 +166,7 @@ end
     
     
 %Delete empty cells
-for condK = 1:4
+for condK = 1:numConds
     shuffledTBT(condK).trialsX(shuffTBTassign(:,condK)==0) = [];
     shuffledTBT(condK).trialsY(shuffTBTassign(:,condK)==0) = [];
     shuffledTBT(condK).trialPSAbool(shuffTBTassign(:,condK)==0) = [];

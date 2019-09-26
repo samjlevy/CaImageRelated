@@ -7,10 +7,12 @@ function AdjustBehaviorTimes(pos_file, xls_file, column_fix, relation)
 [frames, txt] = xlsread(xls_file, 1);
 try 
     load(pos_file,'x_adj_cm','y_adj_cm')
-catch
+end
+
+if ~exist('x_adj_cm')
     load(pos_file);
     inThisFile = whos('-file',pos_file);
-    for ff=1:length(inThisFile); bitNames{ff} = inThisFile(ff).name; end;
+    for ff=1:length(inThisFile); bitNames{ff} = inThisFile(ff).name; end
     [s,~] = listdlg('PromptString','Select x/y positions:',...
                 'ListString',bitNames);
     [whichX, ~] = listdlg('PromptString','Which is the X vector?',...
@@ -20,7 +22,7 @@ catch
 end
 
 %Handle laziness
-if ~exist('column_fix', 'var')
+if isempty(column_fix)
     [column_fix,~]  = listdlg('PromptString','Which frames to adjust?','ListString',txt(1,:));
 end    
 switch class(column_fix)
@@ -35,7 +37,7 @@ switch class(column_fix)
 end
 
 %Find relation, if not given
-if ~exist('relation','var')
+if isempty(relation)
     alignSame = questdlg('Align all the same way or differently?','Align Same',...
         'Same','Different','Same');
     switch alignSame
@@ -57,10 +59,18 @@ if ~exist('relation','var')
     relation(:) = {prepositions{usePrep}}; %So elegant
 end
 
-eventOrder = {'Start on maze (start of Forced', 'ForcedChoiceEnter', 'Forced Choice',...
+sessType = questdlg('What kind of session is this?','Sess type',...
+        'DNMP','ForcedUnforced','DNMP');
+switch sessType
+    case 'DNMP'
+        eventOrder = {'Start on maze (start of Forced', 'ForcedChoiceEnter', 'Forced Choice',...
               'Forced Reward', 'Enter Delay', 'Lift barrier (start of free choice)'...
               'FreeChoiceEnter', 'Free Choice', 'Free Reward', 'Leave maze',...
               'Start in homecage', 'Leave homecage'};
+    case 'ForcedUnforced'
+        eventOrder = {'Start on maze (start of Forced','ChoiceEnter','Choice leave',...
+              'Reward','Enter delay','Leave maze','Start in homecage','Leave homecage'};
+end
           
 %Actually adjust stuff
 oldAnchors = [];

@@ -49,6 +49,9 @@ for mouseI = 1:numMice
     
     clear armtrialbytrial realdays allfiles sortedSessionInds
     
+    load(fullfile(mainFolder,mice{mouseI},'trialbytrialDELAY.mat'))
+    cellTBTdelay{mouseI} = trialbytrial;
+    
     disp(['Mouse ' num2str(mouseI) ' completed'])
 end
 
@@ -144,9 +147,14 @@ end
 %}
 
 %Place fields
+stemPFs = 'PFsLinPooled.mat';
+armPFs = 'PFsLinPooledArm.mat';
+delayPFs = 'PFsLinPooledDelay.mat';
 for mouseI = 1:numMice
-    saveName = fullfile(mainFolder,mice{mouseI},'PFsLinPooled.mat');
-    switch exist(fullfile(mainFolder,mice{mouseI},'PFsLinPooled.mat'),'file')
+    saveName = fullfile(mainFolder,mice{mouseI},stemPFs);
+    %[~, ~, ~, ~, ~, ~, ~] =...
+    %        PFsLinTBTdnmp(cellTBT{mouseI}, stemBinEdges, minspeed, saveName, false,condPairs);
+    switch exist(saveName,'file')
         case 0
             disp(['no pooled placefields found for ' mice{mouseI} ', making now'])
             [~, ~, ~, ~, ~, ~, ~] =...
@@ -155,12 +163,17 @@ for mouseI = 1:numMice
             disp(['found pooled placefields for ' mice{mouseI} ', all good'])
     end
     
-    load(fullfile(mainFolder,mice{mouseI},'PFsLinPooled.mat'),'TMap_unsmoothed','TMap_zRates')
+    load(fullfile(mainFolder,mice{mouseI},'PFsLinPooled.mat'),'TMap_unsmoothed','TMap_zRates','TCounts','RunOccMap')
     cellPooledTMap_unsmoothed{1}{mouseI} = TMap_unsmoothed;
     %cellPooledTMap_firesAtAll{1}{mouseI} = TMap_firesAtAll;
     cellPooledTMap_zRates{1}{mouseI} = TMap_unsmoothed; 
+    cellTCounts{1}{mouseI} = TCounts;
+    cellRunOccMap{1}{mouseI} = RunOccMap;
     
-    saveName = fullfile(mainFolder,mice{mouseI},'PFsLinPooledArm.mat');
+    
+    saveName = fullfile(mainFolder,mice{mouseI},armPFs);
+     [~, ~, ~, ~, ~, ~, ~] =...
+            PFsLinTBTdnmp(cellTBTarm{mouseI}, armBinEdges, minspeed, saveName, false,condPairs);
     switch exist(saveName,'file')
         case 0
             disp(['no pooled placefields for arms found for ' mice{mouseI} ', making now'])
@@ -174,18 +187,88 @@ for mouseI = 1:numMice
     cellPooledTMap_unsmoothedArm{1}{mouseI} = TMap_unsmoothed;
     %cellPooledTMap_firesAtAllArm{1}{mouseI} = TMap_firesAtAll;
     cellPooledTMap_zRatesArm{1}{mouseI} = TMap_unsmoothed; 
+    cellTCounts{2}{mouseI} = TCounts;
+    cellRunOccMap{2}{mouseI} = RunOccMap;
+    
+    %for mouseI = 1:4
+    %for condI = 1:length(cellTBTdelay{mouseI})
+    %    delayLengths{mouseI}{condI} = cell2mat(cellfun(@length,cellTBTdelay{mouseI}(condI).trialsX,'UniformOutput',false));
+    %    min(delayLengths{mouseI}{condI})
+    %end
+    %end
+    
+    delayBinning = 0:20:320;
+    saveName = fullfile(mainFolder,mice{mouseI},delayPFs);
+    [~, ~, ~, ~, ~, ~, ~] =...
+            PFsLinTBTdnmp(cellTBTdelay{mouseI}, delayBinning, 'numFrames', saveName, false,[1; 2]);
+    switch exist(saveName,'file')
+        case 0
+            disp(['no placefields for delay found for ' mice{mouseI} ', making now'])
+            [~, ~, ~, ~, ~, ~, ~] =...
+            PFsLinTBTdnmp(cellTBTarm{mouseI}, armBinEdges, minspeed, saveName, false,condPairs);
+       case 2
+            disp(['found placefields for delay for ' mice{mouseI} ', all good'])
+    end
+    
+    load(saveName,'TMap_unsmoothed','TMap_zRates')
+    cellPooledTMap_unsmoothedDelay{1}{mouseI} = TMap_unsmoothed;
+    %cellPooledTMap_firesAtAllArm{1}{mouseI} = TMap_firesAtAll;
+    cellPooledTMap_zRatesDelay{1}{mouseI} = TMap_unsmoothed; 
+    cellTCounts{3}{mouseI} = TCounts;
+    cellRunOccMap{3}{mouseI} = RunOccMap;
 end
 
-
+numTrials = [];
 for mouseI = 1:numMice
-     numTrialCells{mouseI} = CellsActiveEachTrial(cellTBT{mouseI});
-     for condI = 1:4
-     numTrialCellsPctTotal{mouseI}{condI} = numTrialCells{mouseI}{condI}/numCells(mouseI);
-     numTrialCellsPctDay{mouseI}{condI} = numTrialCells{mouseI}{condI}./sum(cellSSI{mouseI}>0,1);
-     numTrialCellsPctDayMean(mouseI,condI) = mean(mean(numTrialCellsPctDay{mouseI}{condI}));
-     end
+    numTrialCells{mouseI} = CellsActiveEachTrial(cellTBT{mouseI});
+    for condI = 1:4
+         numTrialCellsPctTotal{mouseI}{condI} = numTrialCells{mouseI}{condI}/numCells(mouseI);
+         numTrialCellsPctDay{mouseI}{condI} = numTrialCells{mouseI}{condI}./sum(cellSSI{mouseI}>0,1);
+         numTrialCellsPctDayMean(mouseI,condI) = mean(mean(numTrialCellsPctDay{mouseI}{condI}));
+     
+        sessHere =unique(cellTBT{mouseI}(condI).sessID);
+        numTrials{mouseI}(condI,:) = histcounts(cellTBT{mouseI}(condI).sessID,min(sessHere)-0.5:1:max(sessHere)+0.5);
+    end
 end
 
+%Number of trials original
+%{
+for mouseI = 1:numMice
+    %load(fullfile(mouseDefaultFolder{mouseI},'fullReg.mat'),'fullReg')
+    %cellFullReg{mouseI} = fullReg;
+    load(fullfile(mouseDefaultFolder{mouseI},'DNMPdataTable.mat'))
+    cellDataTable{mouseI} = DNMPdataTable;
+    for regI = 1:length(cellRealDays{mouseI})
+       regSess = find(cellDataTable{mouseI}.RealDay==cellRealDays{mouseI}(regI));
+       folderI = find(contains(cellFullReg{mouseI}.RegSessions,cellDataTable{mouseI}.FolderName(regSess)));
+       if isempty(folderI)
+           if contains(mouseDefaultFolder{mouseI},cellDataTable{mouseI}.FolderName(regSess))
+               regFolder = mouseDefaultFolder{mouseI};
+           end
+       else
+           regFolder = cellFullReg{mouseI}.RegSessions{folderI};
+       end
+       regFolderFull = fullfile(mouseDefaultFolder{mouseI}(1:2),regFolder(3:end));
+       xlFile = ls(fullfile(regFolderFull,'*DNMPsheet.xlsx'));
+       if isempty(xlFile)
+           disp('bluesheet')
+           mouseI
+           regI
+           xlFile = ls(fullfile(regFolderFull,'*DNMPbluesheet.xlsx'));
+       end
+       if size(xlFile,1)==1
+           [frames,txt,~] = xlsread(fullfile(regFolderFull,xlFile));
+           numTrialsFull{mouseI}(regI) = size(frames,1);
+       end
+       if size(xlFile,1)>1
+           disp('too many files')
+           mouseI
+           regI
+       end
+       
+    end
+end
+%}
 Conds = GetTBTconds(cellTBT{1});
 
 useRealDays=1;
@@ -212,7 +295,7 @@ traitLabels = {'splitLR' 'splitST'  'splitLRonly' 'splitSTonly' 'splitBOTH' 'spl
 disp('Done all setup stuff')
 
 %% Splitter cells: Shuffle versions, pooled
-numShuffles = 1000;
+numShuffles = 100;
 shuffThresh = 1 - pThresh;
 binsMin = 1;
 splitDir = 'splitters';
@@ -226,6 +309,7 @@ binsAboveShuffle = [];
 thisCellSplits = [];
 for mouseI = 1:numMice
     shuffleDir = fullfile(mainFolder,mice{mouseI},splitDir);
+    %{
     for stI = 1:length(splitterType)
         for slI = 1:length(splitterLoc)
             switch splitterLoc{slI}
@@ -242,6 +326,10 @@ for mouseI = 1:numMice
                     %cellTMap = cellPooledTMap_firesAtAllArm{1}{mouseI};
                     tbtHere = cellTBTarm{mouseI};
             end
+            
+            %disp(['Getting trial length differences for mouse ' num2str(mouseI)])
+            %[trialLengthMeanDiff{slI}{stI}{mouseI}, trialLengthStsdDiff{slI}{stI}{mouseI}, trialLengthRankSumP{slI}{stI}{mouseI}, lengthData{slI}{stI}{mouseI}] =...
+            %    TrialLengthWrapper1(tbtHere, splitterType{stI},'pooled', numShuffles, binEdgesHere, shuffThresh);
             
             if exist(splitterFile,'file')==0
             disp(['did not find ' splitterType{stI} ' on ' splitterLoc{slI} ' splitting for mouse ' num2str(mouseI) ', making now'])
@@ -264,6 +352,22 @@ for mouseI = 1:numMice
             disp(['done ' splitterType{stI} ' on ' splitterLoc{slI} ' splitting for mouse ' num2str(mouseI)])
         end
     end
+    %}
+    %Delay splitters
+    splitterFile = fullfile(shuffleDir,['splittersLRdelay.mat']);
+    if exist(splitterFile,'file')==0
+        disp(['did not find delay splitting for mouse ' num2str(mouseI) ', making now'])
+        tic
+        [binsAboveShuffle, thisCellSplits] = SplitterWrapper4(cellTBTdelay{mouseI}, cellPooledTMap_unsmoothedDelay{1}{mouseI},  [],...
+                'delayEpoch', numShuffles, delayBinning, 'numFrames', shuffThresh, binsMin);
+        save(splitterFile,'binsAboveShuffle','thisCellSplits')
+        toc
+    end
+    %loadedSplit = load(splitterFile);
+            
+    %binsAboveShuffle{3}{1}{mouseI} = loadedSplit.binsAboveShuffle;
+    %thisCellSplits{3}{1}{mouseI} = loadedSplit.thisCellSplits;
+            
 end
 disp('Done loading all splitting')
 
@@ -343,7 +447,8 @@ for slI = 1:2
     pooledSplitPctChange{slI} = cell(numTraitGroups,1);
     
     for mouseI = 1:numMice
-        [splitterNumChange{slI}{mouseI}, splitterPctChange{slI}{mouseI}] = cellfun(@(x) TraitChangeDayPairs(x,dayPairs{mouseI}),splitPropEachDay{slI}{mouseI},'UniformOutput',false);        
+        [splitterNumChange{slI}{mouseI}, splitterPctChange{slI}{mouseI}] =...
+            cellfun(@(x) TraitChangeDayPairs(x,dayPairs{mouseI}),splitPropEachDay{slI}{mouseI},'UniformOutput',false);        
         for tgI = 1:numTraitGroups
             pooledSplitNumChange{slI}{tgI} = [pooledSplitNumChange{slI}{tgI}; splitterNumChange{slI}{mouseI}{tgI}];
             pooledSplitPctChange{slI}{tgI} = [pooledSplitPctChange{slI}{tgI}; splitterPctChange{slI}{mouseI}{tgI}];
@@ -434,9 +539,10 @@ for slI = 1:2
         for tgI = 1:numTraitGroups
             pooledSplitDayCOM{slI}{tgI} = [pooledSplitDayCOM{slI}{tgI}; logicalCOMgroupout{slI}{mouseI}(tgI).dayCOM];
             
-            pooledCOMBiases{slI}{tgI} = [pooledCOMBiases{slI}{tgI}; logicalCOMgroupout{slI}{mouseI}(tgI).dayBias.Pct.Early...
-                                                                    logicalCOMgroupout{slI}{mouseI}(tgI).dayBias.Pct.NoBias+logicalCOMgroupout{slI}{mouseI}(tgI).dayBias.Pct.SplitAllDays...
-                                                                    logicalCOMgroupout{slI}{mouseI}(tgI).dayBias.Pct.Late];
+            pooledCOMBiases{slI}{tgI} = [pooledCOMBiases{slI}{tgI};...
+                                         logicalCOMgroupout{slI}{mouseI}(tgI).dayBias.Pct.Early...
+                                         logicalCOMgroupout{slI}{mouseI}(tgI).dayBias.Pct.NoBias+logicalCOMgroupout{slI}{mouseI}(tgI).dayBias.Pct.SplitAllDays...
+                                         logicalCOMgroupout{slI}{mouseI}(tgI).dayBias.Pct.Late];
         end        
     end
 end
@@ -921,7 +1027,24 @@ for slI = 1:2
         end
     end
 end
-                
+       
+%Pooled within mice
+CSpooledPVcorrWithinMouse = [];
+withinDayCSpooledPVcorrWithinMouse = [];
+withinDayCSpooledPVcorrWithinMouseMat = [];
+for slI = 1:2
+    for pvtI = 1:length(pvNames)
+        for mouseI = 1:numMice
+            for csI = 1:length(condSet)
+                CSpooledPVcorrWithinMouse{slI}{pvtI}{mouseI}{csI} = pvCorrs{slI}{pvtI}{mouseI}(:,condSet{csI});
+                withinDayCSpooledPVcorrWithinMouse{slI}{pvtI}{mouseI}{csI} = CSpooledPVcorrWithinMouse{slI}{pvtI}{mouseI}{csI}(PVdaysApart{slI}{pvtI}{mouseI}==0,:);
+                for ccI = 1:size(withinDayCSpooledPVcorrWithinMouse{slI}{pvtI}{mouseI}{csI},2)
+                    withinDayCSpooledPVcorrWithinMouseMat{slI}{pvtI}{mouseI}{csI}{1,ccI} = cell2mat(withinDayCSpooledPVcorrWithinMouse{slI}{pvtI}{mouseI}{csI}(:,ccI));
+                end
+            end
+        end
+    end
+end
                 
 disp('Done PV corrs') 
 
