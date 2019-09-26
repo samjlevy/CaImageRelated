@@ -199,6 +199,7 @@ optionsText = {'m - mark off maze time';...
     'a - correct frames auto';...
     'g - reset brightness thresholds';...
     'w - open video player';...
+    'd - sub in DVT frames';...
     ' ';...
     's - save';...
     'q - save and quit';...
@@ -214,6 +215,89 @@ while stillEditing == 1
     mcfCurrentSize = manCorrFig.Position;
     editChoice = input('How would you like to edit? >>','s');
     switch editChoice
+        case 'd'
+            windowUse = input('Which frames to sub in for? enter w (whole session), s (select window), or 2 numbers for frame range >> ','s')
+            if strcmpi(windowUse,'w')
+                subLimits = [1 length(xAVI)];
+            elseif strcmpi(windowUse,'s')
+                figure(posAndVelFig);
+                [answerX,~] = ginput(2);
+                subLimits(1) = max([0 min(round(answerX))]);
+                subLimits(2) = min([length(xAVI) max(round(answerX))]);
+            elseif length(str2num(windowUse))==2
+                subLimits = str2num(windowUse);
+            end
+            subLimLog = false(length(xAVI),1);
+            subLimLog(subLimits(1):subLimits(2)) = true;
+            
+            doneSubbing = 0;
+            while doneSubbing == 0
+                colFilt = questdlg('Which channel points use?','DVT color','Green','Red','MeanWhereBoth','Green');
+                
+                dvtUse = 1;
+                if length(dvtPos)>1
+                    dvtUse = str2num(input(['Found ' num2str(length(dvtUse)) ' DVT files, enter number of which to use >> '],'s'))
+                end
+                otherLogical = ones(length(dvtPos{dvtUse}.greenX),1);
+                switch colFilt
+                    case 'Green'
+                        subInX = dvtPos{dvtUse}.greenX;
+                        subInY = dvtPos{dvtUse}.greenY;
+                        otherLogical = (dvtPos{dvtUse}.greenX~=0);
+                    case 'Red'
+                        subInX = dvtPos{dvtUse}.redX;
+                        subInY = dvtPos{dvtUse}.redY; 
+                        otherLogical = (dvtPos{dvtUse}.redX~=0);
+                    case 'MeanWhereBoth'
+                        subInX = mean([dvtPos{dvtUse}.greenX(:) dvtPos{dvtUse}.redX(:)],2);
+                        subInY = mean([dvtPos{dvtUse}.greenY(:) dvtPos{dvtUse}.redY(:)],2);
+                        otherLogical = (dvtPos{dvtUse}.greenX~=0) & (dvtPos{dvtUse}.redX~=0);
+                end
+                
+                %donePosFilt = 0;
+                %while donePosFilt == 0
+                    posFilt = input('Filter these points by position? (y/n) >> ','s')
+                    if strcmpi(posFilt,'y')
+                        aa = figure; imagesc(v0);
+                        hold on
+                        plot(subInX(subLimLog & otherLogical),subInY(subLimLog & otherLogical),'.')
+                    end
+                    [~,pfX,pfY] = roipoly([]);
+                    
+                    [inPF,~] = inpolygon(subInX,subInY,pfX,pfY);
+                    inPFall = inPF & otherLogical & subLimLog;
+                    plot(subInX(subLimLog & otherLogical & inPF),subInY(subLimLog & otherLogical & inPF),'.g')
+                    inEx = questdlg('Inlucde or exclude these points?','In or out','Include','Exclude','Include');
+                    
+                    switch inEx
+                        case 'Include'
+                            inPolyUse = inPFall;
+                        case 'Exclude'
+                            inPolyUse = ~inPF & otherLogical & subLimLog;
+                    end
+                    
+                    subAll = input('Sub in these points for all frames (a) or just zeros (z) >> ','s')
+                    if strcmpi(subAll,'z')
+                        onlyzeros = (xAVI==0) & (yAVI==0);
+                        inPolyUse = inPolyUse & onlyzeros;
+                    end
+                    
+                    xAVI(inPolyUse) = subInX(inPolyUse);
+                    yAVI(inPolyUse) = subInY(inPolyUse);
+                    
+                %    doneHere = input('Done filtering by position (d) or do another round (r) >> ','s')
+                     
+                %    if strcmpi(doneHere,'d')
+                %        donePosFilt = 1;
+                %    end
+                %end
+                
+                doneSubCheck = input('Done subbing in DVT positions (d) or do it again (a) >> ','s')
+                if strcmpi(doneSubCheck,'d')
+                    doneSubbing = 1;
+                end
+            end
+            
         case 'w'
             h1 = implay(avi_filepath);
             ddd = input('Input y when done with video: ','s');
