@@ -3,19 +3,32 @@ function AlignImagingToTracking2_SL(varargin)
 % to run. Looks at whichEndsFirst to indicate in the other what is the last
 % usable frame. This is all based on time from the DVT and assumed-equal
 % timing in the imaging file
-
+folderUse = cd;
+fps_brainimage = 20;
+pos_file = 'Pos.mat';
 if ~isempty(varargin)
 for aa = 1:length(varargin)/2
     switch varargin{2*aa-1}
         case 'folderUse'
             folderUse = varargin{2*aa};
             cd(folderUse)
+        case 'fps_brainimage'
+            fps_brainimage = varargin{2*aa};
+        case 'pos_file'
+            pos_file = varargin{2*aa};
     end
 end
 end
 
+aa = load(fullfile(folderUse,pos_file));
+fn = fieldnames(aa);
+xind = listdlg('PromptString','Which is X positions?','ListString',fn);
+yind = listdlg('PromptString','Which is Y positions?','ListString',fn);
+xAVI = aa.(fn{xind});
+yAVI = aa.(fn{yind});
+DVTtime = aa.DVTtime;
 
-load Pos.mat DVTtime xAVI yAVI%xAVI_filt yAVI_filt
+
 if ~exist('DVTtime','var')
     [DVTfile, DVTpath] = uigetfile('*.DVT', 'Select DVT file');
     pos_data = importdata(fullfile(DVTpath, DVTfile));
@@ -23,15 +36,13 @@ if ~exist('DVTtime','var')
 else    
     time=DVTtime;
 end    
-%load Pos.mat xAVI yAVI
 
-fps_brainimage = 20;
 %brainFrameRate = 1/fps_brainimage;
 TrackingLength = length(xAVI);
 
 if ~exist('FToffsetSam.mat','file')
     disp('Did not find Sam"s FToffset, running it now')
-    [~, ~, ~ ] = JustFToffset; %FToffset LastUsable whichEndsFirst FTlength brainTime time
+    [~, ~, ~ ] = JustFToffset('fps_brainimage',fps_brainimage); %FToffset LastUsable whichEndsFirst FTlength brainTime time
 end
 load FToffsetSam.mat
 

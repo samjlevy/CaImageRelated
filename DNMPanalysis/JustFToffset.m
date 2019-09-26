@@ -4,7 +4,7 @@ function [FToffset, LastUsable, whichEndsFirst ] = JustFToffset(varargin)
 %indicated as the opposite of whichever is indicated by whichEndsFirst. 
 %This is all based on the assumption that time from the DVT (column 2) is 
 %accurate and assumed-equal timing in the imaging file.
-
+fps_brainimage = 20; 
 useXml = 0;
 overwrite_existing = 0;
 imaging_start_frame = 1;
@@ -16,10 +16,12 @@ for aa=1:length(varargin)
         overwrite_existing = varargin{aa+1};
     elseif strcmpi(varargin{aa},'imaging_start_frame')
         imaging_start_frame = varargin{aa+1};
+    elseif strcmpi(varargin{aa},'fps_brainimage')
+        fps_brainimage = varargin{aa+1};
     end
 end    
 
-fps_brainimage = 20; % frames/sec for brain image timestamps
+% frames/sec for brain image timestamps
 
 DVTfileMaybe = dir('*.DVT');
 if length(DVTfileMaybe) ~= 1

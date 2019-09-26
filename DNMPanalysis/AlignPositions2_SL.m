@@ -83,6 +83,7 @@ for pathI = 1:length(align_paths)
 
         try
             tform = fitgeotrans(floorCorners,[xAnchor yAnchor],'affine');
+            disp('Warning, inputs here might be backwards. Check results')
         catch 
             keyboard
         end

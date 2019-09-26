@@ -1,8 +1,11 @@
-function ParsedFramesToBrainFrames( xls_file)
+function ParsedFramesToBrainFrames( xls_file,fps_brainimage)
 %Takes an excell file as input and returns (in same format) all found frame
 %numbers in brain (FT) time.
 %Question for validation: in alignment bit (lines 32/33), should that
 %-FToffset... be there? Make sure to comment why or why not if removing it
+if isempty(fps_brainimage)
+    fps_brainimage = 20;
+end
 
 if ~exist('xls_file','var')
     try
@@ -22,7 +25,7 @@ else
     [frames, txt] = xlsread(xls_file, 1);
 end
         
-fps_brainimage = 20; brainFrameRate = 1/fps_brainimage;
+brainFrameRate = 1/fps_brainimage;
 
 load FToffsetSam.mat %Comes with FToffset LastUsable whichEndsFirst FTlength brainTime time
 
