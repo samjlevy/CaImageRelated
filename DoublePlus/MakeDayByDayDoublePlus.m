@@ -1,4 +1,6 @@
 function [daybyday, sortedSessionInds, useDataTable] = MakeDayByDayDoublePlus(mousePath, getFluoresence, deleteSilentCells)
+%Delete silent cells is only for cells elimiated through not including
+%certain registration sessions
 
 cd(mousePath)
 

@@ -1,9 +1,11 @@
 function AlignPosToAnchor1(posLedPath,anchorPath)
 
 %posLedPath = 'C:\Users\Sam\Desktop\marble19_190818\Marble19_190818_PosLED_temp.mat';
-anchorPath = 'C:\Users\Sam\Desktop\AddTmaze\MazeAlignmentTemplate.mat';
+%anchorPath = 'C:\Users\Sam\Desktop\AddTmaze\MazeAlignmentTemplate.mat';
 
-load(posLedPath,'xAVI','yAVI','avi_filepath','DVTtime')
+ledPath = ls(fullfile(posLedPath,'*PosLED_temp.mat'));
+
+load(ledPath,'xAVI','yAVI','avi_filepath','DVTtime')
 load(anchorPath,'posAnchorIdeal')
 
 numFrames = length(xAVI);
@@ -14,18 +16,18 @@ try
 obj = VideoReader(avi_filepath);
 catch
     [ff,ll] = uigetfile(['Please locate the file ' avi_filepath]);
-    avi_filepath = fullfile(ll,ff);
-    h1 = implay(avi_filepath);
+    avi_filepath = fullfile(ll,ff);    
 end
+h1 = implay(avi_filepath);
 
 %For each instance: 
 % what are the frame number for this maze epoch?
 whichMaze = zeros(1,numFrames);
 for epochI = 1:numEpochs
     eStart(epochI) = str2double(input(['Enter start frame number for epoch ' num2str(epochI) ' >>'],'s'));
-    %eEnd(epochI) = str2double(input(['Enter end frame number for epoch ' num2str(epochI) ' >>'],'s'));
+    eEnd(epochI) = str2double(input(['Enter end frame number for epoch ' num2str(epochI) ' >>'],'s'));
     
-    pochs(epochI,:) = [eStart(epochI) eEnd(epochI)];
+    epochs(epochI,:) = [eStart(epochI) eEnd(epochI)];
     whichMaze(eStart(epochI):eEnd(epochI)) = epochI;
 end
 try
@@ -91,9 +93,11 @@ for epochI = 1:numEpochs
     end
 end
 
-savePath = strsplit(posLedPath,'\');
-savePath = fullfile(savePath{1:end-1});
-save(fullfile(savePath,'posAnchored.mat'),'v0','x_adj_cm','y_adj_cm','xAnchor','anchors','whichMaze','epochs','xAVI','yAVI','DVTtime')
+%savePath = strsplit(posLedPath,'\');
+%savePath = fullfile(savePath{1:end-1});
+savePath = posLedPath;
+save(fullfile(savePath,'posAnchored.mat'),'v0','x_adj_cm','y_adj_cm','xAnchor','anchors',...
+    'whichMaze','epochs','xAVI','yAVI','DVTtime','posAnchorIdeal')
 
 end
 

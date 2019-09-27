@@ -36,8 +36,8 @@ end
 
 %Here we actually start dealing with things
 newFrames = frames; 
-for column = (1+strcmpi(txt{1,1},'Trial #')):size(txt,2)
-    if ~isnan(frames(:,column))
+for column = (2):size(frames,2)
+    if any(~isnan(frames(:,column))) && ~strcmpi(txt{1,column},'MazeID')
        for row = 1:size(frames,1)
            newFrames(row, column) = findclosest(time(frames(row, column)), brainTime)...
                - (FToffset - (imaging_start_frame-1));
@@ -46,10 +46,13 @@ for column = (1+strcmpi(txt{1,1},'Trial #')):size(txt,2)
        end
     end
 end
+if newFrames(1,2)<0
+    newFrames(1,2) = imaging_start_frame;
+end
 
 newAll=txt;
 for column = 1:size(newFrames,2)
-    if ~isnan(frames(:,column))
+    if any(~isnan(frames(:,column))) || strcmpi(txt{1,column},'MazeID')
        for row = 1:size(frames,1)
            newAll{row+1,column} = newFrames(row,column);
        end
@@ -62,5 +65,7 @@ if ~exist(saveName,'file')
 else
     disp('Brain time file already exists; not writing')
 end
+
+if exist(
 
 end

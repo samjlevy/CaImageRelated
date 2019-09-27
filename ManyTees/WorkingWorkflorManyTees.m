@@ -29,18 +29,20 @@ PreProcessLEDtracking
 %2. Align positions to template
 %   - right now built to take the PosLED_temp.mat,
 %     saves out posAnchored with x/y_adj_cm  
-AlignPosToAnchor1(posLedPath,anchorPath)
+
+AlignPosToAnchor1(posLedPath,'C:\Users\Sam\Desktop\AddTmaze\MazeAlignmentTemplate.mat')
 
 %3. Parse alternation behavior:
 %   - takes in the posAnchored but operates on xAVI,yAVI within. Saves out
 %     a file that has behavior table, lapDirections, stem limits
 [onMazeFinal,behTable] = ParseOnMazeBehaviorMultiWrapper(posLEDfile);
-still need an accuracy file for the datatable?
 
 %4. Turn these tables into an excel sheet 
 MakeSpreadSheetFromBehTable
 
-%5. Adjust positions to final alignment (for now, no)
+%5. Exclude some bad frames
+ExcludeLapFrames
+
 
 %% 3. Align Imaging to position tracking. 
 %1. Align imaging to tracking with updated function
@@ -50,22 +52,30 @@ AlignImagingToTracking2_SL('pos_file','posAnchored.mat','fps_brainimage',10)
 %2. Align behavior timestamps to brain time
 ParsedFramesToBrainFrames( xls_file,10)
 
-%3. Finalize the sheet
-DNMPexcelCombiner(cd)
-ExcelFinalizer(cd)
+%3. Adjust behavior
+%Align positions to new limits
+AdjustStemLimsAlternation1 %crap function for now
+
+%4. Finalize the sheet
+%DNMPexcelCombiner(cd)
+%ExcelFinalizer(cd)
+%   - Just make a copy and remane it for now
+
 %% 4. Add it all together to make a trial by trial!
 %1. Make a dummy cell registration as a placeholder. REPLACE IN FUTURE
 MakeFullRegFake(sessionPaths)
 
 %2. Make a data table of all sessions
-DNMPdataTable = MakeDNMPdataTable(fullRegPath)
+MakeAlternationDataTable1(base_path)
 
 %3. Make daybyday
-[daybyday, sortedSessionInds, useDataTable] = MakeDayByDay(basePath,accuracyThresh, getFluoresence, deleteSilentCells)
+[daybyday, sortedSessionInds, useDataTable] = MakeDayByDayAlternation(mousePath, getFluoresence, deleteSilentCells);
 
 %4. Make trialbytrial
-[trialbytrial, allfiles, sortedSessionInds, realdays]= MakeTrialByTrial2(basePath,taskSegment,correctOnly)
+[trialbytrial, allfiles, sortedSessionInds, realdays]= MakeTBTalternation(mousePath,getFluoresence);
 
+%2-4 happen in a wrapper script:
+MakeTBTwrapperAlternation
 
 
 

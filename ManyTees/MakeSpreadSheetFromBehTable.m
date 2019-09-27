@@ -23,6 +23,10 @@ end
 AlternationDataTable = array2table(fullDat,'VariableNames',{'TrialNum',behLabels{1}{:},'MazeID'});
 AlternationDataTable.TurnDir = lapDirec;
 
-xlswrite('AlternationSheet.xlsx',table2cell(AlternationDataTable))
+
+cc = table2cell(AlternationDataTable);
+cc = [{'Trial #',behLabels{1}{:},'MazeID','TurnDir'}; cc];
+
+xlswrite('AlternationSheet.xlsx',cc)
 
 end
