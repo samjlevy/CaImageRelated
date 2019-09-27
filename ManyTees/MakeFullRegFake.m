@@ -37,7 +37,7 @@ for sessI = 1:length(sessionPaths)
     fullReg.cellCenters = [fullReg.cellCenters; getAllCellCenters(NeuronImage)];
     
     fullReg.sessionInds = [];
-    fullReg.sessionInds([1:length(NeuronImage)]+size(fullReg.sessionInds,1),sessI) = sessI*ones(length(NeuronImage),1);
+    fullReg.sessionInds([1:length(NeuronImage)]+size(fullReg.sessionInds,1),sessI) = [1:length(NeuronImage)]';
 end
   
 cd(sessionPaths{1})

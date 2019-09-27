@@ -103,24 +103,7 @@ for sessI = 1:height(useDataTable)
         
         all_Fluoresence{sessI,1} = NeuronTraces.RawTrace(:,PSAboolUseIndices);       
     end
-    
-    %Check for imaging exclude, delete bad frames
-    if exist(fullfile(thisDir,'excludeFromImaging.mat'),'file')==2
-        ssaa = input(['Found imaging exclude frames for ' useDataTable.FolderName{sessI} ', include them? (y/n) '],'s');
-        if strcmpi(ssaa,'y')
-            %Assumes this refers to the original FinalOutput PSAbool
-            load(fullfile(thisDir,'excludeFromImaging.mat'))
-
-            load(fullfile(thisDir,'Pos_brain.mat'),'PSAboolUseIndices')
-
-            daybyday.imagingFramesDelete{sessI} = logical(sum(PSAboolUseIndices == excludeFromImaging',1));
-
-            %Still need to do something for frames/txt
-        end
-    else
-        daybyday.imagingFramesDelete{sessI} = [];
-    end
-    
+     
     all_PSAbool{sessI,1} = logical(PSAboolAdjusted);
     
     disp('Done')
@@ -135,6 +118,7 @@ if deleteSilentCells == 1
 end
 
 %Reshuffle PSAbool into the right registration order
+%disp('Warning, maybe a bug here?')
 daybyday.PSAbool = PoolPSA2(all_PSAbool, sortedSessionInds);
 
 if getFluoresence == 1

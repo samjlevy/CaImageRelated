@@ -60,7 +60,7 @@ for sessI = 1:numSess
                 trialbytrial(ttI).isCorrect = [];
             end
             
-            trialbytrial(ttI).name = {dirI};
+            trialbytrial(ttI).name = namesHere{dirI};
             correctDirection = strcmpi(daybyday.behavior{sessI}.TurnDir,namesHere{dirI}(1)) & trialsHere;
             
             if correctOnly==1

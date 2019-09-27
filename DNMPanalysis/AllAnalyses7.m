@@ -309,7 +309,7 @@ binsAboveShuffle = [];
 thisCellSplits = [];
 for mouseI = 1:numMice
     shuffleDir = fullfile(mainFolder,mice{mouseI},splitDir);
-    %{
+    
     for stI = 1:length(splitterType)
         for slI = 1:length(splitterLoc)
             switch splitterLoc{slI}
