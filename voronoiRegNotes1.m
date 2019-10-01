@@ -77,8 +77,8 @@ alignRange = 40;
 
 %Set up unchanging background image
 allSideLength = max([max(allCellCenters(:,1))-min(allCellCenters(:,1)) max(allCellCenters(:,2))-min(allCellCenters(:,2))]);
-allSpacing = ;
-allCenter = ;
+allSpacing = [];
+allCenter = [];
 allCenters = GenerateHexagonalGrid2(allCenter,allSpacing,allSideLength);
 %Voronoi background image
 
@@ -121,6 +121,9 @@ rangeCheck = 100;
 spacing = 10;
 %local uniform hex grid
 [xReg,yReg] = GenerateHexagonalGrid2([0,0],spacing,rangeCheck);
+    %Need to figure out some structure for uniform hex grid
+    %Could probably just do clockwise order in concentric rings
+    
 [vorVertsReg,vorIndsReg] = voronoin([xReg,yReg]);
 vorVertsReg(vorVertsReg==Inf)=rangeCheck*5;
 polysReg = cellfun(@(x) polyshape(vorVertsReg(x,1),vorVertsReg(x,2)),vorIndsReg,'UniformOutput',false);
@@ -178,7 +181,8 @@ for cellI = 1:numCells
     
     for cellJ = 1:numCells%but would be another session
     %How to xcorr when have different numbers of points 
-    
+        distJ = distances(cellJ,voronoiAdjTwo(cellJ,:));
+        anglesK = allAngles(cellJ,voronoiAdjTwo(cellJ,:));
     
 
 
