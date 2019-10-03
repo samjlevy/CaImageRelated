@@ -45,7 +45,7 @@ for mouseI = 1:numMice
     end
     
     load(fullfile(mainFolder,mice{mouseI},stemPFs),'TMap_unsmoothed','TMap_zRates','TCounts','RunOccMap')
-    cellPooledTMap_unsmoothed{1}{mouseI} = TMap_unsmoothed;
+    cellTMap_unsmoothed{1}{mouseI} = TMap_unsmoothed;
     %cellPooledTMap_firesAtAll{1}{mouseI} = TMap_firesAtAll;
     cellTMap_zRates{1}{mouseI} = TMap_unsmoothed; 
     cellTCounts{1}{mouseI} = TCounts;
@@ -59,7 +59,7 @@ binsAboveShuffle = [];
 shuffThresh = 1 - pThresh;
 thisCellSplits = [];
 for mouseI = 1:numMice
-    shuffleDir = fullfile(mainFolder,mice{mouseI},splitDir);
+    splitterFile = fullfile(mainFolder,mice{mouseI},'splitLR.mat');
     
     [binsAboveShuffle, numBinsAboveShuffle, thisCellSplits] = SplitterWrapper5(cellTBT{mouseI}, cellPooledTMap_unsmoothed{1}{mouseI},...
         'LR','unpooled', numShuffles, stemBinEdges, [], shuffThresh, 1,'Y');

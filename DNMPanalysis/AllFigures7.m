@@ -155,6 +155,31 @@ for slI = 1:2
     end
 end
 
+%% Splitter DI distributions unpooled
+condNames = {cellTBT{1}.name};
+splitDIcolor = {[0.4000    0.6510    0.8314];[0.9294    0.3490    0.1294]};
+splitDIcolor = {'r','b'};
+gg = [];
+for slI = 1:2 %Maze Location
+    figure;
+    for stI = 1:2 %Splitter type
+        for ttI = 1:2 %Sub chunk
+            subplot(2,2,ttI+2*(stI-1))
+            allDIhere = [];
+            for mouseI = 1:numMice
+                DIhere = DImeanUnpooled{slI}{stI}{mouseI}(:,:,ttI);
+                allDIhere = [allDIhere; DIhere(:)];
+            end
+            gg{ttI+2*(stI-1)} = histogram(allDIhere,[-1.1 -0.9:0.1:0.9 1.1],'FaceColor',splitDIcolor{stI});
+            ylab = cellfun(@str2num,gg.Parent.YTickLabel,'UniformOutput',false);
+            newLab = cellfun(@(x) num2str(x/sum(gg.Values)),ylab,'UniformOutput',false);
+            gg.Parent.YTickLabel = newLab;
+            
+            title(['Splitting between ' condNames{unpooledCPs{stI}(ttI,1)} ' and ' condNames{unpooledCPs{stI}(ttI,2)}])
+        end
+    end
+end
+            
 
 %% Proportion of each splitter type
 hh = figure('Position',[477 83 324 803]);%[593 58 651 803]

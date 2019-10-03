@@ -205,7 +205,7 @@ for mouseI = 1:numMice
         case 0
             disp(['no placefields for delay found for ' mice{mouseI} ', making now'])
             [~, ~, ~, ~, ~, ~, ~] =...
-            PFsLinTBTdnmp(cellTBTarm{mouseI}, armBinEdges, minspeed, saveName, false,condPairs);
+            PFsLinTBTdnmp(cellTBTdelay{mouseI}, armBinEdges, minspeed, saveName, false,condPairs);
        case 2
             disp(['found placefields for delay for ' mice{mouseI} ', all good'])
     end
@@ -295,7 +295,7 @@ traitLabels = {'splitLR' 'splitST'  'splitLRonly' 'splitSTonly' 'splitBOTH' 'spl
 disp('Done all setup stuff')
 
 %% Splitter cells: Shuffle versions, pooled
-numShuffles = 100;
+numShuffles = 1000;
 shuffThresh = 1 - pThresh;
 binsMin = 1;
 splitDir = 'splitters';
@@ -303,6 +303,8 @@ splitDir = 'splitters';
 splitterType = {'LR' 'ST'};
 splitterCPs = {[1 2] [3 4]};
 splitterLoc = {'stem' 'arm'};
+
+unpooledCPs = {[1 2; 3 4];[1 3;2 4]};
 
 %Get/make splitting
 binsAboveShuffle = [];
@@ -348,6 +350,13 @@ for mouseI = 1:numMice
             [rateDiff{slI}{stI}{mouseI}, rateSplit{slI}{stI}{mouseI}, meanRateDiff{slI}{stI}{mouseI}, DIeach{slI}{stI}{mouseI},...
                 DImean{slI}{stI}{mouseI}, DIall{slI}{stI}{mouseI}] =...
                 LookAtSplitters4(cellTMap, splitterCPs{stI}, []);
+            
+            %Splitters for unpooled data
+            [unpooledTMap{slI}{mouseI}, ~, ~, ~, ~, ~, ~] =...
+            PFsLinTBTdnmp(tbtHere, binEdgesHere, minspeed, [], false,[1;2;3;4]);
+            [~, ~, ~, ~,...
+                DImeanUnpooled{slI}{stI}{mouseI}, DIallUnPooled{slI}{stI}{mouseI}] =...
+                LookAtSplitters4(unpooledTMap{slI}{mouseI}, unpooledCPs{stI}, []);
             
             disp(['done ' splitterType{stI} ' on ' splitterLoc{slI} ' splitting for mouse ' num2str(mouseI)])
         end
