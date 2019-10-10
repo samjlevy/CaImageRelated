@@ -23,7 +23,7 @@ frameSize = [obj.Height obj.Width];
 DVTtime = [];
 nFrames = [];
 mcfScaleFactor = 1;
-mcfOriginalSize = [680 558 560 420];
+mcfOriginalSize = [520 378 560 420];
 DVTtoAVIscale = 0.6246;
 dvtPos = []; 
 %Pre-allocate stuff

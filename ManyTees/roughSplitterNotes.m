@@ -12,6 +12,8 @@ splitAbs = splitDir./abs(splitDir);
 splitsSameWay = diff(splitAbs(thisCellSplits,:),1,2)==0;%(bothSplit,:)bothSplit & activeBoth
 sum(splitsSameWay)/length(splitsSameWay)
 
+splitsOpposite = sum(splitAbs,2)==0; splitsOpposite(thisCellSplits==0)=0;
+
 activeBoth = [(aboveThresh{1}+aboveThresh{2})>0 (aboveThresh{3}+aboveThresh{4})>0];
 activeBoth = sum(activeBoth,2)==2;
 

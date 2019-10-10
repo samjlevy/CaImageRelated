@@ -61,7 +61,7 @@ thisCellSplits = [];
 for mouseI = 1:numMice
     splitterFile = fullfile(mainFolder,mice{mouseI},'splitLR.mat');
     
-    [binsAboveShuffle, numBinsAboveShuffle, thisCellSplits] = SplitterWrapper5(cellTBT{mouseI}, cellPooledTMap_unsmoothed{1}{mouseI},...
+    [binsAboveShuffle, numBinsAboveShuffle, thisCellSplits] = SplitterWrapper5(cellTBT{mouseI}, cellTMap_unsmoothed{1}{mouseI},...
         'LR','unpooled', numShuffles, stemBinEdges, [], shuffThresh, 1,'Y');
             save(splitterFile,'binsAboveShuffle','thisCellSplits','numBinsAboveShuffle')
             
