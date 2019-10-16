@@ -90,5 +90,7 @@ disp(['deleted ' num2str(sum(rowsDelete)) ' entries'])
   
 close(figHa)
 
+save(fullfile(base_path,'AlternationDataTable.mat'),'AlternationDataTable')
+
 end
 

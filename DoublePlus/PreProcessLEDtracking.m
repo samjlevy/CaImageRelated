@@ -11,6 +11,7 @@ if contains(version,'R2016a')
     return
 end
 
+global avi_filepath
 avi_filepath = ls('*.avi');
 if size(avi_filepath,1)~=1
     [avi_filepath,~] = uigetfile('*.avi','Choose appropriate video:');
@@ -31,6 +32,8 @@ velThresh = 25;
 calFrameN = [];
 lapParsed = []; scalingX = []; v0anchor = [];
 numOffmaze = []; scalingY = []; xAlign = []; yAlign = [];
+global videoResetCount
+videoResetCount = 1;
 
 startFresh = 0;
 posFiles = ls('*PosLED_temp.mat');
@@ -194,6 +197,11 @@ if strcmpi(firstPass,'Yes')
 SaveTemp;
 end
 %}
+%plotFog.figg = uifigure;
+plotFog.cbx = uicheckbox;
+plotFog.cbx.Text = 'Plot Tracking Live?';
+plotFog.cbx.Value = 1;
+
 optionsText = {'m - mark off maze time';...
     'z - fix (0,0) frames';...
     'b - parse onMaze time';...
@@ -322,7 +330,7 @@ while stillEditing == 1
                 = AutoCorrByLEDWrapper(...
                 posAndVelFig,manCorrFig, mcfCurrentSize, obj, onMazeX, onMazeY, onMazeMask, v0r, v0g, v0,...
                 howRedThresh, howGreenThresh, nBrightPoints, xAVI, yAVI, nFrames,...
-                nRed,nGreen,redPix,greenPix,subMultRedX,subMultRedY,subMultGreenX,subMultGreenY,anyRpix,anyGpix);
+                nRed,nGreen,redPix,greenPix,subMultRedX,subMultRedY,subMultGreenX,subMultGreenY,anyRpix,anyGpix,plotFog);
         case 'f'
             [v0] = AdjustWithBackgroundImage(avi_filepath, obj, v0);
 
@@ -367,9 +375,21 @@ while stillEditing == 1
                 disp(['Now have ' num2str(sum(zero_frames)) ' zero frames'])
             end
             
+            aorm = questdlg('Auto or manual?','aom','Auto','Manual','Manual');
             framesFix = find(zero_frames);
-            [xAVI,yAVI,definitelyGood] = CorrectManualFrames(obj,xAVI,yAVI,v0,...
-                definitelyGood,manCorrFig,framesFix,velThresh);
+            switch aorm
+                case 'Manual'
+                    [xAVI,yAVI,definitelyGood] = CorrectManualFrames(obj,xAVI,yAVI,v0,...
+                        definitelyGood,manCorrFig,framesFix,velThresh);
+                    
+                case 'Auto'
+                    [manCorrFig, obj, xAVI, yAVI, nRed,nGreen,redPix,greenPix,...
+                        subMultRedX,subMultRedY,subMultGreenX,subMultGreenY,anyRpix,anyGpix]...
+                        = ReallyAutoCorrByLEDWrapper(framesFix,...
+                        manCorrFig, mcfCurrentSize, obj, onMazeX, onMazeY, onMazeMask, v0r, v0g, v0,...
+                        howRedThresh, howGreenThresh, nBrightPoints, xAVI, yAVI, nFrames,...
+                        nRed,nGreen,redPix,greenPix,subMultRedX,subMultRedY,subMultGreenX,subMultGreenY,anyRpix,anyGpix,plotFog);
+            end
             
             disp('Done zero frames correction')
         case 'n'
@@ -395,6 +415,8 @@ while stillEditing == 1
             
             [xAVI,yAVI,definitelyGood] = CorrectManualFrames(obj,xAVI,yAVI,v0,...
                 definitelyGood,manCorrFig,framesFix,velThresh);
+            
+          
             
         case 'm'
             onoroff = questdlg('Mark on-maze or off-maze?','Oh, Hi Mark','ON','OFF','OFF');
@@ -458,16 +480,28 @@ while stillEditing == 1
                             = ReallyAutoCorrByLEDWrapper(framesFix,...
                             manCorrFig, mcfCurrentSize, obj, onMazeX, onMazeY, onMazeMask, v0r, v0g, v0,...
                             howRedThresh, howGreenThresh, nBrightPoints, xAVI, yAVI, nFrames,...
-                            nRed,nGreen,redPix,greenPix,subMultRedX,subMultRedY,subMultGreenX,subMultGreenY,anyRpix,anyGpix);
+                            nRed,nGreen,redPix,greenPix,subMultRedX,subMultRedY,subMultGreenX,subMultGreenY,anyRpix,anyGpix,plotFog);
                      case 'Manual'
+
                          [xAVI,yAVI,definitelyGood] = CorrectManualFrames(...
                              obj,xAVI,yAVI,v0,definitelyGood,manCorrFig,framesFix,velThresh);
                  end
             end
             
         case 'v'
+            preVGood = sum(definitelyGood);
+            
             [xAVI,yAVI, definitelyGood] = PreProcCorrectByVelocity...
                 (xAVI,yAVI,onMaze,definitelyGood,velThresh,v0,obj,manCorrFig,posAndVelFig);
+            
+            postVGood = sum(definitelyGood);
+            fixedFrames = postVGood - preVGood;
+            videoResetCount = videoResetCount + fixedFrames;
+            if videoResetCount > 5000
+                clear obj
+                obj = VideoReader(avi_filepath);
+                videoResetCount = 0;
+            end
         case 's'
             SaveTemp;
         case 't'
@@ -557,11 +591,22 @@ end
 %%
 function [xAVI,yAVI,definitelyGood] = CorrectManualFrames(obj,xAVI,yAVI,v0,...
     definitelyGood,manCorrFig,zeroFramesN,velThresh)
+global videoResetCount
+global avi_filepath
 p = ProgressBar(length(zeroFramesN));
 aviSR = obj.FrameRate;
 zfI = 1;
 while zfI < length(zeroFramesN)+1
     corrFrame = zeroFramesN(zfI);
+    
+    
+    %Get the frame to correct
+    videoResetCount = videoResetCount + 1;
+    if videoResetCount > 5000
+        clear obj
+        obj = VideoReader(avi_filepath);
+        videoResetCount = 0;
+    end
     
     [obj,manCorrFig,xAVI,yAVI,definitelyGood,buttonClicked,zfI] = PreProcCorrectFrameManual(...
         corrFrame,obj,manCorrFig,xAVI,yAVI,definitelyGood,velThresh,zfI);
@@ -579,23 +624,39 @@ end
 %%
 function [redX, redY, greenX, greenY, allIndR, allIndG, anyRpix, anyGpix] = AutoCorrByLED(...
     manCorrFig, obj, corrFrame, onMazeX, onMazeY, onMazeMask, v0r, v0g, rawColorThresh,...
-    howRedThresh, howGreenThresh, nBrightPoints)
-
+    howRedThresh, howGreenThresh, nBrightPoints,plotFog)
+global videoResetCount
+global avi_filepath
 %Get the frame to correct
+videoResetCount = videoResetCount + 1;
+if videoResetCount > 5000
+    clear obj
+    obj = VideoReader(avi_filepath);
+    videoResetCount = 0;
+end
+
 aviSR = obj.FrameRate;
 obj.CurrentTime = (corrFrame-1)/aviSR;
 uFrame = readFrame(obj);
 
-%Do some friendly UI stuff
 
-imagesc(manCorrFig.Children,uFrame);
+%Do some friendly UI stuff
+if ~isempty(plotFog)
+    if plotFog.cbx.Value==1
+        imagesc(manCorrFig.Children,uFrame);
+    end
+end
 title(manCorrFig.Children,['Frame# ' num2str(corrFrame)])
 
 boundaryX = onMazeX; boundaryX = [boundaryX; boundaryX(1)];
 boundaryY = onMazeY; boundaryY = [boundaryY; boundaryY(1)];
+if ~isempty(plotFog)
+    if plotFog.cbx.Value==1
 hold(manCorrFig.Children,'on')
 plot(manCorrFig.Children,boundaryX,boundaryY,'r','LineWidth',1.5)
 hold(manCorrFig.Children,'off')
+    end
+end
 
 %Do our image subtract and mult
 [rfRsub, rfGsub] =  GetSelfSubFrame(uFrame, v0r, v0g, onMazeMask);
@@ -619,10 +680,14 @@ end
 [allIndR,redX,redY] = GetBrightBlobPixels(rfRsub,nBrightPoints);
 [allIndG,greenX,greenY] = GetBrightBlobPixels(rfGsub,nBrightPoints);
 
+if ~isempty(plotFog)
+    if plotFog.cbx.Value==1
 hold(manCorrFig.Children,'on')
 plot(manCorrFig.Children,redX,redY,'or')
 plot(manCorrFig.Children,greenX,greenY,'og')
 hold(manCorrFig.Children,'off')
+    end
+end
 
 end
 %%
@@ -810,7 +875,7 @@ function [manCorrFig, obj, xAVI, yAVI, nRed,nGreen,redPix,greenPix,...
     = AutoCorrByLEDWrapper(...
     posAndVelFig,manCorrFig, mcfCurrentSize, obj, onMazeX, onMazeY, onMazeMask, v0r, v0g, v0,...
     howRedThresh, howGreenThresh, nBrightPoints, xAVI, yAVI, nFrames,...
-    nRed,nGreen,redPix,greenPix,subMultRedX,subMultRedY,subMultGreenX,subMultGreenY,anyRpix,anyGpix)
+    nRed,nGreen,redPix,greenPix,subMultRedX,subMultRedY,subMultGreenX,subMultGreenY,anyRpix,anyGpix,plotFog)
     
 manCorrFig = CheckManCorrFig(mcfCurrentSize,manCorrFig,v0);
 
@@ -838,7 +903,7 @@ fixTheseFrames = fStart:fStop;
     = ReallyAutoCorrByLEDWrapper(fixTheseFrames,...
     manCorrFig, mcfCurrentSize, obj, onMazeX, onMazeY, onMazeMask, v0r, v0g, v0,...
     howRedThresh, howGreenThresh, nBrightPoints, xAVI, yAVI, nFrames,...
-    nRed,nGreen,redPix,greenPix,subMultRedX,subMultRedY,subMultGreenX,subMultGreenY,anyRpix,anyGpix);
+    nRed,nGreen,redPix,greenPix,subMultRedX,subMultRedY,subMultGreenX,subMultGreenY,anyRpix,anyGpix,plotFog);
 end
 
 %%
@@ -847,17 +912,21 @@ function [manCorrFig, obj, xAVI, yAVI, nRed,nGreen,redPix,greenPix,...
     = ReallyAutoCorrByLEDWrapper(fixTheseFrames,...
     manCorrFig, mcfCurrentSize, obj, onMazeX, onMazeY, onMazeMask, v0r, v0g, v0,...
     howRedThresh, howGreenThresh, nBrightPoints, xAVI, yAVI, nFrames,...
-    nRed,nGreen,redPix,greenPix,subMultRedX,subMultRedY,subMultGreenX,subMultGreenY,anyRpix,anyGpix)
+    nRed,nGreen,redPix,greenPix,subMultRedX,subMultRedY,subMultGreenX,subMultGreenY,anyRpix,anyGpix,plotFog)
 
+
+manCorrFig = CheckManCorrFig(mcfCurrentSize,manCorrFig,v0);
 %imagesc(v0)
+mcfBlockLength = 5000;
 rawColorThresh = 1;
 %First pass just correct all the frames
+mcfI = 1;
 p = ProgressBar(length(fixTheseFrames));
 for corrFrameI = 1:length(fixTheseFrames)
     corrFrame = fixTheseFrames(corrFrameI);
     [redX, redY, greenX, greenY, allIndR, allIndG, anyRpix, anyGpix] = AutoCorrByLED(...
     manCorrFig, obj, corrFrame, onMazeX, onMazeY, onMazeMask, v0r, v0g, rawColorThresh,...
-    howRedThresh, howGreenThresh, nBrightPoints);
+    howRedThresh, howGreenThresh, nBrightPoints,plotFog);
 
     subMultRedX(corrFrame) = redX;
     subMultRedY(corrFrame) = redY;
@@ -869,6 +938,14 @@ for corrFrameI = 1:length(fixTheseFrames)
     greenPix{corrFrame} = allIndG;
     
     p.progress;
+    mcfI = mcfI+1;
+    if mcfI > mcfBlockLength
+        disp(['Resetting manCorrFig every ' num2str(mcfBlockLength) ' frames'])
+        close(manCorrFig)
+        manCorrFig = CheckManCorrFig(mcfCurrentSize,manCorrFig,v0);
+        
+        mcfI = 1;
+    end
 end
 p.stop;
 

@@ -1,9 +1,13 @@
-function [onMazeFinal,behTable] = ParseOnMazeBehaviorMultiWrapper(posLEDfile)
-
-posLEDfile = 'C:\Users\Sam\Desktop\marble19_190818\posAnchored.mat';
+function [behTable] = ParseOnMazeBehaviorMultiWrapper(posLEDfile)
 
 saveFolder = strsplit(posLEDfile,'\');
-saveFolder = fullfile(saveFolder{1:end-1});
+if length(saveFolder)==1
+    saveFolder = cd;
+    disp('saving in current folder')
+else
+    saveFolder = fullfile(saveFolder{1:end-1});
+end
+
 
 load(posLEDfile,'v0','epochs','xAVI','yAVI');
 %fn = fieldnames(pf);

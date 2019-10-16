@@ -118,6 +118,11 @@ cellComing = {[];[];267;[]};
 cellLeaving = {[242];[];359;[]};
 toBoth = {[14 180];[];[230];[]};
 
+for mouseI = 1:numMice
+    leftSplitter{mouseI} = meanRateDiff{1}{1}{mouseI}<0 & traitGroups{1}{mouseI}{3};
+    studySplitter{mouseI} = meanRateDiff{1}{2}{mouseI}<0 & traitGroups{1}{mouseI}{4};
+end
+
 splittersPlot = randomFiringCell;
 for mouseI = 1:numMice
     if any(splittersPlot{mouseI})
@@ -125,6 +130,7 @@ for mouseI = 1:numMice
         for cellI = 1:length(splittersPlot{mouseI})
             figg = [];
             cp = splittersPlot{mouseI}(cellI);
+            cp = 356;
             pd = find(cellSSI{mouseI}(cp,:)>0);
             [figg] = PlotSplittingDotPlot(daybyday,cellTBTarm{mouseI},cp,pd,'arm','line','wholeLap');
             %cellOutLinePlot...

@@ -66,6 +66,4 @@ else
     disp('Brain time file already exists; not writing')
 end
 
-if exist(
-
 end

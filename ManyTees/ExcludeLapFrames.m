@@ -43,6 +43,11 @@ for lapI = 1:size(bTable,1)
     end
 end
 
+if exist('FToffsetSam.mat','file')==0
+    disp('did not find FToffset, making now')
+    JustFToffset
+end
+
 load FToffsetSam.mat
 
 badFrames = find(excludeFrames);

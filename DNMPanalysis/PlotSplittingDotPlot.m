@@ -186,5 +186,5 @@ for dayI = 1:length(presentDays)
     end
     
     suptitleSL(['Cell ' num2str(cellI) ', Day ' num2str(dayJ) ' on ' mazeLoc])
-    
+    figg{dayI}.Renderer = 'painters';
 end

@@ -5,8 +5,9 @@
 %1. Use inscopix Data Processing to temporally downsample videos to 10fps,
 %   and spatially downsample 2x (to 720x540 x whatever)
 %   - This is necessary because many of the sessions are too long
+%   - After cropping, video sizes should be about:
     
-%2. Run the sesion through Caiman using Will's put together pipeline. 
+%2. Run the sesion through Caiman using Will's  pipeline. 
 %   - Make sure Caiman is expecting a video at 10fps, and still does a 2x
 %   downsample
 
@@ -21,21 +22,24 @@ stdThresh = 3.5; %Num std above mean to get calcium transients at
 durThresh = 5; %Minimum number of frames to call it a transient
 [PSAbool] = DeconvolutionRough1(C,stdThresh,durThresh);
 [cellROIs] = CaimanToMatCellROIs1(A,imSize);
+save('FinalOutput.mat','PSAbool','cellROIs','imSize')
 
 %% 2. Video Position Correction
+%0. FToffset
+JustFToffset('fps_brainimage',10)
+
 %1. Track and fix positions from raw video using tried and true function:
 PreProcessLEDtracking
 
 %2. Align positions to template
-%   - right now built to take the PosLED_temp.mat,
+%   - right now built to take the PosLED_temp.mat, but just the path, not the file
 %     saves out posAnchored with x/y_adj_cm  
-
 AlignPosToAnchor1(posLedPath,'C:\Users\Sam\Desktop\AddTmaze\MazeAlignmentTemplate.mat')
 
 %3. Parse alternation behavior:
-%   - takes in the posAnchored but operates on xAVI,yAVI within. Saves out
+%   - takes in the posAnchored file but operates on xAVI,yAVI within. Saves out
 %     a file that has behavior table, lapDirections, stem limits
-[onMazeFinal,behTable] = ParseOnMazeBehaviorMultiWrapper(posLEDfile);
+[behTable] = ParseOnMazeBehaviorMultiWrapper(posAnchoredFile);
 
 %4. Turn these tables into an excel sheet 
 MakeSpreadSheetFromBehTable
@@ -46,11 +50,12 @@ ExcludeLapFrames
 
 %% 3. Align Imaging to position tracking. 
 %1. Align imaging to tracking with updated function
+%   - use x_adj_cm and y_adj_cm
 %   - saves out Pos_brain.mat
 AlignImagingToTracking2_SL('pos_file','posAnchored.mat','fps_brainimage',10)
 
 %2. Align behavior timestamps to brain time
-ParsedFramesToBrainFrames( xls_file,10)
+ParsedFramesToBrainFrames('AlternationSheet.xlsx',10)
 
 %3. Adjust behavior
 %Align positions to new limits
@@ -72,7 +77,7 @@ MakeAlternationDataTable1(base_path)
 [daybyday, sortedSessionInds, useDataTable] = MakeDayByDayAlternation(mousePath, getFluoresence, deleteSilentCells);
 
 %4. Make trialbytrial
-[trialbytrial, allfiles, sortedSessionInds, realdays]= MakeTBTalternation(mousePath,getFluoresence);
+[trialbytrial, allfiles, sortedSessionInds, realdays]= MakeTBTalternation(mousePath,getFluoresence,correctOnly);
 
 %2-4 happen in a wrapper script:
 MakeTBTwrapperAlternation

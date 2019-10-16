@@ -1,7 +1,9 @@
 %% AllAnalysesAlternation1
 
+disp('loading stuff')
+
 mainFolder = 'C:\Users\Sam\Desktop\TwoMazeAlternationData';
-mice = {'Marble19'};
+mice = {'Marble19','Marble91'};
 
 numMice = length(mice);
 
@@ -24,11 +26,19 @@ for mouseI = 1:numMice
         [trialReli,aboveThresh,~,~] = TrialReliability(cellTBT{mouseI}, 0.25);
         
         save(saveName,'dayUse','threshAndConsec','trialReli')
-        %clear('dayUse','threshAndConsec','dayUseArm','threshAndConsecArm','trialReli','trialReliArm')
+        clear('dayUse','threshAndConsec','dayUseArm','threshAndConsecArm','trialReli','trialReliArm')
     end
 end
+for mouseI = 1:numMice
+    saveName = fullfile(mainFolder,mice{mouseI},'trialReliability.mat');
+    dd = load(saveName);
+    dayUse{mouseI} = dd.dayUse;
+    threshAndConsec{mouseI} = dd.threshAndConsec;
+    trialReli{mouseI} = dd.trialReli;
+end
+
 stemPFs = 'PFsLinStem.mat';
-load('stemLims.mat')
+load(fullfile(mainFolder,'stemLims.mat'))
 stemLims = round(stemLims);
 numBins = 10;
 stemBinEdges = linspace(stemLims(1),stemLims(2),numBins+1);
@@ -52,6 +62,8 @@ for mouseI = 1:numMice
     cellRunOccMap{1}{mouseI} = RunOccMap;
 end
 
+disp('Done loading stuff')
+
 %% Splitters
 pThresh = 0.05;
 numShuffles = 1000;
@@ -61,9 +73,34 @@ thisCellSplits = [];
 for mouseI = 1:numMice
     splitterFile = fullfile(mainFolder,mice{mouseI},'splitLR.mat');
     
-    [binsAboveShuffle, numBinsAboveShuffle, thisCellSplits] = SplitterWrapper5(cellTBT{mouseI}, cellTMap_unsmoothed{1}{mouseI},...
-        'LR','unpooled', numShuffles, stemBinEdges, [], shuffThresh, 1,'Y');
-            save(splitterFile,'binsAboveShuffle','thisCellSplits','numBinsAboveShuffle')
-            
-            [rateDiff, rateSplit, meanRateDiff, DIeach, DImean, DIall] = LookAtSplitters4(cellTMap_unsmoothed{1}{mouseI},[1 2;3 4],[]);
+    if exist(splitterFile,'file')==0
+        disp(['making splitters for ' mice{mouseI}])
+        [binsAboveShuffle, numBinsAboveShuffle, thisCellSplits] = SplitterWrapper5(cellTBT{mouseI}, cellTMap_unsmoothed{1}{mouseI},...
+            'LR','unpooled', numShuffles, stemBinEdges, [], shuffThresh, 1,'Y');
+        
+        [rateDiff, rateSplit, meanRateDiff, DIeach, DImean, DIall] = LookAtSplitters4(cellTMap_unsmoothed{1}{mouseI},[1 2;3 4],[]);
+        
+        save(splitterFile,'binsAboveShuffle','thisCellSplits','numBinsAboveShuffle','rateDiff','rateSplit','meanRateDiff','DIeach','DImean','DIall')
+    else
+        disp(['found splitters for ' mice{mouseI}])
+    end
+    
+    ss = load(splitterFile);
+    binsAboveShuffle{mouseI} = ss.binsAboveShuffle;
+    numBinsAboveShuffle{mouseI} = ss.numBinsAboveShuffle;
+    thisCellSplits{mouseI} = ss.thisCellSplits;
+    rateDiff{mouseI} = ss.rateDiff;
+    rateSplit{mouseI} = ss.rateSplit; 
+    meanRateDiff{mouseI} = ss.meanRateDiff;
+    DIeach{mouseI} = ss.DIeach;
+    DImean{mouseI} = ss.DImean;
+    DIall{mouseI} = ss.DIall; 
 end
+
+disp('Done loading splitters')
+
+%% Decoding analysis: one maze turn dir from the other?
+
+
+
+

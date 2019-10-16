@@ -2,11 +2,11 @@
 
 load('Pos_brain.mat','xBrain','yBrain')
 load('posAnchored.mat','posAnchorIdeal')
-load('stemLims.mat')
+load('C:\Users\Sam\Desktop\TwoMazeAlternationData\stemLims.mat')
 
 bTable = readtable('AlternationSheet_BrainTime.xlsx');
 
-numEpochs = size(epochs,1);
+numEpochs = length(unique(bTable.MazeID));
 for epochI = 1:numEpochs
     hh = figure; plot(posAnchorIdeal(:,1),posAnchorIdeal(:,2),'*')
     hold on
