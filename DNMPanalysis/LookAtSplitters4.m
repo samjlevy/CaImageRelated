@@ -22,7 +22,7 @@ if rem(size(condPairs,2),2)~=0
 end
 
 numSess = size(TMap_unsmoothed,2);
-numConds = size(condPairs,1);
+numCondPairs = size(condPairs,1);
 numCells = size(TMap_unsmoothed,1);
 %numBins = length(TMap_unsmoothed{1,1,1});
 
@@ -32,15 +32,15 @@ else
     trialReli = sum(trialReli,3) > 0;
 end
 
-rateDiff = cell(numCells,numSess,numConds);
-rateSplit = nan(numCells,numSess,numConds);
-meanRateDiff = nan(numCells,numSess,numConds);
-DIeach = cell(numCells,numSess,numConds);
+rateDiff = cell(numCells,numSess,numCondPairs);
+rateSplit = nan(numCells,numSess,numCondPairs);
+meanRateDiff = nan(numCells,numSess,numCondPairs);
+DIeach = cell(numCells,numSess,numCondPairs);
 %DImax = nan(numCells,numSess,numConds);
-DImean = nan(numCells,numSess,numConds);
-DIall = nan(numCells,numSess,numConds);
+DImean = nan(numCells,numSess,numCondPairs);
+DIall = nan(numCells,numSess,numCondPairs);
 
-for cpI = 1:numConds
+for cpI = 1:numCondPairs
     for sessI = 1:numSess
         for cellI = 1:numCells
             if trialReli(cellI,sessI)==1

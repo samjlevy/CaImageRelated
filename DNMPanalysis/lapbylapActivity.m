@@ -11,6 +11,8 @@ transientDur = cell(4,1);
 transLength = cell(4,1); 
 transLengthPosNorm = cell(4,1); 
 
+fluorSum = [];
+fluorAvg = [];
 for condI = 1:numConds
     laps = length(trialbytrial(condI).sessID);
     
@@ -38,9 +40,11 @@ for condI = 1:numConds
             transLength{condI}(lapI,cellI) = maximumX{condI}(lapI,cellI) - minimumX{condI}(lapI,cellI);
             transLengthPosNorm{condI}(lapI,cellI) = transLength{condI}(lapI,cellI) / transientDur{condI}(lapI,cellI);
             
+            if ~isempty(trialbytrial(condI).trialRawTrace)
             thisFluor = trialbytrial(condI).trialRawTrace{lapI}(cellI,:);
             fluorSum{condI}(lapI,cellI) = sum(thisFluor);
             fluorAvg{condI}(lapI,cellI) = mean(thisFluor);
+            end
         end
     end
     

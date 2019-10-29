@@ -5,13 +5,14 @@ function [PSAbool] = DeconvolutionRough1(C,stdThresh,durThresh)
 %baseline level of activity
 
 if isempty(stdThresh)
-    stdThresh = 3.5;
+    stdThresh = 2.5;
     disp(['using default stdThresh ' num2str(stdThresh)])
 end
 if isempty(durThresh)
-    durThresh = 5;
+    durThresh = 3;
     disp(['using default durThresh ' num2str(durThresh)])
 end
+framesDownSkip = 1;
 
 numFrames = size(C,2);
 numCells = size(C,1);
@@ -19,33 +20,54 @@ numCells = size(C,1);
 frameI = 1:numFrames;
 PSAbool = false(numCells,numFrames);
 for cellI = 1:numCells
+
+    actH = C(cellI,:);
+    %figure; plot(actH); hold on
+    fluorDiff = diff(actH);
+    isRising = fluorDiff>=0;
+    isRising = [0 isRising];
+    isRising = logical(isRising);
     
-actH = C(cellI,:);
+    %plotRise = actH; plotRise(isRising==0)=0;
+    %plot(plotRise,'r')
+    
+    largeA = actH > mean(actH)+std(actH)*stdThresh;
+    laOnsets = find(diff([0 largeA])==1);
+    laOffsets = find(diff([largeA 0])==-1)+1;
+ 
+    onsets = find(diff([0 isRising])==1);
+    offsets = find(diff([isRising 0])==-1);
+    
+    %Refinement for small dips
+    %{
+    offs = [offsets(1:end-1)];
+    ons = [onsets(2:end)];
+    
+    diffsHere = ons-offs;
+    killDiffs = diffsHere==(framesDownSkip+1);
+    offs(killDiffs) = [];
+    ons(killDiffs) = [];
+    
+    onsets = [onsets1 ons];
+    offsets = [offs offsets(end)]; 
+    %}
+    
+    onOff = [onsets', offsets'];
+    onDurs = diff(onOff,1,2)+1;
+    onOffThresh = onOff(onDurs>=durThresh,:);
 
-fluorDiff = diff(actH);
-isRising = fluorDiff>0;
-isRising = [0 isRising];
-isRising = logical(isRising);
-
-largeA = actH > mean(actH)+std(actH)*stdThresh;
-laOnsets = find(diff([0 largeA])==1);
-laOffsets = find(diff([largeA 0])==-1)+1;
-
-onsets = find(diff([0 isRising])==1);
-offsets = find(diff([isRising 0])==-1);
-onOff = [onsets', offsets'];
-onDurs = diff(onOff,1,2)+1;
-onOffThresh = onOff(onDurs>=durThresh,:);
-
-PSAbTemp = false(1,numFrames);
-for durI = 1:size(onOffThresh,1)
-    thisEpoch = onOffThresh(durI,1):onOffThresh(durI,2);
-    hasTrans = any(largeA(thisEpoch));
-    if hasTrans
-        PSAbTemp(thisEpoch) = true;
+    PSAbTemp = false(1,numFrames);
+    for durI = 1:size(onOffThresh,1)
+        thisEpoch = onOffThresh(durI,1):onOffThresh(durI,2);
+        hasTrans = any(largeA(thisEpoch));
+        if hasTrans
+            PSAbTemp(thisEpoch) = true;
+        end
     end
-end
-PSAbool(cellI,:) = PSAbTemp;
+    PSAbool(cellI,:) = PSAbTemp;
+    
+    %plotPSA = actH; plotPSA(PSAbTemp==0)=0;
+    %plot(plotPSA,'g')
 end
 
 end

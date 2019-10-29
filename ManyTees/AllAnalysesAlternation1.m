@@ -2,8 +2,8 @@
 
 disp('loading stuff')
 
-mainFolder = 'C:\Users\Sam\Desktop\TwoMazeAlternationData';
-mice = {'Marble19','Marble91'};
+mainFolder = 'C:\Users\Sam\Desktop\TwoMazeAlternationData\Marble19';
+mice = {'190807','190808','190812','190814','190818'};
 
 numMice = length(mice);
 
@@ -38,7 +38,8 @@ for mouseI = 1:numMice
 end
 
 stemPFs = 'PFsLinStem.mat';
-load(fullfile(mainFolder,'stemLims.mat'))
+%load(fullfile(mainFolder,'stemLims.mat'))
+load(fullfile('C:\Users\Sam\Desktop\TwoMazeAlternationData','stemLims.mat'))
 stemLims = round(stemLims);
 numBins = 10;
 stemBinEdges = linspace(stemLims(1),stemLims(2),numBins+1);
@@ -81,9 +82,13 @@ for mouseI = 1:numMice
         [rateDiff, rateSplit, meanRateDiff, DIeach, DImean, DIall] = LookAtSplitters4(cellTMap_unsmoothed{1}{mouseI},[1 2;3 4],[]);
         
         save(splitterFile,'binsAboveShuffle','thisCellSplits','numBinsAboveShuffle','rateDiff','rateSplit','meanRateDiff','DIeach','DImean','DIall')
+        clear('binsAboveShuffle','thisCellSplits','numBinsAboveShuffle','rateDiff','rateSplit','meanRateDiff','DIeach','DImean','DIall')
     else
         disp(['found splitters for ' mice{mouseI}])
     end
+end
+for mouseI = 1:numMice
+    splitterFile = fullfile(mainFolder,mice{mouseI},'splitLR.mat');
     
     ss = load(splitterFile);
     binsAboveShuffle{mouseI} = ss.binsAboveShuffle;
@@ -101,6 +106,7 @@ disp('Done loading splitters')
 
 %% Decoding analysis: one maze turn dir from the other?
 
-
+[decodingResults, shuffledResults, testConds, titles, sessPairs] =...
+    DecoderWrapper3(cellTBT{5},ones(size(dayUse{5},1),1),1000,'transientDur','custom','bayes');
 
 

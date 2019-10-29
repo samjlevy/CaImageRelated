@@ -24,6 +24,11 @@ switch pooledUnpooled
         condsPool = [Conds.Left; Conds.Right; Conds.Study; Conds.Test];
         condLabels = {'Left','Right','Study','Test'};
         trialbytrial = PoolTBTacrossConds(trialbytrial,condsPool,condLabels);
+    case 'custom'
+        condLabels = {trialbytrial(:).name};
+        titles = {'Maze 2 from 1';'Maze 1 from 2'};
+        trainConds = [1 2; 3 4];
+        testConds = [3 4; 1 2];
 end
 
 randomizeNow = [0; ones(numShuffles,1)];
@@ -80,8 +85,16 @@ for testI = 1:size(testConds,1)
                 testingActivity{sessPairI,tcJ}{lapI,1} = lblActivity{testCond}(lapsGet,testingCells);
                 testingAnswers{sessPairI,tcJ}{lapI,1} = testCond;
                 
+                if strcmpi(pooledUnpooled,'custom')
+                    testingAnswers{sessPairI,tcJ}{lapI,1} = trainConds(testI,tcJ);
+                end
+                
                 for trainI = 1:length(testConds(testI,:))
-                    trainCond = testConds(testI,trainI);
+                    if strcmpi(pooledUnpooled,'custom')
+                        trainCond = trainConds(testI,trainI);
+                    else
+                        trainCond = testConds(testI,trainI);
+                    end
                     
                     numTrainLaps = length(trainingLaps(trainCond).lapNums{trainSess});
                     lapUse = lapI;

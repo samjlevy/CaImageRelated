@@ -25,13 +25,14 @@ durThresh = 5; %Minimum number of frames to call it a transient
 save('FinalOutput.mat','PSAbool','cellROIs','imSize')
 
 %% 2. Video Position Correction
-%0. FToffset
-JustFToffset('fps_brainimage',10)
 
 %1. Track and fix positions from raw video using tried and true function:
 PreProcessLEDtracking
 
-%2. Align positions to template
+%2. FToffset
+JustFToffset('fps_brainimage',10)
+
+%3. Align positions to template
 %   - right now built to take the PosLED_temp.mat, but just the path, not the file
 %     saves out posAnchored with x/y_adj_cm  
 AlignPosToAnchor1(posLedPath,'C:\Users\Sam\Desktop\AddTmaze\MazeAlignmentTemplate.mat')
