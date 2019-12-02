@@ -7,7 +7,7 @@ for ptI = 1:size(pts,1)
     %    xx = pts(ptJ,:);
     %    allAngles(ptI,ptJ) = atan((xx(2)-y0)/(xx(1)-x0));
     %end
-    allAngles(ptI,:)=cell2mat(arrayfun(@(xx,yy) atan((yy-y0)/(xx-x0)),pts(:,1),pts(:,2),'UniformOutput',false))';
+    allAngles(ptI,:)=cell2mat(arrayfun(@(xx,yy) atan2((yy-y0),(xx-x0)),pts(:,1),pts(:,2),'UniformOutput',false))';
 end
 
 end

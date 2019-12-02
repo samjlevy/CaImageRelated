@@ -4,14 +4,15 @@ allMask = create_AllICmask(NeuronImage);
 numCells = length(NeuronImage);
 maskSize = size(allMask);
 allCenters = getAllCellCenters(NeuronImage);
-[distances,withinRad] = GetAllPtToPtDistances(allCenters(:,1),allCenters(:,2),[]);
+[allDistances,withinRad] = GetAllPtToPtDistances(allCenters(:,1),allCenters(:,2),[]);
 allAngles = GetAllPtToPtAngles(allCenters);
-figure; hh = histogram(distances);
+figure; hh = histogram(allDistances); title('All center-to-center distances')
 [mm,ii] = max(hh.Values);
 peakDist = mean(hh.BinEdges(ii:ii+1));
 
 figure; voronoi(allCenters(:,1),allCenters(:,2))
 [vorVertices,vorIndices] = voronoin(allCenters);
+title('Voronoi of all cells')
 %Each cell of C is coordinates of the corners for that polygon
 
 %Try local grid dissimilarity by downsampling cells
@@ -32,8 +33,10 @@ for cellI = 1:numCells
         plot(vorVertices(vorIndices{cellI},1),vorVertices(vorIndices{cellI},2),'.r','MarkerSize',6)
     end
 end
+title('Voronoi with all non-inf vertices labeled')
 
 %Get Voronoi adjacency
+%{
 voronoiAdj = false(numCells,numCells);
 for cellI = 1:numCells
     %if edgePolys(cellI)==0
@@ -44,10 +47,12 @@ for cellI = 1:numCells
     end
     %end
 end
+%}
+voronoiAdj = GetVoronoiAdjacency(vorIndices);
 
 %Distances between voronoi adjacent polygons
 gg = logical(triu(ones(numCells),1));
-figure; hh=histogram(distances(voronoiAdj & gg));
+figure; hh=histogram(allDistances(voronoiAdj & gg));
 [mm,ii] = max(hh.Values);
 vCentDist = mean(hh.BinEdges(ii:ii+1));
 title('Distances between adjacent polygon centers')
@@ -76,10 +81,12 @@ thisCenter = allCenters(cellI,:);
 alignRange = 40;
 
 %Set up unchanging background image
+%{
 allSideLength = max([max(allCellCenters(:,1))-min(allCellCenters(:,1)) max(allCellCenters(:,2))-min(allCellCenters(:,2))]);
 allSpacing = [];
 allCenter = [];
 allCenters = GenerateHexagonalGrid2(allCenter,allSpacing,allSideLength);
+%}
 %Voronoi background image
 
 
@@ -123,11 +130,15 @@ spacing = 10;
 [xReg,yReg] = GenerateHexagonalGrid2([0,0],spacing,rangeCheck);
     %Need to figure out some structure for uniform hex grid
     %Could probably just do clockwise order in concentric rings
+    figure; voronoi(xReg,yReg)
     
 [vorVertsReg,vorIndsReg] = voronoin([xReg,yReg]);
 vorVertsReg(vorVertsReg==Inf)=rangeCheck*5;
+vorRegAdj = GetVoronoiAdjacency(vorIndsReg);
+regTiersAdj = GetAllTierAdjacency(vorRegAdj);
 polysReg = cellfun(@(x) polyshape(vorVertsReg(x,1),vorVertsReg(x,2)),vorIndsReg,'UniformOutput',false);
 localHexOverlap = [];
+
 for cellI = 1:numCells
 if edgePolys(cellI)==0 && (sum(voronoiAdjTwo(cellI) & edgePolys)==0)
     %Gather local cells
@@ -138,7 +149,7 @@ if edgePolys(cellI)==0 && (sum(voronoiAdjTwo(cellI) & edgePolys)==0)
     adjCentersTwo = [allCenters(adjCellsTwo,1)-thisCenter(1) allCenters(adjCellsTwo,2)-thisCenter(2)];
     cellsHere = [cellI,adjCells,adjCellsTwo];
     %figure; plot(0,0,'.k'); hold on; plot(adjCenters(:,1),adjCenters(:,2),'.r'); plot(adjCentersTwo(:,1),adjCentersTwo(:,2),'.g')
-
+    %title(['2 voronoi layers for cell ' num2str(cellI)]); xlim([-60 60]); ylim([-60 60])
     vorVertsHere = [vorVertices(:,1)-thisCenter(1) vorVertices(:,2)-thisCenter(2)];
     %for vlI = 1:length(cellsHere); vHere = vorIndices{cellsHere(vlI)}; plot(vorVertsHere([vHere, vHere(1)],1),vorVertsHere([vHere, vHere(1)],2),'b'); end
     vorIndsHere = vorIndices(cellsHere);
@@ -166,32 +177,6 @@ end
 end
 %Then what? Somehow need the pattern of non-locally hexagonal, how similar
 %is it to others?
-    
-
-
-% xcorr of 1st and 2nd tier angles/lengths to find best alignment
-%   finding angle: could just step in 1 degree increments
-%   could slide to next matched pair
-%   determine best fit by local mins of angle/length pt to pt distances,
-%      use circular mean approximation to get these pt distances.
-%   Could add optional limit at this step
-for cellI = 1:numCells
-    theseDist2 = distances(cellI,voronoiAdjTwo(cellI,:));
-    theseAngles2 = allAngles(cellI,voronoiAdjTwo(cellI,:));
-    
-    for cellJ = 1:numCells%but would be another session
-    %How to xcorr when have different numbers of points 
-        distJ = distances(cellJ,voronoiAdjTwo(cellJ,:));
-        anglesK = allAngles(cellJ,voronoiAdjTwo(cellJ,:));
-    
-
-
-
-
-%For each cell
-
-how is it different from specific voronois of one that covers the whole regimage
-
 
 %Test on same downsampled neuron image
 %Generate downsampled sets
@@ -215,3 +200,204 @@ allAngles = GetAllPtToPtAngles(pts)
 %   determine best fit by local mins of angle/length pt to pt distances,
 %      use circular mean approximation to get these pt distances.
 %   Could add optional limit at this step
+
+%% Local regularly-spaced hexagonal grid distribution
+cd('E:\Marble11_180721')
+load('FinalOutput.mat', 'NeuronImage')
+allCenters = getAllCellCenters(NeuronImage);
+[allDistances,withinRad] = GetAllPtToPtDistances(allCenters(:,1),allCenters(:,2),[]);
+allAngles = GetAllPtToPtAngles(allCenters);
+allAreas = cell2mat(cellfun(@(x) polyarea(vorVertices(x,1),vorVertices(x,2)),vorIndices,'UniformOutput',false));
+
+figure; voronoi(allCenters(:,1),allCenters(:,2))
+[vorVertices,vorIndices] = voronoin(allCenters);
+title('Voronoi of all cells')
+vorAdjacency = GetVoronoiAdjacency(vorIndices);
+vorAdjTiers = GetAllTierAdjacency(vorAdjacency,10);
+
+%{
+cellI = 1
+plot(allCenters(cellI,1),allCenters(cellI,2),'r*')
+theseC = find(vorAdjTiers(cellI,:)==1)
+plot(allCenters(cellI,1),allCenters(cellI,2),'g*')
+theseC = find(vorAdjTiers(cellI,:)==2)
+plot(allCenters(cellI,1),allCenters(cellI,2),'r*')
+%}
+
+%Exclude cells that have polygons out of the image edge
+edgePolys = GetVoronoiEdges(vorVertices,allCenters,vorIndices);
+
+rangeCheck = 100;
+spacing = 10;
+%local uniform hex grid
+[xReg,yReg] = GenerateHexagonalGrid2([0,0],spacing,rangeCheck);
+regCenters = [xReg(:), yReg(:)];
+%figure; voronoi(xReg,yReg)    
+[vorVertsReg,vorIndsReg] = voronoin([xReg,yReg]);
+regEdgePolys = GetVoronoiEdges(vorVertsReg,regCenters,vorIndsReg);
+%vorVertsReg(vorVertsReg==Inf)=rangeCheck*5;
+xReg(regEdgePolys) = []; yReg(regEdgePolys) = []; vorIndsReg(regEdgePolys) = [];
+vorRegAdj = GetVoronoiAdjacency(vorIndsReg);
+regTiersAdj = GetAllTierAdjacency(vorRegAdj,[]);
+regMidCell = find(xReg==0 & yReg==0);
+maxAdj = max(regTiersAdj(regMidCell,:));
+regTiersCells{1} = regMidCell;
+for maI = 1:maxAdj
+    regTiersCells{maI+1} = find(regTiersAdj(regMidCell,:)==maI);
+end
+polysReg = cellfun(@(x) polyshape(vorVertsReg(x,1),vorVertsReg(x,2)),vorIndsReg,'UniformOutput',false);
+
+tic
+localHexOverlap = [];
+localHexAreaTotal = [];
+localHexAreaTierTotal = [];
+localHexAreaTierNorm = [];
+numTiersCheck = 2; %Max levels from cellI to look at 
+for cellI = 1:numCells
+    
+if edgePolys(cellI)==0 && (sum(edgePolys(vorAdjTiers(cellI,:)==numTiersCheck))==0)
+    thisCenter = allCenters(cellI,:);
+    
+    %Gather adjacent cells
+    adjTierCells{1} = cellI;
+    adjTierAreas{cellI}{1} = allAreas(cellI);
+    adjTierAreasTotal{cellI}(1,1) = adjTierAreas{cellI}{1};
+    for tcI = 1:numTiersCheck
+        adjTierCells{tcI+1} = find(vorAdjTiers(cellI,:)==tcI);
+        adjTierCenters{tcI+1} = allCenters(adjTierCells{tcI+1},:);
+        adjTierAreas{cellI}{tcI+1} = allAreas(adjTierCells{tcI+1});
+        adjTierAreasTotal{cellI}(1,tcI+1) = sum(adjTierAreas{cellI}{tcI+1}); 
+    end
+    adjCellsHere = [adjTierCells{:}];
+    
+    %Shift all vor vertices, make polygons
+    vorVertsShift = [vorVertices(:,1)-thisCenter(1) vorVertices(:,2)-thisCenter(2)]; %Shift all vertices around this center (0,0)
+    vorCentersShift = [allCenters(:,1)-thisCenter(1), allCenters(:,2)-thisCenter(2)];
+    polysShift(edgePolys==0) = cellfun(@(x) polyshape(vorVertsShift(x,1),vorVertsShift(x,2)),vorIndices(edgePolys==0),'UniformOutput',false); %Polyshape format for adj cells
+    
+    %Deviation from local tiered hex
+    %what percent of each poly is in each of the local-centered hexagons
+    for tcI = 1:numTiersCheck+1
+        adjHere = adjTierCells{tcI};
+        for vlI = 1:length(adjHere)
+            thisCell = adjTierCells{tcI}(vlI);
+            %patch(vorVertices(vorIndices{adjHere(vlI)},1),vorVertices(vorIndices{adjHere(vlI)},2),'g','FaceColor','g','FaceAlpha',0.5)
+            
+            %Get intersection of each reg cell with locally adjacent cell, organized by adjacency tier
+            for maI = 1:length(regTiersCells)
+                for regI = 1:length(regTiersCells{maI})
+                    %patch(vorVertsReg(vorIndsReg{regI},1),vorVertsReg(vorIndsReg{regI},2),'g','FaceColor','g','FaceAlpha',0.5)
+                    intersectPoly = intersect(polysShift{thisCell},polysReg{regTiersCells{maI}(regI)});
+                    localHexOverlap{cellI}{tcI,vlI}(maI,regI) = polyarea(intersectPoly.Vertices(:,1),intersectPoly.Vertices(:,2));
+                end
+            end
+            localHexAreaTotal{cellI}{tcI}(:,vlI) = sum(localHexOverlap{cellI}{tcI,vlI},2); %Each column is each locally adjacent cell to cellI
+        end
+        localHexAreaTierTotal{cellI}(:,tcI) = sum(localHexAreaTotal{cellI}{tcI},2);
+        localHexAreaTierNorm{cellI}(:,tcI) = localHexAreaTierTotal{cellI}(:,tcI)/adjTierAreasTotal{cellI}(1,tcI);
+    end
+   
+end
+end
+toc
+
+%% Vector to adjacent cells comparison
+cd('E:\Marble11_180721')
+load('FinalOutput.mat', 'NeuronImage')
+allCenters = getAllCellCenters(NeuronImage);
+[allDistances,withinRad] = GetAllPtToPtDistances(allCenters(:,1),allCenters(:,2),[]);
+allAngles = GetAllPtToPtAngles(allCenters);
+allAreas = cell2mat(cellfun(@(x) polyarea(vorVertices(x,1),vorVertices(x,2)),vorIndices,'UniformOutput',false));
+
+figure; voronoi(allCenters(:,1),allCenters(:,2))
+[vorVertices,vorIndices] = voronoin(allCenters);
+title('Voronoi of all cells')
+vorAdjacency = GetVoronoiAdjacency(vorIndices);
+vorAdjTiers = GetAllTierAdjacency(vorAdjacency,10);
+
+edgePolys = GetVoronoiEdges(vorVertices,allCenters,vorIndices);
+
+% xcorr of 1st and 2nd tier angles/lengths to find best alignment
+%   finding angle: could just step in 1 degree increments
+%   could slide to next matched pair
+%   determine best fit by local mins of angle/length pt to pt distances,
+%      use circular mean approximation to get these pt distances.
+%   Could add optional limit at this step
+tiersCheck = 2;
+cellsCheck = vorAdjTiers > 0 & vorAdjTiers<=tiersCheck;
+
+rotationsTry = 0:1:359;
+for cellI = 1:numCells
+    theseCells= cellsCheck(cellI,:);
+    theseDist = allDistances(cellI,theseCells);
+    theseAngles = allAngles(cellI,theseCells);
+    
+    thisCenter = allCenters(cellI,:);
+    vorCentersShift = [allCenters(:,1)-thisCenter(1), allCenters(:,2)-thisCenter(2)];
+    
+    theseCenters = vorCentersShift(theseCells,:);
+    theseDistSelf = allDistances(theseCells,theseCells);
+    theseDistSelf(theseDistSelf==0)=NaN;
+    
+    for cellJ = 1:numCells%but would be another session
+    %How to xcorr when have different numbers of points 
+        cellsJ = cellsCheck(cellJ,:); %but actually this needs to be from vorAdjTiers for session B
+        distJ = allDistances(cellJ,cellsJ);
+        anglesJ = allAngles(cellJ,cellsJ);
+        
+        centerJ = allCenters(cellJ,:);
+        vorCentersShiftJ = [allCenters(:,1)-centerJ(1), allCenters(:,2)-centerJ(2)];
+        centersJ = vorCentersShiftJ(cellsJ,:);
+        theseDistSelfJ = allDistances(cellsJ,cellsJ);
+        theseDistSelfJ(theseDistSelfJ==0)=NaN;
+        
+        [pairedDistances,~] = GetAllPtToPtDistances2(theseCenters(:,1),theseCenters(:,2),centersJ(:,1),centersJ(:,2),[]);
+        
+        %Refine paired distances by less than pt-to-pt distances for each voronoi local set of cells
+        pdRefA = pairedDistances < min(theseDistSelf,[],2);
+        pdRefB = pairedDistances < min(theseDistSelfJ,[],1);
+        
+        %for ties, just pick one of each; this works for multiway ties too
+        
+        FindConstellationAlignments(theseAngles,theseDist,anglesJ,distJ)
+        [pairsHave, distHere, ranks] = FindLowestRankPairs(pairedDistances);
+        %{
+        figure; hold on;
+        for cc = 1:length(theseCenters)
+            plot([0 theseCenters(cc,1)],[0 theseCenters(cc,2)],'b')
+            plot(theseCenters(cc,1),theseCenters(cc,2),'ob')
+        end
+        for cc = 1:length(cellsJ)
+            plot([0 centersJ(cc,1)],[0 centersJ(cc,2)],'r')
+            plot(centersJ(cc,1),centersJ(cc,2),'or')
+        end
+        
+        for pp = 1:size(pairsHave,1)
+            plot([theseCenters(pairsHave(pp,1),1) centersJ(pairsHave(pp,2),1)],...
+                 [theseCenters(pairsHave(pp,1),2) centersJ(pairsHave(pp,2),2)],'m')
+        end
+        %}
+        
+        %Compare all rotations:
+        %figure; plot(theseCenters(1,1),theseCenters(1,2),'*r'); hold on
+        xRotated = [];
+        yRotated = [];
+        pairsHave = [];
+        distHere = [];
+        for rsI = 1:length(rotationsTry)
+            %Rotate pts
+            [xRotated{rsI},yRotated{rsI}] = RotatePts(theseCenters(:,1),theseCenters(:,2),rotationsTry(rsI));
+            %Get pt to pt distances
+            [pairedDistances3,~] = GetAllPtToPtDistances2(xRotated{rsI},yRotated{rsI},centersJ(:,1),centersJ(:,2),[]);
+            %Find alignment distance
+            [pairsHave{rsI}, distHere{rsI}, ~] = FindLowestRankPairs(pairedDistances3);
+            
+            %if rsI > 1
+            %plot([xRotated{rsI-1}(1) xRotated{rsI}(1)],[yRotated{rsI-1}(1) yRotated{rsI}(1)],'k')
+            %axis equal
+            %end
+        end
+            
+            
+            
+            
