@@ -397,7 +397,76 @@ for cellI = 1:numCells
             %axis equal
             %end
         end
+    end
+end
             
             
-            
-            
+%% Vector to adjacent cells comparison2: testing it out against self
+cd('E:\Marble11_180721')
+load('FinalOutput.mat', 'NeuronImage')
+allCentersA = getAllCellCenters(NeuronImage);
+allCentersB = allCentersA;
+numCells = size(allCentersA,1);
+
+[vorVertices,vorIndices] = voronoin(allCentersA);
+vorAdjacency = GetVoronoiAdjacency(vorIndices);
+vorAdjTiers = GetAllTierAdjacency(vorAdjacency,10);
+
+edgePolys = GetVoronoiEdges(vorVertices,allCentersA,vorIndices);
+
+tiersCheck = 2;
+cellsCheck = vorAdjTiers > 0 & vorAdjTiers<=tiersCheck;
+
+rotationsTry = 0:5:359;
+
+%Pre-allocate
+pairsHave = cell(numCells,1);
+distHere = cell(numCells,1);
+
+%Try it out
+tic
+f = waitbar(0,'Please wait...');
+for cellI = 1:numCells
+    theseCells= cellsCheck(cellI,:);
+    
+    thisCenter = allCentersA(cellI,:);
+    vorCentersShift = [allCentersA(:,1)-thisCenter(1), allCentersA(:,2)-thisCenter(2)];
+    
+    theseCenters = vorCentersShift(theseCells,:);
+    
+    %if ~(sum(edgePolys & theseCells) > 0 || edgePolys(cellI)==1)
+    pairsHave{cellI} = cell(numCells,1);
+    distHere{cellI} = cell(numCells,1);
+    xRotated = [];
+    yRotated = [];
+    for rsJ = 1:length(rotationsTry)
+       %Rotate pts
+       [xRotated{rsJ},yRotated{rsJ}] = RotatePts(theseCenters(:,1),theseCenters(:,2),rotationsTry(rsJ));
+    end
+    for cellJ = 1:numCells%but would be another session
+        cellsJ = cellsCheck(cellJ,:); %but actually this needs to be from vorAdjTiers for session B
+       
+        centerJ = allCentersB(cellJ,:);
+        vorCentersShiftJ = [allCentersB(:,1)-centerJ(1), allCentersB(:,2)-centerJ(2)];
+        theseCentersJ = vorCentersShiftJ(cellsJ,:);
+        
+        tic
+        pds = cellfun(@(x,y) GetAllPtToPtDistances2(x,y,theseCentersJ(:,1),theseCentersJ(:,2),[]),xRotated,yRotated,'UniformOutput',false);
+        [ph,dh] = cellfun(@FindLowestRankPairs,pds,'UniformOutput',false);
+        toc
+        
+        tic
+        for rsI = 1:length(rotationsTry)
+            %%Rotate pts
+            %[xRotated{rsI},yRotated{rsI}] = RotatePts(theseCenters(:,1),theseCenters(:,2),rotationsTry(rsI));
+            %Get pt to pt distances
+            [pairedDistances,~] = GetAllPtToPtDistances2(xRotated{rsI},yRotated{rsI},theseCentersJ(:,1),theseCentersJ(:,2),[]);
+            %Find alignment distance
+            [pairsHave{cellI}{cellJ}{rsI}, distHere{cellI}{cellJ}(:,rsI), ~] = FindLowestRankPairs(pairedDistances);
+        end
+        toc
+        waitbar((cellJ+numCells*(cellI-1))/(numCells*numCells),f,['Testing Local Rotations ' num2str((cellJ+numCells*(cellI-1))) '/' num2str(numCells*numCells)]);
+    end
+end 
+close(f)
+toc

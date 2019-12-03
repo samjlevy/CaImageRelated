@@ -31,8 +31,11 @@ while(sum(pairsKeep) < pairsGet)
     pairsKeep(indCheck) = true;
     pairsHave = indPairsSorted(pairsKeep,:);
     
-    rowsHave = histcounts(pairsHave(:,1),0.5:1:numRows+0.5);
-    colsHave = histcounts(pairsHave(:,2),0.5:1:numCols+0.5);
+    %rowsHave = histcounts(pairsHave(:,1),0.5:1:numRows+0.5);
+    %colsHave = histcounts(pairsHave(:,2),0.5:1:numCols+0.5);
+    %Hist counts runs too slowly
+    rowsHave = sum(pairsHave(:,1)==1:numRows,1);
+    colsHave = sum(pairsHave(:,2)==1:numCols,1);
     
     if any(rowsHave>1) || any(colsHave>1)
         pairsHave(end,:) = [];
