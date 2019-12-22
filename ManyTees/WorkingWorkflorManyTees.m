@@ -37,15 +37,15 @@ JustFToffset('fps_brainimage',10)
 %     saves out posAnchored with x/y_adj_cm  
 AlignPosToAnchor1(posLedPath,'C:\Users\Sam\Desktop\AddTmaze\MazeAlignmentTemplate.mat')
 
-%3. Parse alternation behavior:
+%4. Parse alternation behavior:
 %   - takes in the posAnchored file but operates on xAVI,yAVI within. Saves out
 %     a file that has behavior table, lapDirections, stem limits
 [behTable] = ParseOnMazeBehaviorMultiWrapper(posAnchoredFile);
 
-%4. Turn these tables into an excel sheet 
+%5. Turn these tables into an excel sheet 
 MakeSpreadSheetFromBehTable
 
-%5. Exclude some bad frames
+%6. Exclude some bad frames
 ExcludeLapFrames
 
 

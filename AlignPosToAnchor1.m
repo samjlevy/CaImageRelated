@@ -5,7 +5,7 @@ function AlignPosToAnchor1(posLedPath,anchorPath)
 
 ledPath = ls(fullfile(posLedPath,'*PosLED_temp.mat'));
 
-load(ledPath,'xAVI','yAVI','avi_filepath','DVTtime')
+load(ledPath,'xAVI','yAVI','avi_filepath','DVTtime','v0')
 load(anchorPath,'posAnchorIdeal')
 
 numFrames = length(xAVI);
@@ -35,7 +35,14 @@ close(h1)
 end
 
 %Get an image to align to.
+oldImage = v0;
 v0 = cell(numEpochs,1);
+if ~iscell(v0)
+    [v0{:}] = deal(oldImage);
+else
+    v0 = oldImage;
+end
+
 x_adj_cm = nan(1,numFrames);
 y_adj_cm = nan(1,numFrames);
 obj = VideoReader(avi_filepath);

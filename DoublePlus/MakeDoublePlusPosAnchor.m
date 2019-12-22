@@ -1,6 +1,16 @@
 function [anchorX,anchorY,bounds] = MakeDoublePlusPosAnchor(saveDir)
 
-realArmLength = 24; %inches
+mazeSize = questdlg('Which size plus maze?','How big is it?','Big (24in)','Small (12in)','Custom','Big (24in)');
+switch mazeSize
+    case 'Big (24in)'
+        realArmLength = 24;
+    case 'Small (12in)'
+        realArmLength = 12;
+    case 'Custom'
+        realArmLength = str2double(input('Enter the length of the arms in inches: ','s'));
+end
+
+%realArmLength = 24; %inches
 realArmWidth = 2.25; %inches
 pixPerInch = 10;
 

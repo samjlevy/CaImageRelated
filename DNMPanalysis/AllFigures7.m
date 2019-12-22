@@ -222,7 +222,14 @@ for tgH = 1:length(tgHere)
     disp(['Sign-rank test ' traitLabels{tgHere(tgH)} ' p= ' num2str(pVal(tgH)) ', zval= ' num2str(stats(tgH).zval)])
 end
     
-
+for slI = 1:2
+    for mouseI = 1:numMice
+        cellsToday{mouseI} = sum(dayUse{mouseI},1);
+        pctActive{mouseI} = cellsToday{mouseI}./sum(cellSSI{mouseI}>0,1);
+        splitAny{mouseI} = sum(traitGroups{slI}{mouseI}{7},1);
+    end
+end
+    
 %% Change in Proportion of Each splitter type by days apart
 changesPlot =[3 4 5 8];
 gh = [];
@@ -754,6 +761,33 @@ end
 %New cells prop Raw
 %statsOut = PlotRawTraitEachMouse(traitProps,realDays,normalization,mouseColors,regColor)
 
+%% Days each splitter type
+thingsHere = [3 4 5];
+for slI = 1:2
+    figure;
+    for stI = 1:length(thingsHere)
+        numDaysSplit{slI}{stI} = [];
+        for mouseI = 1:numMice
+            numDaysHere = sum(traitGroups{slI}{mouseI}{stI},2);
+            
+            numDaysSplit{slI}{stI} = [numDaysSplit{slI}{stI}; numDaysHere(numDaysHere>0)];
+        end
+        
+        cc = cdfplot(numDaysSplit{slI}{stI}); hold on
+        cc.Color = colorAsscAlt{thingsHere(stI)};
+    end
+    
+    xlabel('Num Days This Splitter Type')
+    ylabel('Proportion of These Splitters')
+    title('Splitter type persistence')
+    
+    [pp,hh]=kstest2(numDaysSplit{slI}{1},numDaysSplit{slI}{2})
+    [pp,hh]=kstest2(numDaysSplit{slI}{1},numDaysSplit{slI}{3})
+    [pp,hh]=kstest2(numDaysSplit{slI}{2},numDaysSplit{slI}{3})
+    
+    
+end    
+
 
 %% Decoding by days apart
 %Reg vs. Downsampled
@@ -1152,6 +1186,20 @@ for slI = 1:2
     xlim([0 20])
 end
 suptitleSL('PV individual stats')
+
+aa = CSpooledPVcorrs{1}{5}{1}(CSpooledPVdaysApart{1}{5}{1}==0,:);
+bb = CSpooledPVcorrs{1}{5}{2}(CSpooledPVdaysApart{1}{5}{2}==0,:);
+[ppp,~,stats] = ranksum(aa(:),bb(:));
+disp(['VS self VS LvR = ' num2str([ppp stats.zval]) ])
+aa = CSpooledPVcorrs{1}{5}{1}(CSpooledPVdaysApart{1}{5}{1}==0,:);
+bb = CSpooledPVcorrs{1}{5}{3}(CSpooledPVdaysApart{1}{5}{3}==0,:);
+[ppp,~,stats] = ranksum(aa(:),bb(:));
+disp(['VS self VS SvT = ' num2str([ppp stats.zval]) ])
+aa = CSpooledPVcorrs{1}{5}{2}(CSpooledPVdaysApart{1}{5}{2}==0,:);
+bb = CSpooledPVcorrs{1}{5}{3}(CSpooledPVdaysApart{1}{5}{3}==0,:);
+[ppp,~,stats] = ranksum(aa(:),bb(:));
+disp(['VS self VS LvR = ' num2str([ppp stats.zval]) ])
+
 
 
 %% PV Change over days

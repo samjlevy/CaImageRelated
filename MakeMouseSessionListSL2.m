@@ -998,6 +998,34 @@ if strcmp(userstr,'sam')
 %    MDSL(i).Location = 'C:\Users\Sam\Desktop\CM_Miniscope\ACM1';
 end
 MDSL(i).Notes = [];
+
+i = i+1;
+MDSL(i).Animal = 'Marble07';
+MDSL(i).Date = '06_28_2018';
+MDSL(i).Session = 1;
+MDSL(i).Env = 'Plus1';
+MDSL(i).Room = '719h';
+MDSL(i).RecordStartTime = ' ';
+if strcmp(userstr,'sam')
+    MDSL(i).Location = 'E:\DoublePlus\Marble07\180628-2';
+%elseif strcmp(userstr,'sam')
+%    MDSL(i).Location = 'C:\Users\Sam\Desktop\CM_Miniscope\ACM1';
+end
+MDSL(i).Notes = [];
+
+i = i+1;
+MDSL(i).Animal = 'December';
+MDSL(i).Date = '12_10_2019';
+MDSL(i).Session = 1;
+MDSL(i).Env = 'Plus1';
+MDSL(i).Room = '719h';
+MDSL(i).RecordStartTime = ' ';
+if strcmp(userstr,'sam')
+    MDSL(i).Location = 'E:\DoublePlus\December\December_191210';
+%elseif strcmp(userstr,'sam')
+%    MDSL(i).Location = 'C:\Users\Sam\Desktop\CM_Miniscope\ACM1';
+end
+MDSL(i).Notes = [];
 %% Compile session_ref
 
 session_ref.Polaris_DNMP = Polaris_DNMP;
