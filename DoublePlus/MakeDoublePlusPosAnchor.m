@@ -67,8 +67,11 @@ bounds{2} = [3 4 7 8];
 bounds{3} = [1 3 9 10];
 bounds{4} = [2 4 11 12];
 
+posAnchorIdeal = [anchorX(:), anchorY(:)];
+posAnchorIdeal = (posAnchorIdeal/pixPerInch)*2.54;
+
 if any(saveDir)
-    save(fullfile(saveDir,'mainPosAnchor.mat'),'anchorX','anchorY','bounds')
+    save(fullfile(saveDir,'mainPosAnchor.mat'),'anchorX','anchorY','bounds','posAnchorIdea')
 end
 
 end

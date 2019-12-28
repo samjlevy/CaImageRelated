@@ -40,6 +40,9 @@ JustFToffset('fps_brainimage',20)
 %     saves out posAnchored with x/y_adj_cm  
 AlignPosToAnchor1(posLedPath,'E:\DoublePlus\December\mainPosAnchor.mat') %For december
 
+%3.5 Also need approx reward locations for each lap
+GetPlusRewardLocations(posAnchoredFile)
+
 %4. Parse plus maze behavior: for within day, just need total sequence,
 %reward get time, mark whether it was to the goal or not
 

@@ -1,11 +1,24 @@
-function EditDailyTrialSheet(startPattern)%,options,cellStarts,cellStops
+function EditDailyTrialSheet(startPattern,numTrials)%,options,cellStarts,cellStops
 %Assumes equal number of each type
 [ff,dd] = uigetfile('*.xlsx');
 refSheetLocation = fullfile(dd,ff);
 
+switch numTrials
+    case 60
+        cellStarts = {'D4','J4'};
+        cellStops = {'D33','J33'};
+        trialsHere = [30; 30];
+        nTrials = 60;
+    case 90
+        cellStarts = {'D4','J4','P4'};
+        cellStops = {'D33','J33','P44'};
+        trialsHere = [30; 30; 30];
+        nTrials = 90;
+    otherwise
+        disp('Not built out for this number of trials')
+        return
+end
 
-cellStarts = {'D4','J4'};
-cellStops = {'D33','J33'};
 %{
 nTrials = 0;
 for csI = 1:length(cellStarts)
@@ -13,10 +26,10 @@ for csI = 1:length(cellStarts)
     nTrials = nTrials + trialsHere(csI);
 end
 %}
-trialsHere = [30; 30];
+
 
 options = {'n','e','s','w'};
-nTrials = 60;
+
 %refSheetLocation = 'C:\Users\Sam\Documents\Lab\Plus Maze Within Day Trial Sheet.xlsx';
 
 sameConsecLimit = 3;

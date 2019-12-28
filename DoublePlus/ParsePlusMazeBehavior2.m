@@ -1,11 +1,13 @@
 function [onMazeFinal,behTable] = ParsePlusMazeBehavior2(posLEDfile,posAnchoredFile,idealAnchorFile)
 %THis function is designed to parse out plus maze behavior given good
 %position data
+%Assumes you will have PositionChecker open to validate possible bad trials
 
 disp('parsing on mazeBehavior')
 load(posLEDfile,'onMaze')
-load(posAnchoredFile,'x_adj_cm','y_adj_cm','epochs','posAnchorIdeal')
+load(posAnchoredFile,'x_adj_cm','y_adj_cm','epochs','posAnchorIdeal','rewardXadj','rewardYadj')
 %load(idealAnchorFile)
+numEpochs = size(epochs,1);
 
 %Define generous arm regions3
 overZero = posAnchorIdeal(:,1)>0;
@@ -66,16 +68,69 @@ flickerThresh = 5; %number of consecutive frames can jump back and forth between
 for omI = 1:length(onMazeStarts)
     framesHere = onMazeStarts(omI):onMazeStops(omI);
     seqHere = seqID(framesHere);
+
+    %getStartStop for each region transition
+    [uniqueSeq,seqEpochs] = filterSeqToUnique(seqHere);
+    seqDurs = diff(seqEpochs,1,2);
     
-    getStartStop for each region transition, any that are <= flicker thresh get cut,
-    should be able to filter to rest to a sequence using:...
-        [uniqueSeq,epochs] = filterSeqToUnique(seqID);
+    %any that are <= flicker thresh get cut,
+    tooShort = seqDurs<=flickerThresh;
+    uniqueSeq(tooShort) = [];
+    seqEpochs(tooShort,:) = [];
+    
+    %{
+    if sum(uniqueSeq==1)<1
+        disp(['This sequence does not have a maze middle bit, frames ' num2str([framesHere(1) framesHere(end)])])
+        
+        keepS = input('Keep it (y/n)?>> ','s');
+        if strcmpi(keepS,'n')
+            uniqueSeq = [];
+        end
+    end
+    %}
+    
+    if any(uniqueSeq)
+        trialSeqs{omI} = uniqueSeq;
+        trialSeqEpochs{omI} = framesHere(seqEpochs);
+    else
+        keyboard
+    end
 end
 
-Now also need some reward locations to get good lap ends
-
-
-numEpochs = size(epochs,1);
+frameStartBuffer = 10;
+rewardRadius = 2;
+rewardGetAdjust = 0;
+for trialI = 1:length(trialSeqs)
+    %Get the arm id where the animal finished
+    lastArm = trialSeqs{trialI}(end)-1; %-1 bc have mid + 4 arms
+    if lastArm==1 || lastArm==0
+        disp('Mouse ends in the middle?')
+        keyboard
+    end
+    
+    %Get which epoch/maze/reward marker set to use
+    frameLook = trialSeqEpochs{trialI}(1,1)+frameStartBuffer;
+    thisEpoch = find((frameLook > epochs(:,1)) & (frameLook < epochs(:,2)));
+    
+    %Get the first frame where the animal is within range of the reward zone
+    lastFrames = trialSeqEpochs{trialI}(end,1):trialSeqEpochs{trialI}(end,2);
+    lastDistances = hypot(rewardXadj{thisEpoch}(lastArm) - x_adj_cm(lastFrames),...
+                          rewardYadj{thisEpoch}(lastArm) - y_adj_cm(lastFrames));
+    withinRad = lastDistances < rewardRadius;
+    rewardEnterFrame = lastFrames(find(withinRad,1,'first'));
+       
+    %Adjust forward some number of frames
+    rewardEnterFrame = rewardEnterFrame + rewardGetAdjust;
+    
+    %trial start is first frame here, last is the adjusted forwards
+    trialBounds{trialI} = [frameLook rewardEnterFrame];
+    trialEpoch(trialI,1) = thisEpoch;
+end
+        
+     
+    
+    
+    
 for epochI = 1:numEpochs
     %Parse behavior automatically, lap times and correct alternation directions
     framesHere = epochs(epochI,1):epochs(epochI,2);
