@@ -1,5 +1,8 @@
 function figHand = PlusMazePVcorrHeatmap(PlotRateMaps,condNames,armAlignment,diffRank,pThresh,plotBins)
-
+%This version assumes that the organization of rates within PlotRateMaps
+%follows a particular alignment. Then it generates a grid and fits each
+%firing rate into the appropriate bin location on the grid so we can just
+%imagesc that bin and color it appropriately.
 numBins = length(PlotRateMaps{1});
 
 PlusMapBlank = zeros(numBins*2+3,numBins*2+3);

@@ -1,11 +1,14 @@
-function AlignPosToAnchor1(posLedPath,anchorPath)
+function AlignPosToAnchor1(ledPath,anchorPath)
 
 %posLedPath = 'C:\Users\Sam\Desktop\marble19_190818\Marble19_190818_PosLED_temp.mat';
 %anchorPath = 'C:\Users\Sam\Desktop\AddTmaze\MazeAlignmentTemplate.mat';
 
-ledPath = ls(fullfile(posLedPath,'*PosLED_temp.mat'));
+if isempty(ledPath)
+ledPathFile = ls(fullfile(posLedPath,'*PosLED_temp.mat'));
+disp(['using ' ledPathFile'])
+end
 
-load(ledPath,'xAVI','yAVI','avi_filepath','DVTtime','v0')
+load(ledPathFile,'xAVI','yAVI','avi_filepath','DVTtime','v0')
 load(anchorPath,'posAnchorIdeal')
 
 numFrames = length(xAVI);
@@ -36,8 +39,8 @@ end
 
 %Get an image to align to.
 oldImage = v0;
-v0 = cell(numEpochs,1);
 if ~iscell(v0)
+    v0 = cell(numEpochs,1);
     [v0{:}] = deal(oldImage);
 else
     v0 = oldImage;
@@ -102,7 +105,7 @@ end
 
 %savePath = strsplit(posLedPath,'\');
 %savePath = fullfile(savePath{1:end-1});
-savePath = posLedPath;
+savePath = ledPath;
 save(fullfile(savePath,'posAnchored.mat'),'v0','x_adj_cm','y_adj_cm','xAnchor','anchors',...
     'whichMaze','epochs','xAVI','yAVI','DVTtime','posAnchorIdeal')
 

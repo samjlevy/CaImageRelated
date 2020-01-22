@@ -40,10 +40,22 @@ missingAcc = find(isnan(AlternationDataTable.Accuracy) | isempty(AlternationData
 if any(missingAcc)
     %Some accuracy is missing, filling it in
     for maI = 1:length(missingAcc)
-        load(fullfile(mousePath,AlternationDataTable.FolderName{missingAcc(maI)},'behaviorParse.mat'),'trialCorrect')
-        allAcc = [];
-        for epochI = 1:length(trialCorrect)
-            allAcc = [allAcc; trialCorrect{epochI}];
+        if any(strcmpi(sessType{maI,2},{'OneMaze','TwoMaze'}))
+            cd(fullfile(mousePath,AlternationDataTable.FolderName{missingAcc(maI)}))
+            ffile = ls('*_Finalized.xlsx');
+            behtable = readtable(ffile);
+            allAcc = [];
+            for epochI = 1:length(unique(behtable.Epoch))
+                %Accuracy 
+                allAcc = [allAcc; sum(behtable.Correct(behtable.Epoch==epochI)& ~behtable.AllowedFix(behtable.Epoch==epochI))/...
+                    sum(~behtable.AllowedFix(behtable.Epoch==epochI))];
+            end 
+        else
+            load(fullfile(mousePath,AlternationDataTable.FolderName{missingAcc(maI)},'behaviorParse.mat'),'trialCorrect')
+            allAcc = [];
+            for epochI = 1:length(trialCorrect)
+                allAcc = [allAcc; trialCorrect{epochI}];
+            end
         end
         AlternationDataTable.Accuracy(missingAcc(maI)) = sum(allAcc) / length(allAcc);
     end
@@ -90,7 +102,12 @@ disp(['deleted ' num2str(sum(rowsDelete)) ' entries'])
   
 close(figHa)
 
-save(fullfile(base_path,'AlternationDataTable.mat'),'AlternationDataTable')
+if any(strcmpi(sessType{maI,2},{'OneMaze','TwoMaze'}))
+    PlusMazeDataTable = AlternationDataTable;
+    save(fullfile(base_path,'PlusMazeDataTable.mat'),'PlusMazeDataTable')
+else
+    save(fullfile(base_path,'AlternationDataTable.mat'),'AlternationDataTable')
+end
 
 end
 

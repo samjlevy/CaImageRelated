@@ -34,10 +34,15 @@ if any(frames>length(time))
    disp(['Problem: found ' sum(sum(frames>length(time))) ' frame numbers too long']) 
 end
 
+%Columns to skip and grab later
+badNames ={'MazeID', 'Epoch','Correct','AllowedFix'};
+for cI = 1:size(txt,2); getLater(cI) = any(strcmpi(txt{1,cI},badNames)) || (ischar(txt{2,cI})&&any(txt{2,cI})); end
+
+
 %Here we actually start dealing with things
 newFrames = frames; 
 for column = (2):size(frames,2)
-    if any(~isnan(frames(:,column))) && ~strcmpi(txt{1,column},'MazeID')
+    if any(~isnan(frames(:,column))) && ~getLater(column)
        for row = 1:size(frames,1)
            newFrames(row, column) = findclosest(time(frames(row, column)), brainTime)...
                - (FToffset - (imaging_start_frame-1));
@@ -52,7 +57,7 @@ end
 
 newAll=txt;
 for column = 1:size(newFrames,2)
-    if any(~isnan(frames(:,column))) || strcmpi(txt{1,column},'MazeID')
+    if any(~isnan(frames(:,column))) || (getLater(column)==0)
        for row = 1:size(frames,1)
            newAll{row+1,column} = newFrames(row,column);
        end

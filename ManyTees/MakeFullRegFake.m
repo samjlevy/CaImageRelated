@@ -10,6 +10,7 @@ fullReg.RegSessions = [];
 fullReg.sessionType = [];
 fullReg.orientation = [];
 fullReg.cellCenters = [];
+fullReg.sessionInds = [];
 for sessI = 1:length(sessionPaths)
     prts = strsplit(sessionPaths{sessI},'\');
     cd(sessionPaths{sessI})
@@ -28,15 +29,18 @@ for sessI = 1:length(sessionPaths)
 
     allFilesNames{sessI} = sessionPaths{sessI};
     
+    try
     load('FinalOutput.mat','cellROIs')
     if length(unique(cellROIs{1}))>2
         %Not a binary image
         NeuronImage = cellfun(@(x) x>0.4*max(x(:)),cellROIs,'UniformOutput',false);
     end
+    catch
+        load('FinalOutput.mat','NeuronImage')
+    end
     
     fullReg.cellCenters = [fullReg.cellCenters; getAllCellCenters(NeuronImage)];
     
-    fullReg.sessionInds = [];
     fullReg.sessionInds([1:length(NeuronImage)]+size(fullReg.sessionInds,1),sessI) = [1:length(NeuronImage)]';
 end
   

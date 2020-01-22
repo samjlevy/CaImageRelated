@@ -8,7 +8,7 @@ end
 
 rewardLocs = {'North','East','South','West'};
 
-method = questdlg('Do this ginput or frame numbers?','Ginput','FrameNums','FrameNums');
+method = questdlg('Do this ginput or frame numbers?','How rewards','Ginput','FrameNums','FrameNums');
 if strcmpi(method,'FrameNums')
     PositionChecker;
 end
@@ -31,9 +31,19 @@ for vI = 1:length(v0)
         
         case 'FrameNums'
             for rlI = 1:4
-                frameIn = str2double(input('Enter frame number when mous is at reward location ' rewardLocs{rlI},'s'));
-                rewardX{vI}(rlI,1) = xAVI(frameIn);
-                rewardY{vI}(rlI,1) = YAVI(frameIn);
+                frameIn = str2double(input(['Enter frame number when mouse is at reward location ' rewardLocs{rlI} '>> '],'s'));
+                if frameIn == 0
+                    aa = figure; 
+                    imagesc(v0{vI})
+                    title(['Please click reward location for: ' rewardLocs{rlI}])
+                    [rewardX{vI}(rlI,1),rewardY{vI}(rlI,1)] = ginput(1);
+                    hold on
+                    plot(rewardX{vI}(rlI,1),rewardY{vI}(rlI,1),'+g')
+                    close(aa)
+                else
+                    rewardX{vI}(rlI,1) = xAVI(frameIn);
+                    rewardY{vI}(rlI,1) = yAVI(frameIn);
+                end
             end
     end
     

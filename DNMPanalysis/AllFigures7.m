@@ -21,6 +21,26 @@ cmp = colormap('lines');
 close
 mouseColors = cmp(1:numMice,:);
 
+%% Demo cell outlines 
+uiopen('G:\SLIDE\Processed Data\Bellatrix\Bellatrix_160831\ICmovie_min_proj.tif',1)
+figure; imshow(mat2gray(ICmovie_min_proj))
+load('FinalOutput.mat','NeuronImage')
+imageA = NeuronImage;
+colorList = [0 1 0];
+outlinesA = cellfun(@bwboundaries,imageA,'UniformOutput',false);
+%figA = figure; axis; hold on
+%xlim([0.5 size(imageA{1},2)+0.5]);
+%ylim([0.5 size(imageA{1},1)+0.5]);
+set(gca,'ydir','reverse')
+cp = 1;
+for oaI = 1:length(outlinesA)
+    colorH = colorList(cp,:);
+    plot(outlinesA{oaI}{1}(:,2),outlinesA{oaI}{1}(:,1),'Color',colorH,'LineWidth',1)
+    polyA = polyshape(outlinesA{oaI}{1}(:,2),outlinesA{oaI}{1}(:,1));
+    patch(polyA.Vertices(:,1),polyA.Vertices(:,2),colorH,'EdgeColor','none','FaceAlpha',0.4)
+    cp = cp+1; if cp>size(colorList,1); cp = 1; end
+end
+
 %% Accuracy
 
 figure('Position',[662 264 650 417]); 
@@ -600,6 +620,7 @@ for slI = 1:2
     suptitleSL(['Sources for each type on ' mazeLocations{slI}])
 end
 
+
 for slI = 1:2
     figure('Position',[257 92 1551 750]); 
     for ccI = 1:length(cellCheck)
@@ -616,6 +637,15 @@ for slI = 1:2
         title(['Stats for splitter sources for ' traitLabels{cellCheck(ccI)} ' on ' splitterLoc{slI}])
     end
 end
+
+%pooled sources
+pooledPooledDailySources = cell(5,1);
+for ccJ = 1:length(cellCheck)
+    for ii = 1:5
+        pooledPooledDailySources{ii} = [pooledPooledDailySources{ii}; pooledDailySources{1}{ccJ}{ii}];
+    end
+end
+[so] = PlotBarWithData([pooledPooledDailySources{:}],sourceColors,true,'jitter',sourceLabels);
 
 %% Cells transitioning between types
 
