@@ -1303,3 +1303,410 @@ for slI = 1:2
    end
 end
     
+
+%% Num cells
+
+figure;
+for mouseI = 1:numMice
+    subplot(2,2,mouseI)
+    numCellsHere = sum(cellSSI{mouseI}>0,1);
+    numCellsActive = sum(dayUse{mouseI},1);
+    
+    plot(cellRealDays{mouseI} - (cellRealDays{mouseI}(1)-1),numCellsHere,'b','LineWidth',2)
+    hold on
+    plot(cellRealDays{mouseI} - (cellRealDays{mouseI}(1)-1),numCellsActive,'r--','LineWidth',2)
+    xlabel('Recording Day')
+    ylabel('Number of cells')
+    title(['Mouse ' num2str(mouseI)])
+end
+suptitleSL({'B - number of cells found';'R - number of cells active'})
+
+figure('Position',[692 180 700 604]);
+for mouseI = 1:numMice
+    xx = subplot(2,2,mouseI);
+    cellsHere = cellSSI{mouseI}>0;
+    cellsRegistered = [];
+    for dayI = 1:length(cellRealDays{mouseI})
+        cellsDayI = cellsHere(:,dayI);
+        
+        cellsOther = cellsHere; 
+        cellsOther(:,dayI) = [];
+        cellsOther = sum(cellsOther,2)>0;
+        
+        cellsRegistered(dayI) = sum(cellsOther(cellsDayI));
+    end
+    
+    numCellsHere = sum(cellSSI{mouseI}>0,1);
+    numCellsActive = sum(dayUse{mouseI},1);
+    %xnums = cellRealDays{mouseI} - (cellRealDays{mouseI}(1)-1);
+    xnums = cellRealDays{mouseI};
+    plot(xnums,numCellsHere,'b','LineWidth',2)
+    hold on
+    plot(xnums,cellsRegistered,'r--','LineWidth',2)
+    plot(xnums,numCellsActive,'g.-','LineWidth',2)
+    xlabel('Recording Day')
+    ylabel('Number of cells')
+    xlim([min(xnums)-0.5 max(xnums)+0.5])
+    if mouseI==4
+        ylim([0 1800])
+    end
+    [xx]=MakePlotPrettySL(xx);
+    
+    title(['Mouse ' num2str(mouseI)])
+end
+suptitleSL({'B - number of cells found'; 'R - number of cells registered to another day';'G - number of cells active on stem'})
+
+figure('Position',[692 180 700 604]);
+for mouseI = 1:numMice
+    firstDays{mouseI} = GetFirstDayTrait(cellSSI{mouseI}>0);
+    totalDays{mouseI} = sum(cellSSI{mouseI}>0,2);
+    oneDay{mouseI} = totalDays{mouseI}==1;
+    
+    oneDayMat{mouseI} = cellSSI{mouseI}>0;
+    oneDayMat{mouseI}(oneDay{mouseI}==0,:) = 0;
+    
+    numNewCells = [];
+    cumulativeNewCells = [];
+    for dayI = 1:numDays(mouseI)
+        numNewCells(dayI) = sum(firstDays{mouseI}==dayI);
+        cumulativeNewCells(dayI) = sum(firstDays{mouseI}<=dayI);
+    end
+    thisDayOnly = sum(oneDayMat{mouseI},1);
+
+    xx = subplot(2,2,mouseI);
+    plot(cellRealDays{mouseI},cumulativeNewCells,'b','LineWidth',2)
+    hold on
+    plot(cellRealDays{mouseI},numNewCells,'r','LineWidth',2)
+    plot(cellRealDays{mouseI},thisDayOnly,'g','LineWidth',2)
+    xlabel('Recording Day')
+    ylabel('Unique Cells')
+    xlim([min(cellRealDays{mouseI})-0.5 max(cellRealDays{mouseI})+0.5])
+    
+    ylim([0 xx.YLim(2)])
+    [xx]=MakePlotPrettySL(xx);
+end
+suptitleSL({'B - cumulative total'; 'R - new this day';'G - this day only'})
+
+%% Cell overlap density score
+
+for mouseI = 1:numMice
+    for dayI = 1:numDays(mouseI)
+        
+        im = load(fullfile(cellAllFiles{mouseI}{dayI},'FinalOutput.mat'),'NeuronImage');
+        
+        centersHere = getAllCellCenters(im.NeuronImage);
+        numCellsHere = size(centersHere,1);
+        
+        [cDists,~] = GetAllPtToPtDistances(centersHere(:,1),centersHere(:,2),[]);
+        
+        outlines = cellfun(@bwboundaries, im.NeuronImage, 'UniformOutput', false);
+        
+        %Centers within ROI boundary
+        cellsInRoi{mouseI}{dayI} = false(numCellsHere,numCellsHere);
+        for cellI = 1:numCellsHere
+            [in,on] = inpolygon(centersHere(:,1),centersHere(:,2),outlines{cellI}{1}(:,2),outlines{cellI}{1}(:,1));
+            in(cellI) = false;
+            cellsInRoi{mouseI}{dayI}(cellI,:) = in';
+        end
+        
+        cellsInRange{mouseI}(dayI) = sum(sum(cellsInRoi{mouseI}{dayI},2)>0);
+    end
+    
+    %subplot(2,2,mouseI)
+    %plot(cellRealDays{mouseI},cellsInRange{mouseI})
+end
+cellsInRangePct = cellfun(@(x,y) x./sum(y>0,1),cellsInRange,cellSSI,'UniformOutput',false);
+
+%Convert back to tbt format
+for mouseI = 1:numMice
+    cellOverlapsToday{mouseI} = cellfun(@(x) sum(x,2)>0,cellsInRoi{mouseI},'UniformOutput',false);
+    ovl{mouseI} = zeros(size(cellSSI{mouseI},1),size(cellSSI{mouseI},2));
+    for dayI = 1:numDays(mouseI)
+        for cellI = 1:size(cellSSI{mouseI},1)
+            cellH = cellSSI{mouseI}(cellI,dayI);
+            if any(cellH)
+                ovl{mouseI}(cellI,dayI) = cellOverlapsToday{mouseI}{dayI}(cellH);
+            end
+        end
+    end
+end
+
+%Prop overlap with splitters?
+thingsNow = [3     4     5     8];
+for slI = 1:2
+    figure('Position',[695 118 819 674]);
+    for ii = 1:4
+        pooledHere = [];
+        daysHere = [];
+        aff(ii)=subplot(2,2,ii);
+        for mouseI = 1:4
+            
+            dayss = cellsInRangePct{mouseI}(:);
+            splitPropHere = splitPropEachDay{slI}{mouseI}{thingsNow(ii)};
+            plot(dayss,splitPropHere,'o','MarkerFaceColor',mouseColors(mouseI,:),'MarkerSize',8)
+            pooledHere = [pooledHere; splitPropHere(:)];
+            daysHere = [daysHere; dayss];
+            hold on
+        end
+        
+    ylabel('Proportion of cells')
+    xlabel('Prop cells overlapping')
+    
+    [fitVal,daysPlot] = FitLineForPlotting(pooledHere,daysHere);
+    plot(daysPlot,fitVal,'k','LineWidth',2)
+    [~, ~, ~, RR(ii), Pval(ii), ~] =...
+                fitLinRegSL(pooledHere,daysHere);
+            [Fval(ii),dfNum(ii),dfDen(ii),pVal(ii)] =...
+            slopeDiffFromZeroFtest(pooledHere,daysHere);
+    [propsRho(ii),propsCorrPval(ii)] = corr(daysHere,pooledHere,'type','Spearman');
+    
+    title([traitLabels{thingsNow(ii)}])
+    
+    %xlim([min(daysHere)-0.5 max(daysHere)+0.5])
+    %ylim(ylimsuse{slI,ii})
+    
+    aff(ii) = MakePlotPrettySL(aff(ii));
+    end
+    
+    suptitleSL(['Raw splitting pcts across all mice, and regression on ' mazeLocations{slI}])
+    
+    figure('Position',[735 209 910 420]);
+    for ii = 1:4
+    text(1,ii,[traitLabels{thingsNow(ii)} ' LinReg R=' num2str(sqrt(abs(RR(ii).Ordinary))) ', p=' num2str(Pval(ii))...
+        ', F diff zero F dfNum dfDen p: ' num2str([Fval(ii) dfNum(ii) dfDen(ii) pVal(ii)])...
+        ', spearman corr rho pval: ' num2str([propsRho(ii) propsCorrPval(ii)])]) 
+    end
+    title(['stats for raw data splitter prop changes on ' mazeLocations{slI}])
+    xlim([0 18])
+    ylim([0 6])
+end           
+
+%Likelihood of one type or another overlapping
+for mouseI = 1:numMice
+    for ii = 1:4
+        traitHere = traitGroups{slI}{mouseI}{thingsNow(ii)};
+        splitAndOverlap{mouseI}{ii} = traitHere + ovl{mouseI} == 2;
+    end
+    
+    soCounts{mouseI} = cellfun(@(x) sum(x,1),splitAndOverlap{mouseI},'UniformOutput',false);
+    soProps{mouseI} = cellfun(@(x) x./sum(dayUse{mouseI},1),soCounts{mouseI},'UniformOutput',false);
+end
+soPropsPooled = PoolCellArrAcrossMice(soProps);
+soPropsPooled = cellfun(@(x) x',soPropsPooled,'UniformOutput',false);
+soPropsMat = mat2cell(cell2mat(soPropsPooled),sum(numDays),[1 1 1 1]);
+
+figure;
+compsMakeHere = {[1 2];[2 3];[1 3];[3 4];[2 4];[1 4]};
+    
+[~,statsOut] = PlotTraitProps(soPropsMat,[1 2 3 4],compsMakeHere,[colorAsscAlt(thingsNow)],traitLabels,[]);
+title(['Splitter Proportions for Overlapping ROIs'])
+ylabel('Proportion of Active Cells')
+ylim([-0.01 0.2])
+
+
+
+%All cells in cumulative ROIs
+for mouseI = 1:numMice
+    fr = load(fullfile(mainFolder,mice{mouseI},'fullReg.mat'),'fullReg');
+    
+    im = load(fullfile(mainFolder,mice{mouseI},'fullRegImage.mat'),'fullRegImage');
+    
+    loadedSess = [fr.fullReg.BaseSession; fr.fullReg.RegSessions(:)];
+    loadesSessPt = cellfun(@(x) strsplit(x,'\'),loadedSess,'UniformOutput',false);
+    loadedStr = cellfun(@(x) x{end},loadesSessPt,'UniformOutput',false);
+    for dayI = 1:numDays(mouseI)
+        usedSess = strsplit(cellAllFiles{mouseI}{dayI},'\');
+        usedSess = usedSess{end};
+        
+        thisDay = strcmpi(loadedStr,usedSess);
+        daysInclude(dayI) = find(thisDay);
+    end
+    
+    bigSSI = fr.fullReg.sessionInds(:,daysInclude);
+    cellsUseHere = sum(bigSSI,2)>0;
+       
+    im.fullRegImage = [im.fullRegImage(cellsUseHere)];
+    
+    centersHere = getAllCellCenters(im.fullRegImage);
+    numCellsHere = size(centersHere,1);
+        
+    [cDists,~] = GetAllPtToPtDistances(centersHere(:,1),centersHere(:,2),[]);
+        
+    outlines = cellfun(@bwboundaries, im.fullRegImage, 'UniformOutput', false);
+        
+        %Centers within ROI boundary
+     allCellsInRoi{mouseI} = false(numCellsHere,numCellsHere);
+     for cellI = 1:numCellsHere
+        [in,on] = inpolygon(centersHere(:,1),centersHere(:,2),outlines{cellI}{1}(:,2),outlines{cellI}{1}(:,1));
+        in(cellI) = false;
+        allCellsInRoi{mouseI}(cellI,:) = in';
+    end
+        
+end
+allCellsInRange = cellfun(@(x) sum(x,2)>0,allCellsInRoi,'UniformOutput',false);
+numAllCellsInRange = cellfun(@sum,allCellsInRange,'UniformOutput',false);
+            
+numDaysEachCellPresent = cellfun(@(x) sum(x>0,2),cellSSI,'UniformOutput',false);
+numDaysInRange = cellfun(@(x,y) x(y==1),numDaysEachCellPresent,allCellsInRange,'UniformOutput',false);
+numDaysOutRange = cellfun(@(x,y) x(y==0),numDaysEachCellPresent,allCellsInRange,'UniformOutput',false);
+            
+%Number of days a cell shows up relative to density score
+figure; 
+for mouseI = 1:numMice
+    subplot(2,2,mouseI)
+    histogram(numDaysInRange{mouseI},[0.5:1:numDays(mouseI)+0.5])
+    hold on
+    histogram(numDaysOutRange{mouseI},[0.5:1:numDays(mouseI)+0.5])
+    
+    [h,p] = kstest2(numDaysInRange{mouseI},numDaysOutRange{mouseI});
+    title([ 'p=' num2str(p)])
+end
+
+figure;
+daysInRange = vertcat(numDaysInRange{:});
+daysOutRange = vertcat(numDaysOutRange{:});
+histogram(daysInRange,[0.5:1:11+0.5])
+hold on
+histogram(daysOutRange,[0.5:1:11+0.5])
+[h,p] = kstest2(daysInRange,daysOutRange);
+title(['B overlapped, R not, kstest2 p=' num2str(p)]);
+
+%% Transient-to-ROI isolation
+        
+mouseI = 2;
+
+for dayI = 1:numDays(mouseI)      
+    im = load(fullfile(cellAllFiles{mouseI}{dayI},'FinalOutput.mat'),'NeuronImage');
+        
+    centersHere = getAllCellCenters(im.NeuronImage);
+    numCellsHere = size(centersHere,1);
+    
+    [cDists,~] = GetAllPtToPtDistances(centersHere(:,1),centersHere(:,2),[]);
+    
+    outlines = cellfun(@bwboundaries, im.NeuronImage, 'UniformOutput', false);
+    %Centers within ROI boundary
+        %{
+        cellsInRoi{mouseI}{dayI} = false(numCellsHere,numCellsHere);
+        for cellI = 1:numCellsHere
+            [in,on] = inpolygon(centersHere(:,1),centersHere(:,2),outlines{cellI}{1}(:,2),outlines{cellI}{1}(:,1));
+            in(cellI) = false;
+            cellsInRoi{mouseI}{dayI}(cellI,:) = in';
+        end
+        %}
+    
+    mask = create_AllICmask(im.NeuronImage);
+    aa = figure('Position',[0.1300 0.1100 0.7750 0.8150); imagesc(mask); hold on
+     
+    oHere = find(cellOverlapsToday{mouseI}{dayI});
+    for ohI = 1:length(oHere)
+        plot(outlines{oHere(ohI)}{1}(:,2),outlines{oHere(ohI)}{1}(:,1))
+    end
+    
+    si = strcmpi(input('Choose from this image (y/n)?','s'),'y');
+    while si==1
+        title('Click near overlapping cells to check')
+        [xx,yy]=ginput(1);
+        
+        [ idx, ~ ] = findclosest2D(centersHere(oHere,1),centersHere(oHere,2),xx,yy);
+        cellCheck = oHere(idx);
+        
+        plot(centersHere(cellCheck,1),centersHere(cellCheck,2),'*b')
+        nearC = find(cellsInRoi{mouseI}{dayI}(cellCheck,:));
+        plot(centersHere(nearC,1),centersHere(nearC,2),'*r')
+        
+        fo = load(fullfile(cellAllFiles{mouseI}{dayI},'FinalOutput.mat'),'NeuronTraces','PSAbool');
+        
+        bb = figure;
+        subplot(1+length(nearC),1,1)
+        plot(fo.NeuronTraces.LPtrace(cellCheck,:))
+        hold on
+        psI = find(fo.PSAbool(cellCheck,:));
+        plot(psI,fo.NeuronTraces.LPtrace(cellCheck,psI),'.r')
+        for ncI = 1:length(nearC)
+            subplot(1+length(nearC),1,ncI+1)
+            plot(fo.NeuronTraces.LPtrace(nearC(ncI),:))
+            hold on
+            psI = find(fo.PSAbool(nearC(ncI),:));
+            plot(psI,fo.NeuronTraces.LPtrace(nearC(ncI),psI),'.r')
+        end
+        
+        fh = strcmpi(input('Choose frame here (y/n)?','s'),'y');
+        if fh == 1
+            title('Choose boundary start')
+           [ss,~]=ginput(1);
+            title('Choose boundary end')
+           [ee,~]=ginput(1);
+        
+           plotFrames = round([ss ee]);
+           pfi = plotFrames(1):plotFrames(2);
+           
+            cc = figure;
+            subplot(1+length(nearC),1,1)
+            plot(fo.NeuronTraces.LPtrace(cellCheck,:))
+            hold on
+            psI = find(fo.PSAbool(cellCheck,:));
+            plot(psI,fo.NeuronTraces.LPtrace(cellCheck,psI),'.r')
+            xlim(plotFrames)
+            for ncI = 1:length(nearC)
+                subplot(1+length(nearC),1,ncI+1)
+                plot(fo.NeuronTraces.LPtrace(nearC(ncI),:))
+                hold on
+                psI = find(fo.PSAbool(nearC(ncI),:));
+                plot(psI,fo.NeuronTraces.LPtrace(nearC(ncI),psI),'.r')
+                xlim(plotFrames)
+            end
+            
+            if exist('motCorrMovie-Objects','dir')==0
+                disp(cellAllFiles{mouseI}{dayI})
+                [fil,fol]=uigetfile('.mat','Please find mot corr movie for this session');
+                cd(fol)
+                
+                if exist('motCorrMovie-Objects','dir') 
+                    folH = 'motCorrMovie-Objects';
+                elseif exist('MotCorrMovie-Objects','dir')
+                    folH = 'MotCorrMovie-Objects';
+                end
+                cd(fullfile(fol,folH))
+                
+                    h5here = ls('*.h5');
+                    data = h5read(h5here,'/Object',[1 1 plotFrames(1) 1],[488 622 diff(plotFrames) 1]);
+                    
+                    
+                    ydims = round(centersHere(cellCheck,2)+[-15 15]);
+                    xdims = round(centersHere(cellCheck,1)+[-15 15]);
+                    fA = find(pfi==f1);
+                    framePlotA = data(ydims(1):ydims(2),xdims(1):xdims(2),fA);
+                    
+                    figure; imagesc_gray(framePlotA); hold on
+                    plot(outlines{cellCheck}{1}(:,2),outlines{cellCheck}{1}(:,1))
+                    for ncI = 1:length(nearC)
+                        plot(outlines{nearC(ncI)}{1}(:,2),outlines{nearC(ncI)}{1}(:,1))
+                    end
+                    
+                    
+        end
+        
+        close(bb);
+        close(aa);
+        aa = figure('Position',[0.1300 0.1100 0.7750 0.8150); imagesc(mask); hold on
+        for ohI = 1:length(oHere)
+            plot(outlines{oHere(ohI)}{1}(:,2),outlines{oHere(ohI)}{1}(:,1))
+        end
+        si = strcmpi(input('Choose from this image (y/n)?','s'),'y');
+    
+    end
+end
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+    
+
+
+    
