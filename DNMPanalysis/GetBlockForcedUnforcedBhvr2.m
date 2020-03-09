@@ -1,8 +1,8 @@
 function [start_stop_struct, include_struct, exclude_struct, pooled, correct, lapNumber]...
-    = GetBlockForcedUnforcedBhvr2( xls_file, block_type, sessionLength)
+    = GetBlockForcedUnforcedBhvr2( frames, txt, block_type, sessionLength)
 %Returns frame numbers for what block you want, asking for what type of
 %timestamps
-[frames, txt] = xlsread(xls_file, 1);
+%[frames, txt] = xlsread(xls_file, 1);
 
 includeBlank = zeros(1, sessionLength);
 

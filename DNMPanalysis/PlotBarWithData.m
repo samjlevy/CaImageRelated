@@ -38,8 +38,10 @@ for scI = 1:size(dataMat,2)
     end
 end
 end
+if ~isempty(xLabels)
 b.Parent.XTickLabel = xLabels;
 b.Parent.XTickLabelRotation = 55;
+end
 xlim([0.25 size(dataMat,2)+0.75])
 ylim([0 1])
 

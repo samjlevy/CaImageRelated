@@ -66,7 +66,7 @@ elseif sum(strcmpi('FT',names))==1
     FT=FTstuff.PSAbool;
 else
     names = fieldnames(FTstuff);
-    [s,~] = listdlg('PromptString','Which field:','SelectionMode','single',...
+    [s,~] = listdlg('PromptString','Which field for neural data:','SelectionMode','single',...
                 'ListString',names);
     eval(['FT = FTstuff.' names{s} ';'])
 end

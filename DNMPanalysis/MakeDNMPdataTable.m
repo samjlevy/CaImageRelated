@@ -12,7 +12,9 @@ end
 
 fdPts = strsplit(fullRegPath,'\');
 finalDataRoot = fullfile(fdPts{1:end-1});
-
+if size(allFilesNames,1)==1
+    allFilesNames = allFilesNames';
+end
 DNMPdataTable = table(allFilesNames,realDays,sessType(:,2),nan(length(realDays),1),'VariableNames',{'FolderName','RealDay','SessType','Accuracy'});
 
 %Put things in the right order
@@ -43,9 +45,16 @@ end
 %Check for pos file and finalized excel sheer
 for ffI = 1:height(DNMPdataTable)
     DNMPdataTable.HasPos(ffI) = exist(fullfile(finalDataRoot,DNMPdataTable.FolderName{ffI},'Pos_align.mat'),'file') == 2;
+    if DNMPdataTable.HasPos(ffI)==0
+        DNMPdataTable.HasPos(ffI) = exist(fullfile(DNMPdataTable.FolderName{ffI},'Pos_align.mat'),'file') == 2;
+    end
     
     xlSheet = ls(fullfile(finalDataRoot,DNMPdataTable.FolderName{ffI},'*_Finalized.xlsx'));
     DNMPdataTable.HasFinalBeh(ffI) = any(xlSheet);
+    if DNMPdataTable.HasFinalBeh(ffI)==0
+        xlSheet = ls(fullfile(DNMPdataTable.FolderName{ffI},'*_Finalized.xlsx'));
+        DNMPdataTable.HasFinalBeh(ffI) = any(xlSheet);
+    end
 end
 
 

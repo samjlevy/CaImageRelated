@@ -95,7 +95,7 @@ end
 
 %Zoomed insets where it's good and where it's rejected
  
-%% C
+%% C distances and correlations
 
 mouseDefaultFolder = {'G:\SLIDE\Processed Data\Bellatrix\Bellatrix_160831';...
                       'G:\SLIDE\Processed Data\Polaris\Polaris_160831';...
@@ -107,7 +107,7 @@ mouseDefaultFolder = {'G:\SLIDE\Processed Data\Bellatrix\Bellatrix_160831';...
                                'RegisteredImageSLbuffered.mat';...
                                'RegisteredImageSLbuffered2.mat'};
 regStats = []; frs = []; frsImage = [];
-for mouseI = 2:4
+for mouseI = 1:4
     cd(mouseDefaultFolder{mouseI})
     %[regStats{mouseI}] = CellRegStatsPostHoc(mouseDefaultFolder{mouseI});
     frs{mouseI} = load('fullReg.mat');
@@ -180,6 +180,7 @@ goodsess = [1,3; 1,13;3,4]; %mouse, regI
 mouseI = 1;
 regI = 3;
 imagePathA = frsImage{mouseI}.fullRegImage;
+imagePathA = NeuronImage;
 varNameA = [];
 cellsUseA = 1:find(frs{mouseI}.fullReg.sessionInds(:,regI)>0,1,'last'); %cells up to there
 imagePathB = fullfile(mouseDefaultFolder{mouseI}(1:2),frs{mouseI}.fullReg.RegSessions{regI}(3:end),'RegisteredImageSL.mat');

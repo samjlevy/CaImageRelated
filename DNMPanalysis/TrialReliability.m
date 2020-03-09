@@ -13,11 +13,13 @@ aboveThresh = cell(length(trialbytrial),1);
 lapSpikes = cell(length(trialbytrial),1);
 goodSpikes = cell(length(trialbytrial),1);
 
+sessHere = unique(trialbytrial(1).sessID);
+
 for condType = 1:numConds
-    for sess = 1:max(trialbytrial(condType).sessID)
+    for sess = 1:length(sessHere)
         hitsThisCond = [];
         spikesThisCond = [];
-        thisLaps = find(trialbytrial(condType).sessID == sess);
+        thisLaps = find(trialbytrial(condType).sessID == sessHere(sess));
         for lap = 1:length(thisLaps)
             thisLap = thisLaps(lap);
             hitsThisCond = [hitsThisCond,...

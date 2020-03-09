@@ -416,8 +416,6 @@ while stillEditing == 1
             [xAVI,yAVI,definitelyGood] = CorrectManualFrames(obj,xAVI,yAVI,v0,...
                 definitelyGood,manCorrFig,framesFix,velThresh);
             
-          
-            
         case 'm'
             onoroff = questdlg('Mark on-maze or off-maze?','Oh, Hi Mark','ON','OFF','OFF');
             omStart = str2double(input(['Mark ' onoroff '-maze start frame: '],'s'));
@@ -435,15 +433,25 @@ while stillEditing == 1
             lop = questdlg('Load behTable or parse positions?','Load or parse','Load','Parse','Parse');
             switch lop
                 case 'Parse'
-                    [onMazeFinal,behTable] = PreProcParseOnMazeBehavior(xAVI,yAVI,v0,obj);
+                     whichParse = questdlg('Expect good pos or not yet corrected?','Good','Rough','Rough');
+                     switch whichParse
+                         case 'Rough'
+                            [onMazeFinal,~] = PreProcParseOnMazeBehavior2_2(xAVI,yAVI,v0,obj);
+                         case 'Good'
+                            [onMazeFinal,behTable] = PreProcParseOnMazeBehavior(xAVI,yAVI,v0,obj);
+                     end
                 case 'Load'
                     [fileN, folderN] = uigetfile('*.mat','Choose the behTable file');
                     load(fullfile(folderN,fileN),'onMazeFinal')
             end
             
-            onMaze = zeros(size(xAVI,1),size(xAVI,2));
-            for omII = 1:size(onMazeFinal,1)
-                onMaze(onMazeFinal(omII,1):onMazeFinal(omII,2)) = 1;
+            if islogical(onMazeFinal)
+                onMaze = onMazeFinal;
+            else
+                onMaze = zeros(size(xAVI,1),size(xAVI,2));
+                for omII = 1:size(onMazeFinal,1)
+                    onMaze(onMazeFinal(omII,1):onMazeFinal(omII,2)) = 1;
+                end
             end
         case 'p'
             %Correct by position

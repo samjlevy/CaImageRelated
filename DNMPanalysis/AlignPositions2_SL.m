@@ -59,9 +59,31 @@ for pathI = 1:length(align_paths)
                     return
             end
         end
-        
+    else
+        disp(['file ' align_paths{pathI} ' already registered'])
+        redoOp = input('Redo manual (m), using found anchors (a), skip (s):','s');
+        switch redoOp
+            case {'m','M'}
+                fullAlign = 1;
+                loadAnchors = 0;
+            case {'a','A'}
+                fullAlign = 0;                
+                loadAnchors = 1;
+                if exist(fullfile(align_paths{pathI},'Pos_anchor.mat'),'file')~=2
+                    disp('Did not find anchors')
+                    fullAlign = 1;
+                    loadAnchors = 0;
+                end
+            case {'s','S'}
+                fullAlign = 0;
+                loadAnchors = 0;
+        end
+    end
+    
         disp(['Working on alignment for ' align_paths{pathI}])
-        if exist(fullfile(align_paths{pathI},'Pos_anchor.mat'),'file')~=2
+        
+        %if exist(fullfile(align_paths{pathI},'Pos_anchor.mat'),'file')~=2
+        if fullAlign==1
             isGood = 0;
             while isGood == 0
             [floorCorners,barrierX,barrierY,flipX,flipY,v0Dims] = MakePosAnchor(align_paths{pathI},v0Scale);
@@ -76,9 +98,12 @@ for pathI = 1:length(align_paths)
                         isGood = 0;
                 end
             end
-        else
+        end
+        
+        if loadAnchors==1
             load(fullfile(align_paths{pathI},'Pos_anchor.mat'))
         end
+        
         load(fullfile(align_paths{pathI},'Pos_brain.mat'))
 
         try
@@ -106,9 +131,8 @@ for pathI = 1:length(align_paths)
         save(fullfile(align_paths{pathI},'Pos_align.mat'),'x_adj_cm','y_adj_cm',...
             'PSAbool','xmin','xmax','ymin','ymax','speed')
         disp('done')
-    else 
-        disp(['file ' align_paths{pathI} ' already registered'])
-    end
+    
+    %end
 end
    
 end

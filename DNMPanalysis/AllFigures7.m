@@ -21,11 +21,12 @@ cmp = colormap('lines');
 close
 mouseColors = cmp(1:numMice,:);
 
+disp('Have colors')
 %% Demo cell outlines 
-uiopen('G:\SLIDE\Processed Data\Bellatrix\Bellatrix_160831\ICmovie_min_proj.tif',1)
-figure; imshow(mat2gray(ICmovie_min_proj))
+uiopen('G:\SLIDE\Processed Data\Polaris\Polaris_160831\ICmovie_min_proj.tif',1)
+figure; imshow(mat2gray(ICmovie_min_proj)); hold on
 load('FinalOutput.mat','NeuronImage')
-imageA = NeuronImage;
+imageA = NeuronImage; 
 colorList = [0 1 0];
 outlinesA = cellfun(@bwboundaries,imageA,'UniformOutput',false);
 %figA = figure; axis; hold on
@@ -131,19 +132,23 @@ suptitleSL([num2str(slidingWindowNbins) ' bins that are ' num2str(slidingWindowS
 %% Example cell plots
 
 %Stable: 
-stableSplitter = {[43 44];[4];[293];20};
+stableSplitter = {[43 44];[4];[293];20}; scaling = {[200 200]};
 splitterBecomingBoth = {[ ];[ ];[ ];[65 97]};
 randomFiringCell = {[];[4 176 184];267;[]};
 cellComing = {[];[];267;[]};
 cellLeaving = {[242];[];359;[]};
 toBoth = {[14 180];[];[230];[]};
 
+stableCells = {44;[];104;[]}; stableScaling = {200;[];50;[]};
+exampleSplitters = {11;1333 ;[379 101]; };
+exampleSplitterDays = {5;7;[4 4]; };
+exampleSplitterScaling = {45; ;[40 50]; };
 for mouseI = 1:numMice
     leftSplitter{mouseI} = meanRateDiff{1}{1}{mouseI}<0 & traitGroups{1}{mouseI}{3};
     studySplitter{mouseI} = meanRateDiff{1}{2}{mouseI}<0 & traitGroups{1}{mouseI}{4};
 end
 
-splittersPlot = randomFiringCell;
+splittersPlot = stableSplitter;
 for mouseI = 1:numMice
     if any(splittersPlot{mouseI})
         load(fullfile(mouseDefaultFolder{mouseI},'daybyday.mat'))
@@ -157,7 +162,14 @@ for mouseI = 1:numMice
              
             figHd = [];
             figHd = PlotCellOutline(cellAllFiles{mouseI}(pd),cellSSI{mouseI}(cp,pd),45);
-            title(['m' num2str(mouseI) 'c ' num2str(cp) ' D ' num2str(cellRealDays{mouseI}(pd))])
+            if length(pd)==1
+                title(['m' num2str(mouseI) 'c ' num2str(cp) ' D ' num2str(cellRealDays{mouseI}(pd))])
+            else
+                for dayI = 1:length(pd)
+                    title(figHd{dayI}.Children,['m' num2str(mouseI) 'c ' num2str(cp) ' D ' num2str(cellRealDays{mouseI}(pd(dayI)))])
+                end
+            end
+            
             %title has that cell's number on that day, and the session number (not real day)
             %Also one to combine all these across days? Will have to load
             %the all file, or at least the aligned files from each day
@@ -316,6 +328,7 @@ end
  ylabel('Prop. Active/# Cells Day N')
  xlabel('Recording Day')
 ylim([0 0.4])
+
 %% Splitter proportion changes raw
 thingsNow = [3     4     5     8];
 
@@ -677,7 +690,9 @@ end
 
 %% What are newly active cells?
 %newProps = pooledNewCellProps; newPcts = traitFirstPcts; %new cells 
-newProps = pooledNewlyActiveCellProps; newPcts = inactiveTraitPcts;
+newProps = pooledNewlyActiveCellProps; 
+newPcts = inactiveTraitPcts;
+%newPcts = traitFirstPcts;
 %newProps = pooledNewlyActiveAndNewCellProps; newPcts = inactiveAndNewPcts;
 fg = [];
 statsOut = [];
@@ -738,7 +753,7 @@ for slI = 1:2
                 [Fval(ii),dfNum(ii),dfDen(ii),pVal(ii)] =...
                 slopeDiffFromZeroFtest(pooledHere,daysHere);
         slopePermP(ii) = NaN;
-        [slopePermP(ii)] = slopePermutationTest(pkgForSlope,daysPkg,1000);
+        %[slopePermP(ii)] = slopePermutationTest(pkgForSlope,daysPkg,1000);
         [rhoPropsRaw(ii),pValPropsRaw(ii)] = corr(daysHere,pooledHere,'Type','Spearman');
         %title([traitLabels{thingsNow(ii)} ', R=' num2str(sqrt(abs(RR.Ordinary))) ', p=' num2str(Pval)])
         title([traitLabels{thingsNow(ii)}])
@@ -762,6 +777,28 @@ for slI = 1:2
     ylim([0 6])
 end
 
+propPrevInactiveNowActive = cellfun(@(x,y) sum(x,1)./sum(y(:,2:end)>0,1),prevInactiveNowActive2{1},dayUse,'UniformOutput',false);
+
+figure;
+subplot(1,2,1)
+daysHere = [];
+pooledHere = [];
+for mouseI = 1:numMice
+    dayss = cellRealDays{mouseI} - (cellRealDays{mouseI}(1)-1);
+    dayss = dayss(2:end);
+    splitPropHere = propPrevInactiveNowActive{mouseI};
+    plot(dayss,splitPropHere); hold on
+    pooledHere = [pooledHere; splitPropHere(:)];
+    daysHere = [daysHere; dayss];
+end
+[fitVal,daysPlot] = FitLineForPlotting(pooledHere,daysHere);
+    plot(daysPlot,fitVal,'k','LineWidth',2)
+ [propsRhoH,propsPvalH] = corr(daysHere,pooledHere,'type','Spearman');
+ title(['rho= ' num2str(propsRhoH) ', p= ' num2str(propsPvalH)])
+ ylabel('Prop. Active/Total # Cells')
+  xlabel('Recording Day')
+ ylim([0 0.4])
+ 
 
 %Aggregated
 gh = [];
@@ -960,7 +997,8 @@ cellCritUse = 5;
 %end
 axHand = []; statsOut = [];
 for slI = 1:2
-    [axHand{slI},statsOut{slI}] = PlotPVcurvesDiff(CSpooledPVcorrs2{slI}{cellCritUse},CSpooledPVdaysApart2{slI}{cellCritUse},condSetColors,condSetLabels,{true,0.25},[]);
+    [axHand{slI},statsOut{slI}] = PlotPVcurvesDiff(CSpooledPVcorrs2{slI}{cellCritUse},CSpooledPVdaysApart2{slI}{cellCritUse},...
+        condSetColors,condSetLabels,{true,0.25},[]);
     ylabel('Ensemble State Separation')
     title(['Ensemble state separation on ' mazeLocations{slI}])
     legend off
@@ -1000,6 +1038,7 @@ end
 figHand = [];
 statsOut = [];
 binsUse = {[1:2];[7:8]};
+cellCritUse = 5;
 %ylimsHere = {{0 0.5}{0 1};{0 1}{0 1]
 for bI = 1:length(binsUse)
 for slI = 1:2
@@ -1042,6 +1081,60 @@ for slI = 1:2
 end
 end
 
+%% Pop vector corrs against accuracy
+
+daysHere = vertcat(accuracy{:});
+pvWithinDayOnlyPooled = cell(1,2);
+for slI = 1:2
+    
+    for mouseI = 1:numMice
+        sameDaysHere = uniqueDayDiffs{slI}{cellCritUse}{mouseI}==0;
+        pvWithinDayOnly{mouseI} = [cellArrMeanByCS{slI}{cellCritUse}{mouseI}(sameDaysHere,:)];
+        pvWithinDayOnlyPooled{slI} = [pvWithinDayOnlyPooled{slI}; pvWithinDayOnly{mouseI}];
+    end
+    
+    for bI = 1:length(binsUse)
+        figure;
+        for ii = 1:3
+            aff(ii) = subplot(1,3,ii);
+            pooledHere = [];
+            for mouseI = 1:numMice
+                
+                splitPropH = cell2mat([pvWithinDayOnly{mouseI}(:,ii)]);
+                splitPropHere = mean(splitPropH(:,binsUse{bI}),2);
+                pooledHere = [pooledHere; splitPropHere(:)];
+                plot(accuracy{mouseI},splitPropHere,'o','MarkerFaceColor',mouseColors(mouseI,:),'MarkerSize',8)
+                hold on
+            end    
+            
+            ylabel('PV corr')
+            xlabel('Accuracy')
+            %pvAll = cell2mat(pvWithinDayOnlyPooled{slI}(:,ii));
+        
+            [fitVal,daysPlot] = FitLineForPlotting(pooledHere,daysHere);
+            plot(daysPlot,fitVal,'k','LineWidth',2)
+            [~, ~, ~, RR(ii), Pval(ii), ~] =...
+                fitLinRegSL(pooledHere,daysHere);
+            [Fval(ii),dfNum(ii),dfDen(ii),pVal(ii)] =...
+                slopeDiffFromZeroFtest(pooledHere,daysHere);
+            [propsRho(ii),propsCorrPval(ii)] = corr(daysHere,pooledHere,'type','Spearman');
+    
+            title(['PVtype ' condSetLabels(ii)])
+            aff(ii) = MakePlotPrettySL(aff(ii));
+        end
+        suptitleSL(['Bins ' num2str(bI) ' on ' splitterLoc{slI}])
+        
+        figure('Position',[735 209 910 420]);
+        for ii = 1:3
+        text(1,ii,[condSetLabels{ii} ' LinReg R=' num2str(sqrt(abs(RR(ii).Ordinary))) ', p=' num2str(Pval(ii))...
+            ', F diff zero F dfNum dfDen p: ' num2str([Fval(ii) dfNum(ii) dfDen(ii) pVal(ii)])...
+            ', spearman corr rho pval: ' num2str([propsRho(ii) propsCorrPval(ii)])]) 
+        end
+        title(['stats for PV/accuracy on ' mazeLocations{slI} ', bins ' num2str(bI)])
+        xlim([0 18])
+        ylim([0 6])
+    end
+end
 
 %% Day diffs population state separation
 
@@ -1595,15 +1688,16 @@ for dayI = 1:numDays(mouseI)
         %}
     
     mask = create_AllICmask(im.NeuronImage);
-    aa = figure('Position',[0.1300 0.1100 0.7750 0.8150); imagesc(mask); hold on
+    aa = figure('Position',[518 121 1018 818]); imagesc(mask); hold on
      
-    oHere = find(cellOverlapsToday{mouseI}{dayI});
+    %oHere = find(cellOverlapsToday{mouseI}{dayI});
+    oHere = unique([find(sum(cellsInRoi{mouseI}{dayI},1)>0)';find(cellOverlapsToday{mouseI}{dayI})]);
     for ohI = 1:length(oHere)
         plot(outlines{oHere(ohI)}{1}(:,2),outlines{oHere(ohI)}{1}(:,1))
     end
     
-    si = strcmpi(input('Choose from this image (y/n)?','s'),'y');
-    while si==1
+    %si = strcmpi(input('Choose from this image (y/n)?','s'),'y');
+    %while si==1
         title('Click near overlapping cells to check')
         [xx,yy]=ginput(1);
         
@@ -1614,7 +1708,7 @@ for dayI = 1:numDays(mouseI)
         nearC = find(cellsInRoi{mouseI}{dayI}(cellCheck,:));
         plot(centersHere(nearC,1),centersHere(nearC,2),'*r')
         
-        fo = load(fullfile(cellAllFiles{mouseI}{dayI},'FinalOutput.mat'),'NeuronTraces','PSAbool');
+        %fo = load(fullfile(cellAllFiles{mouseI}{dayI},'FinalOutput.mat'),'NeuronTraces','PSAbool');
         
         bb = figure;
         subplot(1+length(nearC),1,1)
@@ -1629,16 +1723,18 @@ for dayI = 1:numDays(mouseI)
             psI = find(fo.PSAbool(nearC(ncI),:));
             plot(psI,fo.NeuronTraces.LPtrace(nearC(ncI),psI),'.r')
         end
+        suptitleSL(['Cells ' num2str(cellCheck) ' ' num2str(nearC)])
         
         fh = strcmpi(input('Choose frame here (y/n)?','s'),'y');
         if fh == 1
             title('Choose boundary start')
-           [ss,~]=ginput(1);
+            [ss,~]=ginput(1);
             title('Choose boundary end')
-           [ee,~]=ginput(1);
-        
-           plotFrames = round([ss ee]);
-           pfi = plotFrames(1):plotFrames(2);
+            [ee,~]=ginput(1);
+            
+            plotFrames = round([ss ee]);
+            if plotFrames(2) > size(fo.NeuronTraces.LPtrace,2); plotFrames(2) = size(fo.NeuronTraces.LPtrace,2); end
+            pfi = plotFrames(1):plotFrames(2);
            
             cc = figure;
             subplot(1+length(nearC),1,1)
@@ -1655,47 +1751,96 @@ for dayI = 1:numDays(mouseI)
                 plot(psI,fo.NeuronTraces.LPtrace(nearC(ncI),psI),'.r')
                 xlim(plotFrames)
             end
+            suptitleSL(['Frames' num2str(plotFrames)])
             
-            if exist('motCorrMovie-Objects','dir')==0
+            if exist('motCorrMovie-Objects','dir')==1
+                fol = fullfile(cd,'motCorrMovie-Objects');
+            elseif exist('MotCorrMovie-Objects','dir')==1
+                fol = fullfile(cd,'motCorrMovie-Objects');
+            else 
                 disp(cellAllFiles{mouseI}{dayI})
                 [fil,fol]=uigetfile('.mat','Please find mot corr movie for this session');
-                cd(fol)
+            end
+            
+            cd(fol) 
                 
-                if exist('motCorrMovie-Objects','dir') 
-                    folH = 'motCorrMovie-Objects';
-                elseif exist('MotCorrMovie-Objects','dir')
-                    folH = 'MotCorrMovie-Objects';
-                end
-                cd(fullfile(fol,folH))
-                
-                    h5here = ls('*.h5');
-                    data = h5read(h5here,'/Object',[1 1 plotFrames(1) 1],[488 622 diff(plotFrames) 1]);
-                    
-                    
-                    ydims = round(centersHere(cellCheck,2)+[-15 15]);
-                    xdims = round(centersHere(cellCheck,1)+[-15 15]);
-                    fA = find(pfi==f1);
-                    framePlotA = data(ydims(1):ydims(2),xdims(1):xdims(2),fA);
-                    
-                    figure; imagesc_gray(framePlotA); hold on
+            h5here = ls('*.h5');
+            fi = h5info(h5here);
+            fiSize = fi.Datasets.ChunkSize([1 2]);
+            data = h5read(h5here,'/Object',[1 1 plotFrames(1) 1],[fiSize(1) fiSize(2) diff(plotFrames) 1]);
+            
+            ydims = round(centersHere(cellCheck,2)+[-15 15]);
+            xdims = round(centersHere(cellCheck,1)+[-15 15]);
+            figure(cc); 
+            title('Select where to try the first frame')
+            [f1,~] = ginput(1); f1 = round(f1);
+            fA = find(pfi==f1);
+            framePlotAref = data(ydims(1):ydims(2),xdims(1):xdims(2),fA);
+            framePlotA = data(:,:,fA);
+            
+            title('Select where to try the second frame')
+            [f2,~] = ginput(1); f2 = round(f2);
+            fB = find(pfi==f2);
+            framePlotB = data(ydims(1):ydims(2),xdims(1):xdims(2),fB);
+            framePlotB = data(:,:,fB);
+            
+            
+            dd = figure; imagesc(framePlotA); hold on
+            plot(outlines{cellCheck}{1}(:,2),outlines{cellCheck}{1}(:,1),'g','LineWidth',2)
+            for ncI = 1:length(nearC)
+                plot(outlines{nearC(ncI)}{1}(:,2),outlines{nearC(ncI)}{1}(:,1),'m','LineWidth',2)
+            end
+            title(['Frame #' num2str(f1)])
+            figure; histogram(framePlotAref(:))
+               
+            ee = figure; imagesc(framePlotB); hold on
+            plot(outlines{cellCheck}{1}(:,2),outlines{cellCheck}{1}(:,1),'g','LineWidth',2)
+            for ncI = 1:length(nearC)
+                plot(outlines{nearC(ncI)}{1}(:,2),outlines{nearC(ncI)}{1}(:,1),'m','LineWidth',2)
+            end
+            title(['Frame #' num2str(f2)])
+            figure; histogram(framePlotAref(:))
+            
+            for ccc = 1:length(cc.Children)
+                plot(cc.Children(ccc),f1*[1 1],cc.Children(ccc).YLim,'b')
+                plot(cc.Children(ccc),f2*[1 1],cc.Children(ccc).YLim,'b') 
+            end
+            
+            %{
+            ee.Children.XLim = dd.Chilren.Xlim;
+            ee.Children.YLim = dd.Chilren.Ylim;
+            %}
+                    %{
+                    cellCheck = 369;
+                    plotFrames = [16498       25346];
+                    nearC = 312;
+                    fA = 1640;
+                    framePlotA = data(:,:,fA);
+                    figure; imagesc(framePlotA); hold on
                     plot(outlines{cellCheck}{1}(:,2),outlines{cellCheck}{1}(:,1))
                     for ncI = 1:length(nearC)
                         plot(outlines{nearC(ncI)}{1}(:,2),outlines{nearC(ncI)}{1}(:,1))
                     end
+                    set(gca,'clim',[2800 3100])
+            
+            
+                    fB = 7179;
+                    set(gca,'clim',[2900 3150])
                     
+                    %}
                     
         end
         
         close(bb);
         close(aa);
-        aa = figure('Position',[0.1300 0.1100 0.7750 0.8150); imagesc(mask); hold on
+        aa = figure('Position',[0.1300 0.1100 0.7750 0.8150]); imagesc(mask); hold on
         for ohI = 1:length(oHere)
             plot(outlines{oHere(ohI)}{1}(:,2),outlines{oHere(ohI)}{1}(:,1))
         end
         si = strcmpi(input('Choose from this image (y/n)?','s'),'y');
     
     end
-end
+
         
         
         

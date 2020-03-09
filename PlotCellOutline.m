@@ -66,6 +66,9 @@ for dayI = 1:numDays
     box off
     axis equal
     title(['Cell Outline, plot day ' num2str(dayI) ', cell ' num2str(cellNum(dayI))])
+    
+    hold on
+    plot([10 10+50*1.28],[50 50],'w','LineWidth',2)
 end
 
 end

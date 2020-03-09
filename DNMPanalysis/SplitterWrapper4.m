@@ -57,19 +57,19 @@ for shuffleI = 1:numShuffles
         PFsLinTBTdnmp(shuffledTBT, binEdges, minspeed, [], false,shuffPFcondpairs);
     
     tmapShuffSomething = cell2mat(cellfun(@(x) sum(x)>0,tmapShuff,'UniformOutput',false));
-    anyWrong = find((baseTMapSomething==tmapShuffSomething)==0);
-    if any(anyWrong)
+    %anyWrong = find((baseTMapSomething==tmapShuffSomething)==0);
+    %if any(anyWrong)
     %    disp('bad shuffle')
-    end
+    %end
     for cpI = 1:numCondPairs
         [rateDiff, ~, ~, ~, ~] =... % rateSplit{shuffleI}, meanRateDiff{shuffleI}, DIeach{shuffleI}, DImean{shuffleI}
             LookAtSplitters4(tmapShuff,meascondPairs,[]);
        
         shuffRDsomething = cell2mat(cellfun(@(x) sum(abs(x))>0,rateDiff,'UniformOutput',false));
-        anyWrong = find((baseRDsomething==shuffRDsomething)==0);
-        if any(anyWrong)
+        %anyWrong = find((baseRDsomething==shuffRDsomething)==0);
+        %if any(anyWrong)
         %    disp('bad shuffle')
-        end
+        %end
         for cellI = 1:numCells
             for sessI = 1:numSess
                 if any(rateDiff{cellI,sessI})

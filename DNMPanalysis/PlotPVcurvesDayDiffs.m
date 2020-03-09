@@ -59,6 +59,7 @@ for csI = 1:length(condSetColors)
     for dayI = minDays:maxDays
         daysUse = CSpooledPVdaysApart{csI}==dayI;
         errorLine(csI,dayI) = standarderrorSL(CSpooledPVcorrs{csI}(daysUse));
+        %errorLine(csI,dayI) = std(CSpooledPVcorrs{csI}(daysUse));
         meanLine(csI,dayI) = nanmean(CSpooledPVcorrs{csI}(daysUse));
         if plotDots == true
             scatter(dayI+csMod(csI)*ones(sum(daysUse),1),CSpooledPVcorrs{csI}(daysUse),'filled',...
@@ -79,7 +80,15 @@ for csI = 1:length(condSetColors)
     
     [statsOut.slopeSpearman.rho(csI),statsOut.slopeSpearman.pVal(csI)]=corr(CSpooledPVdaysApart{csI},CSpooledPVcorrs{csI},'Type','Spearman');
 end  
-    
+    %{
+for csI = 1:length(condSetColors)
+    meanHere = meanLine(csI,:);
+    errorHere = errorLine(csI,:);
+    patchY = [meanHere+errorHere fliplr(meanHere-errorHere)];
+        patchX = [minDays:maxDays fliplr(minDays:maxDays)];
+        patch(patchX,patchY,condSetColors{csI},'EdgeColor','none','FaceAlpha',0.4)
+end
+   %}     
 pp = [];
 for csI = 1:length(condSetColors)
     pp(csI) = errorbar(minDays:maxDays,meanLine(csI,:),errorLine(csI,:),'Color',condSetColors{csI},'LineWidth',2);

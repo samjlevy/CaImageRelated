@@ -6,6 +6,15 @@ finalDataRoot = fullfile(fdPts{1:end-1});
 load(fullfile(basePath,'DNMPdataTable.mat'))
 load(fullfile(basePath,'fullReg.mat'))
 
+fc = DNMPdataTable.FolderName(1);
+possiblePts = strsplit(fc{1},'\');
+if length(possiblePts)>1
+    for sessI = 1:height(DNMPdataTable)
+        fc = DNMPdataTable.FolderName(sessI);
+        possiblePts = strsplit(fc{1},'\');
+        DNMPdataTable.FolderName(sessI) = {possiblePts{end}};
+    end
+end     
 
 %Choose which files being included: these should have user input options
 whichFilesUse = cell2mat(cellfun(@(x) strcmpi(x,'DNMP'),[DNMPdataTable.SessType],'UniformOutput',false))...
@@ -45,7 +54,7 @@ end
 useDataTable = DNMPdataTable(whichFilesUse,1:6);
 
 %Get the sort order for fullReg.sessionInds that corresponds to DNMPdataTable
-fullRegFiles = [fullReg.BaseSession; fullReg.RegSessions(:)];
+fullRegFiles = [fullReg.baseSession; fullReg.RegSessions(:)];
 fullRegFilesPts = cellfun(@(x) strsplit(x,'\'),fullRegFiles,'UniformOutput',false);
 fullRegFilesEnds = cellfun(@(x) x{end},fullRegFilesPts,'UniformOutput',false);
 
@@ -131,8 +140,6 @@ if getFluoresence == 1
     daybyday.RawTrace = PoolPSA2(all_Fluoresence, sortedSessionInds);
 end
     
-
-
 %save daybyday.mat daybyday sortedSessionInds useDataTable -v7.3
 
 end

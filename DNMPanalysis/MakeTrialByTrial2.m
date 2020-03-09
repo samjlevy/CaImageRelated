@@ -1,4 +1,4 @@
-function [trialbytrial, allfiles, sortedSessionInds, realdays]= MakeTrialByTrial2(basePath,taskSegment,correctOnly)
+function [trialbytrial, allfiles, sortedSessionInds, realdays]= MakeTrialByTrial2(basePath,taskSegment,correctOnly,xlims)
 %Task segment has to be one of the options in GetBlockDNMPbehavior
 
 cd(basePath)
@@ -19,9 +19,15 @@ end
 %First go through and gather all the data
 for sessI = 1:numSess
     %Get all the data for this session
+    if strcmpi(useDataTable.SessType(sessI),'DNMP')
     [bounds(sessI), ~, ~, ~, correct, lapNum]...
         = GetBlockDNMPbehavior2( daybyday.frames{sessI}, daybyday.txt{sessI},...
         taskSegment, length(daybyday.all_x_adj_cm{sessI}));
+    elseif strcmpi(useDataTable.SessType(sessI),'ForcedUnforced')
+        [bounds(sessI), ~, ~, ~, correct, lapNum]...
+        = GetBlockForcedUnforcedBhvr2( daybyday.frames{sessI}, daybyday.txt{sessI},...
+        taskSegment, length(daybyday.all_x_adj_cm{sessI}));
+    end
     
     ss = fieldnames(bounds(sessI));
     if useExtFile == true        
@@ -58,14 +64,27 @@ for sessI = 1:numSess
         lapNumber(sessI).(ss{block}).wrong=...
             lapNum.(ss{block})(correct.(ss{block})==0);
     end
+    
+    lapLengths = structfun(@(x) size(x,1),bounds(sessI));
+    if any(lapLengths<5)
+        disp(num2str(lapLengths))
+        kppSess = input('These are the numbers of laps, keep this session? (y/n)>>','s');
+        keepSess(sessI) = strcmpi(kppSess,'y');
+    end
+end
+
+if correctOnly == false 
+    correctBounds = bounds;
+    ss = fieldnames(lapNumber);
+    for sessI = 1:numSess
+    for condI = 1:length(ss)
+        lapNumber(sessI).(ss{condI}).correct = true(length(lapNumber(sessI).(ss{condI}).all),1);
+    end
+    end
 end
 
 %Then make some formatting adjustments
 [fixedLapNumber] = AdjustLapNumbers(lapNumber);
-
-if correctOnly == false 
-    correctBounds = bounds(sessI);
-end
 
 %Get rid of any exclude frames
 [correctBounds,fixedLapNumber] = RemoveExcludeFrames(daybyday.imagingFramesDelete,...
@@ -81,5 +100,6 @@ allfiles = cellfun(@(x) fullfile(rootPath,x),useDataTable.FolderName,'UniformOut
 realdays = useDataTable.RealDay;
 %sortedSessionInds comes in with daybyday
 
+%save('trialbytrial.mat','trialbytrial','allfiles','sortedSessionInds','realdays','-v7.3')
 end
 
