@@ -34,6 +34,8 @@ lapParsed = []; scalingX = []; v0anchor = [];
 numOffmaze = []; scalingY = []; xAlign = []; yAlign = [];
 global videoResetCount
 videoResetCount = 1;
+global preLoadFrames
+preLoadFrames = true;
 
 startFresh = 0;
 posFiles = ls('*PosLED_temp.mat');
@@ -187,8 +189,9 @@ end
 
 mcfCurrentSize = mcfOriginalSize;
 mcfCurrentSize(3:4) = mcfCurrentSize(3:4)*mcfScaleFactor;
-manCorrFig = figure('Position',mcfCurrentSize,'name','manCorrFig');
-imagesc(v0); 
+manCorrFig = [];
+%manCorrFig = figure('Position',mcfCurrentSize,'name','manCorrFig');
+%imagesc(v0); 
 SaveTemp;
 %{
 firstPass = questdlg('Want to do auto tracking by LEDs?','Auto track?','Yes','No','Yes');
@@ -325,12 +328,16 @@ while stillEditing == 1
                 end
             end
         case 'a' 
+            clear obj
+            obj = VideoReader(avi_filepath);
             [manCorrFig, obj, xAVI, yAVI, nRed,nGreen,redPix,greenPix,...
                 subMultRedX,subMultRedY,subMultGreenX,subMultGreenY,anyRpix,anyGpix]...
                 = AutoCorrByLEDWrapper(...
                 posAndVelFig,manCorrFig, mcfCurrentSize, obj, onMazeX, onMazeY, onMazeMask, v0r, v0g, v0,...
                 howRedThresh, howGreenThresh, nBrightPoints, xAVI, yAVI, nFrames,...
                 nRed,nGreen,redPix,greenPix,subMultRedX,subMultRedY,subMultGreenX,subMultGreenY,anyRpix,anyGpix,plotFog);
+            clear obj
+            obj = VideoReader(avi_filepath);
         case 'f'
             [v0] = AdjustWithBackgroundImage(avi_filepath, obj, v0);
 
@@ -433,7 +440,7 @@ while stillEditing == 1
             lop = questdlg('Load behTable or parse positions?','Load or parse','Load','Parse','Parse');
             switch lop
                 case 'Parse'
-                     whichParse = questdlg('Expect good pos or not yet corrected?','Good','Rough','Rough');
+                     whichParse = questdlg('Expect good pos or not yet corrected?','How parse','Good','Rough','Rough');
                      switch whichParse
                          case 'Rough'
                             [onMazeFinal,~] = PreProcParseOnMazeBehavior2_2(xAVI,yAVI,v0,obj);
@@ -574,17 +581,24 @@ end
 %%
 function manCorrFig = CheckManCorrFig(mcfCurrentSize,manCorrFig,v0)
 figsOpen = findall(0,'type','figure');
-if length(figsOpen)~=0
-isManCorr = strcmp({figsOpen.Name},'manCorrFig');
-elseif length(figsOpen)==0
-    isManCorr=0;
+figsOpen(isgraphics(figsOpen)) = [];
+figsOpen = findall(0,'type','figure');
+
+switch length(figsOpen)==0
+    case 0
+        isManCorr = strcmp({figsOpen.Name},'manCorrFig');
+    case 1
+        isManCorr=0;
 end
 
 if sum(isManCorr)==1
     %We're good
 elseif sum(isManCorr)==0
     manCorrFig = figure('Position',mcfCurrentSize,'name','manCorrFig');
-    imagesc(v0); 
+    manCorrFig.UserData.imhandle = imagesc(v0); 
+    manCorrFig.UserData.pp.r = [];
+    manCorrFig.UserData.pp.g = [];
+    manCorrFig.UserData.boundary = [];
 elseif sum(isManCorr) > 1
     manCorrInds = find(isManCorr);
     close(figsOpen(manCorrInds(2:end)))
@@ -643,26 +657,52 @@ if videoResetCount > 5000
     videoResetCount = 0;
 end
 
-aviSR = obj.FrameRate;
-obj.CurrentTime = (corrFrame-1)/aviSR;
-uFrame = readFrame(obj);
+if strcmpi(class(obj),'uint8')
+    uFrame = obj;
+else
+    aviSR = obj.FrameRate;
+    obj.CurrentTime = (corrFrame-1)/aviSR;
+    uFrame = readFrame(obj);
+end
 
-
+%{
+il = length(manCorrFig.Children.Children);
+isIm = strcmpi(manCorrFig.Children.Children(il).Type,'image');
+if ~isIm
+    for ww = 1:il
+        imType(ww) = strcmpi(manCorrFig.Children.Children(ww).Type,'Image');
+    end
+    il = imType;
+end
+ %}
+%imInd = find(strcmpi(manCorrFig.Children.Children,'matlab.graphics.primitive.Image'));
 %Do some friendly UI stuff
 if ~isempty(plotFog)
     if plotFog.cbx.Value==1
-        imagesc(manCorrFig.Children,uFrame);
+        %imagesc(manCorrFig.Children,uFrame);
+        %manCorrFig.Children.Children(il).CData=uFrame;
+        if ~isempty(manCorrFig.UserData.pp.g)
+            delete(manCorrFig.UserData.pp.g)
+            delete(manCorrFig.UserData.pp.r)
+            manCorrFig.UserData.pp.r = [];
+            manCorrFig.UserData.pp.g = [];
+        end
+        manCorrFig.UserData.imhandle.CData = uFrame;
     end
 end
-title(manCorrFig.Children,['Frame# ' num2str(corrFrame)])
+manCorrFig.Children.Title.String = ['Frame# ' num2str(corrFrame)];
+%title(manCorrFig.Children,['Frame# ' num2str(corrFrame)])
 
 boundaryX = onMazeX; boundaryX = [boundaryX; boundaryX(1)];
 boundaryY = onMazeY; boundaryY = [boundaryY; boundaryY(1)];
 if ~isempty(plotFog)
     if plotFog.cbx.Value==1
-hold(manCorrFig.Children,'on')
-plot(manCorrFig.Children,boundaryX,boundaryY,'r','LineWidth',1.5)
-hold(manCorrFig.Children,'off')
+        if isempty(manCorrFig.UserData.boundary)
+            hold(manCorrFig.Children,'on')
+            manCorrFig.UserData.boundary = ...
+                plot(manCorrFig.Children,boundaryX,boundaryY,'r','LineWidth',1.5); %manCorrFig.Children,
+            hold(manCorrFig.Children,'off')
+        end
     end
 end
 
@@ -690,13 +730,14 @@ end
 
 if ~isempty(plotFog)
     if plotFog.cbx.Value==1
-hold(manCorrFig.Children,'on')
-plot(manCorrFig.Children,redX,redY,'or')
-plot(manCorrFig.Children,greenX,greenY,'og')
-hold(manCorrFig.Children,'off')
+        hold(manCorrFig.Children,'on')
+        manCorrFig.UserData.pp.r = plot(manCorrFig.Children,redX,redY,'or'); %manCorrFig.Children.Children(end).UserData.pp.r = 
+        manCorrFig.UserData.pp.g = plot(manCorrFig.Children,greenX,greenY,'og');
+        hold(manCorrFig.Children,'off')
     end
 end
 
+drawnow
 end
 %%
 function [rfRsub, rfGsub] =  GetSelfSubFrame(uFrame, v0r, v0g, onMazeMask)
@@ -921,20 +962,41 @@ function [manCorrFig, obj, xAVI, yAVI, nRed,nGreen,redPix,greenPix,...
     manCorrFig, mcfCurrentSize, obj, onMazeX, onMazeY, onMazeMask, v0r, v0g, v0,...
     howRedThresh, howGreenThresh, nBrightPoints, xAVI, yAVI, nFrames,...
     nRed,nGreen,redPix,greenPix,subMultRedX,subMultRedY,subMultGreenX,subMultGreenY,anyRpix,anyGpix,plotFog)
-
+global preLoadFrames
 
 manCorrFig = CheckManCorrFig(mcfCurrentSize,manCorrFig,v0);
 %imagesc(v0)
 mcfBlockLength = 5000;
 rawColorThresh = 1;
+if preLoadFrames==true
+    if length(fixTheseFrames)>mcfBlockLength
+        framesLoad = fixTheseFrames(1:mcfBlockLength);
+    else
+        framesLoad = fixTheseFrames;
+    end
+    disp('Loading some frames...')
+    redFrames = obj.read([framesLoad(1) framesLoad(end)]);
+    disp('Done')
+    lastLoaded = framesLoad(end);
+end
+
 %First pass just correct all the frames
 mcfI = 1;
-p = ProgressBar(length(fixTheseFrames));
+%p = ProgressBar(length(fixTheseFrames));
+ff = waitbar(0,'Please wait...');
 for corrFrameI = 1:length(fixTheseFrames)
     corrFrame = fixTheseFrames(corrFrameI);
-    [redX, redY, greenX, greenY, allIndR, allIndG, anyRpix, anyGpix] = AutoCorrByLED(...
-    manCorrFig, obj, corrFrame, onMazeX, onMazeY, onMazeMask, v0r, v0g, rawColorThresh,...
-    howRedThresh, howGreenThresh, nBrightPoints,plotFog);
+    if preLoadFrames==true
+        corrFrameJ = rem(corrFrameI,mcfBlockLength); if corrFrameJ==0; corrFrameJ = mcfBlockLength; end
+        uFrame = redFrames(:,:,:,corrFrameJ);
+        [redX, redY, greenX, greenY, allIndR, allIndG, anyRpix, anyGpix] = AutoCorrByLED(...
+        manCorrFig, uFrame, corrFrame, onMazeX, onMazeY, onMazeMask, v0r, v0g, rawColorThresh,...
+        howRedThresh, howGreenThresh, nBrightPoints,plotFog);
+    else
+        [redX, redY, greenX, greenY, allIndR, allIndG, anyRpix, anyGpix] = AutoCorrByLED(...
+        manCorrFig, obj, corrFrame, onMazeX, onMazeY, onMazeMask, v0r, v0g, rawColorThresh,...
+        howRedThresh, howGreenThresh, nBrightPoints,plotFog);
+    end
 
     subMultRedX(corrFrame) = redX;
     subMultRedY(corrFrame) = redY;
@@ -945,7 +1007,8 @@ for corrFrameI = 1:length(fixTheseFrames)
     redPix{corrFrame} = allIndR;
     greenPix{corrFrame} = allIndG;
     
-    p.progress;
+    %p.progress;
+    waitbar(corrFrameI/length(fixTheseFrames),ff,'Correcting by LEDs')
     mcfI = mcfI+1;
     if mcfI > mcfBlockLength
         disp(['Resetting manCorrFig every ' num2str(mcfBlockLength) ' frames'])
@@ -953,9 +1016,26 @@ for corrFrameI = 1:length(fixTheseFrames)
         manCorrFig = CheckManCorrFig(mcfCurrentSize,manCorrFig,v0);
         
         mcfI = 1;
+        
+        if corrFrameI < length(fixTheseFrames)
+        if preLoadFrames==true
+            framesLeft = (corrFrameI+1):length(fixTheseFrames);
+            nFramesLeft = length(framesLeft);
+            if nFramesLeft>mcfBlockLength
+                framesLoad = fixTheseFrames(framesLeft([1:mcfBlockLength]));
+            else
+                framesLoad = fixTheseFrames(framesLeft);
+            end
+            disp('Loading more frames...')
+            redFrames = obj.read([framesLoad(1) framesLoad(end)]);
+            disp('Done')
+            lastLoaded = framesLoad(end);
+        end
+        end
     end
 end
-p.stop;
+%p.stop;
+close(ff)
 
 haveRedX = ~isnan(subMultRedX(fixTheseFrames));
 haveRedY = ~isnan(subMultRedY(fixTheseFrames));
