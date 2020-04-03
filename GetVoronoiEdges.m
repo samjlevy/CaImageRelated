@@ -1,5 +1,7 @@
 function edgePolys = GetVoronoiEdges(vorVertices,vorCenters,vorIndices)
 
+% Algorithm: if cell has a vertex wich is beyond the max of the centers
+% (assumes voronoi tesselation will add points way away from the seed points
 xOutRange = cell2mat(cellfun(@(x)...
     any(vorVertices(x,1)<min(vorCenters(:,1))) | any(vorVertices(x,1)>max(vorCenters(:,1))),...
     vorIndices,'UniformOutput',false));
