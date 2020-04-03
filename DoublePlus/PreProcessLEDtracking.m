@@ -443,7 +443,7 @@ while stillEditing == 1
                      whichParse = questdlg('Expect good pos or not yet corrected?','How parse','Good','Rough','Rough');
                      switch whichParse
                          case 'Rough'
-                            [onMazeFinal,~] = PreProcParseOnMazeBehavior2_2(xAVI,yAVI,v0,obj);
+                            [onMazeFinal] = PreProcParseOnMazeBehavior2_2(xAVI,yAVI,v0,obj);
                          case 'Good'
                             [onMazeFinal,behTable] = PreProcParseOnMazeBehavior(xAVI,yAVI,v0,obj);
                      end

@@ -168,48 +168,61 @@ if appOm
 
     cpI = 1;
     while cpI <size(omEpochs,1)+1
+        stOm = NaN;
         stretchCheck = omEpochs(cpI,1):omEpochs(cpI,2);
-        midFrameInd = ceil(length(stretchCheck)/2);
-        midFrameN = stretchCheck(midFrameInd);
-        obj.CurrentTime = (midFrameN-1)/aviSR;
-        midFrame = readFrame(obj);
-        orFrame = figure('Position',[422 462 560 420]); imagesc(midFrame); title(['Middle frame ' num2str(midFrameN)])
-        usrApp = figure('Position',[1004 459 560 420]);
-        imagesc(midFrame); hold on;
-        plot(xAVI(stretchCheck(1:midFrameInd-1)),yAVI(stretchCheck(1:midFrameInd-1)),'og')
-        plot(xAVI(stretchCheck(midFrameInd+1:end)),yAVI(stretchCheck(midFrameInd+1:end)),'or')
-        plot(xAVI(midFrameN),yAVI(midFrameN),'*y')
-        title(['Is this segment off the maze?  midFrame= ' num2str(midFrameN) ' (y/n) (input)'])
-        ss = 'g';
-        while (strcmpi(ss,'y') + strcmpi(ss,'n'))==0
-            ss = input('Is this segment off the maze? (y/n) >>','s');
-        end
-
-        if strcmpi(ss,'n')
-            mStart = str2double(input('What frame does this onMaze epoch start?>>','s'));
-            mStop = str2double(input('What frame does this onMaze epoch stops?>>','s'));
-            stretchCheck = mStart:mStop;
+        
+        doneOnMaze = 0;
+        while doneOnMaze==0
             midFrameInd = ceil(length(stretchCheck)/2);
             midFrameN = stretchCheck(midFrameInd);
             obj.CurrentTime = (midFrameN-1)/aviSR;
             midFrame = readFrame(obj);
-            forFrame = figure('Position',[422 462 560 420]); imagesc(midFrame); title(['Middle frame ' num2str(midFrameN)])
-            fusrApp = figure('Position',[1004 459 560 420]);
+            orFrame = figure('Position',[422 462 560 420]); imagesc(midFrame); title(['Middle frame ' num2str(midFrameN)])
+            usrApp = figure('Position',[1004 459 560 420]);
             imagesc(midFrame); hold on;
             plot(xAVI(stretchCheck(1:midFrameInd-1)),yAVI(stretchCheck(1:midFrameInd-1)),'og')
             plot(xAVI(stretchCheck(midFrameInd+1:end)),yAVI(stretchCheck(midFrameInd+1:end)),'or')
             plot(xAVI(midFrameN),yAVI(midFrameN),'*y')
-            title(['Does this look ok?  midFrame= ' num2str(midFrameN) ' (y/n) (input)'])
-            tt = input('Does this look ok? (y/n)>> ','s');
-            if strcmpi(tt,'y')
-                onMazeFinal(mStart:mStop) = true;
-                close(forFrame); close(fusrApp);
-            else
-                keyboard;
+            title(['Is this segment off the maze?  midFrame= ' num2str(midFrameN) ' (y/n) (input)'])
+            ss = 'g';
+            while (strcmpi(ss,'y') + strcmpi(ss,'n'))==0
+                ss = input('Is this segment off the maze? (y/n) >>','s');
+                if strcmpi(ss,'y'); doneOnMaze=1; end
             end
+
+            if strcmpi(ss,'n')
+                disp(['Stretch begins at ' num2str(stretchCheck(1)) ', ends at ' num2str(stretchCheck(end))])
+                mStart = str2double(input('What frame does this onMaze epoch start?>>','s'));
+                mStop = str2double(input('What frame does this onMaze epoch stops?>>','s'));
+                stretchView = mStart:mStop;
+                midFrameInd = ceil(length(stretchView)/2);
+                midFrameN = stretchView(midFrameInd);
+                obj.CurrentTime = (midFrameN-1)/aviSR;
+                midFrame = readFrame(obj);
+                forFrame = figure('Position',[422 462 560 420]); imagesc(midFrame); title(['Middle frame ' num2str(midFrameN)])
+                fusrApp = figure('Position',[1004 459 560 420]);
+                imagesc(midFrame); hold on;
+                plot(xAVI(stretchView(1:midFrameInd-1)),yAVI(stretchView(1:midFrameInd-1)),'og')
+                plot(xAVI(stretchView(midFrameInd+1:end)),yAVI(stretchView(midFrameInd+1:end)),'or')
+                plot(xAVI(midFrameN),yAVI(midFrameN),'*y')
+                title(['Does this look ok?  midFrame= ' num2str(midFrameN) ' (y/n) (input)'])
+                tt = input('Does this look ok? (y/n)>> ','s');
+                if strcmpi(tt,'y')
+                    onMazeFinal(mStart:mStop) = true;
+                    close(forFrame); close(fusrApp);
+                    goodF = sum(stretchCheck(:)==[mStart:mStop],2)==1;
+                    stretchCheck(goodF) = [];
+                    if isempty(stretchCheck)
+                        keyboard
+                        doneOnMaze=1;
+                    end
+                else
+                    keyboard;
+                end
+            end
+            close(orFrame); close(usrApp);
         end
 
-        close(orFrame); close(usrApp);
         cpI = cpI + 1;
     end
 end

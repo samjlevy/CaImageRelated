@@ -1026,6 +1026,20 @@ if strcmp(userstr,'sam')
 %    MDSL(i).Location = 'C:\Users\Sam\Desktop\CM_Miniscope\ACM1';
 end
 MDSL(i).Notes = [];
+
+i = i+1;
+MDSL(i).Animal = 'Kerberos';
+MDSL(i).Date = '04_12_2018';
+MDSL(i).Session = 1;
+MDSL(i).Env = 'Plus1';
+MDSL(i).Room = '719h';
+MDSL(i).RecordStartTime = ' ';
+if strcmp(userstr,'sam')
+    MDSL(i).Location = 'D:\DoublePlus\Kerberos\Kerberos180412';
+%elseif strcmp(userstr,'sam')
+%    MDSL(i).Location = 'C:\Users\Sam\Desktop\CM_Miniscope\ACM1';
+end
+MDSL(i).Notes = [];
 %% Compile session_ref
 
 session_ref.Polaris_DNMP = Polaris_DNMP;
