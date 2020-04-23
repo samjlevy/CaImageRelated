@@ -523,24 +523,27 @@ for dpI = 1:numDayPairs
     end
     suptitleSL(['Distribution of within-arm COM changes, day pair ' num2str(realDays{mouseI}(dayPairsForward(dpI,:))')])
     
-    print(fullfile(saveFolder,['COMchangeKS' num2str(dpI)]),'-dpdf') 
-    close(gg)
+    %print(fullfile(saveFolder,['COMchangeKS' num2str(dpI)]),'-dpdf') 
+    %close(gg)
 end
 
 %Pooled across arms
 for dpI = 1:numDayPairs
     gg = figure;%('Position',[428 376 590 515]);%[428 613 897 278]
     
-    %yy = cdfplot(oneEnvCOMchanges{dpI}(:)); yy.Color = 'b'; yy.LineWidth = 2;
-    %hold on
-    %zz = cdfplot(twoEnvCOMchanges{dpI}(:)); zz.Color = 'r'; zz.LineWidth = 2; 
+    yy = cdfplot(oneEnvCOMchanges{dpI}(:)); yy.Color = 'b'; yy.LineWidth = 2;
+    hold on
+    zz = cdfplot(twoEnvCOMchanges{dpI}(:)); zz.Color = 'r'; zz.LineWidth = 2; 
+    %}
+    % Log scale
+    %{
     [yy,xxy] = ecdf(oneEnvCOMchanges{dpI}(:));
     [zz,xxz] = ecdf(twoEnvCOMchanges{dpI}(:));
     plot(log10(xxy),yy,'b','LineWidth',2)
     hold on
     plot(log10(xxz),zz,'r','LineWidth',2)
     xlim([-1 1])
-    
+    %}
     
     xlabel('CM change'); ylabel('Cumulative Proportion')
     %    title(condNames{condI})
@@ -548,8 +551,10 @@ for dpI = 1:numDayPairs
         %xx.XTick = [0 0.5 1]; xx.XTickLabel = {'0' num2str(numBins/2) num2str(numBins)};
         
     [p,h] = ranksum(oneEnvCOMchanges{dpI}(:),twoEnvCOMchanges{dpI}(:));
-    text(4.5,0.5,['p=' num2str(round(p,3))])
-    
+    [hKS,pKS] = kstest2(oneEnvCOMchanges{dpI}(:),twoEnvCOMchanges{dpI}(:));
+    %text(4.5,0.5,['p=' num2str(round(p,3))])
+    text(4.5,0.5,['RS p=' num2str(p)])
+    text(4.5,0.65,['KS p=' num2str(pKS)])
     title(['Distribution of within-arm COM changes, day pair ' num2str(realDays{mouseI}(dayPairsForward(dpI,:))')])
     
 end
@@ -557,18 +562,21 @@ end
 %% Rate remapping
 
 saveFolder = 'G:\DoublePlus\SFNposter';
-thingUseOne = oneEnvMeanRateDiffs;
-thingUseTwo = twoEnvMeanRateDiffs;
-label = 'mean firing rate differences';
-thingUseOne = oneEnvMeanRatePctChange;
-thingUseTwo = twoEnvMeanRatePctChange;
-label = 'mean firing rate pct changes';
-thingUseOne = oneEnvMaxRatePctChange;
-thingUseTwo = twoEnvMaxRatePctChange;
-label = 'max firing rate pct changes';
-thingUseOne = oneEnvMaxRateDiffs;
-thingUseTwo = twoEnvMaxRateDiffs;
-label = 'max firing rate differences';
+% thingUseOne = oneEnvMeanRateDiffs;
+% thingUseTwo = twoEnvMeanRateDiffs;
+% label = 'mean firing rate differences';
+
+ thingUseOne = oneEnvMeanRatePctChange;
+ thingUseTwo = twoEnvMeanRatePctChange;
+ label = 'mean firing rate pct changes';
+
+% thingUseOne = oneEnvMaxRatePctChange;
+% thingUseTwo = twoEnvMaxRatePctChange;
+% label = 'max firing rate pct changes';
+
+% thingUseOne = oneEnvMaxRateDiffs;
+% thingUseTwo = twoEnvMaxRateDiffs;
+% label = 'max firing rate differences';
 
 for dpI = 1:numDayPairs
     gg = figure('Position',[428 376 590 515]);%[428 613 897 278]
@@ -590,9 +598,10 @@ for dpI = 1:numDayPairs
         %xlim([0 1])
         %xx.XTick = [0 0.5 1]; xx.XTickLabel = {'0' num2str(numBins/2) num2str(numBins)};
         
-        %[h,p] = kstest2(changesHereOne(:,condI),changesHereTwo(:,condI));
+        [hKS,pKS] = kstest2(changesHereOne(:,condI),changesHereTwo(:,condI));
         [p,h] = ranksum(changesHereOne(:,condI),changesHereTwo(:,condI));
-        text(0.4,0.5,['p=' num2str(round(p,3))])%'h=' num2str(h) ', 
+        text(0.4,0.5,['p=' num2str(p)])%'h=' num2str(h) ', 
+        text(0.4,0.65,['KS p= ' num2str(pKS)])
     end
     suptitleSL(['Distribution of within-arm ' label ', day pair ' num2str(realDays{mouseI}(dayPairsForward(dpI,:))')])
     
@@ -618,9 +627,10 @@ for dpI = 1:numDayPairs
     %xlim([0 1])
     %xx.XTick = [0 0.5 1]; xx.XTickLabel = {'0' num2str(numBins/2) num2str(numBins)};
         
-    %[h,p] = kstest2(changesHereOne(:,condI),changesHereTwo(:,condI));
+    [h,pKS] = kstest2(changesHereOne(:,condI),changesHereTwo(:,condI));
     [p,h] = ranksum(changesHereOne(:),changesHereTwo(:));
     text(0.4,0.5,['p=' num2str(round(p,3))])%'h=' num2str(h) ', 
+    text(0.4,0.65,['KS p= ' num2str(pKS)])
     
     suptitleSL(['Distribution of within-arm ' label ', day pair ' num2str(realDays{mouseI}(dayPairsForward(dpI,:))')])
     
@@ -648,6 +658,12 @@ gg=figure; hold on
 for dpI = 1:numDayPairs
     plot((dpI-0.05)*ones(1,length(oneEnvMice)),stoppedFiringAll(oneEnvMice,dpI),'.b','MarkerSize',18)
     plot((dpI+0.05)*ones(1,length(twoEnvMice)),stoppedFiringAll(twoEnvMice,dpI),'.r','MarkerSize',18)
+    
+    %plot((dpI-0.05)*ones(1,length(oneEnvMice)),oneEnvStoppedFiringPct(dpI),'.b','MarkerSize',18)
+    %plot((dpI+0.05)*ones(1,length(twoEnvMice)),twoEnvStoppedFiringPct(dpI),'.r','MarkerSize',18)
+    
+    p = ranksum(stoppedFiringAll(oneEnvMice,dpI),stoppedFiringAll(twoEnvMice,dpI));
+    text(dpI,0.18,['p= ' num2str(p)]) 
 end
 xlim([0.9 numDayPairs+0.1])
 gg.Children.XTick = 1:numDayPairs;
@@ -655,12 +671,14 @@ nn = mat2cell(realDays{mouseI}(dayPairsForward),ones(1,numDayPairs),2);
 gg.Children.XTickLabel = cellfun(@num2str,mat2cell(realDays{mouseI}(dayPairsForward),ones(1,numDayPairs),2),'UniformOutput',false);
 xlabel('Day Pair')
 ylabel('Pct. Cells that stopped firing')
-%ylim([0 0.2])
+ylim([0 0.2])
 
 gg=figure; hold on
 for dpI = 1:numDayPairs
     plot((dpI-0.05)*ones(1,length(oneEnvMice)),startedFiringAll(oneEnvMice,dpI),'.b','MarkerSize',18)
     plot((dpI+0.05)*ones(1,length(twoEnvMice)),startedFiringAll(twoEnvMice,dpI),'.r','MarkerSize',18)
+    p = ranksum(startedFiringAll(oneEnvMice,dpI),startedFiringAll(twoEnvMice,dpI));
+    text(dpI,0.2,['p= ' num2str(p)]) 
 end
 xlim([0.9 numDayPairs+0.1])
 gg.Children.XTick = 1:numDayPairs;

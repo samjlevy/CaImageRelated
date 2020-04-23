@@ -1,6 +1,7 @@
 %AllAnalysesDoublePlus
 
-mainFolder = 'G:\DoublePlus';
+%mainFolder = 'G:\DoublePlus';
+mainFolder = 'C:\Users\Sam\Desktop\DoublePlusFinalData';
 mice = {'Kerberos','Marble07','Marble11','Pandora','Styx','Titan'};
 numMice = length(mice);
 
@@ -366,6 +367,7 @@ losesSameSig = PermutationTestSL(losesSameDiffPct(dDiff),losesSameSamePct(dSame)
 
 
 %% Single cell remapping
+numConds = length(cellTBT{1});
 
 dayPairsForward = [1 2; 1 3; 2 3]; numDayPairs = size(dayPairsForward,1);
 %Center of mass shift
@@ -518,8 +520,8 @@ for mouseI = 1:numMice
         end
             %could also do this for started or stopped in each mouse independently, add them up in the section vvvvv
         
-        %stoppedFiringAll(mouseI,dpI) = sum(sum(stoppedFiring))/(size(stoppedFiring,1)*numConds);
-        %startedFiringAll(mouseI,dpI) = sum(sum(startedFiring))/(size(startedFiring,1)*numConds);
+        stoppedFiringAll(mouseI,dpI) = sum(sum(stoppedFiring))/(size(stoppedFiring,1)*numConds);
+        startedFiringAll(mouseI,dpI) = sum(sum(startedFiring))/(size(startedFiring,1)*numConds);
          %could be normalized by dayPairMaxCells or defHaveboth
         switch mouseI
             case num2cell(oneEnvMice)'
@@ -539,3 +541,9 @@ oneEnvStoppedFiringPct = cell2mat(cellfun(@(x) sum(sum(x))/(size(x,1)*numConds),
 oneEnvStartedFiringPct = cell2mat(cellfun(@(x) sum(sum(x))/(size(x,1)*numConds),oneEnvStartedFiring,'UniformOutput',false));
 twoEnvStoppedFiringPct = cell2mat(cellfun(@(x) sum(sum(x))/(size(x,1)*numConds),twoEnvStoppedFiring,'UniformOutput',false));
 twoEnvStartedFiringPct = cell2mat(cellfun(@(x) sum(sum(x))/(size(x,1)*numConds),twoEnvStartedFiring,'UniformOutput',false));
+
+disp('Done single cell remapping')
+
+% Rate map correlations
+
+% Compare 4 vs 7 to 4 vs 8 within groups

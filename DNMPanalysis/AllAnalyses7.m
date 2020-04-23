@@ -294,6 +294,51 @@ traitLabels = {'splitLR' 'splitST'  'splitLRonly' 'splitSTonly' 'splitBOTH' 'spl
 
 disp('Done all setup stuff')
 
+%% Single lap correlation notes: ensembles?
+numConds = length(cellTBT{1});
+tic
+singleTrialTMap = SingleTrialPVs(cellTBT{1},[stemBinEdges(1) stemBinEdges(end)],[]);
+toc
+%for binI = 1:size(singleTrialTMap{1}{1},2)
+for sessI = 1:numDays(mouseI)
+    trialMat = [];
+    condMarker = [];
+    trialNums = [];
+    lapLabels = {};
+    for condI = 1:numConds
+        trialsHere = cellTBT{mouseI}(condI).sessID==sessI;
+        trialMat = [trialMat, singleTrialTMap{condI}{trialsHere}];
+        condMarker = [condMarker, condI*ones(1,sum(trialsHere))];
+        trialNums = [trialNums; cellTBT{1}(condI).lapNumber(trialsHere)];
+    end
+    lapLabels = [lt(condMarker)];
+    
+    [stCorrsRho,stCorrsPval] = corr(trialMat,'type','Spearman');
+    D1 = pdist(trialMat,'cosine');
+    I = logical(eye(50));
+    stCorrsRho(I) = 0;
+    
+    figure; imagesc(stCorrsRho); ff = gca;
+    ff.XTickLabels;
+    ff.XTick = [1:50];
+    ff.XTickLabels = lapLabels;
+    ff.YTick = [1:50];
+    ff.YTickLabels = lapLabels;
+       
+    
+    stCorrsRho = -stCorrsRho;
+    Z = linkage(stCorrsRho);
+    da = figure; dendrogram(Z,0)
+    xt = str2double(string(da.Children.XTickLabel));
+    da.Children.XTickLabel = lapLabels(xt);
+end
+    
+% Ensembles:
+%Refine TMaps into binary yes/no cell fired
+%For each pair of trials, get num cells fired in both out of total unique
+%cells fired in both
+    
+    
 %% Splitter cells: Shuffle versions, pooled
 numShuffles = 1000;
 shuffThresh = 1 - pThresh;
