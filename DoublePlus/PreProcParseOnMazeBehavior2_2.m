@@ -157,8 +157,8 @@ for epochI = 1:size(onMazeEpochs,1)
     end
 end
 
-mazeOns = find(diff(onMazeFinal)==1)+1;
-mazeOffs = find(diff(onMazeFinal)==-1);
+mazeOns = find(diff([0; onMazeFinal])==1);
+mazeOffs = find(diff([onMazeFinal; 0])==-1);
 onMazeEpochsFinal = [mazeOns, mazeOffs];
 
 %Verify off too

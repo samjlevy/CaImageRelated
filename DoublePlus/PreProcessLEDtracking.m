@@ -681,13 +681,20 @@ if ~isempty(plotFog)
     if plotFog.cbx.Value==1
         %imagesc(manCorrFig.Children,uFrame);
         %manCorrFig.Children.Children(il).CData=uFrame;
+        %manCorrFig = CheckManCorrFig(mcfCurrentSize,manCorrFig,v0)
         if ~isempty(manCorrFig.UserData.pp.g)
             delete(manCorrFig.UserData.pp.g)
             delete(manCorrFig.UserData.pp.r)
             manCorrFig.UserData.pp.r = [];
             manCorrFig.UserData.pp.g = [];
         end
-        manCorrFig.UserData.imhandle.CData = uFrame;
+        
+        if ~exist('manCorrFig.UserData.imhandle','var')
+            manCorrFig.UserData.imhandle = imagesc(uFrame);
+        else
+            manCorrFig.UserData.imhandle.CData = uFrame;
+        end
+        
     end
 end
 manCorrFig.Children.Title.String = ['Frame# ' num2str(corrFrame)];
@@ -975,7 +982,14 @@ if preLoadFrames==true
         framesLoad = fixTheseFrames;
     end
     disp('Loading some frames...')
+    try
     redFrames = obj.read([framesLoad(1) framesLoad(end)]);
+    catch
+        preLoadFrames = false;
+        aviPath = fullfile(obj.Path,obj.Name);
+        clear obj
+        obj = VideoReader(aviPath);
+    end
     disp('Done')
     lastLoaded = framesLoad(end);
 end
@@ -1034,6 +1048,7 @@ for corrFrameI = 1:length(fixTheseFrames)
         end
     end
 end
+preLoadFrames = true;
 %p.stop;
 close(ff)
 

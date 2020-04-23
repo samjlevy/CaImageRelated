@@ -1,4 +1,4 @@
-function [trialbytrial, allfiles, sortedSessionInds, realdays]= MakeTBTdoublePlus(mousePath,locInds)
+function [trialbytrial, allfiles, sortedSessionInds, realdays]= MakeTBTdoublePlus(mousePath,locInds,segmentUse)
 %Task segment has to be one of the options in GetBlockDNMPbehavior
 
 fdPts = strsplit(mousePath,'\');
@@ -9,6 +9,8 @@ load(fullfile(mousePath,'daybyday.mat'))
 
 numSess = length(daybyday.all_x_adj_cm);
 
+switch segmentUse
+    case 'arm_only'
 namesUse = {'north';  'south';  'east'; 'west'};%'midFromN'; 'midFromS'
 fieldsUse = {'startLap' 'enterMid';...
              'startLap' 'enterMid';...
@@ -20,6 +22,20 @@ beFieldsMarker = {'startLap' 'enterMid';...
                   'enterMid' 'leaveMid';...
                   'leaveMid' 'endLap'};
               
+              
+    case {'whole_trial';'on_maze'}
+        namesUse = {'north';'south'};
+        fieldsUse = {'startLap' 'endLap';...
+                     'startLap' 'endLap'};
+        withinLapLabel = {'startLap' 'enterMid';...
+                          'enterMid' 'leaveMid';...
+                          'leaveMid' 'endLap'};
+        beFieldsMarker = {'startLap' 'enterMid';...
+                  'enterMid' 'leaveMid';...
+                  'leaveMid' 'endLap'};
+end
+              
+              
 for tI = 1:length(namesUse)
     trialbytrial(tI).name = namesUse{tI};
     trialbytrial(tI).trialsX = {};
@@ -28,6 +44,8 @@ for tI = 1:length(namesUse)
     trialbytrial(tI).trialRawTrace = {};
     trialbytrial(tI).sessID = [];
     trialbytrial(tI).lapNumber = [];
+    trialbytrial(tI).isCorrect = [];
+    trialbytrial(tI).withinLapMarker = [];
 end
 
 errorNames = {'eventuallyCorrectNorthStart','eventuallyCorrectSouthStart',...
@@ -41,6 +59,7 @@ for eI = 1:length(errorNames)
     errorTBT(eI).trialRawTrace = {};
     errorTBT(eI).sessID = [];
     errorTBT(eI).lapNumber = [];
+    errorTBT(eI).withinLapMarker = [];
 end
               
 for sessI = 1:numSess
@@ -101,6 +120,13 @@ for sessI = 1:numSess
             errorSouthWrongChoice = southStart & rightLength & getsToWest;
     end
     
+    switch segmentUse
+        case 'arm_only'
+            lapType = {northStart; southStart; getsToEast; getsToWest};
+        case {'whole_trial';'on_maze'}
+            lapType = {northStart; southStart};
+    end
+    
     eventuallyCorrect = goodSequence==0 & getsThere;
     
     eventuallyCorrectNorthStart = eventuallyCorrect & northStart & getsThere;
@@ -113,12 +139,12 @@ for sessI = 1:numSess
                       eventuallyCorrectNorthStart | eventuallyCorrectSouthStart)==0 & isCorrect==0;
     
     %Bundle it all up nicely
-    lapType = {northStart; southStart; getsToEast; getsToWest};
     for ttI = 1:length(namesUse)        
-        theseLaps = find(lapType{ttI} & isCorrect & goodSequence);
+        theseLaps = find(lapType{ttI} & goodSequence);% & isCorrect
         
         trialbytrial(ttI).sessID = [trialbytrial(ttI).sessID; sessI*ones(length(theseLaps),1)];
         trialbytrial(ttI).lapNumber = [trialbytrial(ttI).lapNumber; theseLaps];
+        trialbytrial(ttI).isCorrect = [trialbytrial(ttI).sessID; isCorrect(theseLaps)];
         
         for lapI = 1:length(theseLaps)
             thisLap = theseLaps(lapI);
@@ -129,6 +155,21 @@ for sessI = 1:numSess
             trialbytrial(ttI).trialsY = [trialbytrial(ttI).trialsY; daybyday.all_y_adj_cm{sessI}(lapStart:lapEnd)];
             trialbytrial(ttI).trialPSAbool = [trialbytrial(ttI).trialPSAbool; daybyday.PSAbool{sessI}(:,lapStart:lapEnd)];
             trialbytrial(ttI).trialRawTrace = [trialbytrial(ttI).trialRawTrace; daybyday.RawTrace{sessI}(:,lapStart:lapEnd)];
+            
+            if exist('withinLapLabel','var')
+                if ~exist('wllOffset','var')
+                    wllOffset = zeros(size(withinLapLabel));
+                end
+                
+                withinLapMarker = [];
+                for wlI = 1:size(withinLapLabel)
+                    eStart = daybyday.behavior{sessI}(thisLap).(withinLapLabel{wlI,1})+wllOffset(wlI,1);
+                    eEnd = daybyday.behavior{sessI}(thisLap).(withinLapLabel{wlI,2})+wllOffset(wlI,2);
+                    eLength = eEnd-eStart+1;
+                    withinLapMarker = [withinLapMarker; wlI*ones(eLength,1);];
+                end
+                trialbytrial(ttI).withinLapMarker = [trialbytrial(ttI).withinLapMarker; withinLapMarker];
+            end
         end    
     end
     
