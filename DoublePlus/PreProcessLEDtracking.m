@@ -417,11 +417,20 @@ while stillEditing == 1
             
             framesFix = min(answer):max(answer);
                         
-            %howEdit = questdlg(['Edit these ' num2str(length(framesFix)) ' frames?'],'Edit',...
-            %           'Auto','Manual','Cancel','Auto'); 
-            
-            [xAVI,yAVI,definitelyGood] = CorrectManualFrames(obj,xAVI,yAVI,v0,...
-                definitelyGood,manCorrFig,framesFix,velThresh);
+            howEdit = questdlg(['Edit these ' num2str(length(framesFix)) ' frames?'],'Edit',...
+                       'Auto','Manual','Cancel','Auto'); 
+            switch howEdit
+                case 'Manual'
+                [xAVI,yAVI,definitelyGood] = CorrectManualFrames(obj,xAVI,yAVI,v0,...
+                    definitelyGood,manCorrFig,framesFix,velThresh);
+                case 'Auto'
+                [manCorrFig, obj, xAVI, yAVI, nRed,nGreen,redPix,greenPix,...
+                        subMultRedX,subMultRedY,subMultGreenX,subMultGreenY,anyRpix,anyGpix]...
+                        = ReallyAutoCorrByLEDWrapper(framesFix,...
+                        manCorrFig, mcfCurrentSize, obj, onMazeX, onMazeY, onMazeMask, v0r, v0g, v0,...
+                        howRedThresh, howGreenThresh, nBrightPoints, xAVI, yAVI, nFrames,...
+                        nRed,nGreen,redPix,greenPix,subMultRedX,subMultRedY,subMultGreenX,subMultGreenY,anyRpix,anyGpix,plotFog);
+            end
             
         case 'm'
             onoroff = questdlg('Mark on-maze or off-maze?','Oh, Hi Mark','ON','OFF','OFF');
@@ -743,6 +752,20 @@ if ~isempty(plotFog)
         hold(manCorrFig.Children,'off')
     end
 end
+
+% HSV color values
+%{
+hhh = rgb2hsv(uFrame)
+figure; imagesc((hhh(:,:,1)>0.1 & hhh(:,:,1)<0.25) &...
+                (hhh(:,:,2)>0.2) &...
+                (hhh(:,:,3)>0.65)); hold on; plot(gx,gy,'og'))
+title('green blob')
+
+figure; imagesc((hhh(:,:,1)<0.05) &...
+                (hhh(:,:,2)>0.35 & hhh(:,:,2)<0.65) &...
+                (hhh(:,:,3)>0.45 & hhh(:,:,3)<0.6) )
+title('red blob')
+%}
 
 drawnow
 end
