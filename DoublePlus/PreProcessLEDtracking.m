@@ -469,6 +469,27 @@ while stillEditing == 1
                     onMaze(onMazeFinal(omII,1):onMazeFinal(omII,2)) = 1;
                 end
             end
+        case 'h'
+            %Set HSV values
+            zeroFrames = xAVI == 0 & yAVI==0;
+            zomFrames = onMaze & zeroFrames;
+            
+            bc = load('bonsaiCoords.mat');
+            
+            bcHere = ~isnan(bc.xAVI) & ~isnan(bc.yAVI);
+            
+            omHere = true(size(xAVI));
+            mp = questdlg('Restrict within maze boundary?','restr','Yes','No','Yes');
+            if strcmpi(mp,'yes')
+                [onn,inn] = inpolygon(bc.xAVI,bc.yAVI,onMazeX,onMazeY);
+                omHere = onn | inn;
+            end
+            
+            xAVI(zomFrames & bcHere & omHere) = bc.xAVI(zomFrames & bcHere & omHere);
+            yAVI(zomFrames & bcHere & omHere) = bc.yAVI(zomFrames & bcHere & omHere);
+            
+            disp(['Replaced ' num2str(sum(zomFrames & bcHere & omHere)) ' frames'])
+            
         case 'p'
             %Correct by position
             posInclude = true(size(xAVI,1),size(xAVI,2));

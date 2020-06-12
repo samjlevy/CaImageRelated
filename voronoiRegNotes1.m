@@ -61,11 +61,11 @@ title('Distances between adjacent polygon centers')
 %Rectangular
 gSpacing = vCentDist; %dist between points 
 gOffset = 0; %offset every other row 
-row = 0:gSpacing:maskSize(2);
-col = 0:gSpacing:maskSize(1);
+bRow = 0:gSpacing:maskSize(2);
+bCol = 0:gSpacing:maskSize(1);
 
-rowInt = repmat(row,length(col),1);
-colInt = repmat(col(:),length(row),1);
+rowInt = repmat(bRow,length(bCol),1);
+colInt = repmat(bCol(:),length(bRow),1);
 
 grid = [rowInt(:), colInt];
 
@@ -473,6 +473,8 @@ close(f)
 toc
 
 %% Trying to do differences of distances...
+% Load data, get some basic info/adjacency
+% cd('C:\Users\samwi_000\Desktop')
 load('FinalOutput.mat', 'NeuronImage')
 allCenters = getAllCellCenters(NeuronImage);
 %{
@@ -484,32 +486,40 @@ allCenters = getAllCellCenters(NeuronImage);
 allAngles = GetAllPtToPtAngles(allCenters);
 [vorVertices,vorIndices] = voronoin(allCenters);
 allAreas = cell2mat(cellfun(@(x) polyarea(vorVertices(x,1),vorVertices(x,2)),vorIndices,'UniformOutput',false));
+%{
 figure; voronoi(allCenters(:,1),allCenters(:,2))
 title('Voronoi of all cells')
-vorAdjacency = GetVoronoiAdjacency(vorIndices);
+%}
+vorAdjacency = GetVoronoiAdjacency(vorIndices,vorVertices);
 vorAdjTiers = GetAllTierAdjacency(vorAdjacency,10);
 edgePolys = GetVoronoiEdges(vorVertices,allCenters,vorIndices);
 vorAdjTiers(vorAdjTiers==0) = NaN;
 vorAdjTiers(edgePolys,:) = NaN;
-%Get up to 2nd tier voronoi adjacency
+
+% Get up to 2nd tier voronoi adjacency; at this point the exact identity of
+% neurons/pairs of neurons is lost
 vorTwo = vorAdjTiers<=2; %logical
 distTwo = allDistances(vorTwo);
 anglesTwo = allAngles(vorTwo);
-%Get differences of all angles and distances from each other
-distanceDiffs = abs(distTwo - distTwo');
-angleDiffs = anglesTwo - anglesTwo';
-%Refine distances by typical roi width
+
+% Get differences of all angles and distances from each other
+distanceDiffs = abs(distTwo - distTwo1');
+angleDiffs = anglesTwo - anglesTwo1';
+
+% Refine distances by % of typical roi width
 rps=cellfun(@(x) regionprops(x,'majoraxis'),NeuronImage);
 roiWidths = sort([rps.MajorAxisLength],'ascend');
 %maxRoiWidth = roiWidths(round(0.95*length(roiWidths)))
-maxRoiWidth = max(roiWidths);
+maxRoiWidth = max(roiWidths); % This lets them all in
 distanceDiffs(distanceDiffs>maxRoiWidth) = NaN;
 angleDiffs(distanceDiffs>maxRoiWidth) = NaN;
+
+% Find clusters of the transformation
 %angleDiffs = rectifyCircDistances(angleDiffs);
-aBins = linspace(-2*pi,2*pi,30);
+aBins = linspace(-2*pi,2*pi,101);
 dBins = linspace(0,maxRoiWidth,100);
 [hcs,~,~] = histcounts2(angleDiffs,distanceDiffs,aBins,dBins);
-normHist = hcs/max(max(hcs));
+normHist = hcs/max(max(hcs));  % figure; imagesc(normHist)
 histThresh = 0.9;
 histPeaks = normHist > histThresh;
 [ii,jj] = ind2sub([length(dBins) length(aBins)],find(histPeaks));
@@ -552,3 +562,220 @@ vorTwo = vorAdjTiers<=2;
 find(vorAdjTiers==1,1,'first')
 distTwo = allDistances(vorTwo);
 anglesTwo = allAngles(vorTwo);
+
+%% Try some things to get the right cells paired together
+load('FinalOutput.mat', 'NeuronImage')
+allCenters = getAllCellCenters(NeuronImage);
+
+limitedCells = sum(allCenters<250,2)==2;
+NeuronImageA = NeuronImage(limitedCells);
+NeuronImageB = cellfun(@(x) imrotate(x,90),NeuronImageA,'UniformOutput',false);
+clear NeuronImage
+numCellsA = length(NeuronImageA);
+numCellsB = length(NeuronImageB);
+%{
+shuffledOrder = randperm(length(NeuronImageB));
+NeuronImageB = NeuronImageB{shuffledOrder};
+%}
+allCentersA = getAllCellCenters(NeuronImageA);
+allCentersB = getAllCellCenters(NeuronImageB);
+
+[allDistancesA,withinRadA] = GetAllPtToPtDistances(allCentersA(:,1),allCentersA(:,2),[]);
+allAnglesA = GetAllPtToPtAngles(allCentersA);
+[vorVerticesA,vorIndicesA] = voronoin(allCentersA);
+
+[allDistancesB,withinRadB] = GetAllPtToPtDistances(allCentersB(:,1),allCentersB(:,2),[]);
+allAnglesB = GetAllPtToPtAngles(allCentersB);
+[vorVerticesB,vorIndicesB] = voronoin(allCentersB);
+
+%{
+% Plot of voronoi diagrams, cell 1 and tier 2 adjacency, angle to first tier 2 cell
+figure; 
+subplot(1,2,1); voronoi(allCentersA(:,1),allCentersA(:,2)); 
+hold on; plot(allCentersA(1,1),allCentersA(1,2),'*r'); 
+plot(allCentersA(vorTwoA(1,:),1),allCentersA(vorTwoA(1,:),2),'*g');
+cellJ = find(vorTwoA(1,:),1,'first');
+plot(allCentersA(cellJ,1),allCentersA(cellJ,2),'*b');
+title(['Angle here = ' num2str(rad2deg(allAnglesA(1,cellJ)))])
+
+subplot(1,2,2); voronoi(allCentersB(:,1),allCentersB(:,2)); 
+hold on; plot(allCentersB(1,1),allCentersB(1,2),'*r'); 
+plot(allCentersB(vorTwoB(1,:),1),allCentersB(vorTwoB(1,:),2),'*g');
+cellJ = find(vorTwoB(1,:),1,'first');
+plot(allCentersB(cellJ,1),allCentersB(cellJ,2),'*b');
+title(['Angle here = ' num2str(rad2deg(allAnglesB(1,cellJ)))])
+%}
+%{
+figure; subplot(1,2,1); imagesc(create_AllICmask(NeuronImageA)); subplot(1,2,2); imagesc(create_AllICmask(NeuronImageB))
+figure; subplot(1,2,1); imagesc(NeuronImageA{1}); subplot(1,2,2); imagesc(NeuronImageB{1})
+%}
+
+vorAdjacencyA = GetVoronoiAdjacency(vorIndicesA,vorVerticesA);
+vorAdjTiersA = GetAllTierAdjacency(vorAdjacencyA,10);
+edgePolysA = GetVoronoiEdges(vorVerticesA,allCentersA,vorIndicesA);
+vorAdjTiersA(vorAdjTiersA==0) = NaN;
+vorAdjTiersA(edgePolysA,:) = NaN;
+
+vorAdjacencyB = GetVoronoiAdjacency(vorIndicesB,vorVerticesB);
+vorAdjTiersB = GetAllTierAdjacency(vorAdjacencyB,10);
+edgePolysB = GetVoronoiEdges(vorVerticesB,allCentersB,vorIndicesB);
+vorAdjTiersB(vorAdjTiersB==0) = NaN;
+vorAdjTiersB(edgePolysB,:) = NaN;
+
+% Get up to 2nd tier voronoi adjacency
+vorTwoA = vorAdjTiersA<=2; %logical
+distTwoAall = allDistancesA; distTwoAall(~vorTwoA) = NaN;
+vorTwoB = vorAdjTiersB<=2; %logical
+distTwoBall = allDistancesB; distTwoBall(~vorTwoB) = NaN;
+
+neuronTrackerA = repmat([1:length(NeuronImageA)]',1,length(NeuronImageA));
+%cellRowA = neuronTrackerA(vorTwoA);
+%distTwoA = allDistancesA(vorTwoA); % exact identity of neurons/pairs of neurons is lost here
+%anglesTwoA = allAnglesA(vorTwoA); % allAnglesA(find(vorTwoA))
+aaa = allAnglesA'; % These ' required to keep cellI vals associated together
+vta = vorTwoA';
+ada = allDistancesA;
+nta = neuronTrackerA';
+anglesTwoA = aaa(vta);
+distTwoA = ada(vta);
+cellRowA = nta(vta);
+
+neuronTrackerB = repmat([1:length(NeuronImageB)]',1,length(NeuronImageB));
+%cellRowB = neuronTrackerB(vorTwoB);
+%distTwoB = allDistancesB(vorTwoB);
+%anglesTwoB = allAnglesB(vorTwoB);
+aab = allAnglesB'; % These ' required to keep cellI vals associated together
+vtb = vorTwoB';
+adb = allDistancesB;
+ntb = neuronTrackerB';
+anglesTwoB = aab(vtb);
+distTwoB = adb(vtb);
+cellRowB = ntb(vtb);
+
+% Get differences of all angles and distances from each other
+angleDiffs = anglesTwoA(:) - anglesTwoB(:)'; % ( anglesTwoA(i),anglesTwoB(j) )
+distanceDiffs = abs(distTwoA(:) - distTwoB(:)');
+
+[angleDiffsRect] = RectifyAngleDiffs(rad2deg(angleDiffs),'deg');
+angleDiffsAbs = round(abs(angleDiffsRect,4));
+
+cellCellA = repmat(cellRowA(:),1,length(cellRowB));
+cellCellB = repmat(cellRowB(:)',length(cellRowA),1);
+
+imagCellIDs = cellCellA + cellCellB*1i;
+
+% Find peaks in the distribution of angle/radius differences
+% pDist2 to get local density, grab  all the points with above background density at a particular location
+    % angleRadDistances = pdist2(angleDiffsRnd(:),distanceDiffs(:)); 
+    % Can't do this, too many pts, too much memory
+angleBinWidth = 1;
+distBinWidth = 1;
+[angleRadDiffDistribution,yEdges,xEdges,angleBinAssigned,distBinAssigned] = histcounts2(angleDiffsAbs,distanceDiffs);
+
+%{
+figure; imagesc(angleRadDiffDistribution); 
+set(gca,'XTick',1:10:length(xEdges)); set(gca,'XTickLabel',xEdges(1:10:length(xEdges)))
+set(gca,'YTick',1:10:length(yEdges)); set(gca,'YTickLabel',yEdges(1:10:length(yEdges)))
+ylabel('Absolute Angle Difference'); xlabel('Absolute Distance Difference')
+colormap jet; colorbar
+xlim([0 20]); 
+%}
+[diffDistSorted,sordIdx] = sort(angleRadDiffDistribution(:),'descend');
+meanDiffDist = mean(angleRadDiffDistribution(:));
+medianDiffDist = median(angleRadDiffDistribution(:));
+stdDiffDist = std(angleRadDiffDistribution(:));
+distDiffZscoreSorted = zscore(diffDistSorted);
+
+nPeaksCheck = 10;
+for pcI = 1:nPeaksCheck
+    % This is a version of the core logic for alignment discovery
+    thisBin = sordIdx(pcI);
+    [bRow,bCol] = ind2sub(size(angleRadDiffDistribution),thisBin);
+    %theseLimsAngle = yEdges([row row+1]);
+    %theseLimsDist = xEdges([col col+1]);
+    
+    nPtsHere(pcI) = angleRadDiffDistribution(thisBin);
+    
+    %Check if adjacent bins have a z-scored count of 1, add them in (same cluster)
+    
+    % Progressively widen this known good bin to see how narrow it has
+    % to be for this transformation to be found, how wide it can be to survive noise, 
+    % alongside jitter of self-registration control
+    
+    % This is a place where we can start with the known alignment to see
+    % what starting parameters in terms of expected adjacency count, etc.
+    % should be
+    
+    % Get the cell pairs that ended up in this bin
+    angleDiffsHere = angleBinAssigned==bRow;
+    distDiffsHere = distBinAssigned==bCol;
+    angleDistHere = angleDiffsHere & distDiffsHere;
+    
+    imagCellIdsHere = cellCellA(angleDistHere) + cellCellB(angleDistHere)*1i;
+    %[uniqueInAllImag] = ismember(imagCellIDs,imagCellIdsHere); % Any index in tier2 diff matrix which goes with found cell pairs
+    
+    [uniqueCellPairs,ia,ic] = unique(imagCellIdsHere);
+        % In the self-to-self, matched cells should all be where real and imaginary components are equal
+        realHere = real(uniqueCellPairs);
+        imagHere = imag(uniqueCellPairs);
+        same = realHere == imagHere; % sum(same) should equal the number of cells not labeled as edge cells
+        
+    % Restrict match counts by number of cells in a/b min([numCellsA numCellsB])
+    nMaxMatch = min([numCellsA numCellsB]);
+        
+    % How many pairs in this alignment bin for each cell?
+    cellIdCounts = histcounts(ic,[0.5:1:(max(ic)+0.5)]); % cellIdCounts(same) histogram of pts from known matches in this angleDiff/distDiff bin
+    [sortedCellCounts,sortedCountsOrder] = sort(cellIdCounts,'descend');
+    
+    uniqueCellsUseMax{pcI} = uniqueCellPairs(sortedCountsOrder(1:nMaxMatch));
+    
+    sortedNumAlignPartners = cumsum(sortedCellCounts); % Num alignments in this bin each cell
+    
+    % Refine to eliminate overlapped cells, take whichever comes first in sortedCountsOrder
+    uReal = real(uniqueCellsUseMax);
+    uImag = imag(uniqueCellsUseMax);
+    firstUR = false(length(uReal),1);
+    firstUI = false(length(uReal),1);
+    for ii = 1:length(uReal)
+        firstUR(find(uReal==uReal(ii),1,'first')) = true;
+        firstUI(find(uImag==uImag(ii),1,'first')) = true;
+    end
+    uKeep = firstUR & firstUI;
+    
+    uniqueCellsUse{pcI} = uniqueCellsUseMax{pcI}(uKeep); % Cell pairs for alignment
+    
+    totalAligns(pcI) = sum(sortedNumAlignPartners(uKeep));
+    meanAligns(pcI) = mean(sortedNumAlignPartners(uKeep));
+    stdAligns(pcI) = std(sortedNumAlignPartners(uKeep));
+    
+    % Explained angle/distance variance by this bin
+    unexplainedAngles = abs(angleDiffsAbs-mean([yEdges(bRow) yEdges(bRow+1)]));
+    unexplainedDist = abs(distanceDiffs-mean([xEdges(bCol) xEdges(bCol+1)]));
+    % cellPairVar = arrayfun(@(x) unexplainedAngles(imagCellIDs==x),uniqueCellPairs,'UniformOutput',false); % this works but it's really slow
+    [uniqueInAllImag] = ismember(imagCellIDs,imagCellIdsHere);
+        % [uniqueInAllImag] = ismember(imagCellIDs,uniqueCellsUse);
+    totalUEangles = unexplainedAngles(uniqueInAllImag);
+    totalUEdist = unexplainedDist(uniqueInAllImag);
+    hereUEangles = unexplainedAngles(angleDistHere);
+    hereUEdist = unexplainedDist(angleDistHere);
+    
+    meanUEangles(pcI) = mean(hereUEangles); stdUEangles = std(hereUEangles);
+    meanUEdist(pcI) = mean(hereUEdist); stdUEdist = std(hereUEdist);
+    propUEangles(pcI) = sum(hereUEangles)/sum(totalUEangles);
+    propUEdist(pcI) = sum(hereUEdist)/sum(totalUEdist);
+    
+end
+
+% Evaluate how well these alignments work
+
+% Make a transformation based on these alignment pairs
+% Run pt To pt assignment
+% How many anchor points matched
+% How many other points matched
+% How many tier-2 pairs from transformed pts. have good alignments with other image
+
+
+%[idx,C] = kmeans([angleDiffsAbs(:) distanceDiffs(:)],1);
+
+
+

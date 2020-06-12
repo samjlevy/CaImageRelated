@@ -1,4 +1,4 @@
-function HSVcolorRanger(videoFile,backgroundImage,defaults)
+function [ Hue, Saturation, Value] = HSVcolorRanger(videoFile,backgroundImage,possibleFrames)
 %% Build figure
 global fig
 fig.f = figure('Position',[334 133 1269 818]);
@@ -130,7 +130,7 @@ fig.FramesButton = uicontrol('style','pushbutton','String','New frames',...
 %Save button
 fig.FramesButton = uicontrol('style','pushbutton','String','Save',...
                           'Position',[900,30,125,35],...
-                          'Callback',{@SaveAndQuit},'Parent',fig.f);
+                          'Callback',{@savequit},'Parent',fig.f);
                       
 fig.UserData.centers = [];
          
@@ -157,6 +157,24 @@ fig.UserData.bkgFrameHSV = rgb2hsv(fig.UserData.bkgFrame);
 PickFrames(videoFile);
 PlotFrames;
 figure(fig.f);
+
+
+end
+function [Hue,Saturation,Value] = savequit(~,~)
+global fig
+
+close(fig.f)
+return
+
+[Hue,Saturation,Value] = GetFinalVals;
+end 
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+function [Hue,Saturation,Value] = GetFinalVals(~,~)
+global fig
+
+Hue = fig.UserData.Hue;
+Saturation = fig.UserData.Saturation;
+Value = fig.UserData.Value;
 end
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 function PickFrames(videoFile)
@@ -287,6 +305,8 @@ hold(fig.spot(pp).axx,'on')
 fig.spot(pp).axx.Visible = 'off';
 end
 
+disp(' ')
+%{
 for pp = 1:6
     stats=[];
             d = imgaussfilt(double(fig.UserData.frames(pp).HSVbin),2);
@@ -296,6 +316,7 @@ for pp = 1:6
                         [stats.MajorAxisLength] > 10 & ...
                         [stats.MinorAxisLength] > 10;
             stats=stats(MouseBlob);
+end
     %}
 %{
 if fig.plotBlobs.Value == 1
@@ -504,98 +525,6 @@ PlotFrames;
 
 end
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-function savequit(~,~)
-global fig
-global findingContrast
-
-
-close(fig.f)
-try %#ok<TRYNC>
-    close(fig.expect)
-end
-findingContrast=0;
-return
-
-end
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-function InquireValue(~,~)
-disp('sorry not yet implemented')
-%{
-global fig
-global frames
-
-[x,y]=ginput(1);
-
-switch fig.plotSelect.Value
-        case 1
-            imagesc(fig.spot(pp).axx,frames(pp).grayFrame)
-        case 2
-            imagesc(fig.spot(pp).axx,frames(pp).grayThreshed) 
-        case 3
-            imagesc(fig.spot(pp).axx,frames(pp).grayGauss)
-        case 4
-            imagesc(fig.spot(pp).axx,frames(pp).grayGaussThresh)
-        case 5
-            imagesc(fig.spot(pp).axx,frames(pp).grayGaussExpect)
-    end
-valueHere = 
-disp(
-%}
-end
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-function SetDefaults(~,~)
-global fig
-global grayLength
-global gaussThresh
-global grayThresh
-
-switch fig.defSelect.Value
-    case 1
-        grayLength = 15;
-        fig.graySlider.Value = 95;
-        fig.gaussSlider.Value = 0.21;
-    case 2
-        grayLength = 15;
-        fig.graySlider.Value = 95;
-        fig.gaussSlider.Value = 0.21;
-    case 3
-        %grayLength = 15;
-        %grayThresh = 100;
-        %gaussThresh = 0.20;
-end
-
-updateGauss;
-updateThresh;
-
-end
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-function PlotExpectedBlobs(~,~)
-global fig
-global gaussThresh
-
-figsOpen = findall(0,'type','figure');
-isManCorr = strcmp({figsOpen.Name},'expectedblobs');
-if sum(isManCorr)==1
-    %We're good
-elseif sum(isManCorr)==0
-    fig.expect = figure('Name','expectedblobs');
-    fig.expected.axx = axes('Parent',fig.expect);
-elseif sum(isManCorr) > 1
-    manCorrInds = find(isManCorr);
-    close(figsOpen(manCorrInds(2:end)))
-end
-
-fig.expectedBlobs=logical(imgaussfilt(double(fig.v0thresh),10) <= gaussThresh);
-imagesc(fig.expected.axx,fig.expectedBlobs)
-
-end
-
-
-
-
-
-
-
 
 
 
