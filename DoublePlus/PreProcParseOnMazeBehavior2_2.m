@@ -213,7 +213,7 @@ if appOm
                     goodF = sum(stretchCheck(:)==[mStart:mStop],2)==1;
                     stretchCheck(goodF) = [];
                     if isempty(stretchCheck)
-                        keyboard
+                        %keyboard
                         doneOnMaze=1;
                     end
                 else

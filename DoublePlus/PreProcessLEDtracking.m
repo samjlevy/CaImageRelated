@@ -518,6 +518,8 @@ while stillEditing == 1
             if strcmpi(fixp,'y')
                  framesFix = posIncInds(inLasso);
                  howFix = questdlg('How do you want to fix these?','How fix','Auto','Manual','Auto');
+                 
+                 if any(framesFix)
                  switch howFix
                      case 'Auto'
                          [manCorrFig, obj, xAVI, yAVI, nRed,nGreen,redPix,greenPix,...
@@ -530,6 +532,7 @@ while stillEditing == 1
 
                          [xAVI,yAVI,definitelyGood] = CorrectManualFrames(...
                              obj,xAVI,yAVI,v0,definitelyGood,manCorrFig,framesFix,velThresh);
+                 end
                  end
             end
             

@@ -1,4 +1,7 @@
-function CellCenters = getAllCellCenters(NeuronImage)
+function CellCenters = getAllCellCenters(NeuronImage,suppressError)
+if isempty(suppressError)
+    suppressError = false;
+end
 
 CellCenters = zeros(length(NeuronImage),2);
 for thisCell = 1:length(NeuronImage)
@@ -7,7 +10,9 @@ for thisCell = 1:length(NeuronImage)
     if length(stats)==1
         CellCenters(thisCell,1:2) = [stats.Centroid(1) stats.Centroid(2)];
     else
-        disp(['error cell ' num2str(thisCell) ', found ' num2str(length(stats)) ' centers'])
+        if suppressError==false
+            disp(['error cell ' num2str(thisCell) ', found ' num2str(length(stats)) ' centers'])
+        end
     end
 end
  

@@ -564,6 +564,7 @@ distTwo = allDistances(vorTwo);
 anglesTwo = allAngles(vorTwo);
 
 %% Try some things to get the right cells paired together
+distanceThreshold = 3;
 load('FinalOutput.mat', 'NeuronImage')
 allCenters = getAllCellCenters(NeuronImage);
 
@@ -641,9 +642,6 @@ distTwoA = ada(vta);
 cellRowA = nta(vta);
 
 neuronTrackerB = repmat([1:length(NeuronImageB)]',1,length(NeuronImageB));
-%cellRowB = neuronTrackerB(vorTwoB);
-%distTwoB = allDistancesB(vorTwoB);
-%anglesTwoB = allAnglesB(vorTwoB);
 aab = allAnglesB'; % These ' required to keep cellI vals associated together
 vtb = vorTwoB';
 adb = allDistancesB;
@@ -657,7 +655,7 @@ angleDiffs = anglesTwoA(:) - anglesTwoB(:)'; % ( anglesTwoA(i),anglesTwoB(j) )
 distanceDiffs = abs(distTwoA(:) - distTwoB(:)');
 
 [angleDiffsRect] = RectifyAngleDiffs(rad2deg(angleDiffs),'deg');
-angleDiffsAbs = round(abs(angleDiffsRect,4));
+angleDiffsAbs = round(abs(angleDiffsRect),4); % In degrees from here
 
 cellCellA = repmat(cellRowA(:),1,length(cellRowB));
 cellCellB = repmat(cellRowB(:)',length(cellRowA),1);
@@ -671,6 +669,11 @@ imagCellIDs = cellCellA + cellCellB*1i;
 angleBinWidth = 1;
 distBinWidth = 1;
 [angleRadDiffDistribution,yEdges,xEdges,angleBinAssigned,distBinAssigned] = histcounts2(angleDiffsAbs,distanceDiffs);
+[diffDistSorted,sordIdx] = sort(angleRadDiffDistribution(:),'descend');
+%meanDiffDist = mean(angleRadDiffDistribution(:));
+%medianDiffDist = median(angleRadDiffDistribution(:));
+%stdDiffDist = std(angleRadDiffDistribution(:));
+%distDiffZscoreSorted = zscore(diffDistSorted);
 
 %{
 figure; imagesc(angleRadDiffDistribution); 
@@ -680,13 +683,11 @@ ylabel('Absolute Angle Difference'); xlabel('Absolute Distance Difference')
 colormap jet; colorbar
 xlim([0 20]); 
 %}
-[diffDistSorted,sordIdx] = sort(angleRadDiffDistribution(:),'descend');
-meanDiffDist = mean(angleRadDiffDistribution(:));
-medianDiffDist = median(angleRadDiffDistribution(:));
-stdDiffDist = std(angleRadDiffDistribution(:));
-distDiffZscoreSorted = zscore(diffDistSorted);
 
+
+% Find possible alignments based on peaks in the vor tier 2 angle/dist differences 
 nPeaksCheck = 10;
+tic
 for pcI = 1:nPeaksCheck
     % This is a version of the core logic for alignment discovery
     thisBin = sordIdx(pcI);
@@ -732,8 +733,8 @@ for pcI = 1:nPeaksCheck
     sortedNumAlignPartners = cumsum(sortedCellCounts); % Num alignments in this bin each cell
     
     % Refine to eliminate overlapped cells, take whichever comes first in sortedCountsOrder
-    uReal = real(uniqueCellsUseMax);
-    uImag = imag(uniqueCellsUseMax);
+    uReal = real(uniqueCellsUseMax{pcI});
+    uImag = imag(uniqueCellsUseMax{pcI});
     firstUR = false(length(uReal),1);
     firstUI = false(length(uReal),1);
     for ii = 1:length(uReal)
@@ -745,8 +746,8 @@ for pcI = 1:nPeaksCheck
     uniqueCellsUse{pcI} = uniqueCellsUseMax{pcI}(uKeep); % Cell pairs for alignment
     
     totalAligns(pcI) = sum(sortedNumAlignPartners(uKeep));
-    meanAligns(pcI) = mean(sortedNumAlignPartners(uKeep));
-    stdAligns(pcI) = std(sortedNumAlignPartners(uKeep));
+    meanAligns(pcI) = mean(sortedNumAlignPartners(uKeep)); % Num 2nd tier partner cells
+    %stdAligns(pcI) = std(sortedNumAlignPartners(uKeep));
     
     % Explained angle/distance variance by this bin
     unexplainedAngles = abs(angleDiffsAbs-mean([yEdges(bRow) yEdges(bRow+1)]));
@@ -759,23 +760,129 @@ for pcI = 1:nPeaksCheck
     hereUEangles = unexplainedAngles(angleDistHere);
     hereUEdist = unexplainedDist(angleDistHere);
     
-    meanUEangles(pcI) = mean(hereUEangles); stdUEangles = std(hereUEangles);
-    meanUEdist(pcI) = mean(hereUEdist); stdUEdist = std(hereUEdist);
+    meanUEangles(pcI) = mean(hereUEangles); stdUEangles(pcI) = std(hereUEangles);
+    meanUEdist(pcI) = mean(hereUEdist); stdUEdist(pcI) = std(hereUEdist);
     propUEangles(pcI) = sum(hereUEangles)/sum(totalUEangles);
     propUEdist(pcI) = sum(hereUEdist)/sum(totalUEdist);
-    
+    numPairedCells = length(uniqueCellsUse{pcI});
 end
+toc
 
 % Evaluate how well these alignments work
+tic
+for pcI = 1:nPeaksCheck
+    % Make a transformation based on these alignment pairs
+    anchorCellsA = real(uniqueCellsUse{pcI});
+    anchorCellsB = imag(uniqueCellsUse{pcI});
+    basePairCenters = allCentersA(anchorCellsA,:);
+    regPairCenters = allCentersB(anchorCellsB,:);
+    numAnchorCells = length(anchorCellsA);
+    
+    tform = fitgeotrans(regPairCenters,basePairCenters,'affine'); % Features here will have to be compared when we put split images back together etc.
+    RA = imref2d(size(NeuronImageA{1})); % This with outputview restricts view and transformation to that of NeuronImageA
+    [NeuronImageB_shifted,~] = ...
+        cellfun(@(x) imwarp(x,tform,'OutputView',RA,'InterpolationMethod','nearest'),NeuronImageB,'UniformOutput',false);
+    reg_allMask_shifted = create_AllICmask(NeuronImageB_shifted);
+    reg_shift_centers = getAllCellCenters(NeuronImageB_shifted,true);
+    reg_shift_centers(sum(reg_shift_centers==0,2)==2,:) = NaN;
+    % Compare this to transformPtsForward, use it to calculate bad centers (or integer-shifted) outside of imwarp frame (RA)
+    % [x,y] = transformPointsForward(tform,u,v)
+    
+    % Run pt To pt assignment
+    % Start assigning cells
+    [closestCell, distance] = findclosest2D(...
+        allCentersA(:,1), allCentersA(:,2),...
+        reg_shift_centers(:,1), reg_shift_centers(:,2));
+    %closest cell is index in base cells for all reg cells
 
-% Make a transformation based on these alignment pairs
-% Run pt To pt assignment
-% How many anchor points matched
-% How many other points matched
-% How many tier-2 pairs from transformed pts. have good alignments with other image
+    cellsInRange = closestCell(distance < distanceThreshold);
+    closestCell(distance >= distanceThreshold) = NaN;
+    rinds = 1:numCellsB; %reg cells nums
+    inRangeIndices = rinds(distance <= distanceThreshold); %indices of regCells
+    cellsMatched = [1:numCellsA]'==cellsInRange;
+    matchedCounts = sum(cellsMatched,2);
+    overlapped = find(matchedCounts > 1);
+    % Resolve match overlaps by higher correlation 
+    for repCell = 1:length(overlapped)
+        matchedCells = inRangeIndices(cellsInRange==overlapped(repCell)); 
+            %indices in closestCell, full length regCells
 
+        baseReg = fullRegROIavg{1,overlapped(repCell)};
+        regMatchedReg = {regAvg_shifted{1,matchedCells}};
+
+        areaCorrs = cellfun(@(x) corr(baseReg(:),x(:),'type','Spearman'), regMatchedReg, 'UniformOutput',false);
+        areaCorrs = cell2mat(areaCorrs);
+
+        useCell = areaCorrs==max(areaCorrs);
+        if sum(useCell)==1
+            %good
+            closestCell(matchedCells(~useCell)) = NaN;
+            distance(matchedCells(~useCell)) = NaN;
+        else
+            %either both or none, problem; mostly shouldn't happen?
+            disp('something up here, found 2 matches for this cell; probably need a fallback')
+        end 
+        
+        % This this need an additional step to re-check distances after
+        % forced reassignments? (A,B try to go to X, C to Y, A closer to X,
+        % but B closer to Y than C)
+        % Could get closest2d by doing a min on the alltoall distance
+        % matrix, then keeping a record of indices to relabel as NaN when
+        % checking for mins (verify on test pts, and that this isn't
+        % already accomplished)
+    end
+    
+    %{
+    base_allMask = create_AllICmask(NeuronImageA);
+    [overlay,overlayRef] = imfuse(base_allMask,reg_allMask_shifted,'ColorChannels',[1 2 0]);
+    if exist('mixFig','var'); delete(mixFig); clear('mixFig'); end
+    mixFig = figure; imshow(overlay,overlayRef)
+    title(['Base (red) and reg (green) shifted overlay, ' num2str(sum(distance<distanceThreshold)) ' cell centers < 3um'])
+    hold on
+    plot(reg_shift_centers(distance<distanceThreshold,1),reg_shift_centers(distance<distanceThreshold,2),'*r')
+    %}
+    %{
+     figure; subplot(1,3,1); imagesc(base_allMask); title('NeuronsA');...
+     subplot(1,3,2); imagesc(create_AllICmask(NeuronImageB)); title('NeuronsB pre'); ... 
+     subplot(1,3,3); imagesc(reg_allMask_shifted); title('NeuronsB post');  
+    %}
+
+    % How many anchor cells matched
+    worked = zeros(1,numAnchorCells);
+    for chCell = 1:numAnchorCells
+        %Does closest cell match paired Inds cells?
+        worked(chCell) = closestCell(anchorCellsB(chCell)) == anchorCellsA(chCell);
+    end
+
+    % How many base/reg cells matched
+    matchedRegCells = rinds(~isnan(closestCell)); %reg cells
+    unmatchedRegCells = rinds(isnan(closestCell));
+    if ~(length(matchedRegCells) + length(unmatchedRegCells) == numCellsB)
+        disp('Registration counts problem')
+        keyboard
+    end
+    
+    bref = ones(numCellsA,1);
+    bref(allClosestCells(matchedRegCells)) = 0;
+    unmatchedBaseCells = find(bref);
+    matchedBaseCells = closestCell(matchedRegCells); %allClosestCells(inRangeIndicesCells);
+    
+    numMatchedAnchorCells(pcI) = sum(worked);
+    numMatchedOtherCells(pcI) = length(closestCell) - sum(worked);
+    numMatchedBaseCells(pcI) = length(matchedBaseCells);
+    numUnmatchedBaseCells(pcI) = length(unmatchedBaseCells);
+    numMatchedRegCells(pcI) = length(matchedRegCells);
+    numUnmatchedRegCells(pcI) = length(unmatchedRegCells);
+    
+    % How many tier-2 pairs from transformed pts. have good alignments with other image
+    % This should be mostly covered by the verification stuff earlier
+end
+toc
 
 %[idx,C] = kmeans([angleDiffsAbs(:) distanceDiffs(:)],1);
 
 
 
+
+% Still need to solve the 3-way alignment problem: a=b, b=c, a~=c?
+% This is a problem for multiple registrations...
