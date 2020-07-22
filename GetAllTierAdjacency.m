@@ -1,5 +1,5 @@
 function tiersAdj = GetAllTierAdjacency(adjMat,tierLim)
-
+%{
 if isempty(tierLim)
     tierLim = 10;
 end
@@ -32,5 +32,8 @@ while (sum(sum(cellsCovered==0)) > 0) && tierI < tierLim-1
 end
 
 tiersAdj(tiersAdj==Inf) = 0;
+%}
+G = graph(adjMat);
+tiersAdj = distances(G);
 
 end

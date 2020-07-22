@@ -95,11 +95,23 @@ for ccI = 1:4
         [angleRadDiffDistribution,yEdges,xEdges,angleBinAssigned,distBinAssigned] = histcounts2(angleDiffsAbs,distanceDiffs); %%% slow
         [diffDistSorted,sordIdx] = sort(angleRadDiffDistribution(:),'descend');
         
+        theseBins = sordIdx(1:nPeaksCheck);
+        ptsTheseBins = angleRadDiffDistribution(theseBins);
+        ARDdistSz = size(angleRadDiffDistribution);
+        
+        %clear angleRadDiffDistribution
+        
         for pcI = 1:nPeaksCheck
-            thisBin = sordIdx(pcI);
-            [bRow,bCol] = ind2sub(size(angleRadDiffDistribution),thisBin);
             
-            nPtsHere(pcI) = angleRadDiffDistribution(thisBin);
+            %thisBin = sordIdx(pcI);
+            thisBin = theseBins(pcI);
+            %[bRow,bCol] = ind2sub(size(angleRadDiffDistribution),thisBin);
+            [bRow,bCol] = ind2sub(ARDdistSz,thisBin);
+            %nPtsHere(pcI) = angleRadDiffDistribution(thisBin);
+            nPtsHere(pcI) = ptsTheseBins(pcI);
+            
+            thisAngleBin = mean([yEdges(bRow) yEdges(bRow+1)]);
+            thisDistBin = mean([xEdges(bCol) xEdges(bCol+1)]);
             
             % Get the cell pairs that ended up in this bin
             angleDiffsHere = angleBinAssigned==bRow;
@@ -110,7 +122,12 @@ for ccI = 1:4
                 % maybe there's a logical here to get still present from all
             %[uniqueInAllImag] = ismember(imagCellIDs,imagCellIdsHere); % Any index in tier2 diff matrix which goes with found cell pairs
 
+         
             [uniqueCellPairs,ia,ic] = unique(imagCellIdsHere);
+    
+            [uniqueCellsUse{pcI},uniqueCellsUseMax{pcI},totalAligns(pcI),meanAligns(pcI)] =...
+                initClusterStats(uniqueCellPairs,ic,numCellsA,numCellsB);
+           %{
             % In the self-to-self, matched cells should all be where real and imaginary components are equal
             realHere = real(uniqueCellPairs);
             imagHere = imag(uniqueCellPairs);
@@ -142,22 +159,26 @@ for ccI = 1:4
             
             totalAligns(pcI) = sum(sortedNumAlignPartners(uKeep));
             meanAligns(pcI) = mean(sortedNumAlignPartners(uKeep)); % Num 2nd tier partner cells
-            
+            %}
+        
             % Explained angle/distance variance by this bin
-            unexplainedAngles = abs(angleDiffsAbs-mean([yEdges(bRow) yEdges(bRow+1)]));
-            unexplainedDist = abs(distanceDiffs-mean([xEdges(bCol) xEdges(bCol+1)]));
+            %unexplainedAngles = abs(angleDiffsAbs-mean([yEdges(bRow) yEdges(bRow+1)]));
+            unexplainedAngles = abs(angleDiffsAbs-thisAngleBin);
+            %unexplainedDist = abs(distanceDiffs-mean([xEdges(bCol) xEdges(bCol+1)]));
+            unexplainedDist = abs(distanceDiffs-thisDistBin);
             [uniqueInAllImag] = ismember(imagCellIDs,imagCellIdsHere); % index in all original pairs that showed up here %%%% slow?
             totalUEangles = unexplainedAngles(uniqueInAllImag);
             totalUEdist = unexplainedDist(uniqueInAllImag);
             hereUEangles = unexplainedAngles(angleDistHere);
             hereUEdist = unexplainedDist(angleDistHere);
-            
+        
             meanUEangles(ccI,ccJ,pcI) = mean(hereUEangles); stdUEangles(pcI) = std(hereUEangles);
             meanUEdist(ccI,ccJ,pcI) = mean(hereUEdist); stdUEdist(pcI) = std(hereUEdist);
             propUEangles(ccI,ccJ,pcI) = sum(hereUEangles)/sum(totalUEangles);
             propUEdist(ccI,ccJ,pcI) = sum(hereUEdist)/sum(totalUEdist);
             numPairedCells(ccI,ccJ,pcI) = length(uniqueCellsUse{pcI});
             
+            clear unexplainedAngles unexplainedDist
         end
         
         for pcI = 1:nPeaksCheck
@@ -292,4 +313,38 @@ keyboard
 % Save outputs and make a correlation matrix
         
         
+end
+%% %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+function [uniqueCellsUse,uniqueCellsUseMax,totalAligns,meanAligns] = initClusterStats(uniqueCellPairs,ic,numCellsA,numCellsB);
+% In the self-to-self, matched cells should all be where real and imaginary components are equal
+realHere = real(uniqueCellPairs);
+imagHere = imag(uniqueCellPairs);
+same = realHere == imagHere; % sum(same) should equal the number of cells not labeled as edge cells
+
+% Restrict match counts by number of cells in a/b min([numCellsA numCellsB])
+nMaxMatch = min([numCellsA numCellsB]);
+
+% How many pairs in this alignment bin for each cell?
+cellIdCounts = histcounts(ic,[0.5:1:(max(ic)+0.5)]); % cellIdCounts(same) histogram of pts from known matches in this angleDiff/distDiff bin
+[sortedCellCounts,sortedCountsOrder] = sort(cellIdCounts,'descend');
+
+uniqueCellsUseMax = uniqueCellPairs(sortedCountsOrder(1:nMaxMatch));
+
+sortedNumAlignPartners = cumsum(sortedCellCounts); % Num alignments in this bin each cell
+
+% Refine to eliminate overlapped cells, take whichever comes first in sortedCountsOrder
+uReal = real(uniqueCellsUseMax);
+uImag = imag(uniqueCellsUseMax);
+firstUR = false(length(uReal),1);
+firstUI = false(length(uReal),1);
+for ii = 1:length(uReal)
+    firstUR(find(uReal==uReal(ii),1,'first')) = true;
+    firstUI(find(uImag==uImag(ii),1,'first')) = true;
+end
+uKeep = firstUR & firstUI;
+
+uniqueCellsUse = uniqueCellsUseMax(uKeep); % Cell pairs for alignment
+
+totalAligns = sum(sortedNumAlignPartners(uKeep));
+meanAligns = mean(sortedNumAlignPartners(uKeep)); % Num 2nd tier partner cells
 end
