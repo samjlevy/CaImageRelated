@@ -7,8 +7,9 @@ function voronoiRegNotes2_5()
 
 keyboard
 
-imPathA = 'F:\DoublePlus\Pandora\Pandora_180629\FinalOutput.mat';
-imPathB = 'F:\DoublePlus\Pandora\Pandora_180630\FinalOutput.mat';
+imPathA = 'C:\Users\samwi_000\Desktop\Pandora\180629\FinalOutput.mat';
+imPathB = 'C:\Users\samwi_000\Desktop\Pandora\180630\FinalOutput.mat';
+load('C:\Users\samwi_000\Desktop\Pandora\trialbytrial.mat','sortedSessionInds')
 
 distanceThreshold = 3;
 nPeaksCheck = 3;
@@ -65,6 +66,19 @@ for ccX = 1:3
     end
 end
 
+% Rotate and re-find centers
+NeuronImageB = cellfun(@(x) imrotate(x,90),NeuronImageB,'UniformOutput',false);
+allCentersB = getAllCellCenters(NeuronImageB,true);
+
+% Grid midpoints for reference
+aMidsX = mean(aBlocksX,2);  aMidsY = mean(aBlocksY,2);
+[aGridsX,aGridsY] = meshgrid(aMidsX,aMidsY);
+bMidsX = mean(bBlocksX,2);  bMidsY = mean(bBlocksY,2);
+[bGridsX,bGridsY] = meshgrid(bMidsX,bMidsY);
+bGridsXrot = bGridsY;
+bGridsYrot = fliplr(bGridsX);
+
+% Get some baselines to evaluate registration
 % Distance Jitter
 %notes 2_3
 jDistA = 100;
@@ -75,6 +89,12 @@ jDistB = 100;
 
 % Try to register
 hh = waitbar(0,'Starting to register');
+ardHold = [];
+ardHoldD = [];
+abinn = [0:1:180];
+dbinn = [0:1:10];
+dThreshUse = distanceThreshold;
+tic
 for blockA = 1:nBlocks
     % Prep block A
     useCentersA = allCentersA(cellAssignA{blockA},:);
@@ -83,98 +103,295 @@ for blockA = 1:nBlocks
     numVorTwoPartnersA = sum(vorTwoLogicalA,2);
     
     for blockB = 1:nBlocks
+        try
         waitX = blockB + nBlocks*(blockA-1);
-        waitbar(waitX/(nBlocks^2),['Working on ' num2str(waitX) '/' num2str(nBocks^2) '...'])
-        
+        waitbar(waitX/(nBlocks^2+1),hh,['Working on ' num2str(waitX) '/' num2str(nBlocks^2) '...'])
+        end
         % Prep block B
         useCentersB = allCentersB(cellAssignB{blockB},:);
         [allAnglesB,allDistancesB,vorTwoLogicalB,neuronTrackerB] = setupForAligns(useCentersB,vorAdjacencyMax);
         [anglesTwoB,distTwoB,cellRowB] = gatherTwoAligns(allAnglesB,allDistancesB,vorTwoLogicalB,neuronTrackerB);
         numVorTwoPartnersB = sum(vorTwoLogicalB,2);
         
-        intCellIDs = generateUniqueIntIDs(cellRowA,cellRowB); % Creates a unique integer identifier for each A-B voronoi-tier 2 cell pair parent
+        % Creates a unique integer identifier for each A-B voronoi-tier 2 cell pair parent
+        intCellIDs = generateUniqueIntIDs(cellRowA,cellRowB); 
         
-        %[uniqueCellsUsePairs,thisAngleBin,thisDistBin,angleDiffsAbs,distanceDiffs] = coreClusterFinder(anglesTwoA,distTwoA,cellRowA,anglesTwoB,distTwoB,cellRowB,distanceThreshold
+        % Start finding the alignment cluster
+        [angleDiffsAbs,distanceDiffs] = getAngleDistDiffs(anglesTwoA,distTwoA,anglesTwoB,distTwoB);
         
-        angleDiffs = anglesTwoA(:) - anglesTwoB(:)'; % ( anglesTwoA(i),anglesTwoB(j) )
-        distanceDiffs = abs(distTwoA(:) - distTwoB(:)'); % Difference between distances of tier 2 vor points from each other
-        [angleDiffsRect] = RectifyAngleDiffs(rad2deg(angleDiffs),'deg'); %%% slow?
-        angleDiffsAbs = abs(angleDiffsRect);
-        
-        clear angleDiffs angleDiffsRect
-        
-        [angleRadDiffDistribution,yEdges,xEdges,angleBinAssigned,distBinAssigned] = histcounts2(angleDiffsAbs,distanceDiffs); %%% slow
-        disp('this is where we really work from')
-        disp('Also this time lets deal all the flags leftover on things to check')
+        [~,C{blockA,blockB}] = kmeans([angleDiffsAbs(distanceDiffs<dThreshUse) distanceDiffs(distanceDiffs<dThreshUse)],1);
         %{
-        [angleRadDistribution,yEdges,angleBinAssigned] = histcounts(angleDiffsAbs(distanceDiffs<=distanceThreshold));          
+        [angleRadDiffDistribution,yEdges,xEdges,angleBinAssigned,distBinAssigned] =...
+            histcounts2(angleDiffsAbs(distanceDiffs<10),distanceDiffs(distanceDiffs<10),abinn,dbinn); %%% slow
+        
+        if isempty(ardHold)
+            ardHold = angleRadDiffDistribution;
+        else
+            ardHold = ardHold + angleRadDiffDistribution;
+        end
         %}
+        %{
+        [angleRadDist,yEdges,angleBinAssigned] = histcounts(angleDiffsAbs(distanceDiffs<3),abinn);  
+        if isempty(ardHoldD)
+            ardHoldD = angleRadDist;
+        else
+            ardHoldD = ardHoldD + angleRadDist;
+        end
+        %}
+    end
+end
+try; close(hh); end
+toc
+
+clustAngles = cellfun(@(x) x(1),C,'UniformOutput',true);
+clustDists = cellfun(@(x) x(2),C,'UniformOutput',true);
+
+% How do we get the appropriate range of angles here?
+thisDistBin = dThreshUse/2; thisDistBin = 0;
+binWidth = 1;
+thisAngleBin = mean(mean(clustAngles)); % thisAngleBin = 90;
+binHere = thisAngleBin+(binWidth/2)*[-1 1];
+for blockA = 1:nBlocks
+    % Prep block A
+    useCentersA = allCentersA(cellAssignA{blockA},:);
+    numUseCellsA = size(useCentersA,1);
+    [allAnglesA,allDistancesA,vorTwoLogicalA,neuronTrackerA] = setupForAligns(useCentersA,vorAdjacencyMax);
+    [anglesTwoA,distTwoA,cellRowA] = gatherTwoAligns(allAnglesA,allDistancesA,vorTwoLogicalA,neuronTrackerA);
+    numVorTwoPartnersA = sum(vorTwoLogicalA,2);
+    
+    for blockB = 1:nBlocks
+        %waitX = blockB + nBlocks*(blockA-1);
+        %waitbar(waitX/(nBlocks^2),['Working on ' num2str(waitX) '/' num2str(nBocks^2) '...'])
         
-        [diffDistSorted,sordIdx] = sort(angleRadDiffDistribution(:),'descend');
+        % Prep block B
+        useCentersB = allCentersB(cellAssignB{blockB},:);
+        numUseCellsB = size(useCentersB,1);
+        [allAnglesB,allDistancesB,vorTwoLogicalB,neuronTrackerB] = setupForAligns(useCentersB,vorAdjacencyMax);
+        [anglesTwoB,distTwoB,cellRowB] = gatherTwoAligns(allAnglesB,allDistancesB,vorTwoLogicalB,neuronTrackerB);
+        numVorTwoPartnersB = sum(vorTwoLogicalB,2);
+       
+        % Creates a unique integer identifier for each A-B voronoi-tier 2 cell pair parent
+        intCellIDs = generateUniqueIntIDs(cellRowA,cellRowB); % VorTwo
+        %intCellIDall = generateUniqueIntIDs(1:numUseCellsA,1:numUseCellsB); % Basically a well-structured sub2ind, with inds in subscript locations
+          
+        [angleDiffsAbs,distanceDiffs] = getAngleDistDiffs(anglesTwoA,distTwoA,anglesTwoB,distTwoB);
         
-        theseBins = sordIdx(1:nPeaksCheck);
-        ptsTheseBins = angleRadDiffDistribution(theseBins);
-        ARDdistSz = size(angleRadDiffDistribution);
-        
-        clear angleRadDiffDistribution
-        
-        disp('Peak evaluation initialization')
-        pcI = 1;
-        thisBin = theseBins(pcI);
-        [bRow,bCol] = ind2sub(ARDdistSz,thisBin);
-        nPtsHere(pcI) = ptsTheseBins(pcI);
-            
-        thisAngleBin = mean([yEdges(bRow) yEdges(bRow+1)]);
-        thisDistBin = mean([xEdges(bCol) xEdges(bCol+1)]);
-        
-        gg = allDistancesA(:) - allDistancesB(:);
-        angleBinLog(iterI,tryI) = thisAngleBin;
-        distBinLog(iterI,tryI) = thisDistBin;
-        distChangeLong(iterI,tryI) = std(gg);
-        
-        % Get the cell pairs that ended up in this bin
-        angleDiffsHere = angleBinAssigned==bRow;
-        distDiffsHere = distBinAssigned==bCol;
+        angleDiffsHere = (angleDiffsAbs <= max(binHere)) & (angleDiffsAbs >= min(binHere));
+        distDiffsHere = distanceDiffs < dThreshUse;
         angleDistHere = angleDiffsHere & distDiffsHere; % Logical identifier for angle and dist differences in current histogram bin
         
         %imagCellIdsHere = imagCellIDs(angleDistHere); % All the unique cell pair identifiers for vorTwoPairs with angle/dist in this bin
         intCellIdsHere = intCellIDs(angleDistHere);
-
-        [uniqueCellPairs,~,ic] = unique(intCellIdsHere);
-        uniqueCellPairs = intsToCells(uniqueCellPairs,numCellsA);
-        B = uint8(intCellIDs);
-        D = uint8(unique(intCellIdsHere));
-        % disp verify this is really working...
-        [uniqueInAllInts] = ismembc(B,D); % logical of all vor two pairs for any belonging to the cell pair that had at least 1 
+        
+        [uniqueCellPairsInts,~,ic] = unique(intCellIdsHere);
+        uniqueCellPairs = intsToCells(uniqueCellPairsInts,numUseCellsA,numUseCellsB);
         
         disp('Peak quality checking')
         [uniqueCellsUsePairs,uniqueCellsUseMax,totalAligns,meanAligns] =...
-            initClusterStats(uniqueCellPairs,ic,numCellsA,numCellsB);
+            initClusterStats(uniqueCellPairs,ic,numUseCellsA,numUseCellsB);
+        alignCells{blockA,blockB} = uniqueCellsUsePairs;
+
+        B = uint8(intCellIDs);
+        D = uint8(unique(intCellIdsHere));
+        % disp verify this is really working...
+        [uniqueInAllInts] = ismembc(B,D); 
+            % logical of all vor two pairs for any belonging to the cell pair that had at least 1 used this bins        
         
         disp('Peak quality evaluation')
         % Explained angle/distance variance by this bin
         % unexplainedAngles = abs(angleDiffsAbs-thisAngleBin);
         % unexplainedDist = abs(distanceDiffs-thisDistBin);
         % %{
-        evalStats = EvaluatePeakQuality(abs(angleDiffsAbs-thisAngleBin),abs(distanceDiffs-thisDistBin),angleDistHere,uniqueInAllImag);
+        evalStats{blockA,blockB} = EvaluatePeakQuality(abs(angleDiffsAbs-thisAngleBin),abs(distanceDiffs-thisDistBin),angleDistHere,uniqueInAllInts);
             % This should be refind to the unique cells used here?
-        evalStats.numVorApartners{dsI,tryI} = numVorTwoPartnersA(uniqueCellsUsePairs(:,1));
-        evalStats.numVorBpartners{dsI,tryI} = numVorTwoPartnersB(uniqueCellsUsePairs(:,2));         
+        evalStats{blockA,blockB}.numPairedCells = length(uniqueCellsUsePairs);
+        evalStats{blockA,blockB}.numVorApartners = numVorTwoPartnersA(uniqueCellsUsePairs(:,1));
+        evalStats{blockA,blockB}.numVorBpartners = numVorTwoPartnersB(uniqueCellsUsePairs(:,2));         
         %}
         
         % Evaluate that transformation, Run this registration and check how well it went
         anchorCellsA = uniqueCellsUsePairs(:,1);
         anchorCellsB = uniqueCellsUsePairs(:,2);
 
-        [tform, reg_shift_centers, closestPairs, nanDistances, regStats] =...
+        [tform{blockA,blockB}, reg_shift_centers{blockA,blockB}, closestPairs{blockA,blockB}, nanDistances{blockA,blockB}, regStats{blockA,blockB}] =...
             testRegistration(anchorCellsA,useCentersA,anchorCellsB,useCentersB,distanceThreshold);
-        
-        
     end
 end
-        
 
-keyboard
+% Test if transforming the mid points produces an appropriate expected grid 
+for blockA = 1:nBlocks
+    for blockB = 1:nBlocks
+        [gridMidTestX(blockA,blockB),gridMidTestY(blockA,blockB)] = transformPointsForward(tform{blockA,blockB},bGridsXrot(blockB),bGridsYrot(blockB));
+    end
+end
+
+[allAnglesAA,allDistancesAA,vorTwoLogicalAA,neuronTrackerAA] = setupForAligns(allCentersA,vorAdjacencyMax);
+[allAnglesBB,allDistancesBB,vorTwoLogicalBB,neuronTrackerBB] = setupForAligns(allCentersB,vorAdjacencyMax);
+
+cellsBoth = sum(sortedSessionInds(:,[2 3])>0,2)==2;
+tbtPairs = [sortedSessionInds(cellsBoth,2:3)];
+   tic
+for cbI = 1:size(tbtPairs,1)
+    cellA = tbtPairs(cbI,1);
+    cellB = tbtPairs(cbI,2);
+    
+    % Get the tier2 angles, distances for cell and B
+    [anglesTwoAA,distTwoAA,cellRowAA] = gatherTwoAligns(allAnglesAA(cellA,:),allDistancesAA(cellA,:),vorTwoLogicalAA(cellA,:),neuronTrackerAA(cellA,:));
+    [anglesTwoBB,distTwoBB,cellRowBB] = gatherTwoAligns(allAnglesBB(cellB,:),allDistancesBB(cellB,:),vorTwoLogicalBB(cellB,:),neuronTrackerBB(cellB,:));
+    
+    % Get the differences here A vs B
+    [angleDiffsAbs,distanceDiffs] = getAngleDistDiffs(anglesTwoAA,distTwoAA,anglesTwoBB,distTwoBB);
+    
+    % Compare to what was found automatically    
+    explainedHere = angleDiffsAbs - 90;
+    
+    nRight(cbI) = sum(sum(angleDiffsAbs >= min(binHere) & angleDiffsAbs <= max(binHere)));
+    pctRight(cbI) = nRight(cbI) / (length(anglesTwoAA)*length(anglesTwoBB));
+    posRight(cbI) = nRight(cbI) / min([length(anglesTwoAA) length(anglesTwoBB)]);
+    
+   
+    
+    %How....?
+        
+end
+toc
+
+        angleDiffsHere = (angleDiffsAbs <= max(binHere)) & (angleDiffsAbs >= min(binHere));
+        distDiffsHere = distanceDiffs < dThreshUse;
+        angleDistHere = angleDiffsHere & distDiffsHere; % Logical identifier for angle and dist differences in current histogram bin
+        
+        %imagCellIdsHere = imagCellIDs(angleDistHere); % All the unique cell pair identifiers for vorTwoPairs with angle/dist in this bin
+        intCellIdsHere = intCellIDs(angleDistHere);
+
+
+
+
+
+
+
+
+
+
+
+
+% Run pt To pt assignment
+[closestPairs,pairDistances,allDistances,nanDistances,regStats] = evaluateRegistration(allCentersA,reg_shift_centers,anchorCellsA,anchorCellsB,distThresh);
+
+figure; 
+subplot(1,2,1); imagesc(create_AllICmask(NeuronImageA)); axis xy
+hold on; plot(aGridsX(:),aGridsY(:)); plot(aGridsX(1),aGridsY(1),'r*'); plot(aGridsX(9),aGridsY(9),'g*');
+subplot(1,2,2); imagesc(create_AllICmask(NeuronImageB)); axis xy
+hold on; plot(bGridsXrot(:),bGridsYrot(:)); plot(bGridsXrot(1),bGridsYrot(1),'r*'); plot(bGridsXrot(9),bGridsYrot(9),'g*');
+
+figure; 
+subplot(1,2,1); imagesc(create_AllICmask(NeuronImageA(cellAssignA{1,1}))); axis xy
+hold on; plot(aGridsX(1),aGridsY(1),'r*');
+useCentersA = allCentersA(cellAssignA{1},:);
+plot(useCentersA(alignCells{1,1}(:,1),1),useCentersA(alignCells{1,1}(:,1),2),'*g')
+plot(useCentersA(alignCells{1,1}(1,1),1),useCentersA(alignCells{1,1}(1,1),2),'*r')
+plot(reg_shift_centers{1,1}(alignCells{1,1}(1,2),1),reg_shift_centers{1,1}(alignCells{1,1}(1,2),2),'m*')
+
+
+figure; 
+subplot(1,2,1); imagesc(create_AllICmask(NeuronImageA(cellAssignA{1,1}))); axis xy
+useCentersA = allCentersA(cellAssignA{1},:);
+basePairCenters = useCentersA(alignCells{1}(:,1),:);
+hold on;
+plot(basePairCenters(:,1),basePairCenters(:,2),'*g')
+
+
+subplot(1,2,2); imagesc(create_AllICmask(NeuronImageB(cellAssignB{1,1}))); axis xy
+hold on;
+useCentersB = allCentersB(cellAssignB{1},:);
+regPairCenters = useCentersB(alignCells{1}(:,2),:);
+plot(regPairCenters(:,1),regPairCenters(:,2),'*g')
+
+
+subplot(1,2,1); plot(useCentersA(alignCells{1}(cf,1),1),useCentersA(alignCells{1}(cf,1),2),'*r')
+
+
+cf = findclosest2D(basePairCenters(:,1),basePairCenters(:,2),70,19);
+cff = findclosest2D(basePairCenters(:,1),basePairCenters(:,2),43,52);
+cfff = findclosest2D(basePairCenters(:,1),basePairCenters(:,2),53,170);
+
+plot(basePairCenters(cf,1),basePairCenters(cf,2),'*r')
+
+dg = findclosest2D(regPairCenters(:,1),regPairCenters(:,2),30,531);
+dgg = findclosest2D(regPairCenters(:,1),regPairCenters(:,2),60,560);
+dggg = findclosest2D(regPairCenters(:,1),regPairCenters(:,2),180,550);
+
+[cf dg; cff dgg; cfff dggg]
+
+subplot(1,2,2); plot(useCentersB(alignCells{1}(cf,2),1),useCentersB(alignCells{1}(cf,2),2),'*r')
+
+
+cf = 96;
+subplot(1,2,1); plot(useCentersA(alignCells{1}(cf,1),1),useCentersA(alignCells{1}(cf,1),2),'*r')
+subplot(1,2,2); plot(useCentersB(alignCells{1}(cf,2),1),useCentersB(alignCells{1}(cf,2),2),'*r')
+
+plot(regPairCenters(alignCells{1}(cf,2),1),regPairCenters(alignCells{1}(cf,2),2),'*r')
+
+for ii = 1:10
+    [xx,yy] = ginput(1);
+    sd = findclosest2D(regPairCenters(:,1),regPairCenters(:,2),xx,yy);
+    subplot(1,2,1);
+    plot(basePairCenters(sd,1),basePairCenters(sd,2),'*m')
+    subplot(1,2,2);
+    plot(regPairCenters(sd,1),regPairCenters(sd,2),'*m')
+end
+
+bCenters = getAllCellCenters(NeuronImage,true);
+
+cellsBoth = sum(sortedSessionInds(:,[2 3])>0,2)==2;
+tbtPairs = [sortedSessionInds(cellsBoth,2:3)];
+    
+        
+    
+
+regPairCenters = allCentersB(anchorCellsB,:);
+numAnchorCells = length(anchorCellsA);
+
+ttform = fitgeotrans(regPairCenters,basePairCenters,'affine');
+reg_shift_centers = [];
+[rsc(:,1),rsc(:,2)] = transformPointsForward(ttform,regPairCenters(:,1),regPairCenters(:,2));
+
+regR = rsc(alignCells{1}(:,2),:);
+plot(regR(96,1),regR(96,2),'*c')
+
+plot(rsc(:,1),rsc(:,2),'*m')
+
+bpcs = [basePairCenters(cf,:); basePairCenters(cff,:); basePairCenters(cfff,:)];
+rpcs = [regPairCenters(dg,:); regPairCenters(dgg,:); regPairCenters(dggg,:)];
+
+ttform = fitgeotrans(rpcs,bpcs,'affine');
+
+[rscc(:,1),rscc(:,2)] = transformPointsForward(ttform,rpcs(:,1),rpcs(:,2));
+
+plot(gridMidTestX(1,1),gridMidTestY(1,1),'*c')
+
+subplot(1,2,2); imagesc(create_AllICmask(NeuronImageB(cellAssignB{1,1}))); axis xy
+hold on; plot(bGridsXrot(1),bGridsYrot(1),'r*');
+useCentersB = allCentersB(cellAssignB{1},:);
+plot(useCentersB(cellPairs{1,1}(:,2),1),useCentersB(cellPairs{1,1}(:,2),2),'*g')
+plot(useCentersB(cellPairs{1,1}(1,2),1),useCentersB(cellPairs{1,1}(1,2),2),'*r')
+
+
+
+subplot(1,2,1);
+plot(gridMidTestX(:),gridMidTestY(:),'*c')
+
+figure; 
+plot(bGridsXrot(:),bGridsYrot(:))
+hold on
+plot(bGridsXrot(1),bGridsYrot(1),'r*')
+plot(bGridsXrot(9),bGridsYrot(9),'g*')
+
+     disp('Also this time lets deal all the flags leftover on things to check')
+   
+    end
+
+   
+
 %{
 regMats.UEanglePerVorTwoPerAnchor = regMats.UEanglePerVorTwo ./ numPairedCells;
 
@@ -199,10 +416,20 @@ for ccI = 1:4
 end
 suptitleSL('explained angle diffs per vorTwoCell per anchor cell')
 %}
+%end
+%% %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+function [angleDiffsAbs,distanceDiffs] = getAngleDistDiffs(anglesTwoA,distTwoA,anglesTwoB,distTwoB)
+            
+ angleDiffs = anglesTwoA(:) - anglesTwoB(:)'; % ( anglesTwoA(i),anglesTwoB(j) )
+distanceDiffs = abs(distTwoA(:) - distTwoB(:)'); % Difference between distances of tier 2 vor points from each other
+[angleDiffsRect] = RectifyAngleDiffs(rad2deg(angleDiffs),'deg'); %%% slow?
+angleDiffsAbs = abs(angleDiffsRect);
+
 end
 %% %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 function intCellIDs = generateUniqueIntIDs(cellRowA,cellRowB)
-numCellsA = length(cellRowA);
+
+numCellsA = max(cellRowA);
     
 cellCellA = repmat(cellRowA(:),1,length(cellRowB)); % By Row, vor2cells partners of cell n
 cellCellB = repmat(cellRowB(:)',length(cellRowA),1); % By column, vor2cells partners of cell n
@@ -214,14 +441,19 @@ cellCellB = repmat(cellRowB2(:)',length(cellRowA),1);
 intCellIDs = cellCellA + cellCellB;   % Creates a unique integer identifier for each A-B voronoi-tier 2 cell pair parent
 end        
 %% %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-function uniqueCellPairsFixed = intsToCells(uniqueCellPairs,numCellsA)
+function uniqueCellPairsFixed = intsToCells(uniqueCellPairs,numCellsA,numCellsB)
 % Converts unique integer IDs back to indices from the original
 %cellRowB2 = (cellRowB-1)*numCellsA;
 
-uniqueCellPairsFixed(:,1) = uniqueCellPairs(:,1);
-uniqueCellPairsFixed(:,2) = floor(uniqueCellPairs(:,2)/numCellsA)+1;
-disp('Double check this line')
+[uniqueCellPairsFixed(:,1),uniqueCellPairsFixed(:,2)] = ind2sub([numCellsA numCellsB],uniqueCellPairs);
+%{
+[uniqueCellPairsFixed(:,1),uniqueCellPairsFixed(:,2)]
 
+uniqueCellPairsFixed(:,1) = rem(uniqueCellPairs,numCellsA);
+uniqueCellPairsFixed(uniqueCellPairsFixed==0,1) = numCellsA;
+uniqueCellPairsFixed(:,2) = floor(uniqueCellPairs/numCellsA)+1;
+disp('Double check this line')
+%}
 end
 %% %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 function [allAngles,allDistances,vorTwo,neuronTracker] = setupForAligns(allCenters,vorAdjacencyMax)
@@ -299,7 +531,6 @@ evalStats.meanUEdist = mean(hereUEdist);
 evalStats.stdUEdist = std(hereUEdist);
 evalStats.propUEangles = sum(hereUEangles)/sum(totalUEangles);
 evalStats.propUEdist = sum(hereUEdist)/sum(totalUEdist); %
-evalStats.numPairedCells = length(uniqueCellsUse);
 
 end
 %% %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
