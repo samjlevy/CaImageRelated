@@ -88,12 +88,12 @@ jDistB = 100;
 %notes 2_4
 
 % Try to register
-hh = waitbar(0,'Starting to register');
 ardHold = [];
 ardHoldD = [];
 abinn = [0:1:180];
 dbinn = [0:1:10];
 dThreshUse = distanceThreshold;
+hh = waitbar(0,'Starting to register');
 tic
 for blockA = 1:nBlocks
     % Prep block A
@@ -147,15 +147,24 @@ clustAngles = cellfun(@(x) x(1),C,'UniformOutput',true);
 clustDists = cellfun(@(x) x(2),C,'UniformOutput',true);
 
 % How do we get the appropriate range of angles here?
+%{
+thisDistBin = 0;
+binWidth = 1;
+thisAngleBin = 90;
+binHere = thisAngleBin+(binWidth/2)*[-1 1];
+
+blockA = 1;
+blockB = 1;
+%}
 thisDistBin = dThreshUse/2; thisDistBin = 0;
 binWidth = 1;
-thisAngleBin = mean(mean(clustAngles)); % thisAngleBin = 90;
+thisAngleBin = mean(mean(clustAngles)); 
 binHere = thisAngleBin+(binWidth/2)*[-1 1];
 for blockA = 1:nBlocks
     % Prep block A
     useCentersA = allCentersA(cellAssignA{blockA},:);
     numUseCellsA = size(useCentersA,1);
-    [allAnglesA,allDistancesA,vorTwoLogicalA,neuronTrackerA] = setupForAligns(useCentersA,vorAdjacencyMax);
+    [allAnglesA,allDistancesA,vorTwoLogicalA,neuronTrackerA] = setupForAligns(useCentersA,vorAdjacencyMax,true);
     [anglesTwoA,distTwoA,cellRowA] = gatherTwoAligns(allAnglesA,allDistancesA,vorTwoLogicalA,neuronTrackerA);
     numVorTwoPartnersA = sum(vorTwoLogicalA,2);
     
@@ -166,7 +175,7 @@ for blockA = 1:nBlocks
         % Prep block B
         useCentersB = allCentersB(cellAssignB{blockB},:);
         numUseCellsB = size(useCentersB,1);
-        [allAnglesB,allDistancesB,vorTwoLogicalB,neuronTrackerB] = setupForAligns(useCentersB,vorAdjacencyMax);
+        [allAnglesB,allDistancesB,vorTwoLogicalB,neuronTrackerB] = setupForAligns(useCentersB,vorAdjacencyMax,true);
         [anglesTwoB,distTwoB,cellRowB] = gatherTwoAligns(allAnglesB,allDistancesB,vorTwoLogicalB,neuronTrackerB);
         numVorTwoPartnersB = sum(vorTwoLogicalB,2);
        
@@ -264,16 +273,185 @@ toc
         intCellIdsHere = intCellIDs(angleDistHere);
 
 
+% Test voronoi alignment of the registered cells
+nAnchorsHere = size(alignCells{1},1);
+useCentersA = allCentersA(cellAssignA{1},:);
+basePairCenters = useCentersA(alignCells{1}(:,1),:);
+useCentersB = allCentersB(cellAssignB{1},:);
+regPairCenters = useCentersB(alignCells{1}(:,2),:);
+[baseAngles,baseDistances,baseVorTwo,ntBase] = setupForAligns(basePairCenters,vorAdjacencyMax,false);
+[regAngles,regDistances,regVorTwo,ntReg] = setupForAligns(regPairCenters,vorAdjacencyMax,false);
+[baseVorTiers,~] = GetAllVorAdjacency(basePairCenters); % All adjacency
+[regVorTiers,] = GetAllVorAdjacency(regPairCenters);
+
+baseVorOne = baseVorTiers==1;
+regVorOne = regVorTiers; regVorOne = regVorOne==1;
+[vorCa,~] = GetAllVorAdjacency(useCentersA);
+[vorCb,~] = GetAllVorAdjacency(useCentersB);
+aVorOne = vorCa==1;
+bVorOne = vorCb==1;
+
+aa = figure; imagesc(create_AllICmask(NeuronImageA(cellAssignA{1,1}))); axis xy
+hold on
+plot(basePairCenters(:,1),basePairCenters(:,2),'.r')
+datacursormode on
+dcm_obj = datacursormode(bb);
+set( dcm_obj, 'UpdateFcn', @clickedPtIndex );
+
+hold on
+ci = 79
+plot(basePairCenters(ci,1),basePairCenters(ci,2),'r*')
+sum(baseVorTwo(ci,:))
+plot(basePairCenters(baseVorTwo(ci,:),1),basePairCenters(baseVorTwo(ci,:),2),'*m')
+plot(basePairCenters(baseVorOne(ci,:),1),basePairCenters(baseVorOne(ci,:),2),'*g')
+
+figure; voronoi(basePairCenters(:,1),basePairCenters(:,2))
+
+bb = figure; imagesc(create_AllICmask(NeuronImageB(cellAssignB{1,1}))); axis xy
+hold on
+plot(regPairCenters(:,1),regPairCenters(:,2),'.r')
+datacursormode on
+dcm_obj = datacursormode(bb);
+set( dcm_obj, 'UpdateFcn', @clickedPtIndex );
+hold on
+ci = 79
+plot(regPairCenters(ci,1),regPairCenters(ci,2),'r*')
+sum(regVorTwo(ci,:))
+plot(regPairCenters(regVorTwo(ci,:),1),regPairCenters(regVorTwo(ci,:),2),'*m')
+plot(regPairCenters(regVorOne(ci,:),1),regPairCenters(regVorOne(ci,:),2),'*g')
+
+
+
+% Steps outlined in Evernote 200812 to identify similar angles
+DTa = delaunay(basePairCenters(:,1),basePairCenters(:,2)); 
+DTaSorted = sort(DTa,2,'ascend');
+DTb = delaunay(regPairCenters(:,1),regPairCenters(:,2));   
+DTbSorted = sort(DTb,2,'ascend');
+
+% Get angles between anchor points
+ptRsA = GetThreePtRelations(basePairCenters(:,1),basePairCenters(:,2),DTaSorted); % For this triplet of points, its the angle off the middle pt
+ptRsB = GetThreePtRelations(regPairCenters(:,1),regPairCenters(:,2),DTbSorted);
+
+% Refine anchor vor to where it claims it's aligned
+%{
+bbb = baseVorOne*4;
+gg = bbb-regVorOne;
+%[ii,jj] = ind2sub([98 98],find(gg==3)); % A 3 where vorAdjOne in base matches vorAdjOne in reg
+claimedMatch = gg==3;
+%}
+claimedMatch = baseVorOne & regVorOne;
+
+%either = baseVorOne | regVorOne;
+%leftOut = either; leftOut(claimedMatch) = false;
+% sum(sum(either)) == sum(sum(claimedMatch)) + sum(sum(leftOut))
+
+% leftOut:
+% DT in vorOne:
+%{
+DTinVorOneBase = sub2ind(nAnchorsHere*[1 1],DTaSorted(:,1),DTaSorted(:,2));
+DTinVorOneBase = [DTinVorOneBase; sub2ind(nAnchorsHere*[1 1],DTaSorted(:,2),DTaSorted(:,3))];
+DTinVorOneBase = [DTinVorOneBase; sub2ind(nAnchorsHere*[1 1],DTaSorted(:,3),DTaSorted(:,1))];
+DTinvorOneBaseLogical = false(nAnchorsHere); 
+DTinvorOneBaseLogical(DTinVorOneBase) = 1;
+%}
+
+% Get these angles...
+moreThanOneVor = find(sum(claimedMatch,2)>1);
+goodMatches = zeros(size(basePairCenters,1),1);
+diffAfBlog = [];
+diffBfAlog = [];
+for mmI = 1:length(moreThanOneVor)
+    aCell = moreThanOneVor(mmI);
+    basePartners = find(baseVorOne(aCell,:));
+    regPartners = find(regVorOne(aCell,:));
+    
+    haveBoth = basePartners == regPartners(:);
+    cellsInBoth = basePartners(logical(sum(haveBoth,1)));
+    
+    otherPairs = nchoosek(cellsInBoth,2);
+    for opI = 1:size(otherPairs,1)
+        % Find the index of this triplet in DTa and DTb so we can check angles
+        % Sort to make this easier
+        tripFind = sort([aCell otherPairs(opI,:)],'ascend');
+        
+        DTaInd = find(sum(DTaSorted==tripFind,2)==3); % Index of this triplet in DTa
+        DTbInd = find(sum(DTbSorted==tripFind,2)==3); % ...DTb
+        
+        if any(DTaInd) && any(DTbInd) % There was a delaunay triplet with these cells
+            % The angles in this delaunay triangle
+            dAnglesA = ptRsA.angles(DTaInd,:);
+            dAnglesB = ptRsB.angles(DTbInd,:);
+
+            % How do they compare to set from other map?
+            diffsAfromB = ptRsB.angles - dAnglesA;
+            [diffAfB,dABidx] = min(mean(abs(diffsAfromB),2)); % Index of the minimum of the mean of smallest angle differences for triplets
+            AmatchB = dABidx == DTbInd; % Matches the index from other? True if this is the best match among other delaunay triplets
+
+            diffsBfromA = ptRsA.angles - dAnglesB;
+            [diffBfA,dBAidx] = min(mean(abs(diffsBfromA),2)); 
+            BmatchA = dBAidx == DTaInd;
+
+            diffAfBlog = [diffAfBlog; diffAfB];
+            diffBfAlog = [diffBfAlog; diffBfA];
+            % Here we could also check distances
+
+            if AmatchB && BmatchA
+                % Nice, found a match,conclude these pts are good
+                goodMatches(tripFind) = goodMatches(tripFind) + 1;
+            end
+        end
+    end
+end
+
+
+%{
+aa = figure; imagesc(create_AllICmask(NeuronImageA(cellAssignA{1,1}))); axis xy
+hold on
+plot(basePairCenters(:,1),basePairCenters(:,2),'.r')
+plot(basePairCenters(find(goodMatches),1),basePairCenters(find(goodMatches),2),'*g')
+title('Base refined anchor cells')
+
+bb = figure; imagesc(create_AllICmask(NeuronImageB(cellAssignB{1,1}))); axis xy
+hold on
+plot(regPairCenters(:,1),regPairCenters(:,2),'.r')
+plot(regPairCenters(find(goodMatches),1),regPairCenters(find(goodMatches),2),'*g')
+title('reg refined anchor cells')
+
+%}
+
+% From here we have to option to try a new transform with these refined
+% anchor cells, or to try iterating outwards and find all possible matches
+% Iterating out: Either way, need to turn that code from above into a function
+    % Just iterate on possible anchors where vor said a match but were left out of the delaunay
+    % Step through each anchor that still has a 0 in 
+    % All other cells: get a delaunay on the entire set of rois, try to match
+
+DTaAll = delaunay(useCentersA(:,1),useCentersA(:,2));
+
+anchorCellsA = alignCells{1}(find(goodMatches),1);
+anchorCellsB = alignCells{1}(find(goodMatches),2);
+[tf, rscs, cps, nds, rss] =...
+            testRegistration(anchorCellsA,useCentersA,anchorCellsB,useCentersB,distanceThreshold);
+figure; imagesc(create_AllICmask(NeuronImageA(cellAssignA{1,1}))); axis xy
+hold on
+plot(useCentersA(:,1),useCentersA(:,2),'.r')
+plot(rscs(:,1),rscs(:,2),'.g')
+plot(useCentersA(cps(:,1),1),useCentersA(cps(:,1),2),'*c')
+plot(useCentersA(anchorCellsA,1),useCentersA(anchorCellsA,2),'*m')
 
 
 
 
 
 
+for ab = 1:length(ii)
+    plot(basePairCenters([ii(ab) jj(ab)],1),basePairCenters([ii(ab) jj(ab)],2),'r') 
+end
 
 
-
-
+for ab = 1:length(ii)
+    plot(regPairCenters([ii(ab) jj(ab)],1),regPairCenters([ii(ab) jj(ab)],2),'r') 
+end
 % Run pt To pt assignment
 [closestPairs,pairDistances,allDistances,nanDistances,regStats] = evaluateRegistration(allCentersA,reg_shift_centers,anchorCellsA,anchorCellsB,distThresh);
 
@@ -305,6 +483,7 @@ hold on;
 useCentersB = allCentersB(cellAssignB{1},:);
 regPairCenters = useCentersB(alignCells{1}(:,2),:);
 plot(regPairCenters(:,1),regPairCenters(:,2),'*g')
+
 
 
 subplot(1,2,1); plot(useCentersA(alignCells{1}(cf,1),1),useCentersA(alignCells{1}(cf,1),2),'*r')
@@ -456,19 +635,32 @@ disp('Double check this line')
 %}
 end
 %% %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-function [allAngles,allDistances,vorTwo,neuronTracker] = setupForAligns(allCenters,vorAdjacencyMax)
+function [allAngles,allDistances,vorTwo,neuronTracker] = setupForAligns(allCenters,vorAdjacencyMax,excludeEdges)
+
+if isempty(excludeEdges)
+    excludeEdges = false;
+    disp('Including edge vors')
+end
 
 numCells = size(allCenters,1);
 allDistances = GetAllPtToPtDistances(allCenters(:,1),allCenters(:,2),[]);
 allAngles = GetAllPtToPtAngles(allCenters);
+[vorAdjTiers,edgePolys] = GetAllVorAdjacency(allCenters);
+vorAdjTiers(vorAdjTiers==0) = NaN;
+if excludeEdges==true
+    vorAdjTiers(edgePolys,:) = NaN;
+end
+vorTwo = vorAdjTiers<=vorAdjacencyMax; %logical
+neuronTracker = repmat([1:numCells]',1,numCells)';
+
+end
+%% %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+function [vorAdjTiers,edgePolys] = GetAllVorAdjacency(allCenters)
 [vorVertices,vorIndices] = voronoin(allCenters);
 vorAdjacency = GetVoronoiAdjacency(vorIndices,vorVertices);
-vorAdjTiers = GetAllTierAdjacency(vorAdjacency,vorAdjacencyMax);
+vorAdjTiers = GetAllTierAdjacency(vorAdjacency,[]);
 edgePolys = GetVoronoiEdges(vorVertices,allCenters,vorIndices);
-vorAdjTiers(vorAdjTiers==0) = NaN;
-vorAdjTiers(edgePolys,:) = NaN;
-vorTwo = vorAdjTiers<=2; %logical
-neuronTracker = repmat([1:numCells]',1,numCells)';
+%vorAdjTiers(vorAdjTiers==0) = NaN;
 
 end
 %% %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -535,9 +727,14 @@ evalStats.propUEdist = sum(hereUEdist)/sum(totalUEdist); %
 end
 %% %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 function [tform, reg_shift_centers, closestPairs, nanDistances, regStats] = testRegistration(anchorCellsA,allCentersA,anchorCellsB,allCentersB,distThresh)
-            
-basePairCenters = allCentersA(anchorCellsA,:);
-regPairCenters = allCentersB(anchorCellsB,:);
+% Anchor cells is an index?
+if size(anchorCellsA,2)==1
+    basePairCenters = allCentersA(anchorCellsA,:);
+    regPairCenters = allCentersB(anchorCellsB,:);
+elseif size(anchorCellsA,2)==2
+    basePairCenters = anchorCellsA;
+    regPairCenters = anchorCellsB;
+end
 numAnchorCells = length(anchorCellsA);
 
 tform = fitgeotrans(regPairCenters,basePairCenters,'affine');
