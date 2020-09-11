@@ -1,4 +1,4 @@
-function matchCells(base_path, reg_paths, bufferEdges)
+matchCells(base_path, reg_paths, bufferEdges)
 %bufferEdges should be used when there are cell masks out near the edges of
 %the imaging window. During alignment, they can be pushed out of view,
 %which can cause problems leading to those cells' not being registered. 

@@ -5,7 +5,7 @@ function voronoiRegNotes2_5()
 % effects, though not sure what to predict there
 % Still no plains for A==B,B==C,A~=C misalignments
 
-keyboard
+%keyboard
 
 imPathA = 'C:\Users\samwi_000\Desktop\Pandora\180629\FinalOutput.mat';
 imPathB = 'C:\Users\samwi_000\Desktop\Pandora\180630\FinalOutput.mat';
@@ -218,12 +218,15 @@ for blockA = 1:nBlocks
         evalStats{blockA,blockB}.numVorBpartners = numVorTwoPartnersB(uniqueCellsUsePairs(:,2));         
         %}
         
+        [minInds,nanDistances] = findDistanceMatches(distances,otherCriteria)
+        
         % Evaluate that transformation, Run this registration and check how well it went
         anchorCellsA = uniqueCellsUsePairs(:,1);
         anchorCellsB = uniqueCellsUsePairs(:,2);
 
         [tform{blockA,blockB}, reg_shift_centers{blockA,blockB}, closestPairs{blockA,blockB}, nanDistances{blockA,blockB}, regStats{blockA,blockB}] =...
             testRegistration(anchorCellsA,useCentersA,anchorCellsB,useCentersB,distanceThreshold);
+        
     end
 end
 
@@ -285,7 +288,7 @@ regPairCenters = useCentersB(alignCells{1}(:,2),:);
 [regVorTiers,] = GetAllVorAdjacency(regPairCenters);
 
 baseVorOne = baseVorTiers==1;
-regVorOne = regVorTiers; regVorOne = regVorOne==1;
+regVorOne = regVorTiers==1;
 [vorCa,~] = GetAllVorAdjacency(useCentersA);
 [vorCb,~] = GetAllVorAdjacency(useCentersB);
 aVorOne = vorCa==1;
@@ -323,6 +326,60 @@ plot(regPairCenters(regVorOne(ci,:),1),regPairCenters(regVorOne(ci,:),2),'*g')
 
 
 % Steps outlined in Evernote 200812 to identify similar angles
+[wellAligned,goodMatches,diffLogs,cellTripLog] = targetedAlignmentSame(basePairCenters,regPairCenters);
+%{
+aa = figure; imagesc(create_AllICmask(NeuronImageA(cellAssignA{1,1}))); axis xy
+hold on
+plot(basePairCenters(:,1),basePairCenters(:,2),'.r')
+plot(basePairCenters(find(goodMatches),1),basePairCenters(find(goodMatches),2),'*g')
+title('Base refined anchor cells')
+
+bb = figure; imagesc(create_AllICmask(NeuronImageB(cellAssignB{1,1}))); axis xy
+hold on
+plot(regPairCenters(:,1),regPairCenters(:,2),'.r')
+plot(regPairCenters(find(goodMatches),1),regPairCenters(find(goodMatches),2),'*g')
+title('reg refined anchor cells')
+%}
+
+% Index back into this whole population
+anchorCellsA = alignCells{1}(find(goodMatches),1);
+anchorCellsB = alignCells{1}(find(goodMatches),2);
+
+anchorsLogicalA = false(size(useCentersA,1),1); anchorsLogicalA(anchorCellsA) = true;
+anchorsLogicalB = false(size(useCentersB,1),1); anchorsLogicalB(anchorCellsB) = true;
+cellsMissedA = ~anchorsLogicalA;
+cellsMissedB = ~anchorsLogicalB;
+
+gAnchorsA = basePairCenters(wellAligned,:); % gAnchorsAA = useCentersA(anchorCellsA,:); % should be the same...
+gAnchorsB = regPairCenters(wellAligned,:); % gAnchorBB = useCentersB(anchorCellsB,:);
+
+% Difference should be some threshold within the range established by diffLogs
+[~,AorB] = min([sum(cellsMissedA) sum(cellsMissedB)]);
+switch AorB
+    case 1
+        ptsCheck = find(cellsMissedA);
+    case 2
+        ptsCheck = find(cellsMissedB);
+end
+
+for pcI = 1:length(ptsCheck)
+    pHere = ptsCheck(pcI);
+    
+    % Diff from all these anchor points like 
+    diffsBfromA = ptRsA.angles - dAnglesB;  % Could keep this as the set NOT to end up in...
+            [diffBfA,dBAidx] = min(mean(abs(diffsBfromA),2)); 
+            BmatchA = dBAidx == DTaInd;
+%hh = mat2cell(ptRsB.angles,ones(185,1),3);
+%jj= cellfun(@(x) ptRsA.angles-x,hh,'UniformOutput',false);
+% Sequential could make a cool plotting animation...
+
+end
+
+%{
+baseVorOne = GetVoronoiAdjacency2(basePairCenters);
+regVorOne = GetVoronoiAdjacency2(basePairCenters);
+
+
 DTa = delaunay(basePairCenters(:,1),basePairCenters(:,2)); 
 DTaSorted = sort(DTa,2,'ascend');
 DTb = delaunay(regPairCenters(:,1),regPairCenters(:,2));   
@@ -402,6 +459,8 @@ for mmI = 1:length(moreThanOneVor)
         end
     end
 end
+
+%}
 
 
 %{
@@ -597,6 +656,88 @@ suptitleSL('explained angle diffs per vorTwoCell per anchor cell')
 %}
 %end
 %% %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+function [wellAligned,goodMatches,diffLogs,cellTripLog] = targetedAlignmentSame(basePairCenters,regPairCenters)
+% This takes 2 sets of paired points and asks if the engles between those
+% points (at dulaunay triangles) actually is similar between them
+% Good matches says how many well-match delaunay triangles was it involved
+% in, wellAligned is a logical of that
+[baseVorTiers,] = GetAllVorAdjacency(basePairCenters);
+baseVorOne = baseVorTiers==1;
+[regVorTiers,] = GetAllVorAdjacency(regPairCenters);
+regVorOne = regVorTiers==1;
+
+DTa = delaunay(basePairCenters(:,1),basePairCenters(:,2)); 
+DTaSorted = sort(DTa,2,'ascend');
+DTb = delaunay(regPairCenters(:,1),regPairCenters(:,2));   
+DTbSorted = sort(DTb,2,'ascend');
+
+% Get angles between anchor points
+ptRsA = GetThreePtRelations(basePairCenters(:,1),basePairCenters(:,2),DTaSorted); % For this triplet of points, its the angle off the middle pt
+ptRsB = GetThreePtRelations(regPairCenters(:,1),regPairCenters(:,2),DTbSorted);
+
+claimedMatch = baseVorOne & regVorOne;
+
+% Get these angles...
+moreThanOneVor = find(sum(claimedMatch,2)>1);
+goodMatches = zeros(size(basePairCenters,1),1);
+diffAfBlog = [];
+diffBfAlog = [];
+for mmI = 1:length(moreThanOneVor)
+    aCell = moreThanOneVor(mmI);
+    basePartners = find(baseVorOne(aCell,:));
+    regPartners = find(regVorOne(aCell,:));
+    
+    haveBoth = basePartners == regPartners(:);
+    cellsInBoth = basePartners(logical(sum(haveBoth,1)));
+    
+    otherPairs = nchoosek(cellsInBoth,2);
+    for opI = 1:size(otherPairs,1)
+        % Find the index of this triplet in DTa and DTb so we can check angles
+        % Sort to make this easier
+        tripFind = sort([aCell otherPairs(opI,:)],'ascend');
+        
+        DTaInd = find(sum(DTaSorted==tripFind,2)==3); % Index of this triplet in DTa
+        DTbInd = find(sum(DTbSorted==tripFind,2)==3); % ...DTb
+        
+        if any(DTaInd) && any(DTbInd) % There was a delaunay triplet with these cells
+            % The angles in this delaunay triangle
+            dAnglesA = ptRsA.angles(DTaInd,:);
+            dAnglesB = ptRsB.angles(DTbInd,:);
+
+            % How do they compare to set from other map?
+            diffsAfromB = ptRsB.angles - dAnglesA;
+            [diffAfB,dABidx] = min(mean(abs(diffsAfromB),2)); % Index of the minimum of the mean of smallest angle differences for triplets
+            AmatchB = dABidx == DTbInd; % Matches the index from other? True if this is the best match among other delaunay triplets
+
+            diffsBfromA = ptRsA.angles - dAnglesB;  % Could keep this as the set NOT to end up in...
+            [diffBfA,dBAidx] = min(mean(abs(diffsBfromA),2)); 
+            BmatchA = dBAidx == DTaInd;
+
+            % Here we could also check distances
+
+            if AmatchB && BmatchA
+                % Nice, found a match,conclude these pts are good
+                goodMatches(tripFind) = goodMatches(tripFind) + 1;
+                
+                diffAfBlog = [diffAfBlog; diffAfB];
+                diffBfAlog = [diffBfAlog; diffBfA];
+                
+                cellTripLog = [aCell, tripFind];
+            end
+        end
+    end
+end
+
+minAligned = goodMatches>0;
+diffLogs.diffAfBlog = diffAfBlog;
+diffLogs.diffBfAlog = diffBfAlog;
+% Get the distribution here
+%hh = mat2cell(ptRsB.angles,ones(185,1),3);
+%jj = cellfun(@(x) ptRsA.angles-x,hh,'UniformOutput',false);
+
+
+end
+%% %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 function [angleDiffsAbs,distanceDiffs] = getAngleDistDiffs(anglesTwoA,distTwoA,anglesTwoB,distTwoB)
             
  angleDiffs = anglesTwoA(:) - anglesTwoB(:)'; % ( anglesTwoA(i),anglesTwoB(j) )
@@ -658,6 +799,7 @@ end
 function [vorAdjTiers,edgePolys] = GetAllVorAdjacency(allCenters)
 [vorVertices,vorIndices] = voronoin(allCenters);
 vorAdjacency = GetVoronoiAdjacency(vorIndices,vorVertices);
+%voronoiAdj = GetVoronoiAdjacency2(allCenters);
 vorAdjTiers = GetAllTierAdjacency(vorAdjacency,[]);
 edgePolys = GetVoronoiEdges(vorVertices,allCenters,vorIndices);
 %vorAdjTiers(vorAdjTiers==0) = NaN;

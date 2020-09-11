@@ -4,16 +4,29 @@ function [anglesRect] = RectifyAngleDiffs(angleDiffs,degOrRad)
 if strcmpi(degOrRad,'rad')
     angleDiffs = rad2deg(angleDiffs);
 end
-anglesRect = angleDiffs;
+%anglesRect = angleDiffs;
+ba = angleDiffs>180 | angleDiffs<-180; % 0.027493 seconds
+%ad = angleDiffs(ba);
+bb = -360*(angleDiffs./abs(angleDiffs)).*ba;
+%bb(ba) = 0;
+anglesRect = rem(angleDiffs,360);
+anglesRect = anglesRect + bb;
 
+%{
+tic
 % Lower the angles too big...
-anglesRect(angleDiffs>180) = rem(angleDiffs(angleDiffs>180),360);
-anglesRect(angleDiffs>180) = angleDiffs(angleDiffs>180) - 360;    
+ba = angleDiffs>180; % 0.026269 seconds
+anglesRect = rem(angleDiffs,360); % 0.091474 seconds
+%anglesRect(angleDiffs>180) = angleDiffs(angleDiffs>180) - 360;    
+anglesRect(ba) = anglesRect(ba) - 360;  % 0.185723 seconds 
 
 % Raise the angles too small
-anglesRect(angleDiffs<-180) = rem(angleDiffs(angleDiffs<-180),360);
-anglesRect(angleDiffs<-180) = angleDiffs(angleDiffs<-180) + 360;   
-
+ba = angleDiffs<-180; % 0.023895 seconds
+%anglesRect(ba) = rem(angleDiffs(ba),360);
+%anglesRect(angleDiffs<-180) = angleDiffs(angleDiffs<-180) + 360;   
+anglesRect(ba) = anglesRect(ba) + 360; % 0.173190 seconds  
+toc
+%}
 if any(any(anglesRect>180)) || any(any(anglesRect<-180))
     disp('error, bad logic above')
     keyboard
@@ -22,7 +35,5 @@ end
 if strcmpi(degOrRad,'rad')
     anglesRect = deg2rad(anglesRect);
 end
-
-%anglesRect = angleDiffs;
 
 end
