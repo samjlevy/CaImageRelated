@@ -7,6 +7,8 @@ for ngI = 1:length(traitGroup)
                 NNplusKChange(traitGroup{ngI}, dayUse);
         case 'TraitDailyPct'
             groupout{ngI} = TraitDailyPct(traitGroup{ngI},dayUse);
+        case 'TraitNums'
+            groupout{ngI} = sum(traitGroup{ngI},1);
         case 'GetCellsOverlap'
             %varargin 1 is dayPairs
             if iscell(dayUse) && length(dayUse)==length(traitGroup)

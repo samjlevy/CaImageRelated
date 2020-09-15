@@ -12,6 +12,7 @@ mouseDefaultFolder = {'G:\SLIDE\Processed Data\Bellatrix\Bellatrix_160831';...
                       'G:\SLIDE\Processed Data\Nix\Nix_180502'};
 
 %Thresholds
+brainFPS = 20;
 pThresh = 0.05;
 lapPctThresh = 0.25;
 consecLapThresh = 3;
@@ -25,11 +26,13 @@ minspeed = 0;
 zeronans = 1; 
 posThresh = 3;
 cmperbin = (max(xlims)-min(xlims))/numBins;
-condPairs = [1 3; 2 4; 1 2; 3 4];
+condPairs = [1 3; 2 4; 1 2; 3 4]; % {'Left','Right','Study','Test'}
 mazeLocations = {'Stem','Arms'};
 performanceThreshold = 0.7;
 global dayLagLimit
 dayLagLimit = 16;
+%global velThresh
+%velThresh = 0.5;
 %global realDatMarkerSize
 %realDatMarkerSize = 16;
 
@@ -79,19 +82,22 @@ for mouseI = 1:numMice
 end
 
 disp('Getting reliability')
-dayUse = cell(1,numMice); threshAndConsec = cell(1,numMice);
+dayUse = cell(1,numMice); threshAndConsec = cell(1,numMice); trialReliAll = []; trialReliAllArms = [];
 for mouseI = 1:numMice
     saveName = fullfile(mainFolder,mice{mouseI},'trialReliability.mat');
-    if exist(saveName,'file')==0
-        [dayUse,threshAndConsec] = GetUseCells(cellTBT{mouseI}, lapPctThresh, consecLapThresh);
-        [trialReli,aboveThresh,~,~] = TrialReliability(cellTBT{mouseI}, lapPctThresh);
+    %if exist(saveName,'file')==0
+        [dayUse,threshAndConsec,consec] = GetUseCells(cellTBT{mouseI}, lapPctThresh, consecLapThresh, false,[min(stemBinEdges) max(stemBinEdges)],[]);
+        [trialReli,aboveThresh,nLapsActive,~] = TrialReliability(cellTBT{mouseI}, lapPctThresh, false,[min(stemBinEdges) max(stemBinEdges)],[]);
 
-        [dayUseArm,threshAndConsecArm] = GetUseCells(cellTBTarm{mouseI}, lapPctThresh, consecLapThresh);
-        [trialReliArm,aboveThreshArm,~,~] = TrialReliability(cellTBTarm{mouseI}, lapPctThresh);
+        [dayUseArm,threshAndConsecArm,consecArm] = GetUseCells(cellTBTarm{mouseI}, lapPctThresh, consecLapThresh, false,[min(armBinEdges) max(armBinEdges)],[]);
+        [trialReliArm,aboveThreshArm,nLapsActiveArm,~] = TrialReliability(cellTBTarm{mouseI}, lapPctThresh, false,[min(armBinEdges) max(armBinEdges)],[]);
     
-        save(saveName,'dayUse','threshAndConsec','dayUseArm','threshAndConsecArm','trialReli','trialReliArm')
-        clear('dayUse','threshAndConsec','dayUseArm','threshAndConsecArm','trialReli','trialReliArm')
-    end
+        save(saveName,'dayUse','threshAndConsec','consec','dayUseArm','threshAndConsecArm','consecArm','trialReli','trialReliArm','nLapsActive','nLapsActiveArm')
+        clear('dayUse','threshAndConsec','dayUseArm','threshAndConsecArm','trialReli','trialReliArm','consec','consecArm','nLapsActive','nLapsActiveArm')
+    %end
+    
+    [trialReliAll{mouseI},~,~,~] = TrialReliability(cellTBT{mouseI}, lapPctThresh,true,[min(stemBinEdges) max(stemBinEdges)],[]);
+    [trialReliAllArms{mouseI},~,~,~] = TrialReliability(cellTBTarm{mouseI}, lapPctThresh,true,[min(armBinEdges) max(armBinEdges)],[]);
 end
 
 for mouseI = 1:numMice
@@ -101,16 +107,20 @@ for mouseI = 1:numMice
     dayUse{mouseI} = reliability{mouseI}.dayUse;
     presentInactive{1}{mouseI} = (dayUse{mouseI} + (cellSSI{mouseI}>0)) == 1;
     threshAndConsec{mouseI} = reliability{mouseI}.threshAndConsec;
+    consec{mouseI} = reliability{mouseI}.consec;
     cellsActiveToday{mouseI} = sum(dayUse{mouseI},1);
     daysEachCellActive{mouseI} = sum(dayUse{mouseI},2);
     trialReli{mouseI} = reliability{mouseI}.trialReli;
+    lapsActive{mouseI} = reliability{mouseI}.nLapsActive;
     
     dayUseArm{mouseI} = reliability{mouseI}.dayUseArm;
     presentInactive{2}{mouseI} = (dayUseArm{mouseI} + (cellSSI{mouseI}>0)) == 1;
     threshAndConsecArm{mouseI} = reliability{mouseI}.threshAndConsecArm;
+    consecArm{mouseI} = reliability{mouseI}.consecArm;
     cellsActiveTodayArm{mouseI} = sum(dayUseArm{mouseI},1);    
     daysEachCellActiveArm{mouseI} = sum(dayUseArm{mouseI},2);
     trialReliArm{mouseI} = reliability{mouseI}.trialReliArm;
+    lapsActiveArm{mouseI} = reliability{mouseI}.nLapsActiveArm;
     
     %daysCellFound{mouseI} = sum(cellSSI{mouseI}>0,2);
     clear reliability
@@ -123,14 +133,14 @@ for mouseI = 1:numMice
     saveName = fullfile(mainFolder,mice{mouseI},'trialReliabilityPooled.mat');
     if exist(saveName,'file')==0
     cellTBTpooled{mouseI} = PoolTBTacrossConds(cellTBT{mouseI},condPairs,{'Left','Right','Study','Test'});
-    [dayUsePooled,threshAndConsecPooled] = GetUseCells(cellTBTpooled{mouseI}, lapPctThresh, consecLapThresh);
+    [dayUsePooled,threshAndConsecPooled,consecPooled] = GetUseCells(cellTBTpooled{mouseI}, lapPctThresh, consecLapThresh);
     [trialReliPooled,aboveThreshPooled,~,~] = TrialReliability(cellTBTpooled{mouseI}, lapPctThresh);
     
     cellTBTarmPooled{mouseI} = PoolTBTacrossConds(cellTBTarm{mouseI},condPairs,{'Left','Right','Study','Test'});
-    [dayUseArmPooled,threshAndConsecArmPooled] = GetUseCells(cellTBTarmPooled{mouseI}, lapPctThresh, consecLapThresh);
+    [dayUseArmPooled,threshAndConsecArmPooled,consecArmPooled] = GetUseCells(cellTBTarmPooled{mouseI}, lapPctThresh, consecLapThresh);
     [trialReliArmPooled,aboveThreshArmPooled,~,~] = TrialReliability(cellTBTarmPooled{mouseI}, lapPctThresh);
     
-    save(saveName,'dayUsePooled','threshAndConsecPooled','dayUseArmPooled','threshAndConsecArmPooled','trialReliPooled','trialReliArmPooled')
+    save(saveName,'dayUsePooled','threshAndConsecPooled','consecPooled','dayUseArmPooled','threshAndConsecArmPooled','consecArmPooled','trialReliPooled','trialReliArmPooled')
     clear('dayUsePooled','threshAndConsecPooled','dayUseArmPooled','threshAndConsecArmPooled','trialReliPooled','trialReliArmPooled')
     end
     
@@ -146,6 +156,10 @@ for mouseI = 1:numMice
 end
 %}
 
+for mouseI = 1:numMice
+    cellTBT{mouseI} = GetTBTvelocity(cellTBT{mouseI},brainFPS);
+    cellTBTarm{mouseI} = GetTBTvelocity(cellTBTarm{mouseI},brainFPS);
+end
 %Place fields
 stemPFs = 'PFsLinPooled.mat';
 armPFs = 'PFsLinPooledArm.mat';
@@ -288,11 +302,127 @@ for mouseI = 1:numMice
     pooledAllRealDayDiffs = [pooledAllRealDayDiffs; allRealDayDiffs{mouseI}];
 end
 
+allVels = [];
+for mouseI = 1:numMice
+    for condI = 1:4
+        for trialI = 1:length(cellTBT{mouseI}(condI).trialVel)
+            allVels = [allVels; cellTBT{mouseI}(condI).trialVel{trialI}(:)];
+        end
+    end
+end
+
 purp = [0.4902    0.1804    0.5608]; orng = [0.8510    0.3294    0.1020];
 colorAssc = { [1 0 0]     [0 0 1]    [1 0 1]       [0 1 1]         purp     orng        [0 1 0]       [0 0 0]};
 traitLabels = {'splitLR' 'splitST'  'splitLRonly' 'splitSTonly' 'splitBOTH' 'splitONE' 'splitEITHER' 'dontSplit'};
 
+pctUA = [];
+pctUP = [];
+pctUAarm = [];
+pctUParm = [];
+for mouseI = 1:numMice
+    nCellsAboveThreshStem = sum(dayUse{mouseI},1);
+    nCellsAboveThreshArm = sum(dayUseArm{mouseI},1);
+    
+    nCellsHere = sum(cellSSI{mouseI}>0,1);
+    
+    nCellsFiredAtAllStem = sum(sum(trialReli{mouseI},3)>0,1);
+    nCellsFiredAtAllArm = sum(sum(trialReliArm{mouseI},3)>0,1);
+    
+    pctUseActive = nCellsAboveThreshStem ./ nCellsFiredAtAllStem;
+    pctUsePresent = nCellsAboveThreshStem ./ nCellsHere;
+    
+    pctUseActiveArm = nCellsAboveThreshArm ./ nCellsFiredAtAllArm;
+    pctUsePResentArm = nCellsAboveThreshArm ./ nCellsHere;
+    
+    pctUA = [pctUA; pctUseActive(:)];
+    pctUP = [pctUP; pctUsePresent(:)];
+    pctUAarm = [pctUAarm; pctUseActiveArm(:)];
+    pctUParm = [pctUParm; pctUsePResentArm(:)];
+end
+   
+disp(['Stem: cells above thresh/cells present: ' num2str(mean(pctUP)) ' +/- ' num2str(standarderrorSL(pctUP))])
+disp(['Stem: cells above thresh/cells active: ' num2str(mean(pctUA)) ' +/- ' num2str(standarderrorSL(pctUA))])
+disp(['Arm: cells above thresh/cells present: ' num2str(mean(pctUParm)) ' +/- ' num2str(standarderrorSL(pctUParm))])
+disp(['Arm: cells above thresh/cells active: ' num2str(mean(pctUAarm)) ' +/- ' num2str(standarderrorSL(pctUAarm))])
+
 disp('Done all setup stuff')
+disp(['velThresh is ' num2str(velThresh)])
+%% Change in reliability
+% Average all cells trial reliability
+
+
+% Within cell changes in reliability
+for mouseI = 1:numMice
+    daysHere = cellSSI{mouseI}>0;
+    reliSlopeAllDays{mouseI} = nan(numCells(mouseI),1);
+    reliSlopeActiveDays{mouseI} = nan(numCells(mouseI),1);
+    reliChangeActiveDayPairs{mouseI} = nan(size(cellSSI{mouseI}));
+    reliChangeAllDayPairs{mouseI} = nan(size(cellSSI{mouseI}));
+    reliRhoAllDays{mouseI} = nan(numCells(mouseI),1);
+    reliPvalAllDays{mouseI} = nan(numCells(mouseI),1);
+    reliRhoActiveDays{mouseI} = nan(numCells(mouseI),1);
+    reliPvalActiveDays{mouseI} = nan(numCells(mouseI),1);
+    
+    for cellI = 1:size(cellSSI{mouseI},1)
+        % All days found
+        daysH = daysHere(cellI,:);
+        if sum(daysH) > 1
+            dt = trialReliAll{mouseI}(cellI,daysH);
+            rd = cellRealDays{mouseI}(daysH);
+            %[reliSlopeAllDays{mouseI}(cellI), ~, ~, ~, ~, ~] = fitLinRegSL(dt, rd); %slope, intercept, fitLine, rr, pSlope, pInt
+            [reliRhoAllDays{mouseI}(cellI),reliPvalAllDays{mouseI}(cellI)]=corr(dt(:),rd(:),'type','Spearman');
+            % pairs of days, 2:end
+        end
+        
+        
+        % All days with stem reliability > 0
+        daysJ = trialReliAll{mouseI}(cellI,:)>0;
+        dy = trialReliAll{mouseI}(cellI,daysJ);
+        if sum(daysJ) > 1
+            dy = trialReliAll{mouseI}(cellI,daysJ);
+            rd = cellRealDays{mouseI}(daysJ);
+            %[reliSlopeActiveDays{mouseI}(cellI), ~, ~, ~, ~, ~] = fitLinRegSL(dy, rd);
+            [reliRhoActiveDays{mouseI}(cellI),reliPvalActiveDays{mouseI}(cellI)]=corr(dy(:),rd(:),'type','Spearman');
+            
+            % pairs of days 
+            %{
+            daysJJ = find(daysJ);
+            % trialReliAll > 0
+            for dj = 2:length(daysJJ)
+                reliChangeActiveDayPairs{mouseI}(cellI,dj) = ...
+                    trialReliAll{mouseI}(cellI,daysJJ(dj)) - trialReliAll{mouseI}(cellI,daysJJ(dj-1));
+            end
+            for dk = 1:length(daysJJ)
+                daysHH = find(daysH);
+                if daysJJ(dk)>daysHH(1)
+                    prevDayHere = daysHH(find(daysHH<daysJJ(dk),1,'last'));
+                    reliChangeAllDayPairs{mouseI}(cellI,dk) = ....
+                        trialReliAll{mouseI}(cellI,daysJJ(dk)) - trialReliAll{mouseI}(cellI,prevDayHere);
+                end
+            end
+            %}
+        end
+    end
+end
+
+%reliSlopeAllDaysPooled = PoolCellArrAcrossMice(reliSlopeAllDays);
+%reliSlopeActiveDaysPooled = PoolCellArrAcrossMice(reliSlopeActiveDays);
+
+reliRhoAllDaysPooled = PoolCellArrAcrossMice(reliRhoAllDays);
+reliPvalAllDaysPooled = PoolCellArrAcrossMice(reliPvalAllDays);
+reliRhoActiveDaysPooled = PoolCellArrAcrossMice(reliRhoActiveDays);
+reliPvalActiveDaysPooled = PoolCellArrAcrossMice(reliPvalActiveDays);
+
+figure; 
+subplot(1,2,1)
+histogram(reliRhoActiveDaysPooled,[-1:0.05:1])
+title(['days allReli>0, All rho values, mean=' num2str(mean(reliRhoActiveDaysPooled)) ', std=' num2str(std(reliRhoActiveDaysPooled))])
+xlabel('% trials active')
+subplot(1,2,2)
+histogram(reliRhoActiveDaysPooled(reliPvalActiveDaysPooled<=0.05),[-1:0.05:1])
+title('days allReli>0, Only p<0.05 rho vals')
+xlabel('% trials active')
+suptitleSL('Slope of allTrialReli over active days, all cells')
 
 %% Single lap correlation notes: ensembles?
 numConds = length(cellTBT{1});
@@ -344,18 +474,25 @@ numShuffles = 1000;
 shuffThresh = 1 - pThresh;
 binsMin = 1;
 splitDir = 'splitters';
+%splitDir = 'splittersSpd01'; % velThreh = 0.5
+%splitDir = 'splittersSpd02'; % velThreh = 1
 
 splitterType = {'LR' 'ST'};
 splitterCPs = {[1 2] [3 4]};
-splitterLoc = {'stem' 'arm'};
+splitterLoc = {'stem' 'arm'}; %splitterLoc = {'stem'}
 
 unpooledCPs = {[1 2; 3 4];[1 3;2 4]};
 
 %Get/make splitting
 binsAboveShuffle = [];
 thisCellSplits = [];
+CIbounds = [];
+whichBinsAboveShuffle = [];
 for mouseI = 1:numMice
     shuffleDir = fullfile(mainFolder,mice{mouseI},splitDir);
+    if exist(shuffleDir,'dir')==0
+        mkdir(shuffleDir)
+    end
     
     for stI = 1:length(splitterType)
         for slI = 1:length(splitterLoc)
@@ -363,14 +500,18 @@ for mouseI = 1:numMice
                 case 'stem'
                     binEdgesHere = stemBinEdges;
                     splitterFile = fullfile(shuffleDir,['splitters' splitterType{stI} '.mat']);
-                    cellTMap = cellPooledTMap_unsmoothed{1}{mouseI};
+                    cellTMap = cellPooledTMap_unsmoothed{1}{mouseI}; % Original version
                     %cellTMap = cellPooledTMap_firesAtAll{1}{mouseI};
+                    [cellTMap, ~, ~, ~, ~, ~, ~] =...
+                        PFsLinTBTdnmp(cellTBT{mouseI}, stemBinEdges, minspeed, [], false,condPairs);
                     tbtHere = cellTBT{mouseI};
                 case 'arm'
                     splitterFile = fullfile(shuffleDir,['ARMsplitters' splitterType{stI} '.mat']);
                     binEdgesHere = armBinEdges;
-                    cellTMap = cellPooledTMap_unsmoothedArm{1}{mouseI};
+                    cellTMap = cellPooledTMap_unsmoothedArm{1}{mouseI}; % Original version
                     %cellTMap = cellPooledTMap_firesAtAllArm{1}{mouseI};
+                    [cellTMap, ~, ~, ~, ~, ~, ~] =...
+                        PFsLinTBTdnmp(cellTBTarm{mouseI}, armBinEdges, minspeed, [], false,condPairs);
                     tbtHere = cellTBTarm{mouseI};
             end
             
@@ -381,16 +522,22 @@ for mouseI = 1:numMice
             if exist(splitterFile,'file')==0
             disp(['did not find ' splitterType{stI} ' on ' splitterLoc{slI} ' splitting for mouse ' num2str(mouseI) ', making now'])
             tic
-            [binsAboveShuffle, thisCellSplits] = SplitterWrapper4(tbtHere, cellTMap,  splitterType{stI},...
+            [binsAboveShuffle, thisCellSplits,CIbounds, whichBinsAboveShuffle] = SplitterWrapper4(tbtHere, cellTMap,  splitterType{stI},...
                 'pooled', numShuffles, binEdgesHere, minspeed, shuffThresh, binsMin);
-            save(splitterFile,'binsAboveShuffle','thisCellSplits')
+            save(splitterFile,'binsAboveShuffle','thisCellSplits','CIbounds','whichBinsAboveShuffle')
+            %save(splitterFile,'CIbounds','whichBinsAboveShuffle','-append')
             toc
             end
             
+            % %{
             loadedSplit = load(splitterFile);
             
             binsAboveShuffle{slI}{stI}{mouseI} = loadedSplit.binsAboveShuffle;
             thisCellSplits{slI}{stI}{mouseI} = loadedSplit.thisCellSplits;
+            try
+            CIbounds{slI}{stI}{mouseI} = loadedSplit.CIbounds;
+            whichBinsAboveShuffle{slI}{stI}{mouseI} = loadedSplit.whichBinsAboveShuffle;
+            end
             
             [rateDiff{slI}{stI}{mouseI}, rateSplit{slI}{stI}{mouseI}, meanRateDiff{slI}{stI}{mouseI}, DIeach{slI}{stI}{mouseI},...
                 DImean{slI}{stI}{mouseI}, DIall{slI}{stI}{mouseI}] =...
@@ -402,12 +549,14 @@ for mouseI = 1:numMice
             [~, ~, ~, ~,...
                 DImeanUnpooled{slI}{stI}{mouseI}, DIallUnPooled{slI}{stI}{mouseI}] =...
                 LookAtSplitters4(unpooledTMap{slI}{mouseI}, unpooledCPs{stI}, []);
+            %}
             
             disp(['done ' splitterType{stI} ' on ' splitterLoc{slI} ' splitting for mouse ' num2str(mouseI)])
         end
     end
     %}
     %Delay splitters
+    %{
     splitterFile = fullfile(shuffleDir,['splittersLRdelay.mat']);
     if exist(splitterFile,'file')==0
         disp(['did not find delay splitting for mouse ' num2str(mouseI) ', making now'])
@@ -421,14 +570,427 @@ for mouseI = 1:numMice
             
     %binsAboveShuffle{3}{1}{mouseI} = loadedSplit.binsAboveShuffle;
     %thisCellSplits{3}{1}{mouseI} = loadedSplit.thisCellSplits;
-            
+            %}
 end
 disp('Done loading all splitting')
 
+%%  Half-trials consistency
+disp('running half trials for splitters')
+
+for slI = 1:length(splitterLoc)
+    for stI = 1:length(splitterType)
+        
+            halfSplitAsameLog{slI}{stI} = [];
+            halfSplitAsameLogReli{slI}{stI} = [];
+            halfSplitAsameLogReliAll{slI}{stI} = [];
+            halfSplitBsameLog{slI}{stI} = [];
+            halfSplitBsameLogReli{slI}{stI} = [];
+            halfSplitBsameLogReliAll{slI}{stI} = [];
+            
+            halfSplitAciLog{slI}{stI} = [];
+            halfSplitAciLogReli{slI}{stI} = [];
+            halfSplitAciLogReliAll{slI}{stI} = [];
+            halfSplitBciLog{slI}{stI} = [];
+            halfSplitBciLogReli{slI}{stI} = [];
+            halfSplitBciLogReliAll{slI}{stI} = [];
+            
+            halfSplitAciSigLog{slI}{stI} = [];
+            halfSplitAciSigLogReli{slI}{stI} = [];
+            halfSplitAciSigLogReliAll{slI}{stI} = [];
+            halfSplitBciSigLog{slI}{stI} = [];
+            halfSplitBciSigLogReli{slI}{stI} = [];
+            halfSplitBciSigLogReliAll{slI}{stI} = [];
+            %}
+            
+            rateDiffCorr.AvB.rhoLog{slI}{stI} = [];
+            rateDiffCorr.AvB.rhoLogReli{slI}{stI} = [];
+            rateDiffCorr.AvB.rhoLogReliAll{slI}{stI} = [];
+            
+            rateDiffCorr.AvB.pLog{slI}{stI} = [];
+            
+            rateDiffCorr.AvAll.rhoLog{slI}{stI} = [];
+            rateDiffCorr.AvAll.rhoLogReli{slI}{stI} = [];
+            rateDiffCorr.AvAll.rhoLogReliAll{slI}{stI} = [];
+            
+            rateDiffCorr.AvAll.pLog{slI}{stI} = [];
+            
+            rateDiffCorr.BvAll.rhoLog{slI}{stI} = [];
+            rateDiffCorr.BvAll.rhoLogReli{slI}{stI} = [];
+            rateDiffCorr.BvAll.rhoLogReliAll{slI}{stI} = [];
+            
+            rateDiffCorr.BvAll.pLog{slI}{stI} = [];
+        %}
+        
+         tmapAvBrho = [];
+         tmapAvBrhoReli = [];
+         tmapAvBrhoReliAll  = [];
+         tmapAvBpval  = [];
+         
+         tmapAvALLrho = [];
+         tmapAvALLrhoReli = [];
+         tmapAvALLrhoReliAll = [];
+         tmapAvALLpval = [];
+         
+         tmapBvALLrho = [];
+         tmapBvALLrhoReli = [];
+         tmapBvALLrhoReliAll = [];
+         tmapBvALLpval = [];
+    end
+end
+
+
+for mouseI = 1:numMice
+    [cellUnpooledTmap{mouseI}, ~, ~, ~, ~, ~, ~] =...
+            PFsLinTBTdnmp(cellTBT{mouseI}, stemBinEdges, minspeed, [], false,[1;2;3;4]);
+     trMax{mouseI} = max(trialReli{mouseI},[],3);
+end
+
+tic
+for shuffI = 1:100
+    disp(['running shuffle ' num2str(shuffI)])
+    
+for mouseI = 1:numMice 
+    for slI = 1:length(splitterLoc)
+        switch splitterLoc{slI}
+            case 'stem'
+                tbtHere = cellTBT{mouseI};
+                binEdgesHere = stemBinEdges;
+            case 'arm'
+                tbtHere = cellTBTarm{mouseI};
+                binEdgesHere = armBinEdges;
+        end
+        
+        %Split tbt
+        [tbtA, tbtB] = SplitTrialByTrial(tbtHere, 'random');
+         
+        % Check correlation of place fields
+        %{
+        [cellTMapA, ~, ~, ~, ~, ~, ~] =...
+            PFsLinTBTdnmp(tbtA, binEdgesHere, minspeed, [], false,[1;2;3;4]);
+        [cellTMapB, ~, ~, ~, ~, ~, ~] =...
+            PFsLinTBTdnmp(tbtB, binEdgesHere, minspeed, [], false,[1;2;3;4]);
+        
+        
+        rhoAvBtmap = nan(numCells(mouseI),numDays(mouseI));
+        pAvBtmap = nan(numCells(mouseI),numDays(mouseI));
+        rhoAvALLtmap = nan(numCells(mouseI),numDays(mouseI));
+        pAvALLtmap = nan(numCells(mouseI),numDays(mouseI));
+        rhoBvALLtmap = nan(numCells(mouseI),numDays(mouseI));
+        pBvALLtmap = nan(numCells(mouseI),numDays(mouseI));
+        
+        for cellI = 1:numCells(mouseI)
+                for dayI = 1:numDays(mouseI)
+                    if sum(trialReli{mouseI}(cellI,dayI,:),3) > 0
+                        
+                        [rhoAvBtmap(cellI,dayI),pAvBtmap(cellI,dayI)] = corr([cellTMapA{cellI,dayI,:}]',[cellTMapB{cellI,dayI,:}]','type','Spearman');
+                        [rhoAvALLtmap(cellI,dayI),pAvALLtmap(cellI,dayI)] = corr([cellTMapA{cellI,dayI,:}]',[cellUnpooledTmap{mouseI}{cellI,dayI,:}]','type','Spearman');
+                        [rhoBvALLtmap(cellI,dayI),pBvALLtmap(cellI,dayI)] = corr([cellTMapB{cellI,dayI,:}]',[cellUnpooledTmap{mouseI}{cellI,dayI,:}]','type','Spearman');
+                    end
+                end
+        end
+        
+        %Logs...
+         tmapAvBrho = [tmapAvBrho; rhoAvBtmap(~isnan(rhoAvBtmap))];
+         tmapAvBrhoReli = [tmapAvBrhoReli; trialReli{mouseI}(~isnan(rhoAvBtmap))];
+         tmapAvBrhoReliAll = [tmapAvBrhoReliAll; trialReliAll{mouseI}(~isnan(rhoAvBtmap))];
+         tmapAvBpval = [tmapAvBpval; pAvBtmap(~isnan(rhoAvBtmap))];
+         
+         tmapAvALLrho = [tmapAvALLrho; rhoAvALLtmap(~isnan(rhoAvALLtmap))];
+         tmapAvALLrhoReli = [tmapAvALLrhoReli; trialReli{mouseI}(~isnan(rhoAvALLtmap))];
+         tmapAvALLrhoReliAll = [tmapAvALLrhoReliAll; trialReliAll{mouseI}(~isnan(rhoAvALLtmap))];
+         tmapAvALLpval = [tmapAvALLpval; pAvALLtmap(~isnan(rhoAvALLtmap))];
+         
+         tmapBvALLrho = [tmapBvALLrho; rhoBvALLtmap(~isnan(rhoBvALLtmap))];
+         tmapBvALLrhoReli = [tmapBvALLrhoReli; trialReli{mouseI}(~isnan(rhoBvALLtmap))];
+         tmapBvALLrhoReliAll = [tmapBvALLrhoReliAll; trialReliAll{mouseI}(~isnan(rhoBvALLtmap))];
+         tmapBvALLpval = [tmapBvALLpval; pBvALLtmap(~isnan(rhoBvALLtmap))];
+            %}
+        
+         % Make new Tmaps
+        [cellTMapA, ~, ~, ~, ~, ~, ~] =...
+            PFsLinTBTdnmp(tbtA, binEdgesHere, minspeed, [], false,condPairs);
+        [cellTMapB, ~, ~, ~, ~, ~, ~] =...
+            PFsLinTBTdnmp(tbtB, binEdgesHere, minspeed, [], false,condPairs);
+          %}   
+          
+        
+        for stI = 1:length(splitterType)   
+            % Evaluate splitting, compare across and compare to CI bounds...
+            
+            [rateDiffSplitA{slI}{stI}{mouseI}, ~, meanRateDiffSplitA{slI}{stI}{mouseI}, ...
+                DIeachSplitA{slI}{stI}{mouseI}, DImeanSplitA{slI}{stI}{mouseI}, ~] =...
+                LookAtSplitters4(cellTMapA, splitterCPs{stI}, []);
+            [rateDiffSplitB{slI}{stI}{mouseI}, ~, meanRateDiffSplitB{slI}{stI}{mouseI}, ...
+                DIeachSplitB{slI}{stI}{mouseI}, DImeanSplitB{slI}{stI}{mouseI}, ~] =...
+                LookAtSplitters4(cellTMapB, splitterCPs{stI}, []);
+            
+            % Pre-allocate:
+            rateDiffCorrs.AvB{mouseI}{stI}{slI}.rho = nan(numCells(mouseI),numDays(mouseI));
+            rateDiffCorrs.AvB{mouseI}{stI}{slI}.p = nan(numCells(mouseI),numDays(mouseI));
+            rateDiffCorrs.AvAll{mouseI}{stI}{slI}.rho = nan(numCells(mouseI),numDays(mouseI));
+            rateDiffCorrs.AvAll{mouseI}{stI}{slI}.p = nan(numCells(mouseI),numDays(mouseI));
+            rateDiffCorrs.BvAll{mouseI}{stI}{slI}.rho = nan(numCells(mouseI),numDays(mouseI));
+            rateDiffCorrs.BvAll{mouseI}{stI}{slI}.p = nan(numCells(mouseI),numDays(mouseI));
+            
+            halfSplitAsame{mouseI}{stI}{slI} = nan(numCells(mouseI),numDays(mouseI)); % Splits in the same direction as original map
+            halfSplitBsame{mouseI}{stI}{slI} = nan(numCells(mouseI),numDays(mouseI));
+            halfSplitAci{mouseI}{stI}{slI} = nan(numCells(mouseI),numDays(mouseI)); % Splits outside of the confidence interval of the original trials
+            halfSplitBci{mouseI}{stI}{slI} = nan(numCells(mouseI),numDays(mouseI));
+            halfSplitAciSig{mouseI}{stI}{slI} = nan(numCells(mouseI),numDays(mouseI)); % Splits outside of the confidence interval of the original trials where above shuffle
+            halfSplitBciSig{mouseI}{stI}{slI} = nan(numCells(mouseI),numDays(mouseI));
+            %}
+            % Ask how much reliability improves by activity thresholds, try a bunch of different things
+            for cellI = 1:numCells(mouseI)
+                for dayI = 1:numDays(mouseI)
+                    if sum(trialReli{mouseI}(cellI,dayI,:),3) > 0
+                        
+                        
+                        % Correlations of rate differences 
+                        
+                        [rhoAvB,pValAvB] = corr(rateDiffSplitA{slI}{stI}{mouseI}{cellI,1}(:),rateDiffSplitB{slI}{stI}{mouseI}{cellI,1}(:),'Type','Spearman');  
+                        [rhoAvAll,pValAvAll] = corr(rateDiff{slI}{stI}{mouseI}{cellI,1}(:),rateDiffSplitA{slI}{stI}{mouseI}{cellI,1}(:),'Type','Spearman');  
+                        [rhoBvAll,pValBvAll] = corr(rateDiff{slI}{stI}{mouseI}{cellI,1}(:),rateDiffSplitB{slI}{stI}{mouseI}{cellI,1}(:),'Type','Spearman');  
+                        rateDiffCorrs.AvB{mouseI}{stI}{slI}.rho(cellI,dayI) = rhoAvB;    rateDiffCorrs.AvB{mouseI}{stI}{slI}.p(cellI,dayI) = pValAvB;
+                        rateDiffCorrs.AvAll{mouseI}{stI}{slI}.rho(cellI,dayI) = rhoAvAll;    rateDiffCorrs.AvAll{mouseI}{stI}{slI}.p(cellI,dayI) = pValAvAll;
+                        rateDiffCorrs.BvAll{mouseI}{stI}{slI}.rho(cellI,dayI) = rhoBvAll;    rateDiffCorrs.BvAll{mouseI}{stI}{slI}.p(cellI,dayI) = pValBvAll;
+                        
+                        % Are rate differences outside of CIbounds
+                        rateSplitsPos = rateDiff{slI}{stI}{mouseI}{cellI,1} > 0;
+                        rateSplitsNeg = rateDiff{slI}{stI}{mouseI}{cellI,1} < 0;
+
+                        ciHere = CIbounds{slI}{stI}{mouseI}{cellI,dayI}; % Somehow missing data here?
+                        binHere = whichBinsAboveShuffle{slI}{stI}{mouseI}{cellI,dayI};
+                            % ciHere: row 1 positive bounds, row 2 negative bound
+                        
+                        %ciHere = CIbounds{cellI,dayI};
+                        %binHere = whichBinsAboveShuffle{cellI,dayI};
+                        
+                        % Did it split in the same direction as original? (pctBins)
+                        halfSplitPosA = sum(rateDiffSplitA{slI}{stI}{mouseI}{cellI,1}(rateSplitsPos) > 0) / sum(rateSplitsPos);
+                        halfSplitPosB = sum(rateDiffSplitB{slI}{stI}{mouseI}{cellI,1}(rateSplitsPos) > 0) / sum(rateSplitsPos);
+                    
+                        halfSplitNegA = sum(rateDiffSplitA{slI}{stI}{mouseI}{cellI,1}(rateSplitsNeg) < 0) / sum(rateSplitsNeg);
+                        halfSplitNegB = sum(rateDiffSplitB{slI}{stI}{mouseI}{cellI,1}(rateSplitsNeg) < 0) / sum(rateSplitsNeg);
+                        
+                        halfSplitAsame{mouseI}{stI}{slI}(cellI,dayI) = nansum([halfSplitPosA halfSplitNegA]) / (any(rateSplitsPos) + any(rateSplitsNeg));
+                        halfSplitBsame{mouseI}{stI}{slI}(cellI,dayI) = nansum([halfSplitPosB halfSplitNegB]) / (any(rateSplitsPos) + any(rateSplitsNeg));
+                       
+                        % Was that split above the confidence interval?
+                        halfSplitPosAci = sum(rateDiffSplitA{slI}{stI}{mouseI}{cellI,1}(rateSplitsPos) > ciHere(1,rateSplitsPos)) / sum(rateSplitsPos);
+                        halfSplitPosBci = sum(rateDiffSplitB{slI}{stI}{mouseI}{cellI,1}(rateSplitsPos) > ciHere(1,rateSplitsPos)) / sum(rateSplitsPos);
+                    
+                        halfSplitNegAci = sum(rateDiffSplitA{slI}{stI}{mouseI}{cellI,1}(rateSplitsNeg) < ciHere(2,rateSplitsNeg)) / sum(rateSplitsNeg);
+                        halfSplitNegBci = sum(rateDiffSplitB{slI}{stI}{mouseI}{cellI,1}(rateSplitsNeg) < ciHere(2,rateSplitsNeg)) / sum(rateSplitsNeg);
+                        
+                        halfSplitAci{mouseI}{stI}{slI}(cellI,dayI) =  nansum([halfSplitPosAci halfSplitNegAci]) / (any(rateSplitsPos) + any(rateSplitsNeg));
+                        halfSplitBci{mouseI}{stI}{slI}(cellI,dayI) =  nansum([halfSplitPosBci halfSplitNegBci]) / (any(rateSplitsPos) + any(rateSplitsNeg));
+                        
+                        % Was that split above the confidernce interval in the bins that significantly split?
+                        halfSplitPosAciSig(cellI,dayI) = sum(rateDiffSplitA{slI}{stI}{mouseI}{cellI,1}(rateSplitsPos & binHere) > ciHere(1,rateSplitsPos & binHere)) / sum(rateSplitsPos & binHere);
+                        halfSplitPosBciSig(cellI,dayI) = sum(rateDiffSplitB{slI}{stI}{mouseI}{cellI,1}(rateSplitsPos & binHere) > ciHere(1,rateSplitsPos & binHere)) / sum(rateSplitsPos & binHere);
+                    
+                        halfSplitNegAciSig(cellI,dayI) = sum(rateDiffSplitA{slI}{stI}{mouseI}{cellI,1}(rateSplitsNeg & binHere) < ciHere(2,rateSplitsNeg & binHere)) / sum(rateSplitsNeg & binHere);
+                        halfSplitNegBciSig(cellI,dayI) = sum(rateDiffSplitB{slI}{stI}{mouseI}{cellI,1}(rateSplitsNeg & binHere) < ciHere(2,rateSplitsNeg & binHere)) / sum(rateSplitsNeg & binHere);
+                        
+                        halfSplitAciSig{mouseI}{stI}{slI}(cellI,dayI) =  nansum([halfSplitPosAciSig(cellI,dayI) halfSplitNegAciSig(cellI,dayI)]) / (any(rateSplitsPos) + any(rateSplitsNeg));
+                        halfSplitBciSig{mouseI}{stI}{slI}(cellI,dayI) =  nansum([halfSplitPosBciSig(cellI,dayI) halfSplitNegBciSig(cellI,dayI)]) / (any(rateSplitsPos) + any(rateSplitsNeg));
+                        %}
+                        
+                    end
+                end
+            end
+            
+            % Make a big log so we can filter success accoring to reliability
+            
+            halfSplitAsameLog{slI}{stI} = [halfSplitAsameLog{slI}{stI}; halfSplitAsame{mouseI}{stI}{slI}(~isnan(halfSplitAsame{mouseI}{stI}{slI}))];
+            halfSplitAsameLogReli{slI}{stI} = [halfSplitAsameLogReli{slI}{stI}; trMax{mouseI}(~isnan(halfSplitAsame{mouseI}{stI}{slI}))];
+            halfSplitAsameLogReliAll{slI}{stI} = [halfSplitAsameLogReliAll{slI}{stI}; trialReliAll{mouseI}(~isnan(halfSplitAsame{mouseI}{stI}{slI}))];
+            halfSplitBsameLog{slI}{stI} = [halfSplitBsameLog{slI}{stI}; halfSplitBsame{mouseI}{stI}{slI}(~isnan(halfSplitBsame{mouseI}{stI}{slI}))];
+            halfSplitBsameLogReli{slI}{stI} = [halfSplitBsameLogReli{slI}{stI}; trMax{mouseI}(~isnan(halfSplitBsame{mouseI}{stI}{slI}))];
+            halfSplitBsameLogReliAll{slI}{stI} = [halfSplitBsameLogReliAll{slI}{stI}; trialReliAll{mouseI}(~isnan(halfSplitBsame{mouseI}{stI}{slI}))];
+            
+            halfSplitAciLog{slI}{stI} = [halfSplitAciLog{slI}{stI}; halfSplitAci{mouseI}{stI}{slI}(~isnan(halfSplitAci{mouseI}{stI}{slI}))];
+            halfSplitAciLogReli{slI}{stI} = [halfSplitAciLogReli{slI}{stI}; trMax{mouseI}(~isnan(halfSplitAci{mouseI}{stI}{slI}))];
+            halfSplitAciLogReliAll{slI}{stI} = [halfSplitAciLogReliAll{slI}{stI}; trialReliAll{mouseI}(~isnan(halfSplitAci{mouseI}{stI}{slI}))];
+            halfSplitBciLog{slI}{stI} = [halfSplitBciLog{slI}{stI}; halfSplitBci{mouseI}{stI}{slI}(~isnan(halfSplitBci{mouseI}{stI}{slI}))];
+            halfSplitBciLogReli{slI}{stI} = [halfSplitBciLogReli{slI}{stI}; trMax{mouseI}(~isnan(halfSplitBci{mouseI}{stI}{slI}))];
+            halfSplitBciLogReliAll{slI}{stI} = [halfSplitBciLogReliAll{slI}{stI}; trialReliAll{mouseI}(~isnan(halfSplitBci{mouseI}{stI}{slI}))];
+            
+            halfSplitAciSigLog{slI}{stI} = [halfSplitAciSigLog{stI}{slI}; halfSplitAciSig{mouseI}{stI}{slI}(~isnan(halfSplitAciSig{mouseI}{stI}{slI}))];
+            halfSplitAciSigLogReli{slI}{stI} = [halfSplitAciSigLogReli{stI}{slI}; trMax{mouseI}(~isnan(halfSplitAciSig{mouseI}{stI}{slI}))];
+            halfSplitAciSigLogReliAll{slI}{stI} = [halfSplitAciSigLogReliAll{stI}{slI}; trialReliAll{mouseI}(~isnan(halfSplitAciSig{mouseI}{stI}{slI}))];
+            halfSplitBciSigLog{slI}{stI} = [halfSplitBciSigLog{stI}{slI}; halfSplitBciSig{mouseI}{stI}{slI}(~isnan(halfSplitBciSig{mouseI}{stI}{slI}))];
+            halfSplitBciSigLogReli{slI}{stI} = [halfSplitBciSigLogReli{stI}{slI}; trMax{mouseI}(~isnan(halfSplitBciSig{mouseI}{stI}{slI}))];
+            halfSplitBciSigLogReliAll{slI}{stI} = [halfSplitBciSigLogReliAll{stI}{slI}; trialReliAll{mouseI}(~isnan(halfSplitBciSig{mouseI}{stI}{slI}))];
+            %}
+            
+            rateDiffCorr.AvB.rhoLog{slI}{stI} = [rateDiffCorr.AvB.rhoLog{slI}{stI}; rateDiffCorrs.AvB{mouseI}{stI}{slI}.rho(~isnan(rateDiffCorrs.AvB{mouseI}{stI}{slI}.rho))];
+            rateDiffCorr.AvB.rhoLogReli{slI}{stI} = [rateDiffCorr.AvB.rhoLogReli{slI}{stI}; trMax{mouseI}(~isnan(rateDiffCorrs.AvB{mouseI}{stI}{slI}.rho))];
+            rateDiffCorr.AvB.rhoLogReliAll{slI}{stI} = [rateDiffCorr.AvB.rhoLogReliAll{slI}{stI}; trialReliAll{mouseI}(~isnan(rateDiffCorrs.AvB{mouseI}{stI}{slI}.rho))];
+            
+            rateDiffCorr.AvB.pLog{slI}{stI} = [rateDiffCorr.AvB.pLog{slI}{stI}; rateDiffCorrs.AvB{mouseI}{stI}{slI}.p(~isnan(rateDiffCorrs.AvB{mouseI}{stI}{slI}.rho))];
+                                                                                
+            rateDiffCorr.AvAll.rhoLog{slI}{stI} = [rateDiffCorr.AvAll.rhoLog{slI}{stI}; rateDiffCorrs.AvAll{mouseI}{stI}{slI}.rho(~isnan(rateDiffCorrs.AvAll{mouseI}{stI}{slI}.rho))];
+            rateDiffCorr.AvAll.rhoLogReli{slI}{stI} = [rateDiffCorr.AvAll.rhoLogReli{slI}{stI}; trMax{mouseI}(~isnan(rateDiffCorrs.AvAll{mouseI}{stI}{slI}.rho))];
+            rateDiffCorr.AvAll.rhoLogReliAll{slI}{stI} = [rateDiffCorr.AvAll.rhoLogReliAll{slI}{stI}; trialReliAll{mouseI}(~isnan(rateDiffCorrs.AvAll{mouseI}{stI}{slI}.rho))];
+            
+            rateDiffCorr.AvAll.pLog{slI}{stI} = [rateDiffCorr.AvAll.pLog{slI}{stI}; rateDiffCorrs.AvAll{mouseI}{stI}{slI}.p(~isnan(rateDiffCorrs.AvAll{mouseI}{stI}{slI}.rho))];
+            
+            rateDiffCorr.BvAll.rhoLog{slI}{stI} = [rateDiffCorr.BvAll.rhoLog{slI}{stI}; rateDiffCorrs.BvAll{mouseI}{stI}{slI}.rho(~isnan(rateDiffCorrs.BvAll{mouseI}{stI}{slI}.rho))];
+            rateDiffCorr.BvAll.rhoLogReli{slI}{stI} = [rateDiffCorr.BvAll.rhoLogReli{slI}{stI}; trMax{mouseI}(~isnan(rateDiffCorrs.BvAll{mouseI}{stI}{slI}.rho))];
+            rateDiffCorr.BvAll.rhoLogReliAll{slI}{stI} = [rateDiffCorr.BvAll.rhoLogReliAll{slI}{stI}; trialReliAll{mouseI}(~isnan(rateDiffCorrs.BvAll{mouseI}{stI}{slI}.rho))];
+            
+            rateDiffCorr.BvAll.pLog{slI}{stI} = [rateDiffCorr.BvAll.pLog{slI}{stI}; rateDiffCorrs.BvAll{mouseI}{stI}{slI}.p(~isnan(rateDiffCorrs.BvAll{mouseI}{stI}{slI}.rho))];
+            %}
+            
+                        
+        end
+    end
+end
+
+end
+toc
+
+trialReliSteps = 0:0.01:0.5;
+for slI = 1:length(splitterLoc)
+    for stI = 1:length(splitterType)
+
+        for trsI = 1:length(trialReliSteps)
+            %{
+            aStuff = tmapAvBpval(tmapAvBrhoReli >= trialReliSteps(trsI));
+            avbMean(trsI) = mean(aStuff); avbSem(trsI) = standarderrorSL(aStuff);
+            
+            aStuff = tmapAvALLpval(tmapAvALLrhoReli >= trialReliSteps(trsI));
+            bStuff = tmapBvALLpval(tmapBvALLrhoReli >= trialReliSteps(trsI));
+            
+            AvALLmean(trsI) = mean(aStuff); AvALLsem(trsI) = standarderrorSL(aStuff);
+            BvALLmean(trsI) = mean(bStuff); BvALLsem(trsI) = standarderrorSL(bStuff);
+            ABvALLmean(trsI) = mean([aStuff; bStuff]); ABALLsem(trsI) = standarderrorSL([aStuff; bStuff]);
+            %}
+            %figure; plot(trialReliSteps,avbMean)
+            
+            
+            % Pct bins split same direction
+            aStuff = ...
+                halfSplitAsameLog{slI}{stI}(halfSplitAsameLogReli{slI}{stI} >= trialReliSteps(trsI));
+            bStuff = ...
+                halfSplitBsameLog{slI}{stI}(halfSplitBsameLogReli{slI}{stI} >= trialReliSteps(trsI));
+
+            halfSplitSameMean{slI,stI}(trsI) = mean([aStuff; bStuff]);
+            halfSplitSameStd{slI,stI}(trsI) = standarderrorSL([aStuff; bStuff]);
+            
+            aStuff = ...
+                halfSplitAsameLog{slI}{stI}(halfSplitAsameLogReli{1}{1} >= trialReliSteps(trsI));
+            bStuff = ...
+                halfSplitBsameLog{slI}{stI}(halfSplitBsameLogReli{1}{1} >= trialReliSteps(trsI));
+            cStuff = ...
+                halfSplitAsameLog{slI}{stI}(halfSplitAsameLogReli{1}{2} >= trialReliSteps(trsI));
+            dStuff = ...
+                halfSplitBsameLog{slI}{stI}(halfSplitBsameLogReli{1}{2} >= trialReliSteps(trsI));
+            
+            hssMean(trsI) =  mean([aStuff; bStuff; cStuff; dStuff]);
+            hssSEM(trsI) =  standarderrorSL([aStuff; bStuff; cStuff; dStuff]);
+            hssStd(trsI) =  std([aStuff; bStuff; cStuff; dStuff]);
+            
+            
+            % Pct bins split above 95% of shuffles
+            aStuff = ...
+                halfSplitAciLog{slI}{stI}(halfSplitAciLogReli{slI}{stI} >= trialReliSteps(trsI));
+            bStuff = ...
+                halfSplitBciLog{slI}{stI}(halfSplitBciLogReli{slI}{stI} >= trialReliSteps(trsI));
+
+            halfSplitCImean{slI,stI}(trsI) = mean([aStuff; bStuff]);
+            
+            % Pct bins where originally significant here split above 95% of shuffles
+            aStuff = ...
+                halfSplitAciSigLog{slI}{stI}(halfSplitAciSigLogReli{slI}{stI} >= trialReliSteps(trsI));
+            bStuff = ...
+                halfSplitBciSigLog{slI}{stI}(halfSplitBciSigLogReli{slI}{stI} >= trialReliSteps(trsI));
+
+            halfSplitCIsigMean{slI,stI}(trsI) = mean([aStuff; bStuff]);
+            halfSplitCIsigStd{slI,stI}(trsI) = std([aStuff; bStuff]);
+            
+            % AvB rateDiffCorr p vals
+            aStuff = rateDiffCorr.AvB.pLog{slI}{stI}(rateDiffCorr.AvB.rhoLogReli{slI}{stI} >= trialReliSteps(trsI));
+            rateDiffCorrAvBpVals{slI,stI}(trsI) = mean(aStuff);
+            
+            % AvAll rateDiffCorr p vals
+            aStuff = rateDiffCorr.AvAll.pLog{slI}{stI}(rateDiffCorr.AvAll.rhoLogReli{slI}{stI} >= trialReliSteps(trsI));
+            rateDiffCorrAvALLpVals{slI,stI}(trsI) = mean(aStuff);
+            
+            % BvAll rateDiffCorr p vals
+            aStuff = rateDiffCorr.BvAll.pLog{slI}{stI}(rateDiffCorr.BvAll.rhoLogReli{slI}{stI} >= trialReliSteps(trsI));
+            rateDiffCorrBvALLpVals{slI,stI}(trsI) = mean(aStuff);
+            %}
+        end
+    end
+end
+
+figure; 
+errorbar(trialReliSteps,hssMean,hssSEM,'r')
+
+figure; 
+errorbar(trialReliSteps,halfSplitSameMean{1,1},halfSplitSameStd{1,1},'r')
+hold on
+errorbar(trialReliSteps,halfSplitSameMean{1,2},halfSplitSameStd{1,2},'b')
+ylim([0.6 0.8])
+xlabel('Reliability Threshold')
+title('Mean pct bins Split same dir')
+MakePlotPrettySL(gca);
+
+figure; 
+subplot(1,3,1)
+    plot(trialReliSteps,halfSplitSameMean{1,1},'r')
+    hold on
+    plot(trialReliSteps,halfSplitSameMean{1,2},'b')
+    xlabel('Max Trial-type reli')
+    title('Mean pct bins Split same dir')
+subplot(1,3,2)
+    plot(trialReliSteps,halfSplitCImean{1,1},'r')
+    hold on
+    plot(trialReliSteps,halfSplitCImean{1,2},'b')
+    title('Mean pct bins Split above shuffle')
+subplot(1,3,3)
+    plot(trialReliSteps,halfSplitCIsigMean{1,1},'r')
+    hold on
+    plot(trialReliSteps,halfSplitCIsigMean{1,2},'b')
+    title('Mean pct bins Split above shuffle in sig splitter bins')
+    suptitleSL('Reliability of half of trials to original')
+  
+    
+figure; 
+subplot(1,3,1)
+    plot(trialReliSteps,rateDiffCorrAvBpVals{1,1},'r')
+    hold on
+    plot(trialReliSteps,rateDiffCorrAvBpVals{1,2},'b')
+    xlabel('Max Trial-type reli')
+    title('Half A vs. Half B')
+subplot(1,3,2)
+    plot(trialReliSteps,rateDiffCorrAvALLpVals{1,1},'r')
+    hold on
+    plot(trialReliSteps,rateDiffCorrAvALLpVals{1,2},'b')
+    title('Half A vs. Original')
+subplot(1,3,3)
+    plot(trialReliSteps,rateDiffCorrBvALLpVals{1,1},'r')
+    hold on
+    plot(trialReliSteps,rateDiffCorrBvALLpVals{1,2},'b')
+    title('Half B vs. Original')
+suptitleSL('Rate difference correlations')
+    
+disp('done half trials consistency')
 %% Splitter cells: logical each type
 dayUseFilter = {dayUse; dayUseArm}; 
 %dayUseFilter = {dayUsePooled; dayUseArmPooled};
-%dayUseFilter = {cellfun(@(x) ones(size(x)),dayUse,'UniformOutput',false); cellfun(@(x) ones(size(x)),dayUseArm,'UniformOutput',false)};
+% All cells ever
+%    dayUseFilter = {cellfun(@(x) ones(size(x)),dayUse,'UniformOutput',false); cellfun(@(x) ones(size(x)),dayUseArm,'UniformOutput',false)};
+% All cells that pass shuffle/fire at least once
+%    dayUseFilter = {cellfun(@(x) sum(x,3)>0,trialReli,'UniformOutput',false); cellfun(@(x) sum(x,3)>0,trialReliArm,'UniformOutput',false)};   
+% Cells that pass 0.25 with all trials
+%    dayUseFilter = {cellfun(@(x) x>=lapPctThresh,trialReliAll,'UniformOutput',false); cellfun(@(x) x>=lapPctThresh,trialReliAllArms,'UniformOutput',false)}; 
+% All cells present that day    
+    %dayUseFilter = {cellfun(@(x) x>0,cellSSI,'UniformOutput',false); cellfun(@(x) x>0,cellSSI,'UniformOutput',false)};   %Should just include all cells that pass shuffle...
+% thresh but not consec
+    dayUseFilter = {cellfun(@(x) sum(x>=lapPctThresh,3)>0,trialReli,'UniformOutput',false); cellfun(@(x) sum(x>=lapPctThresh,3)>0,trialReliArm,'UniformOutput',false)}; 
 
 splitterCells = [];
 for mouseI = 1:numMice
@@ -477,6 +1039,15 @@ numPairsCompare = size(pairsCompare,1);
 
 disp('Done splitter logicals')
 
+for mouseI = 1:numMice
+    nSplitters(mouseI) = sum(sum(logical(traitGroups{1}{mouseI}{7})));
+    nHere(mouseI) = sum(sum(dayUseFilter{1}{mouseI}));
+    
+    %everSplitHere{mouseI} = sum( sum(logical(traitGroups{1}{mouseI}{7}),2)>0);
+    
+    uniqueObservations(mouseI) = sum(sum(cellSSI{mouseI}>0));
+end
+
 %% How many each type per day?
 pooledSplitProp = [];
 splitPropEachDay = [];
@@ -511,6 +1082,397 @@ for slI = 1:2
 end
 
 disp('Done how many splitters')
+
+%% Splitters by reliability steps
+slI = 1;
+trialReliSteps = 0:0.01:0.5;
+%trialReliSteps = 0:1:12; % For number of laps active
+
+propsRho = []; propsCorrPval = [];
+splitNumMean = []; splitNumStd = [];
+dayUseFilter = [];
+for trsI = 1:length(trialReliSteps)
+    
+    splitterCells = [];
+    for mouseI = 1:numMice
+        %dayUseFilter{1}{mouseI} = sum(trialReli{mouseI} >= trialReliSteps(trsI),3)>0; % Original trial-type specific reliability
+                	%sum(trialReliArm{mouseI} >= trialReliSteps(trsI),3)>0}; 
+        dayUseFilter{1}{mouseI} = trialReliAll{mouseI} >= trialReliSteps(trsI); % Reliability across all trials
+        %dayUseFilter{1}{mouseI} = (sum(lapsActive{mouseI},3) >= trialReliSteps(trsI))>0; % number of laps active
+        
+        numCellsHere{slI}(trsI,mouseI) = sum(sum(dayUseFilter{1}{mouseI}));
+        pctCellsHere{slI}(trsI,mouseI) = mean(sum(dayUseFilter{1}{mouseI},1) ./ sum(cellSSI{mouseI}>0,1));
+        for stI = 1:length(splitterType)
+                %Filter for active cells
+                splitterCells{slI}{stI}{mouseI} = thisCellSplits{slI}{stI}{mouseI}.*dayUseFilter{slI}{mouseI};
+
+                %Get different splitting types
+                switch splitterType{stI}
+                    case 'LR'
+                        splittersLR{slI}{mouseI} = splitterCells{slI}{stI}{mouseI};
+                    case 'ST'
+                        splittersST{slI}{mouseI} = splitterCells{slI}{stI}{mouseI};
+                end            
+            end
+        [splittersLRonly{slI}{mouseI}, splittersSTonly{slI}{mouseI}, splittersBoth{slI}{mouseI},...
+            splittersOne{slI}{mouseI}, splittersAny{slI}{mouseI}, splittersNone{slI}{mouseI}] = ...
+            GetSplittingTypes(splittersLR{slI}{mouseI}, splittersST{slI}{mouseI}, dayUseFilter{slI}{mouseI});
+            
+        %Package into trait logicals
+        traitGroups{slI}{mouseI} = {logical(splittersLR{slI}{mouseI});... 
+                                    logical(splittersST{slI}{mouseI});... 
+                                    logical(splittersLRonly{slI}{mouseI});... 
+                                    logical(splittersSTonly{slI}{mouseI}); ...
+                                    logical(splittersBoth{slI}{mouseI}); ...
+                                    logical(splittersOne{slI}{mouseI});... 
+                                    logical(splittersAny{slI}{mouseI}); ...
+                                    logical(splittersNone{slI}{mouseI})};
+                                
+        splitPropEachDay{slI}{mouseI} = RunGroupFunction('TraitDailyPct',traitGroups{slI}{mouseI},dayUseFilter{slI}{mouseI});
+        splitNumsEachDay{slI}{mouseI} = RunGroupFunction('TraitNums',traitGroups{slI}{mouseI},[]);
+        
+        
+    end
+    
+    thingsNow = [3     4     5     8];
+    for ii = 1:4
+        pooledHere = [];
+            daysHere = [];
+        for mouseI = 1:numMice
+             dayss = cellRealDays{mouseI} - (cellRealDays{mouseI}(1)-1);
+             splitPropHere = splitPropEachDay{slI}{mouseI}{thingsNow(ii)};
+             pooledHere = [pooledHere; splitPropHere(:)];
+             daysHere = [daysHere; dayss];   
+        end
+
+        [propsRho(trsI,ii),propsCorrPval(trsI,ii)] = corr(daysHere,pooledHere,'type','Spearman');
+
+        snH = [];
+        for mouseI = 1:numMice
+            snH = [snH; splitNumsEachDay{slI}{mouseI}{thingsNow(ii)}(:)];
+        end
+        splitNumMean(trsI,ii) = mean(snH);
+        splitNumStd(trsI,ii) = std(snH);
+
+    end
+end
+  
+figure;
+for ii = 1:4
+    subplot(2,2,ii)
+    rhoHere = propsRho(:,ii);
+    pHere = propsCorrPval(:,ii);
+    
+    %{
+    pGood = pHere<=0.05;
+    pBad = pHere > 0.05;
+    yyaxis left
+    plot(trialReliSteps(pBad),rhoHere(pBad),'.','MarkerSize',6)
+    hold on
+    plot(trialReliSteps(pGood),rhoHere(pGood),'*')
+    ylabel('rho value')
+    
+    yyaxis right
+    plot([trialReliSteps([1 end])],[0.05 0.05],'r--')
+    hold on
+    plot([trialReliSteps([1 end])],[0.1 0.1],'k--')
+    
+    plot(trialReliSteps(pBad),pHere(pBad),'.','MarkerSize',6)
+    hold on
+    plot(trialReliSteps(pGood),pHere(pGood),'*')
+    ylabel('p value')
+    %}
+    
+    pGood = pHere<=0.05;
+    pMed = (pHere > 0.05) & (pHere<=0.1);
+    pBad = pHere > 0.1;
+    plot(trialReliSteps(pBad),rhoHere(pBad),'.','MarkerSize',6)
+    hold on
+    plot(trialReliSteps(pMed),rhoHere(pMed),'+')
+    plot(trialReliSteps(pGood),rhoHere(pGood),'*')
+    ylabel('rho value')
+    
+    xlabel('Reliability threshold')
+    
+    title(traitLabels{thingsNow(ii)})
+    
+    MakePlotPrettySL(gca);
+    %xlim([0 0.3])
+end
+suptitleSL('Correlations of daily splitter proportions by reliability threshold: number laps active')
+
+figure;
+nCellsHere = sum(numCellsHere{1},2);
+plot(trialReliSteps,nCellsHere)
+ylim([0 15000])
+ xlabel('Reliability threshold')
+title('Total number cells*days included') 
+MakePlotPrettySL(gca)
+ 
+figure;
+nCellsHere = mean(pctCellsHere{1},2);
+plot(trialReliSteps,nCellsHere)
+ylim([0 0.5])
+ xlabel('Reliability threshold')
+title('Mean prop cells per day')
+MakePlotPrettySL(gca)
+
+%{
+figure;
+for ii = 1:4
+    subplot(2,2,ii)
+    
+    plot([min(trialReliSteps) max(trialReliSteps)],[0 0],'k--')
+    hold on
+    errorbar(trialReliSteps,splitNumMean(:,ii),splitNumStd(:,ii))
+end
+        %}
+
+%% Lap duration dist. analysis
+% Get lap lengths, binary whether or not a cell fired
+% thisCellSplits{slI}{stI}{mouseI} just says did this cell have a bin above shuffle in 
+
+% For each cell, get the lengths of the laps it fired on
+lapLengths = [];
+cff = [];
+cellFired = [];
+for mouseI = 1:numMice
+    
+    for condI = 1:4
+        lapLengths{mouseI}{condI} = cell2mat(cellfun(@length,cellTBT{mouseI}(condI).trialsX,'UniformOutput',false));
+        cff{mouseI}{condI} = cellfun(@(x) sum(x,2)>0,cellTBT{mouseI}(condI).trialPSAbool,'UniformOutput',false);
+        
+        cellFired{mouseI}{condI} = cell2mat(cff{mouseI}{condI}')'; % Reorganized: (lapI,cellI)
+    end
+    lapLengthsZ{mouseI} = cell(1,4); % lap lengths Z scored within a day and across conditions
+    
+    for dayI = 1:numDays(mouseI)
+        lengthsA = [];
+        cmA = [];
+        for condI = 1:4
+            dayTrialsH = cellTBT{mouseI}(condI).sessID==dayI;
+            lengthsHere = lapLengths{mouseI}{condI}(dayTrialsH);
+            cMarker = condI*ones(size(lengthsHere));
+            lengthsA = [lengthsA; lengthsHere];
+            cmA = [cmA; cMarker];
+            
+            lapLengthsDayMean{mouseI}(dayI,condI) = mean(lengthsHere);
+        end
+        lengthsAz = zscore(lengthsA);
+        for condI = 1:4
+            lapLengthsZ{mouseI}{condI} = [lapLengthsZ{mouseI}{condI}; lengthsAz(cmA==condI)];
+            lapLengthsDayMeanZ{mouseI}(dayI,condI) = mean(lapLengthsZ{mouseI}{condI});
+        end
+    end
+end
+
+% Get the z-scored lengths of laps when a cell fired
+cellFiredLapLengths = [];
+cellFiredLapLengthsMean = [];
+cellFiredLapLengthsZ = [];
+cellFiredLapLengthsZmean = [];
+
+xcellFiredLapLengths = [];
+xcellFiredLapLengthsMean = [];
+xcellFiredLapLengthsZ = [];
+xcellFiredLapLengthsZmean = [];
+for mouseI = 1:numMice
+    for dayI = 1:numDays(mouseI)
+        for condI = 1:4
+            dayTrialsH = cellTBT{mouseI}(condI).sessID==dayI;
+            lapsH{condI,1} = lapLengthsZ{mouseI}{condI}(dayTrialsH);
+            
+            for cellI = 1:numCells(mouseI)
+                % Lengths of laps where this cell fired
+                cellFiredH = cellFired{mouseI}{condI}(:,cellI);
+                
+                cellFiredLapLengths{mouseI}{dayI}{cellI}{condI} = lapLengths{mouseI}{condI}(dayTrialsH(:) & cellFiredH(:));
+                cellFiredLapLengthsMean{mouseI}{dayI}{cellI}{condI} = mean( cellFiredLapLengths{mouseI}{dayI}{cellI}{condI} );
+                cellFiredLapLengthsZ{mouseI}{dayI}{cellI}{condI} = lapLengthsZ{mouseI}{condI}(dayTrialsH(:) & cellFiredH(:));
+                cellFiredLapLengthsZmean{mouseI}{dayI}{cellI}{condI} = mean( cellFiredLapLengthsZ{mouseI}{dayI}{cellI}{condI} );
+                
+                % Lenghts of laps where this cell DID NOT fire
+                xcellFiredH = ~cellFired{mouseI}{condI}(:,cellI);
+                
+                xcellFiredLapLengths{mouseI}{dayI}{cellI}{condI} = lapLengths{mouseI}{condI}(dayTrialsH(:) & xcellFiredH(:));
+                xcellFiredLapLengthsMean{mouseI}{dayI}{cellI}{condI} = mean( xcellFiredLapLengths{mouseI}{dayI}{cellI}{condI} );
+                xcellFiredLapLengthsZ{mouseI}{dayI}{cellI}{condI} = lapLengthsZ{mouseI}{condI}(dayTrialsH(:) & xcellFiredH(:));
+                xcellFiredLapLengthsZmean{mouseI}{dayI}{cellI}{condI} = mean( xcellFiredLapLengthsZ{mouseI}{dayI}{cellI}{condI} );
+            end
+        end
+    end
+end
+
+% Compare lap lengths fired to cell's reliability 
+% Likelihood of surviving shuffle given lengths of laps active / diff
+% across conditions in laps active
+slI = 1;
+for stI = 1:length(splitterType)
+    
+    for mouseI = 1:numMice
+        lapLengthsDiff{stI}{mouseI} = nan(size(cellSSI{mouseI}));
+        lapLengthsDiffZ{stI}{mouseI} = nan(size(cellSSI{mouseI}));
+        xlapLengthsDiff{stI}{mouseI} = nan(size(cellSSI{mouseI}));
+        xlapLengthsDiffZ{stI}{mouseI} = nan(size(cellSSI{mouseI}));
+        % If a cell was active this day does it survive a shuffle yes or no, what is the mean zscore of lap lengths active 
+        for dayI = 1:numDays(mouseI)
+            for cellI = 1:numCells(mouseI)
+                if sum(trialReli{mouseI}(cellI,dayI,:),3) > 0                    
+                    switch splitterType{stI}
+                        case 'LR'
+                            condsA = Conds.Left;
+                            condsB = Conds.Right;
+                        case 'ST'
+                            condsA = Conds.Study;
+                            condsB = Conds.Test;
+                    end
+                    % meanRateDiff{1}{1} will be negative where splits left, positive where splits right
+                    % meanRateDiff{1}{2} will be negative where splits study, positive where splits test
+                    if meanRateDiff{slI}{stI}{mouseI}(cellI,dayI) < 0
+                        condsC = condsB;
+                        condsB = condsA;
+                        condsA = condsC;
+                    end
+                    % This makes it so the sign will be positive if the lap
+                    % lengths from the conditions it splits towards are longer than those from the other conditions
+
+                    meanLengthsH = cell2mat(cellFiredLapLengthsMean{mouseI}{dayI}{cellI});
+                    %meanLengthsH(isnan(meanLengthsH)) = 0;
+                    ZmeanLengthsH = cell2mat(cellFiredLapLengthsZmean{mouseI}{dayI}{cellI});
+                    %ZmeanLengthsH(isnan(ZmeanLengthsH)) = 0;
+                    
+                    % lapLengthsDiff will be positive if B has longer trials than A
+                    mlHa = nanmean(meanLengthsH(condsA)); 
+                        if isnan(mlHa); mlHa = 0; end
+                    mlHb = nanmean(meanLengthsH(condsB));
+                        if isnan(mlHb); mlHb = 0; end
+                    lapLengthsDiff{stI}{mouseI}(cellI,dayI) = mlHb - mlHa;
+
+                    zmlHa = nanmean(ZmeanLengthsH(condsA)); 
+                        if isnan(zmlHa); zmlHa = 0; end
+                    zmlHb = nanmean(ZmeanLengthsH(condsB));
+                        if isnan(zmlHb); zmlHb = 0; end
+                    lapLengthsDiffZ{stI}{mouseI}(cellI,dayI) = zmlHb - zmlHa;
+                    
+                    % Same but trials it didn't fire on:
+                    % Will be positive if lengths of laps it didn't fire on
+                    % are longer in condition it splits towards than in those it didn't
+                    % and negative if laps it didn't fire on are longer in
+                    % the condition it didn't fire on and than in condition it did
+                    
+                    xmeanLengthsH = cell2mat(xcellFiredLapLengthsMean{mouseI}{dayI}{cellI});
+                    %meanLengthsH(isnan(meanLengthsH)) = 0;
+                    xZmeanLengthsH = cell2mat(xcellFiredLapLengthsZmean{mouseI}{dayI}{cellI});
+                    
+                    mlHa = nanmean(xmeanLengthsH(condsA)); 
+                        if isnan(mlHa); mlHa = 0; end
+                    mlHb = nanmean(xmeanLengthsH(condsB));
+                        if isnan(mlHb); mlHb = 0; end
+                    xlapLengthsDiff{stI}{mouseI}(cellI,dayI) = mlHb - mlHa;
+
+                    zmlHa = nanmean(xZmeanLengthsH(condsA)); 
+                        if isnan(zmlHa); zmlHa = 0; end
+                    zmlHb = nanmean(xZmeanLengthsH(condsB));
+                        if isnan(zmlHb); zmlHb = 0; end
+                    xlapLengthsDiffZ{stI}{mouseI}(cellI,dayI) = zmlHb - zmlHa;
+                end
+            end
+        end
+        % rateDiff{slI}{stI}{mouseI}
+        %lapLengthsDiff{stI}{mouseI} = lapLengthsDiff{stI}{mouseI} * -1*(meanRateDiff{slI}{stI}{mouseI}>0);
+    end
+end
+
+% Ok Here actually sort out survival by lap length differences, compare that to thresholding
+trialReliSteps = 0:0.01:0.5;
+for trsI = 1:length(trialReliSteps)
+    
+    for mouseI = 1:numMice
+        cellHere = sum(trialReli{mouseI}> trialReliSteps(trsI),3)>0 ;
+        numHere = sum(cellHere,1);    
+
+        for stI = 1:length(splitterType)
+            % Cells that are here and split vs. dont
+            hereAndSplit = (thisCellSplits{1}{stI}{mouseI} & cellHere);
+            hereAndNosplit = (thisCellSplits{1}{stI}{mouseI} & ~cellHere);
+
+            xMeanLengthDiffsSplit = xlapLengthsDiff{stI}{mouseI};
+            xMeanLengthDiffsSplit(hereAndNosplit | ~cellHere) = NaN;
+            xMeanLengthDiffsNosplit = xlapLengthsDiff{stI}{mouseI};
+            xMeanLengthDiffsNosplit(hereAndSplit | ~cellHere) = NaN;
+
+            xMeanLengthDiffsSplitZ = xlapLengthsDiffZ{stI}{mouseI};
+            xMeanLengthDiffsSplitZ(hereAndNosplit | ~cellHere) = NaN;
+            xMeanLengthDiffsNosplitZ = xlapLengthsDiffZ{stI}{mouseI};
+            xMeanLengthDiffsNosplitZ(hereAndSplit | ~cellHere) = NaN;
+
+            % <0 is where laps from non-firing conition are longer than firing condition
+            numXmeanLengthDiffsSplit = sum(xMeanLengthDiffsSplit<0,1);
+            numXmeanLengthDiffsNosplit = sum(xMeanLengthDiffsNosplit<0,1);
+
+            numXmeanLengthDiffsSplitZ = sum(xMeanLengthDiffsSplitZ<0,1);
+            numXmeanLengthDiffsNosplitZ = sum(xMeanLengthDiffsNosplitZ<0,1);
+
+            pctSplitWithLongerOffCondNoFiringLaps = numXmeanLengthDiffsSplit ./ numHere;
+            pctSplitWithLongerOffCondNoFiringLapsZ = numXmeanLengthDiffsSplitZ ./ numHere;
+
+            % Aggregate across mice
+            pctLongerOffCondNoFiring{stI}{mouseI}(trsI,:) = pctSplitWithLongerOffCondNoFiringLaps;
+            pctLongerOffCondNoFiringZ{stI}{mouseI}(trsI,:) = pctSplitWithLongerOffCondNoFiringLapsZ;
+        end
+    end
+
+end
+  
+figure;
+for stI = 1:2
+    subplot(1,2,stI)
+    
+    for trsI = 1:length(trialReliSteps)
+        hhHere = [];
+        for mouseI = 1:numMice
+            hhHere = [hhHere,pctLongerOffCondNoFiring{stI}{mouseI}(trsI,:)];
+        end
+        mMean(trsI) = mean(hhHere);
+        mStd(trsI) = std(hhHere);
+    end
+    
+    errorbar(mMean,mStd)
+end        
+    %{
+
+
+for mouseI = 1:numMice
+    maxTrialReli{mouseI} = max(trialReli{mouseI},[],3);
+    firedThisCond{mouseI} = trialReli{mouseI}>0;
+end
+
+% Cells below threshold that survive vs dont (expect survivors to have low lap lengths), 
+% Expect cells that survive threshold vs dont to fire in conditions with lower lap lengths than other conditions 
+for stI = 1:length(splitterType)
+    switch splitterType{stI}
+        case 'LR'
+            condsA = Conds.Left;
+            condsB = Conds.Right;
+        case 'ST'
+            condsA = Conds.Study;
+            condsB = Conds.Test;
+    end
+    
+    for mouseI = 1:numMice
+        for cellI = 1:numCells(mouseI)
+            if sum(trialReli{mouseI}(cellI,dayI,:),3) > 0
+                % Lap lengths for trials active
+                trialReli{mouseI}(cellI,dayI,condsA)
+                
+            end
+            
+    
+    
+    
+    
+end
+%}
 
 %% Cells coming back across days
 splitCBgroupOut = []; splitSSgroupOut = [];
@@ -959,9 +1921,11 @@ for slI = 1:2
     for mouseI = 1:numMice 
         for cc = 1:size(pooledCondPairs,1)
             tluI = 1;
+            % traitLogicalA: threshAndConsec
             pooledTraitLogicalA{slI}{mouseI}(:,:,cc) =...
                 sum(traitLogicalsUse{slI}{tluI}{mouseI}(:,:,pooledCondPairs(cc,:)),3) > 0;
             tluI = 2;
+            % traitLogicalB: trialReli > 0
             pooledTraitLogicalB{slI}{mouseI}(:,:,cc) =...
                 sum(traitLogicalsUse{slI}{tluI}{mouseI}(:,:,pooledCondPairs(cc,:)),3) > 0;
         end

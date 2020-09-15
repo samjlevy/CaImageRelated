@@ -1,9 +1,9 @@
-function [dayAllUse, threshAndConsec] = GetUseCells(trialbytrial, lapPctThresh, consecLapThresh)
+function [dayAllUse, threshAndConsec, consec] = GetUseCells(trialbytrial, lapPctThresh, consecLapThresh, poolConds,xBinLims,yBinLims)
 
 %lapPctThresh = 0.25
 %consecLapThresh = 3;
 
-[trialReli,aboveThresh,~,~] = TrialReliability(trialbytrial, lapPctThresh);%sortedReliability
+[trialReli,aboveThresh,~,~] = TrialReliability(trialbytrial, lapPctThresh, poolConds,xBinLims,yBinLims);%sortedReliability
 [consec, enoughConsec] = ConsecutiveLaps(trialbytrial, consecLapThresh);%maxConsec
 
 newUse = cell2mat(cellfun(@(x) sum(x,2) > 0,aboveThresh,'UniformOutput',false));

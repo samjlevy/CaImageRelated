@@ -1,4 +1,4 @@
-function [binsAboveShuffle, thisCellSplits] = SplitterWrapper4(trialbytrial, baseTMap, typeShuff,...
+function [binsAboveShuffle, thisCellSplits, CIout, whichBinsAboveShuffle] = SplitterWrapper4(trialbytrial, baseTMap, typeShuff,...
     pooledunpooled, numShuffles, binEdges, minspeed, shuffThresh, binsMin)
 %typeShuff = 'leftright' or 'studytest'  
 %pooledunpooled = 'pooled' or 'unpooled' - e.g. puts study l and r together
@@ -72,7 +72,8 @@ for shuffleI = 1:numShuffles
         %end
         for cellI = 1:numCells
             for sessI = 1:numSess
-                if any(rateDiff{cellI,sessI})
+                %if any(rateDiff{cellI,sessI})
+                if any([baseTMap{cellI,sessI,baseCondPairs}])    
                     rateDiffReorg{cellI,sessI,cpI}(shuffleI,:) = rateDiff{cellI,sessI,cpI};
                 end
             end
@@ -86,7 +87,7 @@ close(h)
 disp('Done with shuffling')
 
 
-[~, binsAboveShuffle, thisCellSplits] = SplitterRateRank2(baseRateDiff, rateDiffReorg, shuffThresh, binsMin);
+[whichBinsAboveShuffle, binsAboveShuffle, thisCellSplits, CIout] = SplitterRateRank2(baseRateDiff, rateDiffReorg, shuffThresh, binsMin);
     
 thisCellSplits = sum(thisCellSplits,3) > 0;
 

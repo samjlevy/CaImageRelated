@@ -8,6 +8,18 @@ for mouseI = 1:numMice
 end
 %}
 
+% Slim down
+mouseI = 1;
+dayI = 1;
+cellI = 5;
+clear tbtSmall
+for condI = 1:4
+tbtSmall(condI) = StripTBT(cellTBT{mouseI},condI,dayI);
+end
+aa = figure; PlotRasterMultiSess2(tbtSmall, cellI, cellSSI{mouseI}(:,dayI), aa,'portrait','160825', true, xlims)
+for ss = 1:5; aa.Children(ss).XLim = xlims; end
+%PlotRastersPDF(cellTBT{mouseI}, cellSSI{mouseI}, cellAllFiles{mouseI}{dayI}, cellI, saveDir, mice{mouseI});
+
 %%
 tgsPlot = [3 4 5];
 
@@ -223,16 +235,21 @@ end
 hh = figure('Position',[477 83 324 803]);%[593 58 651 803]
 axHand = []; statsOut = [];
 compsMakeHere = {[1 2];[2 3];[1 3];[3 4];[2 4];[1 4]};
-for slI = 1:2
+for slI = 1:length(splitterLoc)
     axHand{slI} = subplot(2,1,slI);
     [axHand{slI},statsOut{slI}] = PlotTraitProps(pooledSplitProp{slI},[3 4 5 8],compsMakeHere,colorAsscAlt,traitLabels,axHand{slI});
     title(['Splitter Proportions on ' upper(splitterLoc{slI})])
 end
 suptitleSL('Proportions of Splitter Cells on Central Stem and Return Arms')
 
+thingsNow = [3 4 5 8]
+for ii = 1:4
+    numsPSP(ii) = mean(pooledSplitProp{slI}{thingsNow(ii)});
+    numsPSPsem(ii) = standarderrorSL(pooledSplitProp{slI}{thingsNow(ii)});
+end
 %Stats text figure
 figure('Position',[680 558 1055 420]); 
-for slI = 1:2
+for slI = 1:length(splitterLoc)
     subplot(2,1,slI)
     text(1,1,'comparisons:'); text(3,0.5,num2str(statsOut{slI}.comparisons'))
     text(1,1.5,'sign rank test p'); text(3,1.5,num2str([statsOut{slI}.signrank.pVal]))
@@ -240,7 +257,9 @@ for slI = 1:2
     text(1,2.5,'KS ANOVA p tukey'); text(4,2.5,num2str(statsOut{slI}.ksANOVA.multComps(:,6)'))
     text(1,3,['KS ANOVA: Chi-sq    ' num2str(statsOut{slI}.ksANOVA.tbl{2,5})]) 
     text(1,3.5,['KS ANOVA: df groups, error, total    ' num2str([statsOut{slI}.ksANOVA.tbl{2:end,3}])])
-       
+    text(1,4,['Nums mean: ' num2str([numsPSP*100])])
+    text(1,4.5,['Nums SEM: ' num2str([numsPSPsem*100])])
+    
     xlim([0 12]); ylim([0 5])
     title(['Stats for splitter proportions on ' splitterLoc{slI}])
 end
@@ -287,10 +306,10 @@ for slI = 1:2
     title(['stats for splitter prop changes on ' splitterLoc{slI}])
 end
 
-%% Prop. of cells above activity threshold
+%% Prop. of cells above activity threshold - Stem
 
-propActiveCellsOfTotal = cellfun(@(x) sum(x,1)/size(x,1),dayUse,'UniformOutput',false);
-propActiveCellsOfFound = cellfun(@(x,y) sum(x,1)./sum(y>0,1),dayUse,cellSSI,'UniformOutput',false);
+propActiveCellsOfTotal = cellfun(@(x) sum(x,1)/size(x,1),dayUseFilter{1},'UniformOutput',false);
+propActiveCellsOfFound = cellfun(@(x,y) sum(x,1)./sum(y>0,1),dayUseFilter{1},cellSSI,'UniformOutput',false);
 
 figure;
 subplot(1,2,1)
@@ -314,6 +333,69 @@ end
 subplot(1,2,2)
 daysHere = [];
 pooledHere = [];
+pLog = [];
+for mouseI = 1:numMice
+    dayss = cellRealDays{mouseI} - (cellRealDays{mouseI}(1)-1);
+    splitPropHere = propActiveCellsOfFound{mouseI};
+    plot(dayss,splitPropHere); hold on
+    pooledHere = [pooledHere; splitPropHere(:)];
+    daysHere = [daysHere; dayss];
+    pLog = [pLog; pooledHere];
+end
+[fitVal,daysPlot] = FitLineForPlotting(pooledHere,daysHere);
+    plot(daysPlot,fitVal,'k','LineWidth',2)
+ [propsRhoH,propsPvalH] = corr(daysHere,pooledHere,'type','Spearman');
+ title(['rho= ' num2str(propsRhoH) ', p= ' num2str(propsPvalH)])
+ ylabel('Prop. Active/# Cells Day N')
+ xlabel('Recording Day')
+ylim([0 0.4])
+
+% Indiv
+figure; 
+for mouseI = 1:numMice
+subplot(2,2,mouseI)
+daysHere = [];
+pooledHere = [];
+    dayss = cellRealDays{mouseI} - (cellRealDays{mouseI}(1)-1);
+    splitPropHere = propActiveCellsOfFound{mouseI};
+    plot(dayss,splitPropHere); hold on
+    pooledHere = [pooledHere; splitPropHere(:)];
+    daysHere = [daysHere; dayss];
+[fitVal,daysPlot] = FitLineForPlotting(pooledHere,daysHere);
+    plot(daysPlot,fitVal,'k','LineWidth',2)
+ [propsRhoH,propsPvalH] = corr(daysHere,pooledHere,'type','Spearman');
+ title(['rho= ' num2str(propsRhoH) ', p= ' num2str(propsPvalH)])
+ ylabel('Prop. Active/# Cells Day N')
+ xlabel('Recording Day')
+ylim([0 0.4])
+end
+
+% Arms
+propActiveCellsOfTotal = cellfun(@(x) sum(x,1)/size(x,1),dayUseFilter{2},'UniformOutput',false);
+propActiveCellsOfFound = cellfun(@(x,y) sum(x,1)./sum(y>0,1),dayUseFilter{2},cellSSI,'UniformOutput',false);
+
+figure;
+subplot(1,2,1)
+daysHere = [];
+pooledHere = [];
+for mouseI = 1:numMice
+    dayss = cellRealDays{mouseI} - (cellRealDays{mouseI}(1)-1);
+    splitPropHere = propActiveCellsOfTotal{mouseI};
+    plot(dayss,splitPropHere); hold on
+    pooledHere = [pooledHere; splitPropHere(:)];
+    daysHere = [daysHere; dayss];
+end
+[fitVal,daysPlot] = FitLineForPlotting(pooledHere,daysHere);
+    plot(daysPlot,fitVal,'k','LineWidth',2)
+ [propsRhoH,propsPvalH] = corr(daysHere,pooledHere,'type','Spearman');
+ title(['rho= ' num2str(propsRhoH) ', p= ' num2str(propsPvalH) ' ARMS'])
+ ylabel('Prop. Active/Total # Cells')
+  xlabel('Recording Day')
+ ylim([0 0.4])
+ 
+subplot(1,2,2)
+daysHere = [];
+pooledHere = [];
 for mouseI = 1:numMice
     dayss = cellRealDays{mouseI} - (cellRealDays{mouseI}(1)-1);
     splitPropHere = propActiveCellsOfFound{mouseI};
@@ -324,11 +406,31 @@ end
 [fitVal,daysPlot] = FitLineForPlotting(pooledHere,daysHere);
     plot(daysPlot,fitVal,'k','LineWidth',2)
  [propsRhoH,propsPvalH] = corr(daysHere,pooledHere,'type','Spearman');
- title(['rho= ' num2str(propsRhoH) ', p= ' num2str(propsPvalH)])
+ title(['rho= ' num2str(propsRhoH) ', p= ' num2str(propsPvalH) ' ARMS'])
  ylabel('Prop. Active/# Cells Day N')
  xlabel('Recording Day')
 ylim([0 0.4])
 
+% Indiv
+figure; 
+for mouseI = 1:numMice
+subplot(2,2,mouseI)
+daysHere = [];
+pooledHere = [];
+    dayss = cellRealDays{mouseI} - (cellRealDays{mouseI}(1)-1);
+    splitPropHere = propActiveCellsOfFound{mouseI};
+    plot(dayss,splitPropHere); hold on
+    pooledHere = [pooledHere; splitPropHere(:)];
+    daysHere = [daysHere; dayss];
+[fitVal,daysPlot] = FitLineForPlotting(pooledHere,daysHere);
+    plot(daysPlot,fitVal,'k','LineWidth',2)
+ [propsRhoH,propsPvalH] = corr(daysHere,pooledHere,'type','Spearman');
+ title(['Mouse ' num2str(mouseI) ' rho= ' num2str(propsRhoH) ', p= ' num2str(propsPvalH)])
+ ylabel('Prop. Active/# Cells Day N')
+ xlabel('Recording Day')
+ylim([0 0.4])
+end
+suptitleSL('ARMS')
 %% Splitter proportion changes raw
 thingsNow = [3     4     5     8];
 
@@ -373,8 +475,8 @@ for slI = 1:2
             slopeDiffFromZeroFtest(pooledHere,daysHere);
     [propsRho(ii),propsCorrPval(ii)] = corr(daysHere,pooledHere,'type','Spearman');
     
-    %title([traitLabels{thingsNow(ii)} ', R=' num2str(sqrt(abs(RR.Ordinary))) ', p=' num2str(Pval)])
-    title([traitLabels{thingsNow(ii)}])
+    title([traitLabels{thingsNow(ii)} ', Rho=' num2str(propsRho(ii)) ', p=' num2str(propsCorrPval(ii))])
+    %title(traitLabels{thingsNow(ii)})
     
     xlim([min(daysHere)-0.5 max(daysHere)+0.5])
     ylim(ylimsuse{slI,ii})
@@ -384,7 +486,7 @@ for slI = 1:2
     end
     
     suptitleSL(['Raw splitting pcts across all mice, and regression on ' mazeLocations{slI}])
-    
+    %{
     figure('Position',[735 209 910 420]);
     for ii = 1:4
     text(1,ii,[traitLabels{thingsNow(ii)} ' LinReg R=' num2str(sqrt(abs(RR(ii).Ordinary))) ', p=' num2str(Pval(ii))...
@@ -394,10 +496,97 @@ for slI = 1:2
     title(['stats for raw data splitter prop changes on ' mazeLocations{slI}])
     xlim([0 18])
     ylim([0 6])
+    %}
 end
 
-%Comparison to accuracy
+%% Indiv animal splitter props
+
+for mouseI = 1:numMice
+hh = figure('Position',[477 83 324 803]);%[593 58 651 803]
+axHand = []; statsOut = [];
+compsMakeHere = {[1 2];[2 3];[1 3];[3 4];[2 4];[1 4]};
 for slI = 1:2
+    axHand{slI} = subplot(2,1,slI);
+    [axHand{slI},statsOut{slI}] = PlotTraitProps(splitPropEachDay{slI}{mouseI},[3 4 5 8],compsMakeHere,colorAsscAlt,traitLabels,axHand{slI});
+    title(['Splitter Proportions on ' upper(splitterLoc{slI})])
+end
+suptitleSL({'Proportions of Splitter Cells on Central Stem and Return Arms';['Mouse' num2str(mouseI)]})
+
+%Stats text figure
+figure('Position',[680 558 1055 420]); 
+for slI = 1:2
+    subplot(2,1,slI)
+    text(1,1,'comparisons:'); text(3,0.5,num2str(statsOut{slI}.comparisons'))
+    text(1,1.5,'sign rank test p'); text(3,1.5,num2str([statsOut{slI}.signrank.pVal]))
+    try
+    text(1,2,'sign rank test z'); text(3,2,num2str([statsOut{slI}.signrank.zVal]))
+    end
+    text(1,2.5,'KS ANOVA p tukey'); text(4,2.5,num2str(statsOut{slI}.ksANOVA.multComps(:,6)'))
+    text(1,3,['KS ANOVA: Chi-sq    ' num2str(statsOut{slI}.ksANOVA.tbl{2,5})]) 
+    text(1,3.5,['KS ANOVA: df groups, error, total    ' num2str([statsOut{slI}.ksANOVA.tbl{2:end,3}])])
+       
+    xlim([0 12]); ylim([0 5])
+    title(['Stats for splitter proportions on ' splitterLoc{slI} ' for  mouse' num2str(mouseI)])
+end
+
+end
+
+
+thingsNow = [3     4     5     8];
+for mouseI = 1:numMice
+ylimsuse = {[0 0.4],[0 0.4],[0.2 0.8],[0 0.4];[0.2 0.6],[0 0.2],[0.2 0.8],[0 0.2]}; 
+for slI = 1:length(splitterLoc)
+    figure('Position',[695 118 819 674]);
+    for ii = 1:4
+        pooledHere = [];
+        daysHere = [];
+        aff(ii)=subplot(2,2,ii);
+            
+            dayss = cellRealDays{mouseI} - (cellRealDays{mouseI}(1)-1);
+            splitPropHere = splitPropEachDay{slI}{mouseI}{thingsNow(ii)};
+           plot(dayss,splitPropHere)
+            pooledHere = [pooledHere; splitPropHere(:)];
+            daysHere = [daysHere; dayss];
+            hold on
+
+    ylabel('Proportion of cells')
+    xlabel('Recording day')
+    
+    [fitVal,daysPlot] = FitLineForPlotting(pooledHere,daysHere);
+    plot(daysPlot,fitVal,'k','LineWidth',2)
+    [~, ~, ~, RR(ii), Pval(ii), ~] =...
+                fitLinRegSL(pooledHere,daysHere);
+            [Fval(ii),dfNum(ii),dfDen(ii),pVal(ii)] =...
+            slopeDiffFromZeroFtest(pooledHere,daysHere);
+    [propsRho(ii),propsCorrPval(ii)] = corr(daysHere,pooledHere,'type','Spearman');
+    
+    title([traitLabels{thingsNow(ii)} ', Rho=' num2str(propsRho(ii)) ', p=' num2str(propsCorrPval(ii))])
+    %title(traitLabels{thingsNow(ii)})
+    
+    xlim([min(daysHere)-0.5 max(daysHere)+0.5])
+    ylim(ylimsuse{slI,ii})
+    xticks([1 6 12 18])
+    
+    aff(ii) = MakePlotPrettySL(aff(ii));
+    end
+    
+    suptitleSL(['Raw splitting pcts for mouse ' num2str(mouseI) ', and regression on ' mazeLocations{slI} ' mouse ' num2str(mouseI)])
+    %{
+    figure('Position',[735 209 910 420]);
+    for ii = 1:4
+    text(1,ii,[traitLabels{thingsNow(ii)} ' LinReg R=' num2str(sqrt(abs(RR(ii).Ordinary))) ', p=' num2str(Pval(ii))...
+        ', F diff zero F dfNum dfDen p: ' num2str([Fval(ii) dfNum(ii) dfDen(ii) pVal(ii)])...
+        ', spearman corr rho pval: ' num2str([propsRho(ii) propsCorrPval(ii)])]) 
+    end
+    title(['stats for raw data splitter prop changes on ' mazeLocations{slI} ' mouse ' num2str(mouseI)])
+    xlim([0 18])
+    ylim([0 6])
+    %}
+end
+
+end
+%% Comparison to accuracy
+for slI = 1:length(splitterLoc)
     figure('Position',[695 118 819 674]);
     for ii = 1:4
         pooledHere = [];
@@ -424,7 +613,7 @@ for slI = 1:2
             slopeDiffFromZeroFtest(pooledHere,daysHere);
     [propsRho(ii),propsCorrPval(ii)] = corr(daysHere,pooledHere,'type','Spearman');
     
-    title([traitLabels{thingsNow(ii)}])
+    title([traitLabels{thingsNow(ii)} ', rho=' num2str(propsRho(ii)) ', p=' num2str(propsCorrPval(ii))])
     
     %xlim([min(daysHere)-0.5 max(daysHere)+0.5])
     ylim(ylimsuse{slI,ii})
@@ -494,6 +683,97 @@ for slI = 1:2
     xlim([0 18])
     ylim([0 6])
 end
+
+% Individuals
+for mouseI = 1:4
+for slI = 1:length(splitterLoc)
+    figure('Position',[695 118 819 674]);
+    for ii = 1:4
+        pooledHere = [];
+        daysHere = [];
+        aff(ii)=subplot(2,2,ii);
+        
+            
+        dayss = accuracy{mouseI};
+        splitPropHere = splitPropEachDay{slI}{mouseI}{thingsNow(ii)};
+        plot(dayss,splitPropHere,'o','MarkerFaceColor',mouseColors(mouseI,:),'MarkerSize',8)
+        pooledHere = [pooledHere; splitPropHere(:)];
+        daysHere = [daysHere; dayss];
+        hold on
+        
+        
+    ylabel('Proportion of cells')
+    xlabel('Accuracy')
+    
+    [fitVal,daysPlot] = FitLineForPlotting(pooledHere,daysHere);
+    plot(daysPlot,fitVal,'k','LineWidth',2)
+    [~, ~, ~, RR(ii), Pval(ii), ~] =...
+                fitLinRegSL(pooledHere,daysHere);
+            [Fval(ii),dfNum(ii),dfDen(ii),pVal(ii)] =...
+            slopeDiffFromZeroFtest(pooledHere,daysHere);
+    [propsRho(ii),propsCorrPval(ii)] = corr(daysHere,pooledHere,'type','Spearman');
+    
+    title([traitLabels{thingsNow(ii)} ', rho=' num2str(propsRho(ii)) ', p=' num2str(propsCorrPval(ii))])
+    
+    %xlim([min(daysHere)-0.5 max(daysHere)+0.5])
+    ylim(ylimsuse{slI,ii})
+    
+    aff(ii) = MakePlotPrettySL(aff(ii));
+    end
+    
+    suptitleSL(['Raw splitting pcts for mouse ' num2str(mouseI) ', and regression on ' mazeLocations{slI}])
+    %{
+    figure('Position',[735 209 910 420]);
+    for ii = 1:4
+    text(1,ii,[traitLabels{thingsNow(ii)} ' LinReg R=' num2str(sqrt(abs(RR(ii).Ordinary))) ', p=' num2str(Pval(ii))...
+        ', F diff zero F dfNum dfDen p: ' num2str([Fval(ii) dfNum(ii) dfDen(ii) pVal(ii)])...
+        ', spearman corr rho pval: ' num2str([propsRho(ii) propsCorrPval(ii)])]) 
+    end
+    title(['stats for raw data splitter prop changes on ' mazeLocations{slI}])
+    xlim([0 18])
+    ylim([0 6])
+    %}
+end
+end
+
+%% reliability of splitters by type
+
+thingsNow = [3     4     5     8];
+for slI = 1:length(splitterLoc)
+    relisMax = [];
+    relisAll = [];
+    grps = [];
+    ccc = colorAsscAlt';
+    ccd = reshape([ccc{:}],3,8)';
+    for ii = 1:length(thingsNow)
+        for mouseI = 1:numMice
+            maxReli = max(trialReli{mouseI},[],3);
+            reliHereMax = maxReli(traitGroups{slI}{mouseI}{thingsNow(ii)});
+            reliHereAll = trialReliAll{mouseI}(traitGroups{slI}{mouseI}{thingsNow(ii)});
+
+            grp = ii*ones(length(reliHereMax),1);
+
+            relisMax = [relisMax; reliHereMax];
+            relisAll = [relisAll; reliHereAll];
+            grps = [grps; grp];
+        end
+    end
+    colorGrps = grps; colorGrps(colorGrps==3) = 5; colorGrps(colorGrps==4) = 8;
+    colorDots = ccd(colorGrps,:);
+    
+    figure;
+    subplot(1,2,1)
+    scatterBoxSL(relisMax, grps, 'xLabel', traitLabels([1 2 5 8]), 'plotBox', true, 'circleColors', colorDots, 'transparency', 0.8) %,'plotHandle',axHand
+    title('Max reliability any trial type')
+    subplot(1,2,2)
+    scatterBoxSL(relisAll, grps, 'xLabel', traitLabels([1 2 5 8]), 'plotBox', true, 'circleColors', colorDots, 'transparency', 0.8) %,'plotHandle',axHand
+    title('Reliability across all trials')
+    suptitleSL('Calcium event reliability by splitter type')
+    
+    p = ranksum(relisAll(grps==1),relisAll(grps==3))
+    p = ranksum(relisMax(grps==1),relisMax(grps==3))
+end
+
 %% Within day decoding results
 
 colors = {colorAssc{1} colorAssc{2}};
@@ -755,8 +1035,8 @@ for slI = 1:2
         slopePermP(ii) = NaN;
         %[slopePermP(ii)] = slopePermutationTest(pkgForSlope,daysPkg,1000);
         [rhoPropsRaw(ii),pValPropsRaw(ii)] = corr(daysHere,pooledHere,'Type','Spearman');
-        %title([traitLabels{thingsNow(ii)} ', R=' num2str(sqrt(abs(RR.Ordinary))) ', p=' num2str(Pval)])
-        title([traitLabels{thingsNow(ii)}])
+        title([traitLabels{thingsNow(ii)} ', Rho=' num2str(rhoPropsRaw(ii)) ', p=' num2str(pValPropsRaw(ii))])
+        %title([traitLabels{thingsNow(ii)}])
 
         xlim([min(daysHere)-0.5 max(daysHere)+0.5])
         ylim(ylimsuse{slI,ii})
@@ -765,7 +1045,7 @@ for slI = 1:2
     end
     
     suptitleSL(['Raw splitting pcts of newly active cells across all mice, and regression on ' mazeLocations{slI}])
-    
+    %{
     figure('Position',[322 269 1255 420]);
     for ii = 1:4
     text(1,ii,[traitLabelsAlt{thingsNow(ii)} ' LinReg R=' num2str(sqrt(abs(RR(ii).Ordinary))) ', p=' num2str(Pval(ii))...
@@ -775,6 +1055,60 @@ for slI = 1:2
     title(['stats for raw data new cell splitter prop changes on ' mazeLocations{slI}])
     xlim([0 15])
     ylim([0 6])
+    %}
+end
+
+% Individual
+
+thingsNow = [3     4     5     8];
+ylimsuse = {[0 0.5],[0 0.5],[0.1 0.9],[0 0.5];[0.1 0.7],[-0.01 0.4],[0.1 0.7],[-0.01 0.4]};
+for mouseI = 1:4
+for slI = 1:2
+    figure('Position',[695 118 819 674]);
+    for ii = 1:4
+        pooledHere = [];
+        daysHere = [];
+        aaa = subplot(2,2,ii);
+        
+            
+            dayss = cellRealDays{mouseI} - (cellRealDays{mouseI}(1)-1);
+            dayss = dayss(2:end);
+            %dayss = cellRealDays{mouseI};
+            splitPropHere = newPcts{slI}{mouseI}{thingsNow(ii)};
+            pkgForSlope{mouseI} = splitPropHere;
+            %splitPropHere = splitPropHere - mean(splitPropHere);
+            plot(dayss,splitPropHere)
+            pooledHere = [pooledHere; splitPropHere(:)];
+            daysHere = [daysHere; dayss];
+            daysPkg{mouseI} = dayss;
+            hold on
+            
+            
+        
+        
+        ylabel('Proportion of cells')
+        xlabel('Recording day')
+
+        [fitVal,daysPlot] = FitLineForPlotting(pooledHere,daysHere);
+        plot(daysPlot,fitVal,'k','LineWidth',2)
+        [~, ~, ~, RR(ii), Pval(ii), ~] =...
+                    fitLinRegSL(pooledHere,daysHere);
+                [Fval(ii),dfNum(ii),dfDen(ii),pVal(ii)] =...
+                slopeDiffFromZeroFtest(pooledHere,daysHere);
+        slopePermP(ii) = NaN;
+        %[slopePermP(ii)] = slopePermutationTest(pkgForSlope,daysPkg,1000);
+        [rhoPropsRaw(ii),pValPropsRaw(ii)] = corr(daysHere,pooledHere,'Type','Spearman');
+        title([traitLabels{thingsNow(ii)} ', Rho=' num2str(rhoPropsRaw(ii)) ', p=' num2str(pValPropsRaw(ii))])
+        %title([traitLabels{thingsNow(ii)}])
+
+        xlim([min(daysHere)-0.5 max(daysHere)+0.5])
+        ylim(ylimsuse{slI,ii})
+        xticks([2 6 12 18])
+        aaa = MakePlotPrettySL(aaa);
+    end
+    
+    suptitleSL(['Raw splitting pcts of newly active cells for mouse ' num2str(mouseI) ', and regression on ' mazeLocations{slI}])
+end
 end
 
 propPrevInactiveNowActive = cellfun(@(x,y) sum(x,1)./sum(y(:,2:end)>0,1),prevInactiveNowActive2{1},dayUse,'UniformOutput',false);
@@ -797,8 +1131,31 @@ end
  title(['rho= ' num2str(propsRhoH) ', p= ' num2str(propsPvalH)])
  ylabel('Prop. Active/Total # Cells')
   xlabel('Recording Day')
- ylim([0 0.4])
+ ylim([0 1])
  
+ 
+figure;
+for mouseI = 1:numMice
+subplot(2,2,mouseI)
+daysHere = [];
+pooledHere = [];
+
+    dayss = cellRealDays{mouseI} - (cellRealDays{mouseI}(1)-1);
+    dayss = dayss(2:end);
+    splitPropHere = propPrevInactiveNowActive{mouseI};
+    plot(dayss,splitPropHere); hold on
+    pooledHere = [pooledHere; splitPropHere(:)];
+    daysHere = [daysHere; dayss];
+
+[fitVal,daysPlot] = FitLineForPlotting(pooledHere,daysHere);
+    plot(daysPlot,fitVal,'k','LineWidth',2)
+ [propsRhoH,propsPvalH] = corr(daysHere,pooledHere,'type','Spearman');
+ title(['rho= ' num2str(propsRhoH) ', p= ' num2str(propsPvalH)])
+ ylabel('Prop. Active/Total # Cells')
+ xlabel('Recording Day')
+ ylim([0 1])
+ xlim([0 18])
+end
 
 %Aggregated
 gh = [];
@@ -1276,13 +1633,14 @@ suptitleSL('Across dimension bin vs. bin PV corrs')
 
 %%  PV within a day
 cellCritUse = 5;
+cellCritUse = 1;
 %StemcondSetColors
 jj = []; statsOut = [];
 for slI = 1:2
 [jj{slI},statsOut{slI}] = PlotPVcurves(CSpooledPVcorrs{slI}{cellCritUse},CSpooledPVdaysApart{slI}{cellCritUse},{[0.5 0.5 0.5];'r';'b'},condSetLabels,true,'STD',[]);
 title(['Mean Within-Day Population Vector Correlation on ' splitterLoc{slI} ])
 ylim([0 1])
-jj{slI}.Children = MakePlotPrettySL(jj{slI}.Children);
+%jj{slI}.Children = MakePlotPrettySL(jj{slI}.Children);
 end
 figure('Position',[489 123 1047 576]);
 for slI = 1:2
@@ -1307,6 +1665,7 @@ for slI = 1:2
     end
     ylim([0 4])
     xlim([0 20])
+    title(splittlerLoc{slI})
 end
 suptitleSL('PV individual stats')
 
@@ -1329,7 +1688,7 @@ disp(['VS self VS LvR = ' num2str([ppp stats.zval]) ])
 %binsUse = {[1:2];[7:8]};
 binsUse = {[1:2];[3:4];[5:6];[7:8]};
 statsOut = [];
-for slI = 1:2
+for slI = 1:length(splitterLoc)
     for bI = 1:length(binsUse)
     corrsUse = withinDayCSpooledPVcorrWithinMouseMat{slI}{cellCritUse};
     [figHand,statsOut{slI}{bI}] = PlotPVcurvesRawDays(corrsUse,cellRealDays,binsUse{bI},{'g','r','b'});
@@ -1340,7 +1699,7 @@ for slI = 1:2
     end
 end
 
-for slI = 1:2
+for slI = 1:length(splitterLoc)
     figure('Position',[579 174 636 562]);
     subplot(2,1,1)
     for bI = 1:length(binsUse)
@@ -1842,11 +2201,137 @@ for dayI = 1:numDays(mouseI)
     end
 
         
+%% Mean activity rate
+
+trialReliAllNan = trialReliAll;
+trialReliAllArmsNan = trialReliAllArms;
+for mouseI = 1:numMice
+    trialReliAllNan{mouseI}(trialReliAllNan{mouseI}==0) = NaN;
+    trialReliAllArmsNan{mouseI}(trialReliAllArmsNan{mouseI}==0) = NaN;
+end
+    
+meanReliAll = cellfun(@(x) nanmean(x,1),trialReliAllNan,'UniformOutput',false);
+meanReliAllArms = cellfun(@(x) nanmean(x,1),trialReliAllArmsNan,'UniformOutput',false);
+
+figure;
+subplot(1,2,1)
+daysHere = [];
+pooledHere = [];
+for mouseI = 1:numMice
+    dayss = cellRealDays{mouseI} - (cellRealDays{mouseI}(1)-1);
+    splitPropHere = meanReliAll{mouseI};
+    plot(dayss,splitPropHere); hold on
+    pooledHere = [pooledHere; splitPropHere(:)];
+    daysHere = [daysHere; dayss];
+end
+[fitVal,daysPlot] = FitLineForPlotting(pooledHere,daysHere);
+    plot(daysPlot,fitVal,'k','LineWidth',2)
+ [propsRhoH,propsPvalH] = corr(daysHere,pooledHere,'type','Spearman');
+ title(['rho= ' num2str(propsRhoH) ', p= ' num2str(propsPvalH)])
+ ylabel('Mean % Trials Active on Stem')
+  xlabel('Recording Day')
+ ylim([0 0.2])
+ 
+subplot(1,2,2)
+daysHere = [];
+pooledHere = [];
+for mouseI = 1:numMice
+    dayss = cellRealDays{mouseI} - (cellRealDays{mouseI}(1)-1);
+    splitPropHere = meanReliAllArms{mouseI};
+    plot(dayss,splitPropHere); hold on
+    pooledHere = [pooledHere; splitPropHere(:)];
+    daysHere = [daysHere; dayss];
+end
+[fitVal,daysPlot] = FitLineForPlotting(pooledHere,daysHere);
+    plot(daysPlot,fitVal,'k','LineWidth',2)
+ [propsRhoH,propsPvalH] = corr(daysHere,pooledHere,'type','Spearman');
+ title(['rho= ' num2str(propsRhoH) ', p= ' num2str(propsPvalH)])
+  ylabel('Mean % Trials Active on Arms')
+ xlabel('Recording Day')
+ylim([0 0.25])
+
+suptitleSL('mean % trials active, if active at all')
+
         
         
+%% Mean reliability score by splitter type (% laps with calcium events)
+for slI = 1:2
+    for mouseI = 1:numMice
+        for tgI = 1:numTraitGroups
+            splitterReli{slI}{mouseI}{tgI} = nan(size(cellSSI{mouseI}));
+            splitterReli{slI}{mouseI}{tgI}(traitGroups{slI}{mouseI}{tgI}) = ...
+                trialReliAll{mouseI}(traitGroups{slI}{mouseI}{tgI});
+        end
+        splitterReliMeans{slI}{mouseI} = cellfun(@(x) nanmean(x,1),splitterReli{slI}{mouseI},'UniformOutput',false);
+    end
+end
+    
+    
+thingsNow = [3     4     5     8];
+
+ylimsuse = {[0 0.4],[0 0.4],[0.2 0.8],[0 0.4];[0.2 0.6],[0 0.2],[0.2 0.8],[0 0.2]}; 
+for slI = 1:length(splitterLoc)
+    figure('Position',[695 118 819 674]);
+    for ii = 1:4
+        pooledHere = [];
+        daysHere = [];
+        aff(ii)=subplot(2,2,ii);
+        for mouseI = 1:4
+            
+            dayss = cellRealDays{mouseI} - (cellRealDays{mouseI}(1)-1);
+            %dayss = cellRealDays{mouseI};
+            splitPropHere = splitterReliMeans{slI}{mouseI}{thingsNow(ii)};
+            %splitPropHere = splitPropHere - mean(splitPropHere);
+            plot(dayss,splitPropHere)
+            pooledHere = [pooledHere; splitPropHere(:)];
+            daysHere = [daysHere; dayss];
+            hold on
+            
+            %outputForMarc(ii).indivMice(mouseI).props = splitPropHere;
+            %outputForMarc(ii).indivMice(mouseI).days = dayss;
+            
+            %outputForMarc(ii).earlyDat(mouseI) = mean(splitPropHere(1:2));
+            %outputForMarc(ii).lateDat(mouseI) = mean(splitPropHere(end-1:end));
+        end
         
-        
-        
+    %outputForMarc(ii).earlyMean = mean(outputForMarc(ii).earlyDat);
+    %outputForMarc(ii).lateMean = mean(outputForMarc(ii).lateDat);
+    %outputForMarc(ii).props = pooledHere;
+    %outputForMarc(ii).days = daysHere;
+
+    ylabel('Mean reliability')
+    xlabel('Recording day')
+    
+    [fitVal,daysPlot] = FitLineForPlotting(pooledHere,daysHere);
+    plot(daysPlot,fitVal,'k','LineWidth',2)
+    [~, ~, ~, RR(ii), Pval(ii), ~] =...
+                fitLinRegSL(pooledHere,daysHere);
+            [Fval(ii),dfNum(ii),dfDen(ii),pVal(ii)] =...
+            slopeDiffFromZeroFtest(pooledHere,daysHere);
+    [propsRho(ii),propsCorrPval(ii)] = corr(daysHere,pooledHere,'type','Spearman');
+    
+    title([traitLabels{thingsNow(ii)} ', R=' num2str(sqrt(abs(RR(ii).Ordinary))) ', p=' num2str(Pval(ii))])
+    %title(traitLabels{thingsNow(ii)})
+    
+    xlim([min(daysHere)-0.5 max(daysHere)+0.5])
+    ylim(ylimsuse{slI,ii})
+    xticks([1 6 12 18])
+    
+    aff(ii) = MakePlotPrettySL(aff(ii));
+    end
+    
+    suptitleSL(['mean reliability all mice on ' mazeLocations{slI}])
+    
+    figure('Position',[735 209 910 420]);
+    for ii = 1:4
+    text(1,ii,[traitLabels{thingsNow(ii)} ' LinReg R=' num2str(sqrt(abs(RR(ii).Ordinary))) ', p=' num2str(Pval(ii))...
+        ', F diff zero F dfNum dfDen p: ' num2str([Fval(ii) dfNum(ii) dfDen(ii) pVal(ii)])...
+        ', spearman corr rho pval: ' num2str([propsRho(ii) propsCorrPval(ii)])]) 
+    end
+    title(['stats for raw data splitter prop changes on ' mazeLocations{slI}])
+    xlim([0 18])
+    ylim([0 6])
+end
         
         
         

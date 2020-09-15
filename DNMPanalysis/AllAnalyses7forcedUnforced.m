@@ -75,13 +75,15 @@ disp('Getting reliability')
 dayUse = cell(1,numMice); threshAndConsec = cell(1,numMice);
 for mouseI = 1:numMice
     saveName = fullfile(mainFolder,mice{mouseI},'trialReliability.mat');
-    if exist(saveName,'file')==0
-        [dayUse,threshAndConsec] = GetUseCells(cellTBT{mouseI}, lapPctThresh, consecLapThresh);
-        [trialReli,aboveThresh,~,~] = TrialReliability(cellTBT{mouseI}, lapPctThresh);
+    %if exist(saveName,'file')==0
+        %[dayUse,threshAndConsec] = GetUseCells(cellTBT{mouseI}, lapPctThresh, consecLapThresh);
+        %[trialReli,aboveThresh,~,~] = TrialReliability(cellTBT{mouseI}, lapPctThresh);
+        [dayUse,threshAndConsec,consec] = GetUseCells(cellTBT{mouseI}, lapPctThresh, consecLapThresh, false,[min(stemBinEdges) max(stemBinEdges)],[]);
+        [trialReli,aboveThresh,nLapsActive,~] = TrialReliability(cellTBT{mouseI}, lapPctThresh, false,[min(stemBinEdges) max(stemBinEdges)],[]);
 
         save(saveName,'dayUse','threshAndConsec','trialReli')
         clear('dayUse','threshAndConsec','trialReli')
-    end
+    %end
 end
 
 for mouseI = 1:numMice

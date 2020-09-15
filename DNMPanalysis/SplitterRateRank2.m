@@ -1,4 +1,4 @@
-function [binsAboveShuffle, numBinsAboveShuffle, thisCellSplits] = SplitterRateRank2(baseRateDiff, rateDiffReorg, shuffThresh, binsMin)
+function [binsAboveShuffle, numBinsAboveShuffle, thisCellSplits, CIout] = SplitterRateRank2(baseRateDiff, rateDiffReorg, shuffThresh, binsMin)
 %Shuffled rate diff needs to be organized so that all shuffles are aligned
 %in the same cell array
 
@@ -31,7 +31,8 @@ for cpI = 1:numCondPairs
     for cellI = 1:numCells
         for sessI = 1:numSess
             ratesHere = baseRateDiff{cellI,sessI,cpI};
-            if any(ratesHere)
+            %if any(ratesHere)
+            if sum(size(sortedReorg{cellI,sessI,cpI}))>0 % This should grab instances from previous where we determined the cell fired at all
                 rateGreaterThanShuffles = sum(ratesHere > sortedReorg{cellI,sessI,cpI},1);
                 rateLessThanShuffles = sum(ratesHere < sortedReorg{cellI,sessI,cpI},1);
                 
@@ -43,6 +44,9 @@ for cpI = 1:numCondPairs
                 binsAboveShuffle{cellI,sessI,cpI}(rateLesserUse) = rateLessThanShuffles(rateLesserUse) > indThresh;
                     
                 numBinsAboveShuffle(cellI,sessI,cpI) = sum(binsAboveShuffle{cellI,sessI,cpI});
+                
+                CIout{cellI,sessI,cpI}(1,:) = sortedReorg{cellI,sessI,cpI}(indThresh,:);
+                CIout{cellI,sessI,cpI}(2,:) = sortedReorg{cellI,sessI,cpI}((numShuffles - indThresh),:);
             end
         end
     end

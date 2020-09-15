@@ -19,6 +19,8 @@ function [TMap_unsmoothed, TMap_firesAtAll, TMap_zRates, OccMap, RunOccMap, xBin
     %dispProgress = p.Results.dispProgress;
     %getZscore = p.Results.getZscore;
     
+global velThresh
+    
   
 armAlignment = GetDoublePlusArmAlignment;
 
@@ -68,7 +70,7 @@ if strcmpi(minspeed,'numFrames')
 else
     binsBy = 'spatialBins';
     binEdges = sort(binEdges,'ascend');
-    binEdges(end) = [];
+    %binEdges(end) = []; %???
     numBins = length(binEdges)-1;
     TMap_blank = zeros(1,numBins);
     cmperbin = mean(abs(diff(binEdges)));
@@ -94,20 +96,29 @@ for condPairI = 1:numConds
         
         posX = [];
         posY = [];
+        velH = [];
         for chJ  = 1:numCondsHere
             pxHere = [trialbytrial(condsHere(chJ)).trialsX{lapsUse{chJ},1}];
             pyHere = [trialbytrial(condsHere(chJ)).trialsY{lapsUse{chJ},1}];
             posX = [posX pxHere];
             posY = [posY pyHere];
+            
+            if any(velThresh)
+                velHere = [trialbytrial(condsHere(chJ)).trialVel{lapsUse{chJ},1}];
+                velH = [velH velHere];
+            end
         end 
         
         posUse = posX;  
         
-        %deal with velocity
+        % deal with velocity
         good = true(1,length(posX));
         isrunning = good;                         %Running frames that were not excluded.
+        if any(velThresh)
         %isrunning(velocity < minspeed) = false;
-         
+            isrunning(velH < velThresh) = false;
+        end
+        
         linearEdges = binEdges;
         linearEdges = sort(linearEdges,'ascend');
         
@@ -120,6 +131,7 @@ for condPairI = 1:numConds
             %trialLengths = [trialLengths; cell2mat(cellfun(@length,trialbytrial(chK).trialsX(lapsUse{1}),'UniformOutput',false))]; 
         end
         lapsSpiking = logical(lapsSpiking);  
+        lapsSpiking = lapsSpiking(:,isrunning);
         
         %Make an occupancy map
         %Get spiking by that occupancy map

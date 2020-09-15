@@ -55,7 +55,9 @@ for pcI = 1:size(comparisons,1)
     
     [statsOut.signrank(pcI).pVal,statsOut.signrank(pcI).hVal,stats] =...
         signrank(pooledSplitProp{plotWhich(compHere(1))}, pooledSplitProp{plotWhich(compHere(2))});
+    try
     statsOut.signrank(pcI).zVal = stats.zval;
+    end
     
     %plot a bar across the pair of compare inds
     possibleHeight = max(round(cell2mat(cellfun(@max,pooledSplitProp(plotWhich(compHere)),'UniformOutput',false)),1));

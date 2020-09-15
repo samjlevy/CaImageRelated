@@ -987,13 +987,13 @@ Styx(1) = (i+1);
 
 i = i+1;
 MDSL(i).Animal = 'Styx';
-MDSL(i).Date = '03_12_2018';
+MDSL(i).Date = '03_14_2018';
 MDSL(i).Session = 1;
 MDSL(i).Env = 'Plus1';
 MDSL(i).Room = '719h';
 MDSL(i).RecordStartTime = ' ';
 if strcmp(userstr,'sam')
-    MDSL(i).Location = 'D:\DoublePlus\Styx180312';
+    MDSL(i).Location = 'E:\DoublePlus\Styx\Styx180314';
 %elseif strcmp(userstr,'sam')
 %    MDSL(i).Location = 'C:\Users\Sam\Desktop\CM_Miniscope\ACM1';
 end
@@ -1028,14 +1028,14 @@ end
 MDSL(i).Notes = [];
 
 i = i+1;
-MDSL(i).Animal = 'Kerberos';
-MDSL(i).Date = '04_05_2018';
+MDSL(i).Animal = 'Pandora';
+MDSL(i).Date = '06_21_2018';
 MDSL(i).Session = 1;
 MDSL(i).Env = 'Plus1';
 MDSL(i).Room = '719h';
 MDSL(i).RecordStartTime = ' ';
 if strcmp(userstr,'sam')
-    MDSL(i).Location = 'D:\DoublePlus\Kerberos\Kerberos180405';
+    MDSL(i).Location = 'D:\DoublePlus\Pandora\Pandora180621';
 %elseif strcmp(userstr,'sam')
 %    MDSL(i).Location = 'C:\Users\Sam\Desktop\CM_Miniscope\ACM1';
 end
