@@ -68,8 +68,10 @@ for ccX = 1:nBlocksX
                                (allCentersB(:,2) >= bBlocksY(ccY,1) & allCentersB(:,2) <= bBlocksY(ccY,2));
                            
         % Grid midpoints for reference
-        aGridsX(ccX,ccY) = mean([aBlocksX(ccX,1) aBlocksX(ccX,2)]);
-        aGridsY(ccX,ccY) = mean([aBlocksY(ccY,1) aBlocksY(ccY,2)]);
+        aGridsX(ccX,ccY) = mean([bBlocksX(ccX,1) bBlocksX(ccX,2)]);
+        aGridsY(ccX,ccY) = mean([bBlocksY(ccY,1) bBlocksY(ccY,2)]);
+        bGridsX(ccX,ccY) = mean([bBlocksX(ccX,1) bBlocksX(ccX,2)]);
+        bGridsY(ccX,ccY) = mean([bBlocksY(ccY,1) bBlocksY(ccY,2)]);
     end
 end
 cellAssignAbig = cell2mat([cellAssignA(:)']); % big logical matrix of these assignments
@@ -230,6 +232,8 @@ for blockA = 1:nBlocks
         alignIndsB = alignCells{blockA,blockB}(:,2);
         anchorIndsB = find(wellAligned{blockA,blockB});
         allAnchorCellsB{blockA,blockB} = cellIndsB(alignIndsB(anchorIndsB));
+        
+        allAnchorCellsPairs{blockA,blockB} = [allAnchorCellsA{blockA,blockB}, allAnchorCellsB{blockA,blockB}];
         
         if length(anchorCellsB{blockA,blockB}) > 2 % Minimum required for affine transformation
             [tform{blockA,blockB}, reg_shift_centers{blockA,blockB}, closestPairs{blockA,blockB}, nanDistances{blockA,blockB}, regStats{blockA,blockB}] =...
@@ -511,35 +515,148 @@ baseToRegshiftDists(isnan(acUse)) = NaN;
 [cc,colMin] = min(baseToRegshiftDists,[],2); % Column with the minimum distance to base cell
 colMin(isnan(cc)) = NaN; % Nan out entries that don't have registered cells
 tformCentersReArr = [tformCenters{:}];
-finalRegShiftCenters = nan(numCellsA,2);
+aAlignedFinalRegShiftCenters = nan(numCellsA,2);
 indsUse = sub2ind(size(tformCentersReArr),find(~isnan(colMin)),colMin(~isnan(colMin)));
-finalRegShiftCenters(~isnan(colMin),:) = cell2mat(tformCentersReArr(indsUse));
+aAlignedFinalRegShiftCenters(~isnan(colMin),:) = cell2mat(tformCentersReArr(indsUse)); % Reg shift centers in image a indices
 finalRegPairs(:,1) = 1:numCellsA;
 finalRegPairs(:,2) = nan(numCellsA,1);
 finalRegPairs(~isnan(colMin),2) = acUse(indsUse);
+disp('Also need to verify that anchor cells are being kept here, coming from right transform')
+
+tformSource = nan(numCellsA,1);
+tformSource(~isnan(colMin)) = tformsUse(colMin(~isnan(colMin))); %colMin(~isnan(colMin)); % which transform these came from
+
+disp('Need reg shift centers in imageB indices, not fully working yet')
+finalRegShiftCenters = nan(numCellsB,2);
+for tfI = 1:length(tformsUse)
+    thisTF = tformsUse(tfI);
+    theseCellsInA = tformSource==thisTF;
+    theseCellsInB = finalRegPairs(:,2);
+    finalRegShiftCenters(theseCellsInB(theseCellsInA),:) = reg_shift_centers_all{thisTF}(theseCellsInB(theseCellsInA),:);
+end
+
 
 registeredBaseCells_log = ~isnan(finalRegPairs(:,2)); % logical
+registeredBaseCells = find(registeredBaseCells_log);
 unmatchedBaseCells_log = isnan(finalRegPairs(:,2)); % logical
 unmatchedBaseCells = find(unmatchedBaseCells_log); % index
 
-disp('work on this!')
-%{
-for tformsUse
-    [distances,withinRad] = GetAllPtToPtDistances2(allCentersA(:,1),allCentersA(:,2),...
-                                                   reg_shift_centers_all{tform}(:,1),reg_shift_centers_all{tform}(:,2),[])
-    nan out where no matches from b
-    nan out rows from a where we have a registered cell
-    nan out columns from b where we have a registered cell
-    
-    findDistancesMatches(baseToRegshiftDists
+registeredRegCells = sort(finalRegPairs(:,2));
+registeredRegCells(isnan(registeredRegCells)) = [];
+registeredRegCells_log = false(numCellsB,1);
+registeredRegCells_log(registeredRegCells) = true;
+unmatchedRegCells_log = ~registeredRegCells_log;
+unmatchedRegCells = find(unmatchedRegCells_log);
+
+% Alternate version of above: assign reg cell by saying: among those within
+% the distance threshold, take this reg_shift cell which is closest to the
+% transformed center-of-mass of the anchor cells for that transformation
+% Get center-of-mass of anchor cells and it's transformation
+for blockA = 1:nBlocksA
+    useCentersA = allCentersA(cellAssignA{blockA},:);
+    for blockB = 1:nBlocksB
+        useCentersB = allCentersB(cellAssignB{blockB},:);
+        
+        % Center of mass of anchor cells
+        anchorCentersA = useCentersA(anchorCellsA{blockA,blockB},:);
+        anchorCentersB = useCentersB(anchorCellsB{blockA,blockB},:);
+        if any(anchorCentersB)
+        anchorsCOM{blockA,blockB} = centerOfMassPts(anchorCentersB);
+        AanchorsCOM{blockA,blockB} = centerOfMassPts(anchorCentersA);
+        % transformed aCOM
+        anchorsCOMfwd{blockA,blockB} = affineTransform(tform{blockA,blockB},anchorsCOM{blockA,blockB});
+        
+        % Distance from reg_shifts to aCOM
+        regShift_aCOM_dists{blockA,blockB} = GetPtFromPtsDist(anchorsCOMfwd{blockA,blockB},reg_shift_centers_all{blockA,blockB});
+        end
+    end
 end
-then we need to resolve conflicts again across possible b hits. Repeat code from above?
-%}
+
+
+% Assign matched cells by getting the reg_shift cell according to some distance metric:
+% - closest distance to base cell
+% - closest distance to shifted COM of anchor cells
+pooledUnregDists_baseRS = [];
+pooledUnregDists_RSanchorCOM = [];
+pooledUnregInds = [];
+pooledTF = [];
+unbaseInds = repmat(unmatchedBaseCells(:),1,length(unmatchedRegCells));
+unregInds = repmat(unmatchedRegCells(:)',length(unmatchedBaseCells),1);
+for tfI = 1:length(tformsUse)
+    thisTF = tformsUse(tfI);
+    % Distances from base to reg_shift cells
+    [baseRegDists{tfI},~] = GetAllPtToPtDistances2(allCentersA(:,1),allCentersA(:,2),...
+        reg_shift_centers_all{thisTF}(:,1),reg_shift_centers_all{thisTF}(:,2),[]);
+    
+    baseRegDists{tfI}(baseRegDists{tfI}>distanceThreshold) = NaN;
+    
+    % Get only the indices where unregistered base_reg_shift diststs
+    unregEntries_baseRS = baseRegDists{tfI}(unmatchedBaseCells,unmatchedRegCells);
+    tfInds = thisTF*ones(length(unmatchedBaseCells),length(unmatchedRegCells));
+    
+    % Get reg_shift cells within distance threshold and closest to shifted COM of anchors
+    brdSubstitute = repmat(regShift_aCOM_dists{thisTF}(:)',numCellsA,1);
+    unregEntries_RSanchorCOM = brdSubstitute(unmatchedBaseCells,unmatchedRegCells);
+    
+    % Pool these dists, inds
+    pooledUnregDists_baseRS = [pooledUnregDists_baseRS; unregEntries_baseRS(:)];
+    pooledUnregDists_RSanchorCOM = [pooledUnregDists_RSanchorCOM(:); unregEntries_RSanchorCOM(:)];
+    pooledUnregInds = [pooledUnregInds; unbaseInds(:) unregInds(:)];
+    pooledTF = [pooledTF; tfInds(:)];
+end
+pooledUnregInds(isnan(pooledUnregDists_baseRS),:) = [];
+pooledTF(isnan(pooledUnregDists_baseRS),:) = [];
+pooledUnregDists_RSanchorCOM(isnan(pooledUnregDists_baseRS)) = [];
+pooledUnregDists_baseRS(isnan(pooledUnregDists_baseRS)) = []; % This has to come last
+
+% Base - reg_shift distance
+[pooledUnregDistsSorted_baseRS,srtIdx] = sort(pooledUnregDists_baseRS,'ascend');
+pooledUnregIndsSorted = pooledUnregInds(srtIdx,:);
+pooledTFsorted = pooledTF(srtIdx);
+[vals,indsMat,indKept] = RankedUniqueInds(pooledUnregDistsSorted_baseRS,pooledUnregIndsSorted,[]);
+tfKept = pooledTFsorted(indKept);
+
+if sum(registeredBaseCells_log(indsMat(:,1)))~=0 ||...
+   sum(registeredRegCells_log(indsMat(:,2)))~=0
+    disp('Problem: did not revise only unregistered cells...')
+    keyboard
+end
+
+% Update final reg assignments
+finalRegPairs2 = finalRegPairs;
+finalRegPairs(indsMat(:,1),2) = indsMat(:,2);
+
+% Reg_shift - shifted anchorCOM distance
+[pooledUnregDistsSorted_RSanchorCOM,srtIdx] = sort(pooledUnregDists_RSanchorCOM,'ascend');
+pooledUnregIndsSorted = pooledUnregInds(srtIdx,:);
+pooledTFsorted = pooledTF(srtIdx);
+[vals,indsMat,indKept] = RankedUniqueInds(pooledUnregDistsSorted_RSanchorCOM,pooledUnregIndsSorted,[]);
+tfKept = pooledTFsorted(indKept);
+
+if sum(registeredBaseCells_log(indsMat(:,1)))~=0 ||...
+   sum(registeredRegCells_log(indsMat(:,2)))~=0
+    disp('Problem: did not revise only unregistered cells...')
+    keyboard
+end
+
+% Update final reg assignments
+finalRegPairs2(indsMat(:,1),2) = indsMat(:,2);
+% We need a tally of which transformation everything came from
+
+% And we need the centers for the reg shifted
+
+% And a new neuron image for all the reg shifted
+
+
+
+
+% At this point we should be completely out of reg_shift cells that would be within our distance threshold...
+% But do we need to somehow translate the others anyway to have a unqiue
+% entry for them? Depends on whether we're going to aggregate unregistered
+% cells as "unique" or leave them out and just to all day pairs...
 
     
 
-
-disp('work on this later!')
 % Say how good each block's reg was
 for blockA = 1:nBlocksA
     for blockB = 1:nBlocksB
@@ -553,11 +670,14 @@ for blockA = 1:nBlocksA
 end
 numGoodRegAttempts = cellfun(@sum,goodRegAttempts);
 pctGoodRegAttempts = numGoodRegAttempts ./ regAttemptsPossible;
+if any(any(pctGoodRegAttempts > 1))
+    keyboard
     disp('Something wrong here, getting a bad number...')
+end
 % Get the code from old cell register to transform the images and fit them to base display
 
 
-
+disp('Work on this!')
 % For all other cells, get the transforms that were closest, get anchors
 % points from there, compute triangle alignment thing
 targetedAlignmentSame % this function has that code
@@ -568,30 +688,63 @@ hold on
 plot(allCentersA(~isnan(finalRegPairs(:,2)),1),allCentersA(~isnan(finalRegPairs(:,2)),2),'*c') % registered cells
 plot(allCentersA(thisUBC,1),allCentersA(thisUBC,2),'om') % unregistered cell
 plot(aGridsX(assignBlocks),aGridsY(assignBlocks),'.r') % blocks this cell is part of
+plot(usableRSaCOMs(:,1),usableRSaCOMs(:,2),'.k') % Transformed anchor COMs
+plot(allCentersA(allAnchorCellsPairs{aBlockUse,bBlockUse}(:,1),1),allCentersA(allAnchorCellsPairs{aBlockUse,bBlockUse}(:,1),2),'*b')
+plot(allCentersA(allAnchorCellsPairs{aBlockUse,bBlockUse}(anchorPairUse,1),1),allCentersA(allAnchorCellsPairs{aBlockUse,bBlockUse}(anchorPairUse,1),2),'ob')
+
+plot(reg_shift_centers_all{aBlockUse,bBlockUse}(allAnchorCellsPairs{aBlockUse,bBlockUse}(:,2),1),...
+     reg_shift_centers_all{aBlockUse,bBlockUse}(allAnchorCellsPairs{aBlockUse,bBlockUse}(:,2),2),'+r')
+plot(reg_shift_centers_all{aBlockUse,bBlockUse}(allAnchorCellsPairs{aBlockUse,bBlockUse}(anchorPairUse,2),1),...
+     reg_shift_centers_all{aBlockUse,bBlockUse}(allAnchorCellsPairs{aBlockUse,bBlockUse}(anchorPairUse,2),2),'or')
+
 %}
+
 for ucI = 1:length(unmatchedBaseCells)
     thisUBC = unmatchedBaseCells(ucI);
+    thisCenter = allCentersA(thisUBC,:);
     
-    % Find the A block it's part of
+    % Find the A block it's closest to the center of
     assignBlocks = find(cellAssignAbig(thisUBC,:)); 
-    gMidDists = GetPtFromPtsDist(allCentersA(thisUBC,:),[aGridsX(assignBlocks(:)),aGridsY(assignBlocks(:))]); % Distance from block mids
+    gMidDists = GetPtFromPtsDist(thisCenter,[aGridsX(assignBlocks(:)),aGridsY(assignBlocks(:))]); % Distance from block mids
     [~,gmdMin] = min(gMidDists);
     aBlockUse = assignBlocks(gmdMin);
+    % Could also do COM of A anchors...
+    %AanchorsCOM
     
-    % Find the B block with the best reg overlap this a block
-    goodTFhere = goodTforms(aBlockUse,:);
-    [~,bBlockUse] = max(numGoodRegAttempts(aBlockUse,:).*goodTFhere);
+    % Find the B block to use
+    goodTFhere = goodTforms(aBlockUse,:); % logical of B locks that are acceptable transforms
+    goodTFhereInds = find(goodTFhere);
+    % Highest number of reg overlaps
+    [~,bBlockUse] = max(pctGoodRegAttempts(aBlockUse,:).*goodTFhere); 
+    % Closest transformed anchor COM
+    usableRSaCOMs = reshape([anchorsCOMfwd{aBlockUse,goodTFhere}],[2 sum(goodTFhere)])';
+    rsAcomDists = GetPtFromPtsDist(thisCenter, usableRSaCOMs); 
+    [~,bBlockUseTemp] = min(rsAcomDists); 
+    %bBlockUse = goodTFhereInds(bBlockUseTemp);
     
     % Get triangle alignment thisUBC, to some number pairs of cells in A
     % For the registered cells in B that go here find the best match among
     % triangle alignments to unregistered cells
+
     
     % Pick some pair of registered (or anchor, even...) cells in A, get the
     % same cells in this B transform
-    % Gt the triangle alignment thisUBC to a cell pair
+    nPairsCheck = 1;
+    anchorIndsA = allAnchorCellsPairs{aBlockUse,bBlockUse}(:,1);
+    anchorCentersA = allCentersA(anchorIndsA,:);
+    anchorDistsA = GetPtFromPtsDist(thisCenter, anchorCentersA);
+    [aa,adistsIdx] = sort(anchorDistsA,'ascend');
+    anchorPairUse = adistsIdx([1 2]);
+    
+    anchorIndsB = allAnchorCellsPairs{aBlockUse,bBlockUse}(:,2);
+    anchorCentersB = reg_shift_centers_all{aBlockUse,bBlockUse}(anchorIndsB,2);
+    
+    
+    % Get the triangle alignment thisUBC to a cell pair
     % For all unregistered cells in B, get triangle alignments to B anchor cells
     % Select the best match
-    
+    targetedAlignmentSame code is in here for triangle similarity minimization
+    bMinInd = triangleMatchMinimize(anchorsA,ptA,anchorsB,ptsB)
 end
    
 
@@ -885,7 +1038,7 @@ end
 end
 %% %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 function [wellAligned,goodMatches,diffLogs,cellTripLog] = targetedAlignmentSame(basePairCenters,regPairCenters)
-% This takes 2 sets of paired points and asks if the engles between those
+% This takes 2 sets of paired points and asks if the angles between those
 % points (at dulaunay triangles) actually is similar between them
 % Good matches says how many well-match delaunay triangles was it involved
 % in, wellAligned is a logical of that
