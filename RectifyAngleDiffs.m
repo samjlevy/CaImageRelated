@@ -5,12 +5,13 @@ if strcmpi(degOrRad,'rad')
     angleDiffs = rad2deg(angleDiffs);
 end
 %anglesRect = angleDiffs;
-ba = angleDiffs>180 | angleDiffs<-180; % 0.027493 seconds
+ba = angleDiffs>180 | angleDiffs<-180; % index % 0.027493 seconds
 %ad = angleDiffs(ba);
-bb = -360*(angleDiffs./abs(angleDiffs)).*ba;
+bb = -360*(angleDiffs./abs(angleDiffs)).*ba; % 0.1
 %bb(ba) = 0;
-anglesRect = rem(angleDiffs,360);
-anglesRect = anglesRect + bb;
+
+anglesRect = rem(angleDiffs,360); %0.09
+anglesRect = anglesRect + bb; % 0.04
 
 %{
 tic

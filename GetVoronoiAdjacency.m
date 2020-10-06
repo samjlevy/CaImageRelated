@@ -1,5 +1,10 @@
 function voronoiAdj = GetVoronoiAdjacency(vorIndices,vorVerts)
 
+if isempty(vorVerts) && size(vorIndices,2)==2 && isnumeric(vorIndices)
+    % Allows using 
+    [vorVerts,vorIndices] = voronoin(vorIndices);
+end
+
 if any(vorVerts)
     notInf = find(sum(~isinf(vorVerts),2)==2); %Indices that don't have inf
     fixedIndices = cellfun(@(x) x(logical(sum(x(:)==notInf(:)',2))),vorIndices,'UniformOutput',false);

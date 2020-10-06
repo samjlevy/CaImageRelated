@@ -1,4 +1,5 @@
 function [distances,withinRad] = GetAllPtToPtDistances(ptsX,ptsY,smoothRad)
+% All to all distances 
 
 %With more than a few hundred points this gets to big to calculate
 %{
