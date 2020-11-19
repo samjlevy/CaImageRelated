@@ -991,8 +991,8 @@ elseif strcmpi(frameIn,'w')
     figure(posAndVelFig);
     [windowLims,~] = ginput(2);
     windowLims = round(windowLims);
-    winStart = max([min(windowLims) 1]);
-    winStop = min([max(windowLims) length(xAVI)]);
+    fStart = max([min(windowLims) 1]);
+    fStop = min([max(windowLims) length(xAVI)]);
 elseif length(str2num(frameIn))==2
     ffs = str2num(frameIn);
     fStart = ffs(1);

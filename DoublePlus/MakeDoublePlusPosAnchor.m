@@ -71,7 +71,7 @@ posAnchorIdeal = [anchorX(:), anchorY(:)];
 posAnchorIdeal = (posAnchorIdeal/pixPerInch)*2.54;
 
 if any(saveDir)
-    save(fullfile(saveDir,'mainPosAnchor.mat'),'anchorX','anchorY','bounds','posAnchorIdea')
+    save(fullfile(saveDir,'mainPosAnchor.mat'),'anchorX','anchorY','bounds','posAnchorIdeal')
 end
 
 end

@@ -14,7 +14,10 @@ end
 hold(manCorrFig.Children,'off')
     
 figure(manCorrFig);
+buttonClicked = [];
+while isempty(buttonClicked)
 [xclick,yclick,buttonClicked] = ginput(1);
+end
 switch buttonClicked
     case 1
         xAVI(corrFrame) = xclick;

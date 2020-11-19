@@ -128,6 +128,9 @@ dbinn = [0:1:10];
 dThreshUse = distanceThreshold;
 hh = waitbar(0,'Starting to register');
 tic
+tform = cell(nBlocksA,nBlocksB);
+reg_shift_centers = cell(nBlocksA,nBlocksB);
+closestPairs = cell(nBlocksA,nBlocksB);
 for blockA = 1:nBlocks
     % Prep block A
     useCentersA = allCentersA(cellAssignA{blockA},:); % 0.006752 seconds
@@ -666,7 +669,7 @@ if any(conflictAnchorCells)
     disp('Found conflicting anchor cells, do not yet have a solution for this')
 end
 % Eliminate transforms whose anchors are entirely covered by another...
-nAnchorsThresh = 5;
+nAnchorsThresh = 4;
 badTforms = numAnchorPairs < nAnchorsThresh;
 tformsUse(badTforms) = [];
 aggregateAnchorPairs(:,badTforms) = [];
@@ -685,7 +688,7 @@ finalAnchorPairs = [[1:numCellsA]', anchorPairUse];
 
 % Hail Mary mega transform:
 haveAnchor = finalAnchorPairs(~isnan(anchorPairUse));
-megaTform = fitgeotrans(allCentersB(finalAnchorPairs(haveAnchor,2),:),allCentersA(haveAnchor,:),'affine');
+megaTform = fitgeotrans(allCentersB(finalAnchorPairs(haveAnchor,2),:),allCentersA(haveAnchor,:),'projective');
 hmRS = affineTransform(megaTform,allCentersB);
 
 RA = imref2d(size(NeuronImageA{1}));
@@ -702,7 +705,7 @@ badPts = find(sum(statsOut.inPreNotPost,2)>=2); % Two connections off this pt th
 
 % Try registering
 [distances,~] = GetAllPtToPtDistances2(allCentersA(:,1),allCentersA(:,2),hmRS(:,1),hmRS(:,2),[]);
-[minIndsBaseRS,baseRSdistances] = findDistanceMatches(distances,[]);
+%[minIndsBaseRS,baseRSdistances] = findDistanceMatches(distances,[]);
 
 haveDistance = distances; 
 haveDistance(haveDistance>distanceThreshold) = NaN;
@@ -716,6 +719,10 @@ goodInds = indsMat(goodVal,:);
 
 finalRegPairs = [[1:numCellsA]',nan(numCellsA,1)];
 finalRegPairs(goodInds(:,1),2) = goodInds(:,2);
+
+haveReg = find(~isnan(finalRegPairs(:,2)));
+hold on
+plot(allCentersA(haveReg,1),allCentersA(haveReg,2),'.k','MarkerSize',10)
 
 
 %for imi = 1:1452; plot([allCentersA(indsMat(imi,1),1) hmRS(indsMat(imi,2),1)],...

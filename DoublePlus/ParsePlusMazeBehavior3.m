@@ -1,11 +1,11 @@
-function [onMazeFinal,behTable] = ParsePlusMazeBehavior2(posLEDfile,posAnchoredFile)
+function ParsePlusMazeBehavior3(posAnchoredFile)
 %THis function is designed to parse out plus maze behavior given good
 %position data
 %Assumes you will have PositionChecker open to validate possible bad trials
 
 disp('parsing on mazeBehavior')
-load(posLEDfile,'onMaze')
-load(posAnchoredFile,'x_adj_cm','y_adj_cm','epochs','posAnchorIdeal','rewardXadj','rewardYadj')
+%load(posLEDfile,'onMaze')
+load(posAnchoredFile,'x_adj_cm','y_adj_cm','epochs','posAnchorIdeal','rewardXadj','rewardYadj','onMaze')
 %load(idealAnchorFile)
 numEpochs = size(epochs,1);
 
@@ -97,6 +97,9 @@ for omI = 1:length(onMazeStarts)
     end
 end
 
+parseRewards = questdlg('Parse rewarded behavior?','Parse rewards','Yes','No','No')
+switch parseRewards
+    case 'Yes'
 frameStartBuffer = 10;
 rewardRadius = 2;
 rewardGetAdjust = 0;
@@ -127,6 +130,9 @@ for trialI = 1:length(trialSeqs)
     withinRad = lastDistances < rewardRadius;
     rewardEnterFrame = lastFrames(find(withinRad,1,'first'));
     if isempty(rewardEnterFrame)
+        % First try findclosest
+        possible = findclosest2D(x_adj_cm(lastFrames),y_adj_cm(lastFrames),rewardXadj{thisEpoch}(lastArm),...
+            rewardYadj{thisEpoch}(lastArm));
         disp('No reward entry')
         %keyboard
         
@@ -158,6 +164,12 @@ for trialI = 1:length(trialSeqs)
     %trial start is first frame here, last is the adjusted forwards
     trialBounds{trialI} = [frameLook rewardEnterFrame];
     trialEpoch(trialI,1) = thisEpoch;
+end
+    case 'No'
+        for trialI = 1:length(trialSeqs)
+            trialBounds{trialI} = [trialSeqEpochs{trialI}(1,1) trialSeqEpochs{trialI}(end,2)];
+            trialEpoch(trialI,1) = find((trialBounds{trialI}(1)+10 > epochs(:,1)) & (trialBounds{trialI}(1)+10 < epochs(:,2)));
+        end
 end
         
 save('plusMazeBehavior.mat','trialEpoch','trialBounds','trialSeqs','trialSeqEpochs')    

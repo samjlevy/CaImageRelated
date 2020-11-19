@@ -1,76 +1,32 @@
-function AlignPosToAnchor1(ledPath,anchorPath)
+function AlignPosToAnchor2(ledPath,anchorPath)
+% Assumes 1 epoch
 
 %posLedPath = 'C:\Users\Sam\Desktop\marble19_190818\Marble19_190818_PosLED_temp.mat';
 %anchorPath = 'C:\Users\Sam\Desktop\AddTmaze\MazeAlignmentTemplate.mat';
 
+ledPathFile = ledPath;
 if isempty(ledPath)
 posLedPath = cd;
 ledPathFile = ls(fullfile(posLedPath,'*PosLED_temp.mat'));
 disp(['using ' ledPathFile])
 end
 
-load(ledPathFile,'xAVI','yAVI','avi_filepath','DVTtime','v0')
+load(ledPathFile,'xAVI','yAVI','avi_filepath','DVTtime','v0','onMaze')
 load(anchorPath,'posAnchorIdeal')
 
 numFrames = length(xAVI);
 %How many instances are we aligning? (For multiple mazes in 1 video)
-numEpochs = str2double(input('How many epochs on different mazes are there? >> ','s'));
-
-
-if numEpochs > 1
-    getEpochs = questdlg('How to dictate epochs?','Find epochs?','onMaze Limits','Frames','onMaze Limits');
-switch getEpochs
-    case 'Frames'
-        try
-        obj = VideoReader(avi_filepath);
-        catch
-            [ff,ll] = uigetfile(['Please locate the file ' avi_filepath]);
-            avi_filepath = fullfile(ll,ff);    
-        end
-        h1 = implay(avi_filepath);
-
-        %For each instance: 
-        % what are the frame number for this maze epoch?
-        whichMaze = zeros(1,numFrames);
-        for epochI = 1:numEpochs
-            eStart(epochI) = str2double(input(['Enter start frame number for epoch ' num2str(epochI) ' >>'],'s'));
-            eEnd(epochI) = str2double(input(['Enter end frame number for epoch ' num2str(epochI) ' >>'],'s'));
-
-            epochs(epochI,:) = [eStart(epochI) eEnd(epochI)];
-            whichMaze(eStart(epochI):eEnd(epochI)) = epochI;
-        end
-        try
-        close(h1)
-        end
-    case 'onMaze'
-        for epochI = 1:numEpochs
-            efile = questdlg('For epoch, use on maze from this file or load another?','This File','Load','This File'); 
-            lfile = ledPathFile;
-            if strcmpi(efile,'Load')
-                [ff,ll] = uigetfile(['Please locate the file ' lfile]);
-                lfile = fullfile(ll,ff);
-            end
-            load(lfile,'onMaze')
-            eStart(epochI) = find(onMaze,1,'first');
-            eEnd(epochI) = find(onMaze,1,'last');
-            epochs(epochI,:) = [eStart(epochI) eEnd(epochI)];
-            whichMaze(eStart(epochI):eEnd(epochI)) = epochI;
-        end
-end
-
-else
-    lfile = ledPathFile;
-    load(lfile,'onMaze')
-    eStart = find(onMaze,1,'first');
-    eEnd = find(onMaze,1,'last');
-    whichMaze = ones(1,numFrames);
-    epochs = [eStart eEnd];
-end
+lfile = ledPathFile;
+load(lfile,'onMaze')
+eStart = find(onMaze,1,'first');
+eEnd = find(onMaze,1,'last');
+whichMaze = ones(1,numFrames);
+epochs = [eStart eEnd];
 
 %Get an image to align to.
 oldImage = v0;
 if ~iscell(v0)
-    v0 = cell(numEpochs,1);
+    v0 = cell(1,1);
     [v0{:}] = deal(oldImage);
 else
     v0 = oldImage;
@@ -78,13 +34,12 @@ end
 
 x_adj_cm = nan(1,numFrames);
 y_adj_cm = nan(1,numFrames);
-for epochI = 1:numEpochs
-    doneAligning = 0;
-    while doneAligning == 0
-    epochFrames = eStart(epochI):eEnd(epochI);
-    disp(['Please get a background image for epoch ' num2str(epochI) ...
-        ', frames between ' num2str(eStart(epochI)) ' and ' num2str(eEnd(epochI))])
-    voFig = figure; imagesc(v0{epochI});
+
+doneAligning = 0;
+while doneAligning == 0
+    epochFrames = eStart:eEnd;
+    disp(['Please get a background image for frames between ' num2str(eStart) ' and ' num2str(eEnd)])
+    voFig = figure; imagesc(v0{1});
     useload = questdlg('Use v0, load v0, or remake?','Where v0?','Use','Load','Remake','Use');
     switch useload
         case 'Use'
@@ -94,7 +49,7 @@ for epochI = 1:numEpochs
             lfile = fullfile(ll,ff);
             aa = load(lfile,'v0');
             v0{epochI} = aa.v0;
-            imagesc(v0{epochI});
+            imagesc(v0{1});
     end
     adjGood = questdlg('Good or adjust?','Adjust','Good','Adjust','Good');
     close(voFig);
@@ -109,7 +64,7 @@ for epochI = 1:numEpochs
     title('Target find the equivalent of the purple asterisk in reference image')
     ylim([min(posAnchorIdeal(:,2))-5 max(posAnchorIdeal(:,2))+5])
     xlim([min(posAnchorIdeal(:,1))-5 max(posAnchorIdeal(:,1))+5])
-    posImage = figure('Position',[909 235 560 420]); imagesc(v0{epochI})
+    posImage = figure('Position',[909 235 560 420]); imagesc(v0{1})
     hold on
     title('Click here to set the anchor')
     
@@ -141,21 +96,23 @@ for epochI = 1:numEpochs
     tform = fitgeotrans([xAnchor(:) yAnchor(:)],posAnchorIdeal,'affine');
     [x_adj_cm(epochFrames), y_adj_cm(epochFrames)] = transformPointsForward(tform,xAVI(epochFrames),yAVI(epochFrames));
     
-    anchors{epochI} = [xAnchor(:) yAnchor(:)];
+    anchors{1} = [xAnchor(:) yAnchor(:)];
     goodAlign = questdlg('Was this alignment good?','Good alignment','Yes','No','Yes');
     if strcmpi(goodAlign,'Yes')
         doneAligning = 1;
     end
     close(templateImage);
     close(posImage);
-    end
 end
 
-%savePath = strsplit(posLedPath,'\');
-%savePath = fullfile(savePath{1:end-1});
-savePath = ledPath;
-save(fullfile(savePath,'posAnchored.mat'),'v0','x_adj_cm','y_adj_cm','xAnchor','anchors',...
-    'whichMaze','epochs','xAVI','yAVI','DVTtime','posAnchorIdeal')
+savePath = strsplit(ledPathFile,'\');
+if length(savePath)==1
+    savePath = cd;
+else
+    savePath = fullfile(savePath{1:end-1});
+end
+save(fullfile(savePath,'posAnchored.mat'),'v0','x_adj_cm','y_adj_cm','xAnchor','yAnchor','anchors',...
+    'whichMaze','epochs','xAVI','yAVI','DVTtime','posAnchorIdeal','onMaze')
 
 end
 

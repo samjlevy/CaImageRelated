@@ -1,5 +1,9 @@
-function GetPlusRewardLocations(posAnchoredFile)
+function GetPlusRewardLocations(posAnchoredFile,rewardLocFile)
 
+if ~isempty(rewardLocFile)
+    load(rewardLocFile,'rewardX','rewardY','rewardXadj','rewardYadj','rewardLocs')
+else
+    
 load(posAnchoredFile,'v0','posAnchorIdeal','anchors','xAVI','yAVI','epochs')
 
 if ~iscell(v0)
@@ -14,7 +18,7 @@ if strcmpi(method,'FrameNums')
 end
 
 %Get the reward locations
-for vI = 1:length(v0)
+for vI = 1:size(epochs,1)
     disp(['Doing epoch ' num2str(vI) ', frames ' num2str(epochs(vI,1)) ' thru ' num2str(epochs(vI,2))])
     
     switch method
@@ -51,7 +55,9 @@ for vI = 1:length(v0)
     [rewardXadj{vI}, rewardYadj{vI}] = transformPointsForward(tform,rewardX{vI},rewardY{vI});
 end
 
-save(posAnchoredFile,'rewardX','rewardY','rewardXadj','rewardYadj','-append')
+end
+
+save(posAnchoredFile,'rewardX','rewardY','rewardXadj','rewardYadj','rewardLocs','-append')
 disp(['Done getting reward locations, saved to: ' posAnchoredFile])
 
 end

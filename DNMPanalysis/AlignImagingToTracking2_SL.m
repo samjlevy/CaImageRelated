@@ -16,14 +16,26 @@ for aa = 1:length(varargin)/2
             fps_brainimage = varargin{2*aa};
         case 'pos_file'
             pos_file = varargin{2*aa};
+        case 'xPositions'
+            x_var_name = varargin{2*aa};
+        case 'yPositions'
+            y_var_name = varargin{2*aa};
     end
 end
 end
 
 aa = load(fullfile(folderUse,pos_file));
 fn = fieldnames(aa);
-xind = listdlg('PromptString','Which is X positions?','ListString',fn);
-yind = listdlg('PromptString','Which is Y positions?','ListString',fn);
+if exist('x_var_name','var')
+    xind = find(strcmpi(fn,x_var_name));
+else
+    xind = listdlg('PromptString','Which is X positions?','ListString',fn);
+end
+if exist('y_var_name','var')
+    yind = find(strcmpi(fn,y_var_name));
+else
+    yind = listdlg('PromptString','Which is Y positions?','ListString',fn);
+end
 xAVI = aa.(fn{xind});
 yAVI = aa.(fn{yind});
 DVTtime = aa.DVTtime;
