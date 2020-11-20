@@ -715,7 +715,7 @@ finalRegPairs(goodInds(:,1),2) = goodInds(:,2);
 
 %for imi = 1:1452; plot([allCentersA(indsMat(imi,1),1) hmRS(indsMat(imi,2),1)],...
 %                       [allCentersA(indsMat(imi,1),2) hmRS(indsMat(imi,2),2)],'m'); end
-outputs.reg_shift_centers = hmRs;
+outputs.reg_shift_centers = hmRS;
 outputs.tform = megaTform; 
 outputs.anchors = finalAnchorPairs;
 outputs.regShiftedImages = regShiftedImages;
@@ -1045,7 +1045,7 @@ for cellI = 1:size(finalRegPairs,1)
         %}
     end
 end
-%}
+
 
 % Evaluate again what we have, what we missed
 registeredBaseCells_log = ~isnan(finalRegPairs(:,2)); % logical

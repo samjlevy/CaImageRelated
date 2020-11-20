@@ -85,7 +85,7 @@ disp('Getting reliability')
 dayUse = cell(1,numMice); threshAndConsec = cell(1,numMice); trialReliAll = []; trialReliAllArms = [];
 for mouseI = 1:numMice
     saveName = fullfile(mainFolder,mice{mouseI},'trialReliability.mat');
-    %if exist(saveName,'file')==0
+    if exist(saveName,'file')==0
         [dayUse,threshAndConsec,consec] = GetUseCells(cellTBT{mouseI}, lapPctThresh, consecLapThresh, false,[min(stemBinEdges) max(stemBinEdges)],[]);
         [trialReli,aboveThresh,nLapsActive,~] = TrialReliability(cellTBT{mouseI}, lapPctThresh, false,[min(stemBinEdges) max(stemBinEdges)],[]);
 
@@ -94,7 +94,11 @@ for mouseI = 1:numMice
     
         save(saveName,'dayUse','threshAndConsec','consec','dayUseArm','threshAndConsecArm','consecArm','trialReli','trialReliArm','nLapsActive','nLapsActiveArm')
         clear('dayUse','threshAndConsec','dayUseArm','threshAndConsecArm','trialReli','trialReliArm','consec','consecArm','nLapsActive','nLapsActiveArm')
-    %end
+    end
+    
+    [dayUseDelay,threshAndConsecDelay,consecDelay] = GetUseCells(cellTBTdelay{mouseI}, lapPctThresh, consecLapThresh, false,[],[]);
+    [trialReliDelay,aboveThreshDelay,nLapsActiveDelay,~] = TrialReliability(cellTBTdelay{mouseI}, lapPctThresh, false,[],[]);
+    save(saveName,'dayUseDelay','threshAndConsecDelay','consecDelay','trialReliDelay','aboveThreshDelay','nLapsActiveDelay','-append')
     
     [trialReliAll{mouseI},~,~,~] = TrialReliability(cellTBT{mouseI}, lapPctThresh,true,[min(stemBinEdges) max(stemBinEdges)],[]);
     [trialReliAllArms{mouseI},~,~,~] = TrialReliability(cellTBTarm{mouseI}, lapPctThresh,true,[min(armBinEdges) max(armBinEdges)],[]);
@@ -122,7 +126,16 @@ for mouseI = 1:numMice
     trialReliArm{mouseI} = reliability{mouseI}.trialReliArm;
     lapsActiveArm{mouseI} = reliability{mouseI}.nLapsActiveArm;
     
+    dayUseDelay{mouseI} = reliability{mouseI}.dayUseDelay;
+    presentInactive{3}{mouseI} = (dayUseDelay{mouseI} + (cellSSI{mouseI}>0)) == 1;
+    threshAndConsecDelay{mouseI} = reliability{mouseI}.threshAndConsecDelay;
+    consecDelay{mouseI} = reliability{mouseI}.consecDelay;
+    cellsActiveTodayDelay{mouseI} = sum(dayUseDelay{mouseI},1);    
+    daysEachCellActiveDelay{mouseI} = sum(dayUseDelay{mouseI},2);
+    trialReliDelay{mouseI} = reliability{mouseI}.trialReliDelay;
+    lapsActiveDelay{mouseI} = reliability{mouseI}.nLapsActiveDelay;
     %daysCellFound{mouseI} = sum(cellSSI{mouseI}>0,2);
+    
     clear reliability
 end
 
@@ -556,7 +569,7 @@ for mouseI = 1:numMice
     end
     %}
     %Delay splitters
-    %{
+    
     splitterFile = fullfile(shuffleDir,['splittersLRdelay.mat']);
     if exist(splitterFile,'file')==0
         disp(['did not find delay splitting for mouse ' num2str(mouseI) ', making now'])
@@ -566,10 +579,10 @@ for mouseI = 1:numMice
         save(splitterFile,'binsAboveShuffle','thisCellSplits')
         toc
     end
-    %loadedSplit = load(splitterFile);
+    loadedSplit = load(splitterFile);
             
-    %binsAboveShuffle{3}{1}{mouseI} = loadedSplit.binsAboveShuffle;
-    %thisCellSplits{3}{1}{mouseI} = loadedSplit.thisCellSplits;
+    binsAboveShuffle{3}{1}{mouseI} = loadedSplit.binsAboveShuffle;
+    thisCellSplits{3}{1}{mouseI} = loadedSplit.thisCellSplits;
             %}
 end
 disp('Done loading all splitting')
@@ -990,7 +1003,8 @@ dayUseFilter = {dayUse; dayUseArm};
 % All cells present that day    
     %dayUseFilter = {cellfun(@(x) x>0,cellSSI,'UniformOutput',false); cellfun(@(x) x>0,cellSSI,'UniformOutput',false)};   %Should just include all cells that pass shuffle...
 % thresh but not consec
-    dayUseFilter = {cellfun(@(x) sum(x>=lapPctThresh,3)>0,trialReli,'UniformOutput',false); cellfun(@(x) sum(x>=lapPctThresh,3)>0,trialReliArm,'UniformOutput',false)}; 
+    dayUseFilter = {cellfun(@(x) sum(x>=lapPctThresh,3)>0,trialReli,'UniformOutput',false); cellfun(@(x) sum(x>=lapPctThresh,3)>0,trialReliArm,'UniformOutput',false);...
+                    cellfun(@(x) sum(x>=lapPctThresh,3)>0,trialReliDelay,'UniformOutput',false)}; 
 
 splitterCells = [];
 for mouseI = 1:numMice
