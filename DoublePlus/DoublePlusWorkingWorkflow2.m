@@ -60,7 +60,7 @@ MakeQuickPlusSpreadsheet
 ParsedFramesToBrainFrames('PlusBehavior.xlsx',20)
 
 %{
-%5. Turn these tables into an excel sheet 
+%5. Turn these tables into an excel sheet                                
 MakeSpreadSheetFromBehTable
 
 %6. Exclude some bad frames
@@ -83,6 +83,15 @@ ParsedFramesToBrainFrames('PlusBehavior.xlsx',20)
 %3. Finalize: for now just copy and rename
 copyfile 'PlusBehavior_BrainTime.xlsx' 'PlusBehavior_BrainTime_Finalized.xlsx'
 
+%4. Deal with multi-part sessions
+% For files from the same session, same behavior type:
+CombineSameSessionPieces
+% For files from the same session, diff behaviors:
+MergeDifferentSessionPieces(foldersUse,cellRegInds,saveFolder)
+% For files coming from different neural data; requires sessionInds
+% registration to put them together, that in the same order as in folders
+% use
+
 %% 4. Add it all together to make a trial by trial!
 %1. Make a dummy cell registration as a placeholder. REPLACE IN FUTURE
 
@@ -96,13 +105,13 @@ realDays = [fileData(:).sessNum];
 MakeFullRegFake(sessionPaths,baseSessionInd,realDays,sessionType,'overlap')
 
 %2. Make a data table of all sessions
-MakeAlternationDataTable1(session_paths{1})
+%MakeAlternationDataTable1(session_paths{1})
 
 %3. Make daybyday
 mousePath = 'E:\DoublePlus\December';
 getFluoresence = true;
-deleteSilentCells = true;
-[daybyday, sortedSessionInds, useDataTable] = MakeDayByDayWithinPlus(mousePath, getFluoresence, deleteSilentCells);
+deleteSilentCells = cd;
+[~, ~] = MakeDayByDayDoublePlus2(mousePath, getFluoresence, deleteSilentCells);
 
 %4. Make trialbytrial
 correctOnly = false;

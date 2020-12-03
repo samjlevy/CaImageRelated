@@ -12,7 +12,8 @@ normalizedTraces = zeros(numCells,numTs);
 
 for cellI = 1:numCells
     tc = rawTraces(cellI,:);
-    normalizedTraces(cellI,:) = (tc - min(tc))/max(tc);
+    rc = (tc - min(tc));
+    normalizedTraces(cellI,:) = rc/max(rc);
 end
 
 end

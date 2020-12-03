@@ -24,7 +24,7 @@ colorList = [...
 load(fullfile(base_path,'FinalOutput.mat'),'NeuronImage')
 baseImage = NeuronImage;
 base_allMask = create_AllICmask(baseImage);
-base_cellCenters = getAllCellCenters(baseImage);
+base_cellCenters = getAllCellCenters(baseImage,false);
 
 %for regSess = 1:length(reg_paths)
 
@@ -33,7 +33,7 @@ reg_path = reg_paths;%{regSess};
 load(fullfile(reg_path,'FinalOutput.mat'),'NeuronImage','NeuronAvg')
 regImage = NeuronImage;
 reg_allMask = create_AllICmask(regImage);
-reg_cellCenters = getAllCellCenters(regImage);
+reg_cellCenters = getAllCellCenters(regImage,false);
 
 clear NeuronImage
 
@@ -179,7 +179,7 @@ RA = imref2d(size(base_allMask));
     cellfun(@(x) imwarp(x,tform,'OutputView',RA,'InterpolationMethod','nearest'),regImage,'UniformOutput',false);
 reg_allMask_shifted = create_AllICmask(regImage_shifted);
 
-reg_shift_centers = getAllCellCenters(regImage_shifted);
+reg_shift_centers = getAllCellCenters(regImage_shifted,false);
 
 %find closest: closestCell is baseCell index for each reg cell
 [closestCell, distance] = findclosest2D ( base_cellCenters(:,1), base_cellCenters(:,2),...

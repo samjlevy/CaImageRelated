@@ -42,7 +42,7 @@ else
     end
     baseImage = bufferedNeuronImage;
         
-    base_cellCenters = getAllCellCenters(baseImage);
+    base_cellCenters = getAllCellCenters(baseImage,false);
     baseOrientation = cellfun(@(x) regionprops(x,'Orientation'), baseImage,'UniformOutput',false);
     
     fullReg.sessionInds = [1:length(baseImage)]'; %#ok<NBRAK>
