@@ -330,11 +330,11 @@ if ~isempty(daybyday.behavior{sessI})
             rule = daybyday.sessType{sessI};
         end
             
-        tempTBT.trialsX{thisTrial,1} = {xPosLap(framesKeepHere)};
-        tempTBT.trialsY{thisTrial,1} = {yPosLap(framesKeepHere)};
-        tempTBT.trialPSAbool{thisTrial,1} = {daybyday.PSAbool{sessI}(:,framesKeepAll)};
-        tempTBT.trialRawTrace{thisTrial,1} = {daybyday.RawTrace{sessI}(:,framesKeepAll)};
-        tempTBT.trialDFDTtrace{thisTrial,1} = {daybyday.DFDTtrace{sessI}(:,framesKeepAll)};
+        tempTBT.trialsX{thisTrial,1} = xPosLap(framesKeepHere);
+        tempTBT.trialsY{thisTrial,1} = yPosLap(framesKeepHere);
+        tempTBT.trialPSAbool{thisTrial,1} = daybyday.PSAbool{sessI}(:,framesKeepAll);
+        tempTBT.trialRawTrace{thisTrial,1} = daybyday.RawTrace{sessI}(:,framesKeepAll);
+        tempTBT.trialDFDTtrace{thisTrial,1} = daybyday.DFDTtrace{sessI}(:,framesKeepAll);
         tempTBT.sessID(thisTrial,1) = sessI;
         tempTBT.sessNumber(thisTrial,1) = sessInd;
         tempTBT.lapNumber(thisTrial,1) = trialI;

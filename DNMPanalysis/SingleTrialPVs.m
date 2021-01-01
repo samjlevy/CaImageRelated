@@ -1,4 +1,5 @@
 function [singleTrialTMap] = SingleTrialPVs(trialbytrial,xBinLims,yBinLims)
+% Creates the firing rate vector for every single trial
 
 numConds = length(trialbytrial);
 numCells = size(trialbytrial(1).trialPSAbool{1},1);
