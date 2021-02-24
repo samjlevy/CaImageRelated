@@ -1,4 +1,8 @@
-function [fixedEpochs, reporter] = FindBadLaps(x_adj_cm, y_adj_cm, epochs)
+function [fixedEpochs, reporter] = FindBadLapsAdvanced(x_adj_cm, y_adj_cm, epochs, boundary)
+% uses boundary to do a pass for pts out out bounds, tries a few things to
+% solve them quickly...
+
+
 inEpochs = epochs;
 
 badFig = figure('name','FindBad','Position',[300 100 560*2 420*2]);
@@ -14,10 +18,7 @@ for thisE = 1:length(epochs)
     indInds = [];
     for ee = 1:length(epochs(thisE).starts)
         nowInds = [nowInds, epochs(thisE).starts(ee):epochs(thisE).stops(ee)]; %#ok<AGROW>
-        %indInds = [indInds, ee*ones(1,(epochs(thisE).stops(ee)-epochs(thisE).starts(ee)+1))]; %#ok<AGROW>
-        framesHH = epochs(thisE).starts(ee):epochs(thisE).stops(ee);
-        indInds = [indInds, ee*ones(1,length(framesHH))];
-            % this is which lap...
+        indInds = [indInds, ee*ones(1,(epochs(thisE).stops(ee)-epochs(thisE).starts(ee)+1))]; %#ok<AGROW>
     end
     anynanH = isnan(x_adj_cm(nowInds)) | isnan(y_adj_cm(nowInds));
     if any(anynanH)

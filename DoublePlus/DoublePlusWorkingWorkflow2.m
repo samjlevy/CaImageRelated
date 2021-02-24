@@ -104,6 +104,8 @@ sessionType = {fileData(:).sessType};
 realDays = [fileData(:).sessNum];
 MakeFullRegFake(sessionPaths,baseSessionInd,realDays,sessionType,'overlap')
 
+
+
 %2. Make a data table of all sessions
 %MakeAlternationDataTable1(session_paths{1})
 
@@ -118,6 +120,12 @@ correctOnly = false;
 [trialbytrial, allfiles, sortedSessionInds, realdays]= MakeTBTwithinDayPlus(mousePath,getFluoresence,correctOnly);
 
 
+%% 5. Fixing things we skipped earlier
+
+% 1. Validate all behavior parsing: 
+% - load trials of each sequence, plot, check for errors
+
+% 2. Replace cell registration
 
 
 

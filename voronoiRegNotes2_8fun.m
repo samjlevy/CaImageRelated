@@ -727,12 +727,14 @@ plot(allCentersA(haveReg,1),allCentersA(haveReg,2),'.k','MarkerSize',10)
 
 %for imi = 1:1452; plot([allCentersA(indsMat(imi,1),1) hmRS(indsMat(imi,2),1)],...
 %                       [allCentersA(indsMat(imi,1),2) hmRS(indsMat(imi,2),2)],'m'); end
-outputs.reg_shift_centers = hmRs;
+outputs.reg_shift_centers = hmRS;
 outputs.tform = megaTform; 
 outputs.anchors = finalAnchorPairs;
 outputs.regShiftedImages = regShiftedImages;
 outputs.distances = distances;
 outputs.finalRegPairs = finalRegPairs;
+
+disp('Actually stop here for now...')
 %{
 % Alternate work (tform before reg) starts here
 % Get anchor COMs, distance of pts from anchorCOM, regShift of both
@@ -1059,6 +1061,8 @@ for cellI = 1:size(finalRegPairs,1)
 end
 %}
 
+disp('Here down might be ok?')
+%{
 % Evaluate again what we have, what we missed
 registeredBaseCells_log = ~isnan(finalRegPairs(:,2)); % logical
 registeredBaseCells = find(registeredBaseCells_log);
@@ -1177,6 +1181,8 @@ title('Final image overlay')
 hold on
 plot(allCentersA(haveFinalReg,1),allCentersA(haveFinalReg,2),'.k','MarkerSize',8)
 %}
+%}
+
 end
 %% %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 function [wellAligned,goodMatches,diffLogs,cellTripLog] = targetedAlignmentSame(basePairCenters,regPairCenters)
@@ -1443,7 +1449,8 @@ imagHere = uniqueCellPairs(:,2);
 same = realHere == imagHere; % sum(same) should equal the number of cells not labeled as edge cells
 
 % Restrict match counts by number of cells in a/b min([numCellsA numCellsB])
-nMaxMatch = min([numCellsA numCellsB]);
+%nMaxMatch = min([numCellsA numCellsB]);
+nMaxMatch = min([length(realHere) length(imagHere)]); % not totally sure if this is right...
 
 % How many pairs in this alignment bin for each cell?
 cellIdCounts = histcounts(ic,[0.5:1:(max(ic)+0.5)]); % cellIdCounts(same) histogram of pts from known matches in this angleDiff/distDiff bin

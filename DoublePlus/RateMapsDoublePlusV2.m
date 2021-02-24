@@ -1,7 +1,9 @@
-function [TMap_unsmoothed,RunOccMap] = RateMapsDoublePlusV2(trialbytrial, bins, binType, condPairs, minSpeed, occNanSol, saveName)
+function [TMap_unsmoothed,RunOccMap] = RateMapsDoublePlusV2(trialbytrial, bins, binType, condPairs, minSpeed, occNanSol, saveName, circShift)
 
 % occNanSol switches what to do with 0s in the OccMap, which will causes
 % nans in the TMap. For those TMap nans, 'leaveNan' or 'zeroOut'
+% circShift can either be true to randomly pick, or a number; this will
+% shift the entire vector, not on a lap by lap basis
 
 switch binType
     case 'vertices'
@@ -100,6 +102,13 @@ for condI = 1:numConds
         lapsSpiking = logical(lapsSpiking);  
         %lapsSpiking = lapsSpiking(:,isrunning);
         
+        if circShift==true
+            shiftAmt = randi(size(lapsSpiking,2)-1);
+            
+            ls = lapsSpiking;
+            lapsSpiking = [ls(:,shiftAmt+1:end) ls(:,1:shiftAmt)];
+        end
+        
         switch binType
             case 'vertices'
                 % Vertices of each bin specified
@@ -113,7 +122,7 @@ for condI = 1:numConds
                 end
                 if any(find(zz==0))
                     disp('Error: pos outside of a bin')
-                    keyboard
+                    %keyboard
                 end
                 OccMap{condI,sessI} = sum(yy,2);
                 

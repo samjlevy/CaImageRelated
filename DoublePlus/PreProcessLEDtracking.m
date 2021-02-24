@@ -110,6 +110,8 @@ if startFresh == 1
     xAVI = zeros(nFrames,1);
     yAVI = zeros(nFrames,1);
     definitelyGood = false(size(xAVI,1),size(xAVI,2));
+    definitelyGoodRed = false(size(xAVI,1),size(xAVI,2));
+    definitelyGoodGreen = false(size(xAVI,1),size(xAVI,2));
     brightnessCalibrated = 0;
     v0 = [];
     subMultRedX = nan(nFrames,1);
@@ -218,6 +220,9 @@ optionsText = {'m - mark off maze time';...
     'g - reset brightness thresholds';...
     'w - open video player';...
     'd - sub in DVT frames';...
+    'c - correct which';...
+    'i - interpolate between';...
+    'x - fix NaN frames';...
     ' ';...
     's - save';...
     'q - save and quit';...
@@ -227,12 +232,77 @@ hb = msgbox(optionsText,'PreProcess Keys');
 %Here is where user decides how to correct things here on out
 [posAndVelFig] = PreProcUpdatePosAndVel(xAVI,yAVI,onMaze,definitelyGood,velThresh,[]);
 stillEditing = 1;
+colorCorrect = 'Mean';
 while stillEditing == 1
-    posAndVelFig = PreProcUpdatePosAndVel(xAVI,yAVI,onMaze,definitelyGood, velThresh,posAndVelFig);
+    switch colorCorrect
+        case 'Mean'
+            xCorr = xAVI;
+            yCorr = yAVI;
+            dgCorr = definitelyGood;
+        case 'Red'
+            xCorr = subMultRedX;
+            yCorr = subMultRedY;
+            dgCorr = definitelyGoodRed;
+        case 'Green'
+            xCorr = subMultGreenX;
+            yCorr = subMultGreenY;
+            dgCorr = definitelyGoodGreen;
+    end
+    
+    posAndVelFig = PreProcUpdatePosAndVel(xCorr,yCorr,onMaze,dgCorr, velThresh,posAndVelFig);
     manCorrFig = CheckManCorrFig(mcfCurrentSize,manCorrFig,v0);
     mcfCurrentSize = manCorrFig.Position;
     editChoice = input('How would you like to edit? >>','s');
     switch editChoice
+        case 'i'
+            disp('Interpolating between points')
+            h1 = implay(avi_filepath);
+            fStart = str2double(input('Which frame start?','s'));
+            fStop = str2double(input('Which frame stop?','s'));
+            
+            doInterp = strcmpi(input(['Confirm, interpolate between ' num2str(fStart) ' and ' num2str(fStop) ', ' num2str(fStop - fStart + 1) ' frames? (y/n) >>'],'s'),'y');
+            if doInterp
+               figure;
+               plot(xCorr([fStart fStop]),yCorr([fStart fStop]));
+               hold on
+               plot(xCorr([fStart fStop]),yCorr([fStart fStop]),'.');
+               title('Before')
+                
+               xFixed = interp1([fStart fStop],xCorr([fStart fStop]),(fStart+1):(fStop-1));
+               yFixed = interp1([fStart fStop],yCorr([fStart fStop]),(fStart+1):(fStop-1));
+                
+               figure;
+               plot(xFixed,yFixed);
+               hold on
+               plot(xFixed,yFixed,'.');
+               title('After')
+               
+               xCorr((fStart+1):(fStop-1)) = xFixed;
+               yCorr((fStart+1):(fStop-1)) = yFixed; 
+               disp('Did it')
+            end
+            
+            try 
+                close(h1);
+            end
+            
+            switch colorCorrect
+                case 'Mean'
+                    xAVI = xCorr;
+                    yAVI = yCorr;
+                    definitelyGood = dgCorr;
+                case 'Red'
+                    subMultRedX = xCorr;
+                    subMultRedY = yCorr;
+                    definitelyGoodRed = dgCorr;
+                case 'Green'
+                    subMultGreenX = xCorr;
+                    subMultGreenY = yCorr;
+                    definitelyGoodGreen = dgCorr;
+            end
+            
+        case 'c'
+            colorCorrect = questdlg('Which version correct?','Correct witch','Mean','Red','Green','Mean');
         case 'd'
             windowUse = input('Which frames to sub in for? enter w (whole session), s (select window), or 2 numbers for frame range >> ','s')
             if strcmpi(windowUse,'w')
@@ -368,6 +438,36 @@ while stillEditing == 1
         case 'g'
             [howRedThresh,howGreenThresh,calibrateFrames] = CelibrateLEDbrightness(nFrames,obj,aviSR,avi_filepath,xAVI,v0r, v0g, onMazeMask,frameSize,nBrightPoints);
             brightnessCalibrated = 1;
+        case 'x'
+            nanFrames = find(isnan(xCorr) | isnan(yCorr));
+            if any(nanFrames)
+                disp(['Found ' num2str(length(nanFrames)) ' nan frames'])
+                fixxx = questdlg('Replace with zeros or fix?','Fix or zero','ReplaceZero','Fix','ReplaceZero');
+                switch fixxx
+                    case 'Fix'
+                        [xCorr,yCorr,dgCorr] = CorrectManualFrames(obj,xCorr,yCorr,v0,...
+                            dgCorr,manCorrFig,nanFrames,velThresh);
+                    case 'ReplaceZero'
+                        xCorr(nanFrames) = 0;
+                        yCorr(nanFrames) = 0;
+                end
+            end
+            
+            switch colorCorrect
+                case 'Mean'
+                    xAVI = xCorr;
+                    yAVI = yCorr;
+                    definitelyGood = dgCorr;
+                case 'Red'
+                    subMultRedX = xCorr;
+                    subMultRedY = yCorr;
+                    definitelyGoodRed = dgCorr;
+                case 'Green'
+                    subMultGreenX = xCorr;
+                    subMultGreenY = yCorr;
+                    definitelyGoodGreen = dgCorr;
+            end
+            
         case 'z'
             zero_frames = xAVI==0 & yAVI==0;
             disp(['Found ' num2str(sum(zero_frames)) ' zero frames'])
@@ -386,9 +486,25 @@ while stillEditing == 1
             framesFix = find(zero_frames);
             switch aorm
                 case 'Manual'
-                    [xAVI,yAVI,definitelyGood] = CorrectManualFrames(obj,xAVI,yAVI,v0,...
-                        definitelyGood,manCorrFig,framesFix,velThresh);
+                    [xCorr,yCorr,dgCorr] = CorrectManualFrames(obj,xCorr,yCorr,v0,...
+                        dgCorr,manCorrFig,framesFix,velThresh);
+                    %[xAVI,yAVI,definitelyGood] = CorrectManualFrames(obj,xAVI,yAVI,v0,...
+                    %    definitelyGood,manCorrFig,framesFix,velThresh);
                     
+                    switch colorCorrect
+                        case 'Mean'
+                            xAVI = xCorr;
+                            yAVI = yCorr;
+                            definitelyGood = dgCorr;
+                        case 'Red'
+                            subMultRedX = xCorr;
+                            subMultRedY = yCorr;
+                            definitelyGoodRed = dgCorr;
+                        case 'Green'
+                            subMultGreenX = xCorr;
+                            subMultGreenY = yCorr;
+                            definitelyGoodGreen = dgCorr;
+                    end
                 case 'Auto'
                     [manCorrFig, obj, xAVI, yAVI, nRed,nGreen,redPix,greenPix,...
                         subMultRedX,subMultRedY,subMultGreenX,subMultGreenY,anyRpix,anyGpix]...
@@ -421,8 +537,24 @@ while stillEditing == 1
                        'Auto','Manual','Cancel','Auto'); 
             switch howEdit
                 case 'Manual'
-                [xAVI,yAVI,definitelyGood] = CorrectManualFrames(obj,xAVI,yAVI,v0,...
-                    definitelyGood,manCorrFig,framesFix,velThresh);
+                [xCorr,yCorr,dgCorr] = CorrectManualFrames(obj,xCorr,yCorr,v0,...
+                    dgCorr,manCorrFig,framesFix,velThresh);
+                
+                switch colorCorrect
+                        case 'Mean'
+                            xAVI = xCorr;
+                            yAVI = yCorr;
+                            definitelyGood = dgCorr;
+                        case 'Red'
+                            subMultRedX = xCorr;
+                            subMultRedY = yCorr;
+                            definitelyGoodRed = dgCorr;
+                        case 'Green'
+                            subMultGreenX = xCorr;
+                            subMultGreenY = yCorr;
+                            definitelyGoodGreen = dgCorr;
+                end
+                    
                 case 'Auto'
                 [manCorrFig, obj, xAVI, yAVI, nRed,nGreen,redPix,greenPix,...
                         subMultRedX,subMultRedY,subMultGreenX,subMultGreenY,anyRpix,anyGpix]...
@@ -431,6 +563,8 @@ while stillEditing == 1
                         howRedThresh, howGreenThresh, nBrightPoints, xAVI, yAVI, nFrames,...
                         nRed,nGreen,redPix,greenPix,subMultRedX,subMultRedY,subMultGreenX,subMultGreenY,anyRpix,anyGpix,plotFog);
             end
+            
+            
             
         case 'm'
             onoroff = questdlg('Mark on-maze or off-maze?','Oh, Hi Mark','ON','OFF','OFF');
@@ -539,8 +673,8 @@ while stillEditing == 1
         case 'v'
             preVGood = sum(definitelyGood);
             
-            [xAVI,yAVI, definitelyGood] = PreProcCorrectByVelocity...
-                (xAVI,yAVI,onMaze,definitelyGood,velThresh,v0,obj,manCorrFig,posAndVelFig);
+            [xCorr,yCorr,dgCorr] = PreProcCorrectByVelocity...
+                (xCorr,yCorr,onMaze,dgCorr,velThresh,v0,obj,manCorrFig,posAndVelFig);
             
             postVGood = sum(definitelyGood);
             fixedFrames = postVGood - preVGood;
@@ -549,6 +683,21 @@ while stillEditing == 1
                 clear obj
                 obj = VideoReader(avi_filepath);
                 videoResetCount = 0;
+            end
+            
+            switch colorCorrect
+                case 'Mean'
+                    xAVI = xCorr;
+                    yAVI = yCorr;
+                    definitelyGood = dgCorr;
+                case 'Red'
+                    subMultRedX = xCorr;
+                    subMultRedY = yCorr;
+                    definitelyGoodRed = dgCorr;
+                case 'Green'
+                    subMultGreenX = xCorr;
+                    subMultGreenY = yCorr;
+                    definitelyGoodGreen = dgCorr;
             end
         case 's'
             SaveTemp;
@@ -568,7 +717,7 @@ while stillEditing == 1
                     velThresh = input('What is the new velThresh?  >>');
             end 
             disp(['New velThresh is ' num2str(velThresh)])
-            [posAndVelFig] = PreProcUpdatePosAndVel(xAVI,yAVI,onMaze,definitelyGood,velThresh,posAndVelFig);
+            [posAndVelFig] = PreProcUpdatePosAndVel(xCorr,yCorr,onMaze,dgCorr,velThresh,posAndVelFig);
         case 'r'
             disp('Set manCorrFig scaling')
             mcfScaleFactor = strdouble(input('Enter scale factor >> ','s'));
@@ -597,6 +746,7 @@ while stillEditing == 1
         otherwise 
             disp('Not a recognized input')
     end
+    
 end
 
     function SaveTemp
@@ -605,7 +755,7 @@ end
             'Rbrightness','Gbrightness','calibrateFrames','howRed','howGreen',...
             'howRedThresh','howGreenThresh','anyRpix','anyGpix',...
             'nRed','nGreen','redPix','greenPix','brightnessCalibrated',...
-            'onMazeMask','onMazeX','onMazeY',...
+            'onMazeMask','onMazeX','onMazeY','definitelyGoodRed','definitelyGoodGreen',...
             'onMaze','behTable','velThresh','DVTtime','nFrames','avi_filepath')
         disp('Saved!')
     end

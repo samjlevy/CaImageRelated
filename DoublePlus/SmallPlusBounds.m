@@ -1,5 +1,5 @@
 function [dataBins,plotBins] = SmallPlusBounds(posAnchorIdeal,nArmBins)
-
+% Not actually restricted to the small maze, runs based on posAnchorIdeal
 %nArmBins = 5;
 
 midPoint = abs(posAnchorIdeal(1,1));

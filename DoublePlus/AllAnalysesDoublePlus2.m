@@ -14,6 +14,8 @@ nArmBins = 14;
 lgAnchor = load(fullfile(mainFolder,'mainPosAnchor.mat'));
 [lgDataBins,lgPlotBins] = SmallPlusBounds(lgAnchor.posAnchorIdeal,nArmBins);
 lgBinVertices = {lgDataBins.X, lgDataBins.Y};
+binMidsX = mean(lgDataBins.X,2);
+binMidsY = mean(lgDataBins.Y,2);
 
 mazeWidth = 5.7150; % cm
 binSize = lgBinVertices{1}(5,1) - lgBinVertices{1}(4,1);
@@ -43,7 +45,7 @@ consecLapThresh = 3;
 
 disp('loading root data')
 for mouseI = 1:numMice
-    load(fullfile(mainFolder,mice{mouseI},'trialbytrial.mat'))
+    %load(fullfile(mainFolder,mice{mouseI},'trialbytrial.mat'))
     load(fullfile(mainFolder,mice{mouseI},'trialbytrialLAP.mat'))
     if iscell(trialbytrial(1).trialsX{1})
         disp(['Found a misformatted trialbytrial for ' mice{mouseI} ', fixing and saving now'])
@@ -54,27 +56,27 @@ for mouseI = 1:numMice
     
     cellTBT{mouseI} = trialbytrial;
     cellSSI{mouseI} = sortedSessionInds;
-    %{
+    
     cellAllFiles{mouseI} = allfiles;
-    try; cellRealDays{mouseI} = realDays; catch cellRealDays{mouseI} = realdays; end
-    load(fullfile(mainFolder,mice{mouseI},'sessType.mat'))
-    cellSessType{mouseI} = sessType;
+    try cellRealDays{mouseI} = realDays; catch cellRealDays{mouseI} = realdays; end
+    
+    %load(fullfile(mainFolder,mice{mouseI},'sessType.mat'))
+    %cellSessType{mouseI} = sessType;
     
     daysHave = unique(cellTBT{mouseI}(1).sessID);
-    cellSessType{mouseI} = cellSessType{mouseI}(daysHave);
-    cellSessionSubtypes{mouseI} = [cellSessType{mouseI}{:}];
+    %cellSessType{mouseI} = cellSessType{mouseI}(daysHave);
+    %cellSessionSubtypes{mouseI} = [cellSessType{mouseI}{:}];
     
     numDays(mouseI) = size(cellSSI{mouseI},2);
     numCells(mouseI) = size(cellSSI{mouseI},1);
-    %}
-    clear trialbytrial sortedSessionInds allFiles
-    %{
-    load(fullfile(mainFolder,mice{mouseI},'DoublePlusDataTable.mat'))
-    accuracy{mouseI} = DoublePlusDataTable.Accuracy;
-    realDays{mouseI} = DoublePlusDataTable.RealDay;
     
-    clear DoublePlusDataTable 
-    %}
+    clear trialbytrial sortedSessionInds allFiles
+    
+    %load(fullfile(mainFolder,mice{mouseI},'DoublePlusDataTable.mat'))
+    %accuracy{mouseI} = DoublePlusDataTable.Accuracy;
+    %realDays{mouseI} = DoublePlusDataTable.RealDay;
+    %clear DoublePlusDataTable 
+    
     disp(['Mouse ' num2str(mouseI) ' completed'])
 end
 
@@ -84,11 +86,15 @@ condNames = {cellTBT{1}.name};
 disp('Getting reliability')
 dayUse = cell(1,numMice); threshAndConsec = cell(1,numMice);
 for mouseI = 1:numMice
-    [dayUse{mouseI},threshAndConsec{mouseI}] = GetUseCells(cellTBT{mouseI}, lapPctThresh, consecLapThresh);
-    [trialReli{mouseI},aboveThresh{mouseI},~,~] = TrialReliability(cellTBT{mouseI}, lapPctThresh);
+    % Issue here with what bins to use...
+    % All of this might actually be easier to just grab from the new placefields...
+    xBinLims = [];
+    yBinLims = [];
+    [dayUse{mouseI},threshAndConsec{mouseI}] = GetUseCells(cellTBT{mouseI}, lapPctThresh, consecLapThresh, false, xBinLims, yBinLims);
+    [trialReli{mouseI},aboveThresh{mouseI},~,~] = TrialReliability(cellTBT{mouseI}, lapPctThresh, false, xBinLims, yBinLims);
     cellsActiveToday{mouseI} = sum(dayUse{mouseI},1);
     daysEachCellActive{mouseI} = sum(dayUse{mouseI},2);
-    %disp(['Mouse ' num2str(mouseI) ' completed'])
+    disp(['Mouse ' num2str(mouseI) ' completed'])
 end
 disp('done reliability')
 
@@ -174,12 +180,12 @@ condPairs = [1 2];
 numCondPairs = size(condPairs,1);
 for mouseI = 1:numMice
     saveName = fullfile(mainFolder,mice{mouseI},'PFsCheck.mat');
-    if exist(saveName,'file')==0
-        %[TMap_unsmoothed,RunOccMap] = RateMapsDoublePlusV2(trialbytrial, bins, binType, condPairs, minSpeed, occNanSol, saveName)
+    %if exist(saveName,'file')==0
+        %[TMap_unsmoothed,RunOccMap] = RateMapsDoublePlusV2(trialbytrial, bins, binType, condPairs, minSpeed, occNanSol, saveName, circShift)
         tic
-        [~,~] = RateMapsDoublePlusV2(cellTBT{mouseI}, bins, 'vertices', condPairs, 0, 'zeroOut', saveName);
+        [~,~] = RateMapsDoublePlusV2(cellTBT{mouseI}, lgBinVertices, 'vertices', condPairs, 0, 'zeroOut', saveName, false);
         toc
-    end
+    %end
     load(saveName);
     cellTMap{mouseI} = TMap_unsmoothed;
     cellFiresAtAll{mouseI} = TMap_firesAtAll;
@@ -198,7 +204,6 @@ for mouseI = 1:numMice
 
             singleCellCorrs{mouseI}{spI}{cpI} = cellfun(@(x,y) corr(x(:),y(:),'type','Spearman'),...
                 cellTMap{mouseI}(:,sessPairs(spI,1),cpI),cellTMap{mouseI}(:,sessPairs(spI,2),cpI));
-            %singleCellCorrDiffs = cellTMap{mouseI}(:,sessPairs(spI,1),cpI) - cellTMap{mouseI}(:,sessPairs(spI,2),cpI);
             
             % Some kind of indexing here to only take cells from both days
             switch groupNum(mouseI) 
@@ -210,8 +215,8 @@ for mouseI = 1:numMice
             
         end
         
-        %{
-        singleCellCorrDiffs = singleCellCorrs{mouseI}{1}{cpI} - singleCellCorrs{mouseI}{2}{cpI};
+        % Positive if higher correlation 4-7 than 4-8
+        singleCellCorrDiffs{mouseI}{cpI} = singleCellCorrs{mouseI}{1}{cpI} - singleCellCorrs{mouseI}{2}{cpI};
         switch groupNum(mouseI) 
             case 1
             pooledSingleCorrDiffsOneEnv{cpI} = [pooledSingleCorrDiffsOneEnv{cpI}; singleCellCorrDiffs(firesBothDays)];
@@ -224,7 +229,7 @@ end
 
 % ECDF for single Cell corrs each day pair
 for cpI = 1:numCondPairs
-    gg = figure('Position',[428 376 590 515]);%[428 613 897 278]
+    %gg = figure('Position',[428 376 590 515]);%[428 613 897 278]
     figure;
     for dpI = 1:numSessPairs
         xx = subplot(2,ceil(numSessPairs/2),dpI); hold on
@@ -234,19 +239,20 @@ for cpI = 1:numCondPairs
         
         xlabel('Corr'); ylabel('Cumulative Proportion')
         title(['sessPair ' num2str([sessPairs(dpI,:)])])
-        xlim([0 1])
-        xx.XTick = [0 0.5 1]; xx.XTickLabel = {'0' num2str(numBins/2) num2str(numBins)};
+        %xlim([0 1])
+        %xx.XTick = [0 0.5 1]; xx.XTickLabel = {'0' num2str(numBins/2) num2str(numBins)};
         
         [h,p] = kstest2(pooledSingleCorrsOneEnv{cpI,dpI},pooledSingleCorrsTwoEnv{cpI,dpI});
         text(0.4,0.5,['p=' num2str(round(p,2))])
     end
-    suptitleSL(['Distribution of single cell rate map correlations, day pair ' num2str(realDays{mouseI}(dayPairsForward(dpI,:))')])
+    %suptitleSL(['Distribution of single cell rate map correlations, day pair ' num2str(realDays{mouseI}(dayPairsForward(dpI,:))')])
     
     %print(fullfile(saveFolder,['COMchangeKS' num2str(dpI)]),'-dpdf') 
     %close(gg)
 end
-% ECDF for single Cell corrs differences
 
+% ECDF for single Cell corrs differences
+4-7 - 4-8
 
 
 
