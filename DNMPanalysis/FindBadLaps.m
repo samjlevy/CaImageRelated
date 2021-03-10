@@ -1,7 +1,7 @@
 function [fixedEpochs, reporter] = FindBadLaps(x_adj_cm, y_adj_cm, epochs)
 inEpochs = epochs;
 
-badFig = figure('name','FindBad','Position',[300 100 560*2 420*2]);
+badFig = figure('name','FindBad','Position',[358 150.5000 883 653.5000]); %[300 100 560*2 420*2]);
 for thisE = 1:length(epochs)
     
     %deleteLaps = false(length(epochs(thisE).starts),1);

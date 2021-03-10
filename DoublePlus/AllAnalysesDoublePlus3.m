@@ -4,15 +4,20 @@
 %mainFolder = 'C:\Users\Sam\Desktop\DoublePlusFinalData';
 mainFolder = 'F:\DoublePlus';
 %mainFolder = 'C:\Users\samwi_000\Desktop\DoublePlus';
-mice = {'Kerberos','Marble07','Marble11','Pandora','Styx','Titan'};
+load(fullfile(mainFolder,'groupAssign.mat'))
+groupNum(strcmpi(groupAssign(:,2),'same')) = 1;
+groupNum(strcmpi(groupAssign(:,2),'diff')) = 2;
+%mice = {'Kerberos','Marble07','Marble11','Pandora','Styx','Titan'};
+mice = groupAssign(:,1)';
 numMice = length(mice);
+groupColors = {'r','b'};
 
 %dayThree = [11 12 13 12 9 12];
 dayThree = 3*ones(numMice,1);
-load(fullfile(mainFolder,'groupAssign.mat'))
+
 sessTypes = {'Turn','Turn','Turn','Place','Place','Place','Turn','Turn','Turn'};
 name = {'North-West','South-East';'North-East','South-East'};
-binLabelsUse = {['m','n','w'],['m','s','e'];['m','n','e'],['m','s','e']};
+binLabelsUse = {['n','m','w'],['s','m','e'];['n','m','e'],['s','m','e']};
 armLabels = {'n','e','s','w'};
 
 nArmBins = 14;
@@ -29,15 +34,7 @@ hold on
 plot(allMazeBound.X(1),allMazeBound.Y(1),'*r')
 plot(allMazeBound.X(end),allMazeBound.Y(end),'og')
 %}
-pt = [binMidsX(lgDataBins.labels=='m') binMidsY(lgDataBins.labels=='m')];
-otherPts = [binMidsX binMidsY]; % (lgDataBins.label~='m')
-binDistFromCenter = GetPtFromPtsDist(pt,otherPts);
-for armI = 1:4
-    theseArms = lgDataBins.labels == armLabels{armI};
-    armDists = binDistFromCenter(theseArms);
-    [~,armBinDistsRank{armI}] = sort(armDists,'ascend');
-    % if we need to eliminate furthest out bin
-end
+[binOrderIndex] = SetBinOrder(lgDataBins,binLabelsUse);
 for condI = 1:2
     %for ll = 1:length(binLabelsUse{1,condI})
     turnBinsUse{condI} = logical(sum(lgDataBins.labels == binLabelsUse{1,condI},2));
@@ -47,12 +44,16 @@ end
 mazeWidth = 5.7150; % cm
 binSize = lgBinVertices{1}(5,1) - lgBinVertices{1}(4,1);
 
+
+
+% Small maze:
+%{
 nArmBins = 7;
 smAnchor = load(fullfile(mainFolder,'smallPosAnchor.mat'));
 %[smDataBins,smPlotBins] = SmallPlusBounds(smAnchor.posAnchorIdeal,nArmBins);
 [smDataBins,smPlotBins] = SmallPlusBoundsSized(smAnchor.posAnchorIdeal,nArmBins,binSize);
 smBinVertices = {smDataBins.X, smDataBins.Y};
-
+%}
 
 locInds = {1 'center'; 2 'north'; 3 'south'; 4 'east'; 5 'west'};
 %{
@@ -112,49 +113,70 @@ armAlignment = GetDoublePlusArmAlignment;
 numConds = length(cellTBT{1});
 
 disp('Getting reliability')
-dayUse = cell(1,numMice); threshAndConsec = cell(1,numMice);
 for mouseI = 1:numMice
-    %[] = TrialReliability2(trialbytrial,boundary,lapPctThresh, consecLapThresh)
-    [dayUse{mouseI},trialReli{mouseI},threshAndConsec{mouseI}] = TrialReliability2(cellTBT{mouseI},allMazeBound,lapPctThresh, consecLapThresh);
+    reliFileName = fullfile(mainFolder,mice{mouseI},'trialReli.mat');
+    if exist(reliFileName,'file')==0
+        [dayUse,trialReli,threshAndConsec] = TrialReliability2(cellTBT{mouseI},allMazeBound,lapPctThresh, consecLapThresh,[1;2]);
+        [dayUseAll,trialReliAll,threshAndConsecAll] = TrialReliability2(cellTBT{mouseI},allMazeBound,lapPctThresh, consecLapThresh,[1 2]);
+        save(reliFileName,'dayUse','trialReli','threshAndConsec','dayUseAll','trialReliAll','threshAndConsecAll')
+    end
+
+end
+clear dayUse threshAndConsec trialReli%dayUse = cell(1,numMice); threshAndConsec = cell(1,numMice);
+for mouseI = 1:numMice
+    reliFileName = fullfile(mainFolder,mice{mouseI},'trialReli.mat');
+    reliLoad = load(reliFileName);
     
-    %{
-    xBinLims = [];
-    yBinLims = [];
-    [dayUse{mouseI},threshAndConsec{mouseI}] = GetUseCells(cellTBT{mouseI}, lapPctThresh, consecLapThresh, false, xBinLims, yBinLims);
-    [trialReli{mouseI},aboveThresh{mouseI},~,~] = TrialReliability(cellTBT{mouseI}, lapPctThresh, false, xBinLims, yBinLims);
-    cellsActiveToday{mouseI} = sum(dayUse{mouseI},1);
-    daysEachCellActive{mouseI} = sum(dayUse{mouseI},2);
-    %}
+    dayUse{mouseI} = reliLoad.dayUse;
+    trialReli{mouseI} = reliLoad.trialReli; 
+    threshAndConsec{mouseI} = reliLoad.threshAndConsec;
+    dayUseAll{mouseI} = reliLoad.dayUseAll;
+    trialReliAll{mouseI} = reliLoad.trialReliAll;
+    threshAndConsecAll{mouseI} = reliLoad.threshAndConsecAll;
+  
     disp(['Mouse ' num2str(mouseI) ' completed'])
 end
 disp('done reliability')
 
 
 disp('checking place fields')
+condPairs = [1; 2];
+numCondPairs = size(condPairs,1);
 for mouseI = 1:numMice
-    saveName = fullfile(mainFolder,mice{mouseI},'PFsLin.mat');
-    %switch exist(fullfile(mainFolder,mice{mouseI},'PFsLin.mat'),'file')
-    %    case 0
-            disp(['no placefields found for ' mice{mouseI} ', making now'])
-            %[TMap_unsmoothed, TMap_gauss, TMap_zRates, OccMap, RunOccMap, xBin, TCounts] =...
-            [~, ~, ~, ~, ~, ~, ~] =...
-            PFsLinTBTdoublePlus(cellTBT{mouseI}, binEdges, minspeed, saveName, false); %'trialReli',trialReli{mouseI},
-    %    case 2
-    %        disp(['found placefields for ' mice{mouseI} ', all good'])
-    %end
-end
-
-for mouseI = 1:numMice
-    load(fullfile(mainFolder,mice{mouseI},'PFsLin.mat'),'TMap_unsmoothed','TMap_zRates')
-    for condI = 1:length(condNames)
-        if sum(strcmpi(condNames{condI},{'north','west'}))==1 %Bin is direction of travel
-            TMap_unsmoothed(:,:,condI) = cellfun(@fliplr,TMap_unsmoothed(:,:,condI),'UniformOutput',false);
-            TMap_zRates(:,:,condI) = cellfun(@fliplr,TMap_zRates(:,:,condI),'UniformOutput',false);
+    pfName= fullfile(mainFolder,mice{mouseI},'PFsLin.mat');
+    if exist(pfName,'file')==0
+        disp(['no placefields found for ' mice{mouseI} ', making now'])
+        binLabels = lgDataBins.labels;
+        binVertices = lgBinVertices;
+        tic
+        %[TMap_unsmoothed,RunOccMap] = RateMapsDoublePlusV2(trialbytrial, bins, binType, condPairs, minSpeed, occNanSol, saveName, circShift)
+        [~,~] = RateMapsDoublePlusV2(cellTBT{mouseI}, lgBinVertices, 'vertices', condPairs, 0, 'zeroOut', pfName, false);
+        toc
+        load(pfName)
+        if mouseI == 1
+            [TMap_unsmoothed{:,5,1}] = deal(zeros(length(lgDataBins.labels),1));
+            [TMap_unsmoothed{:,5,2}] = deal(zeros(length(lgDataBins.labels),1));
+            [TMap_unsmoothed{:,6,1}] = deal(zeros(length(lgDataBins.labels),1));
+            [TMap_unsmoothed{:,6,2}] = deal(zeros(length(lgDataBins.labels),1));
+            %save(pfName,'TMap_unsmoothed','-append')
         end
+        TMap_unsmoothed(:,[1:3 7:9],1) = cellfun(@(x) x(binOrderIndex{1}),TMap_unsmoothed(:,[1:3 7:9],1),'UniformOutput',false);
+        TMap_unsmoothed(:,[1:3 7:9],2) = cellfun(@(x) x(binOrderIndex{2}),TMap_unsmoothed(:,[1:3 7:9],2),'UniformOutput',false);
+        TMap_unsmoothed(:,[4:6],1) = cellfun(@(x) x(binOrderIndex{3}),TMap_unsmoothed(:,[4:6],1),'UniformOutput',false);
+        TMap_unsmoothed(:,[4:6],2) = cellfun(@(x) x(binOrderIndex{4}),TMap_unsmoothed(:,[4:6],2),'UniformOutput',false);
+        
+        save(pfName,'TMap_unsmoothed','binLabels','binVertices','-append')
     end
-    cellTMap_unsmoothed{mouseI} = TMap_unsmoothed;
-    cellTMap_zScored{mouseI} = TMap_zRates;
-end   
+end
+for mouseI = 1:numMice
+    pfName= fullfile(mainFolder,mice{mouseI},'PFsLin.mat');
+    load(pfName);
+    cellTMap{mouseI} = TMap_unsmoothed;
+    cellFiresAtAll{mouseI} = TMap_firesAtAll;
+    allTMap{mouseI} = cellfun(@(y,z) [y(:); z(:)],cellTMap{mouseI}(:,:,1),cellTMap{mouseI}(:,:,2),'UniformOutput',false);
+end
+clear TMap_unsmoothed TMap_firesAtAll
+disp('Done loading place fields')
 
 groupNames = unique(groupAssign(:,2));
 twoEnvMice = find(strcmpi('diff',groupAssign(:,2)));
@@ -197,91 +219,137 @@ end
 
 %% Re-mapping by Cell-coactivity
 
-
-condPairs = [1 2];
-numCondPairs = size(condPairs,1);
-for mouseI = 1:numMice
-    saveName = fullfile(mainFolder,mice{mouseI},'PFsCheck.mat');
-    %if exist(saveName,'file')==0
-        %[TMap_unsmoothed,RunOccMap] = RateMapsDoublePlusV2(trialbytrial, bins, binType, condPairs, minSpeed, occNanSol, saveName, circShift)
-        tic
-        [~,~] = RateMapsDoublePlusV2(cellTBT{mouseI}, lgBinVertices, 'vertices', condPairs, 0, 'zeroOut', saveName, false);
-        toc
-    %end
-    load(saveName);
-    cellTMapall{mouseI} = TMap_unsmoothed;
-    cellFiresAtAllall{mouseI} = TMap_firesAtAll;
-end
-
-condPairs = [1; 2];
-numCondPairs = size(condPairs,1);
-for mouseI = 1:numMice
-    saveName = fullfile(mainFolder,mice{mouseI},'PFsCheck2.mat');
-    %if exist(saveName,'file')==0
-        %[TMap_unsmoothed,RunOccMap] = RateMapsDoublePlusV2(trialbytrial, bins, binType, condPairs, minSpeed, occNanSol, saveName, circShift)
-        tic
-        [~,~] = RateMapsDoublePlusV2(cellTBT{mouseI}, lgBinVertices, 'vertices', condPairs, 0, 'zeroOut', saveName, false);
-        toc
-        
-    %end
-    load(saveName);
-    %{
-    if mouseI == 1
-        [TMap_unsmoothed{:,5,1}] = deal(zeros(length(lgDataBins.labels),1));
-        [TMap_unsmoothed{:,5,2}] = deal(zeros(length(lgDataBins.labels),1));
-        [TMap_unsmoothed{:,6,1}] = deal(zeros(length(lgDataBins.labels),1));
-        [TMap_unsmoothed{:,6,2}] = deal(zeros(length(lgDataBins.labels),1));
-    end
-    %}
-    cellTMap{mouseI} = TMap_unsmoothed;
-    cellFiresAtAll{mouseI} = TMap_firesAtAll;
-end
-
-% Ratemap corrs
-%turnBinsUse = cell(numConds,1);
-%placeBinsUse = cell(numConds,1);
-for condI = 1:numConds
-    %for ll = 1:length(binLabelsUse{1,condI})
-    turnBinsUse{condI} = logical(sum(lgDataBins.labels,binLabelsUse == turnBinsUse{1,condI},2));
-    placeBinsUse{condI} = logical(sum(lgDataBins.labels,binLabelsUse == turnBinsUse{2,condI},2));
-end
+%tmapPooled
+turnDays = [1:3 7:9];
+placeDays = [4:6];
+condPairs = [1; 2]; numCondPairs = size(condPairs,1);
 
 dayPairs = [1 3; 2 3; 3 7; 3 8; 3 9];
+
+% Ratemap corrs
+singleCellCorrsRho = []; singleCellCorrsP = [];
 for mouseI = 1:numMice
-    [singleCellCorrsRho{mouseI}, singleCellCorrsP{mouseI}] = singleNeuronCorrelations(cellTMap{mouseI},dayPairs,turnBinsUse);
+    [singleCellCorrsRho{mouseI}, singleCellCorrsP{mouseI}] = singleNeuronCorrelations(cellTMap{mouseI},dayPairs,[]);%turnBinsUse
     %{mouseI}{condI}{dayPairI}(cellI)
+    [allSingleCellCorrsRho{mouseI}, allSingleCellCorrsP{mouseI}] = singleNeuronCorrelations(allTMap{mouseI},dayPairs,[]);
 end
+disp('Done single-cell corrs across days')
 
 for mouseI = 1:numMice
-    [coactivity{mouseI},numTrialsActive{mouseI},pctTrialsActive{mouseI}] = findingEnsemblesNotes2(cellTBT{mouseI},'day');
-    %coactivity{mouseI}{dayI,condI}(cellI,cellJ)
+    %[coactivity{mouseI},numTrialsActive{mouseI},pctTrialsActive{mouseI}] = findingEnsemblesNotes2(cellTBT{mouseI},condPairs);
+    [coactivity2{mouseI},pctTrialsActive2{mouseI},trialCoactiveAboveBaseline{mouseI},totalCoactiveAboveBaseline{mouseI},chanceCoactive{mouseI}] =...
+        findingEnsemblesNotes3(cellTBT{mouseI},allMazeBound,condPairs);
     
-    cellsToday = cellSSI{mouseI}>0;
+    aa = graph(trialCoactiveAboveBaseline{mouseI});
+    [bins,binsizes] = conncomp(aa);
+    
+    %coactivity{mouseI}{dayI,condI}(cellI,cellJ)
+    trialNormalizedCoactivity,pctTrialsActive
+    nCellsToday = sum(cellSSI{mouseI}>0,1);
+    numCellsToday = mat2cell(repmat(nCellsToday(:),1,numCondPairs),ones(9,1),ones(1,numCondPairs));
     isCoactive = cellfun(@(x) x>0,coactivity{mouseI},'UniformOutput',false);
     
     numCoactivePartners{mouseI} = cellfun(@(x) sum(x,2),isCoactive,'UniformOutput',false);
+    pctCoactivePartners{mouseI} = cellfun(@(x,y) x/(y*ones(numCells(mouseI),1)),numCoactivePartners{mouseI},numCellsToday,'UniformOutput',false);
     totalCoactive{mouseI} = cellfun(@(x) sum(x,2),coactivity{mouseI},'UniformOutput',false);
     meanCoactivity{mouseI} = cellfun(@(x,y) x./y,totalCoactive{mouseI},numCoactivePartners{mouseI},'UniformOutput',false);
 end
+disp('Done getting coactivity')
+
+% Pool corrs by group
+
+threshHere = 0.1;
+corrsPooled = cell(2,1); meanCorrPooled = []; semCorrPooled = [];
+for groupI = 1:2
+    for dpI = 1:size(dayPairs,1)
+        corrsPooled{groupI}{dpI} = [];
+        for condI = 1:numCondPairs
+            miceH = find(groupNum==groupI);
+            for mouseI = 1:length(miceH)
+                cellsHere = cellSSI{miceH(mouseI)}(:,dayPairs(dpI,1)) & cellSSI{miceH(mouseI)}(:,dayPairs(dpI,2));
+                reliUse = trialReli{miceH(mouseI)}(:,dayPairs(dpI,1),condI)>threshHere & trialReli{miceH(mouseI)}(:,dayPairs(dpI,2),condI)>threshHere;
+                cellsHere = cellsHere & reliUse;
+                %corrsHere = singleCellCorrsRho{miceH(mouseI)}{condI}{dpI}(cellsHere);
+                corrsHere = allSingleCellCorrsRho{miceH(mouseI)}{condI}{dpI}(cellsHere);
+                meanCorrs{groupI,mouseI}(condI,dpI) = mean(corrsHere);
+                semCorrs{groupI,mouseI}(condI,dpI) = standarderrorSL(corrsHere);
+                corrsPooled{groupI}{dpI} = [corrsPooled{groupI}{dpI}; corrsHere];
+            end
+        end
+        meanCorrPooled(groupI,dpI) = mean(corrsPooled{groupI}{dpI});
+        semCorrPooled(groupI,dpI) = standarderrorSL(corrsPooled{groupI}{dpI});
+    end
+end
+
+for dpI = 1:size(dayPairs,1)
+    [p(dpI),h(dpI)] = ranksum(corrsPooled{1}{dpI},corrsPooled{2}{dpI});
+end
+meanCorrPooled = [meanCorrPooled(:,1:2), [1;1], meanCorrPooled(:,3:end)];
+semCorrPooled = [semCorrPooled(:,1:2), [0;0], semCorrPooled(:,3:end)];
+
+figure;
+for condI = 1:numCondPairs
+    if numCondPairs > 1
+        subplot(numCondPairs,1,condI)
+    end
+    for groupI = 1:2
+        for mouseI = 1:3
+            %errorbar(meanCorrs{groupI,mouseI}(condI,:),semCorrs{groupI,mouseI}(condI,:),'Color',groupColors{groupI})
+            plot(meanCorrs{groupI,mouseI}(condI,:),'Color',groupColors{groupI})
+            hold on
+        end
+    end
+end
+
+figure; 
+errorbar(meanCorrPooled(1,:),semCorrPooled(1,:),'Color',groupColors{1}); hold on
+errorbar(meanCorrPooled(2,:),semCorrPooled(2,:),'Color',groupColors{2});
+
 
 % Scatter of ratemap correlations against coactivity, num coactive partners, etc. on 1st day in pair
+%threshHere = 0.1;
+xAgg = cell(size(dayPairs,1),1);
+yAgg = cell(size(dayPairs,1),1);
 for dpI = 1:size(dayPairs,1)
     figure('Position',[328.5000 130 1028 627.5000]);
     for mouseI = 1:numMice
         subplot(2,3,mouseI)
-        title([mice{mouseI} ' ' groups{mouseI}])
+        %title([mice{mouseI} ' ' groups{mouseI}])
         condColors = ['r';'g'];
-        for condI = 1:numConds
+        for condI = 1:numCondPairs
             cellsHere = cellSSI{mouseI}(:,dayPairs(dpI,1)) & cellSSI{mouseI}(:,dayPairs(dpI,2));
-            xPlot = meanCoactivity{mouseI}{min(dayPairs(dpI,:)),condI}(cellsHere); %needs to be restricted by cells carried over?
-            yPlot = singleCellCorrsRho{mouseI}{condI}{dpI}(cellsHere);
-            plot(xPlot,yPlot,'.',MarkerFaceColor,condColors(condI))
+            %reliUse = trialReli{mouseI}(:,dayPairs(dpI,1),condI)>threshHere & trialReli{mouseI}(:,dayPairs(dpI,2),condI)>threshHere;
+            reliUse = trialReliAll{mouseI}(:,dayPairs(dpI,1),condI)>threshHere & trialReliAll{mouseI}(:,dayPairs(dpI,2),condI)>threshHere;
+            cellsHere = cellsHere & reliUse;
+            xPlot = pctCoactivePartners{mouseI}{min(dayPairs(dpI,:)),condI}(cellsHere); %needs to be restricted by cells carried over?
+            %yPlot = singleCellCorrsRho{mouseI}{condI}{dpI}(cellsHere);
+            yPlot = allSingleCellCorrsRho{mouseI}{condI}{dpI}(cellsHere);
+            plot(xPlot,yPlot,'.','MarkerFaceColor',condColors(condI))
             hold on
+            
+            xAgg{dpI} = [xAgg{dpI}; xPlot];
+            yAgg{dpI} = [yAgg{dpI}; yPlot];
         end
         ylabel('PF corr')
         xlabel('mean coactivity')
     end
-    suptitleSL(['Rate maps by coactivity day pair ' num2str(dayPair(dpI,:))])
+    suptitleSL(['Rate maps by coactivity day pair ' num2str(dayPairs(dpI,:))])
+end
+
+figure;
+for dpI = 1:size(dayPairs,1)
+    subplot(1,size(dayPairs,1),dpI)
+    plot(xAgg{dpI},yAgg{dpI},'.')
+    [rho,p] = corr(xAgg{dpI},yAgg{dpI},'type','Spearman');
+    title(['rho ' num2str(rho) ' p: ' num2str(p)])
+    ylabel('PF corr')
+    xlabel('mean coactivity')
+end
+
+figure;
+for mouseI = 1:numMice
+    subplot(2,3,mouseI)
+    histogram(trialReli{mouseI}(trialReli{mouseI}>0))
 end
 
 % Change of connectivity across days
@@ -332,6 +400,20 @@ tbtfields =  {'trialsX',...
     'endArm',...
     'lapSequence',...
     'rule'};
+
+%% Single-neuron place field changes
+for mouseI = 1:numMice
+    TMapMeans{mouseI} = cellfun(@mean, allTMap{mouseI});
+    TMapStds{mouseI} = cellfun(@std, allTMap{mouseI});
+    sdM = 1.645; % 1 tailed t test
+    TMapThresh{mouseI} = cellfun(@(x,y) x+y*sdM,TmapMeans{mouseI},TMapStds{mouseI});
+    [TmapAboveThresh{mouseI}(:,:,1)] = cellfun(@(x,y) x>y,cellTMap{mouseI}(:,:,1),num2cell(TMapThresh{mouseI}),'UniformOutput',false);
+    [TmapAboveThresh{mouseI}(:,:,2)] = cellfun(@(x,y) x>y,cellTMap{mouseI}(:,:,2),num2cell(TMapThresh{mouseI}),'UniformOutput',false);
+    % Has to be >, >= lets 0 be above mean
+    
+    [outputs] = PlaceFieldRemapping(cellTMap{mouseI},TmapAboveThresh{mouseI},dayPairs);
+end
+
 
 %% Single-neuron rate map corrs (new whole lap tbt, new bins
 

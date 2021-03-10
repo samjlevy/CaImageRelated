@@ -124,7 +124,7 @@ for condI = 1:numConds
                     disp('Error: pos outside of a bin')
                     %keyboard
                 end
-                OccMap{condI,sessI} = sum(yy,2);
+                OccMap{condI,sessions(sessI)} = sum(yy,2);
                 
                 binIdsCell = sum(cell2mat(cellfun(@(x,y,z) z*inpolygon(posX,posY,x,y),xBinCells,yBinCells,binLabelsCell,...
                     'UniformOutput',false)),1); % Which bin is each position in
@@ -132,10 +132,10 @@ for condI = 1:numConds
                 % Spiking
                 for cellI = 1:numCells
                     thisSpiking = yy(:,lapsSpiking(cellI,:));
-                    TCounts{cellI,sessI,condI} = sum(thisSpiking,2);
-                    TMap_unsmoothed{cellI,sessI,condI} = TCounts{cellI,sessI,condI} ./ OccMap{condI,sessI};
+                    TCounts{cellI,sessions(sessI),condI} = sum(thisSpiking,2);
+                    TMap_unsmoothed{cellI,sessions(sessI),condI} = TCounts{cellI,sessions(sessI),condI} ./ OccMap{condI,sessions(sessI)};
                     if strcmpi(occNanSol,'zeroOut')
-                        TMap_unsmoothed{cellI,sessI,condI}(OccMap{condI,sessI}==0) = 0;
+                        TMap_unsmoothed{cellI,sessions(sessI),condI}(OccMap{condI,sessions(sessI)}==0) = 0;
                     end
                 end
               
@@ -165,6 +165,9 @@ for condI = 1:numConds
                                 
                 end
         end
+        
+        else
+            
         
         end
         

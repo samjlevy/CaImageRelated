@@ -1,4 +1,4 @@
-function MakeTBTdoublePlusQuick
+function MakeTBTdoublePlusQuick(daybyday,allfiles,sortedSessionInds)
 
 mainFolder = 'F:\DoublePlus';
 load(fullfile(mainFolder,'behLimits.mat'))
@@ -240,6 +240,12 @@ if ~isempty(daybyday.behavior{sessI})
         
         % Verify...
         if parsedLapEnd < parsedLapStart
+            goesOut = goesOut(goesOut > parsedLapStart);
+            goesOut(1);
+            
+        end
+        
+        if isempty(goesOut)
             disp('Parsing error...')
             
             ppFig = figure; plot(xPosLap,yPosLap,'.')
@@ -357,29 +363,53 @@ dlaps{1} = strcmpi(tempTBT.startArm,'n');
 dlaps{2} = strcmpi(tempTBT.startArm,'s');
 
 for ti = 1:2
-    trialbytrial(ti).trialsX = [tempTBT(1).trialsX(dlaps{ti})];
-    trialbytrial(ti).trialsY = [tempTBT(1).trialsY(dlaps{ti})];
-    trialbytrial(ti).trialPSAbool = [tempTBT.trialPSAbool(dlaps{ti})];
-    trialbytrial(ti).trialRawTrace = [tempTBT.trialRawTrace(dlaps{ti})];
-    trialbytrial(ti).trialDFDTtrace = [tempTBT.trialDFDTtrace(dlaps{ti})];
-    trialbytrial(ti).sessID = [tempTBT.sessID(dlaps{ti})];
-    trialbytrial(ti).sessNumber = [tempTBT.sessNumber(dlaps{ti})];
-    trialbytrial(ti).lapNumber = [tempTBT.lapNumber(dlaps{ti})];
-    trialbytrial(ti).isCorrect = [tempTBT.isCorrect(dlaps{ti})];
-    trialbytrial(ti).allowedFix = [tempTBT.allowedFix(dlaps{ti})];
-    trialbytrial(ti).MazeID = tempTBT.MazeID;
-    trialbytrial(ti).startArm = [tempTBT.startArm(dlaps{ti})];
-    trialbytrial(ti).endArm = [tempTBT.endArm(dlaps{ti})];
-    trialbytrial(ti).rewardArm = tempTBT.rewardArm;
-    trialbytrial(ti).lapSequence = [tempTBT.lapSequence(dlaps{ti})];
-    trialbytrial(ti).rule = [tempTBT.rule(dlaps{ti})];
+    trialbytrialAll(ti).trialsX = [tempTBT(1).trialsX(dlaps{ti})];
+    trialbytrialAll(ti).trialsY = [tempTBT(1).trialsY(dlaps{ti})];
+    trialbytrialAll(ti).trialPSAbool = [tempTBT.trialPSAbool(dlaps{ti})];
+    trialbytrialAll(ti).trialRawTrace = [tempTBT.trialRawTrace(dlaps{ti})];
+    trialbytrialAll(ti).trialDFDTtrace = [tempTBT.trialDFDTtrace(dlaps{ti})];
+    trialbytrialAll(ti).sessID = [tempTBT.sessID(dlaps{ti})];
+    trialbytrialAll(ti).sessNumber = [tempTBT.sessNumber(dlaps{ti})];
+    trialbytrialAll(ti).lapNumber = [tempTBT.lapNumber(dlaps{ti})];
+    trialbytrialAll(ti).isCorrect = logical([tempTBT.isCorrect(dlaps{ti})]);
+    trialbytrialAll(ti).allowedFix = [tempTBT.allowedFix(dlaps{ti})];
+    trialbytrialAll(ti).MazeID = tempTBT.MazeID;
+    trialbytrialAll(ti).startArm = [tempTBT.startArm(dlaps{ti})];
+    trialbytrialAll(ti).endArm = [tempTBT.endArm(dlaps{ti})];
+    trialbytrialAll(ti).rewardArm = tempTBT.rewardArm;
+    trialbytrialAll(ti).lapSequence = [tempTBT.lapSequence(dlaps{ti})];
+    trialbytrialAll(ti).rule = [tempTBT.rule(dlaps{ti})];
 end
 
-cd(mouseDir)
-load('fullReg.mat','fullReg')
-allfiles = fullReg.RegSessions;
-load('realDays.mat','realDays')
+for ti = 1:2
+    correctTrials = trialbytrialAll(ti).isCorrect;
+    
+    trialbytrial(ti).trialsX = [trialbytrialAll(ti).trialsX(correctTrials)];
+    trialbytrial(ti).trialsY = [trialbytrialAll(ti).trialsY(correctTrials)];
+    trialbytrial(ti).trialPSAbool = [trialbytrialAll(ti).trialPSAbool(correctTrials)];
+    trialbytrial(ti).trialRawTrace = [trialbytrialAll(ti).trialRawTrace(correctTrials)];
+    trialbytrial(ti).trialDFDTtrace = [trialbytrialAll(ti).trialDFDTtrace(correctTrials)];
+    trialbytrial(ti).sessID = [trialbytrialAll(ti).sessID(correctTrials)];
+    trialbytrial(ti).sessNumber = [trialbytrialAll(ti).sessNumber(correctTrials)];
+    trialbytrial(ti).lapNumber = [trialbytrialAll(ti).lapNumber(correctTrials)];
+    trialbytrial(ti).isCorrect = [trialbytrialAll(ti).isCorrect(correctTrials)];
+    trialbytrial(ti).allowedFix = [trialbytrialAll(ti).allowedFix(correctTrials)];
+    %trialbytrial(ti).MazeID = [trialbytrialAll(ti).MazeID(correctTrials)];
+    trialbytrial(ti).startArm = [trialbytrialAll(ti).startArm(correctTrials)];
+    trialbytrial(ti).endArm = [trialbytrialAll(ti).endArm(correctTrials)];
+    %trialbytrial(ti).rewardArm = [trialbytrialAll(ti).rewardArm(correctTrials)];
+    trialbytrial(ti).lapSequence = [trialbytrialAll(ti).lapSequence(correctTrials)];
+    trialbytrial(ti).rule = [trialbytrialAll(ti).rule(correctTrials)];
+    
+end
+    
 
-save(fullfile(mouseDir,'trialbytrial.mat'),'trialbytrial','allfiles','sortedSessionInds','realDays','-v7.3')
+%cd(mouseDir)
+%load('fullReg.mat','fullReg')
+%allfiles = fullReg.RegSessions;
+%load('realDays.mat','realDays')
+realDays = daybyday.realDays;
+mouseDir = cd;
+save(fullfile(mouseDir,'trialbytrial.mat'),'trialbytrial','trialbytrialAll','allfiles','sortedSessionInds','realDays','-v7.3')
 
 end

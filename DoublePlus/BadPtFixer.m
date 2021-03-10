@@ -1,24 +1,12 @@
-function BadPtFixer(x_adj_cm, y_adj_cm, epochs, mazeBoundary)
+function [fixedEpochs] = BadPtFixer(x_adj_cm, y_adj_cm, epochs, mazeBoundary)
 %quick analysis, lap by lap, of any pts outside
-
-%{
-if adding < 10 gets first point within sanity
-    if subtractin < 10 gets last point within sanity
-        if first non nan is within sanity
-            if last non nan is within sanity
-                roi select any points wrong, for each lap they contain, ask if fix by interpolating
-
-each time we do one of these options, show two figures, pts before and after fix
-%}
 
 for thisE = 1:length(epochs)
     
     %deleteLaps = false(length(epochs(thisE).starts),1);
     numLaps = length(epochs(thisE).starts);
     
-    movingOn=0;
-    while movingOn==0
-    
+    %{
     % All inds aggregated
     nowInds = [];
     indInds = [];
@@ -26,8 +14,7 @@ for thisE = 1:length(epochs)
         nowInds = [nowInds, epochs(thisE).starts(ee):epochs(thisE).stops(ee)]; %#ok<AGROW>
         indInds = [indInds, ee*ones(1,(epochs(thisE).stops(ee)-epochs(thisE).starts(ee)+1))]; %#ok<AGROW>
     end
-    
-    %{
+     
     badFig = figure('name','FindBad','Position',[300 100 560*1.5 420*1.5]);
     plot(x_adj_cm,y_adj_cm,'.k','MarkerSize',8)
     hold on
@@ -89,6 +76,38 @@ for thisE = 1:length(epochs)
     % plot(xps(outofBound),yps(outofBound),'.r')
     outofBoundStart = outofBound(1:numLaps);
     outofBoundStop = outofBound(numLaps+(1:numLaps));
+    for lapI=1:numLaps
+        if outofBoundStart(lapI) == true
+             %ptDists = GetPtFromPtsDist([startX(lapI) startY(lapI)],otherPts)
+             theseF = epochs(thisE).starts(lapI):epochs(thisE).stops(lapI);
+             [inB,onB] = inpolygon(x_adj_cm(theseF),y_adj_cm(theseF),mazeBoundary(:,1),mazeBoundary(:,2));
+             inBound = inB | onB;
+             firstIn = find(inBound,1,'first');
+             if firstIn < 10
+                 epochs(thisE).starts(lapI) = theseF(firstIn);
+                 disp(['Fixed a start out of bounds for lap ' num2str(lapI)])
+             else
+                 keyboard
+             end
+        end
+        
+        if outofBoundStop(lapI) == true
+             theseF = epochs(thisE).starts(lapI):epochs(thisE).stops(lapI);
+             numHere = length(theseF);
+             [inB,onB] = inpolygon(x_adj_cm(theseF),y_adj_cm(theseF),mazeBoundary(:,1),mazeBoundary(:,2));
+             inBound = inB | onB;
+             lastIn = find(inBound,1,'last');
+             if (numHere-lastIn) < 10
+                 epochs(thisE).stops(lapI) = theseF(lastIn);
+                 disp(['Fixed a stop out of bounds for lap ' num2str(lapI)])
+             else
+                 keyboard
+             end
+        end 
+    end
+    
 end
+
+fixedEpochs = epochs;
 
 end

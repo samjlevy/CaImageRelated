@@ -5,9 +5,13 @@ sequences = originalBehavior.ArmSequence;
 [seqs,~] = unique(sequences);
 disp(['Found ' num2str(length(seqs)) ' unique behavior sequences in ' num2str(length(sequences)) ' laps'])
 
+fixedLapStarts = originalBehavior.LapStart;
+fixedLapStops = originalBehavior.LapStop;
+
 numLaps = length(sequences);
 deleteLaps = false(numLaps,1);
 for seqI = 1:length(seqs)
+    
     redoLaps = true;
     while redoLaps==true
     theseSeq = strcmpi(sequences,seqs{seqI});
@@ -60,7 +64,7 @@ for seqI = 1:length(seqs)
                 end
                     
                 if strcmpi(input('Relabel sequence for this lap?','s'),'y');
-                    newSeq = input(['Current sequence ' seqs{seqI} ', what is new sequence? >>']);
+                    newSeq = input(['Current sequence ' seqs{seqI} ', what is new sequence? >>'],'s');
                     editedSequences{theseLaps(lapI)} = newSeq;
                 end
                 
@@ -74,6 +78,15 @@ for seqI = 1:length(seqs)
     
     [fixedEpochs, reporter] = FindBadLaps(xHere, yHere, epochs);
     
+    %if length(fixedEpochs(1).starts) ~= numLaps || length(fixedEpochs(1).stops) ~= numLaps
+    %    keyboard
+    %end
+    redoLaps = false;
+    if strcmpi(input('Redo those laps? (y/n)','s'),'y');
+        redoLaps = true;
+    end
+    
+    if redoLaps == false
     if strcmpi(input(['Edited ' num2str(sum(reporter{1})) ' laps, keep those edits? (y/n)'],'s'),'y');
         if sum(reporter{1}) > 0
         fixedLapStarts(theseSeq) = fixedEpochs(1).starts;
@@ -83,11 +96,8 @@ for seqI = 1:length(seqs)
     if strcmpi(input('Keep any relabeled sequences? (y/n)>>','s'),'y');
         sequences = editedSequences;
     end
-    
-    redoLaps = false;
-    if strcmpi(input('Redo those laps? (y/n)','s'),'y');
-        redoLaps = true;
     end
+    
     
     end
 end
