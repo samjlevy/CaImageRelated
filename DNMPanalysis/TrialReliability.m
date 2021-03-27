@@ -11,6 +11,10 @@ numConds = length(trialbytrial);
 
 sessHere = unique(trialbytrial(1).sessID);
 
+if isempty(poolConds)
+    poolConds = false;
+end
+
 if poolConds == false
     reliability = zeros(numCells, numDays, numConds);
 aboveThresh = cell(length(trialbytrial),1);

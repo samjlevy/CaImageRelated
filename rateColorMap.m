@@ -10,10 +10,11 @@ hh = figure;
 cc = colormap(colorMapUse);
 close(hh);
 
-boundaries = linspace(0,normMax-0.00001,64);
+nColors = size(cc,1);
+boundaries = linspace(0,normMax-0.00001,nColors); %64
 
 ptColors = zeros(length(rates),3);
-for bdStops = 1:64
+for bdStops = 1:nColors
     thesePts = rates >= boundaries(bdStops);
     ptColors(thesePts,:) = repmat(cc(bdStops,:),sum(thesePts),1);
 end

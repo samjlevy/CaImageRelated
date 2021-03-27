@@ -1051,6 +1051,17 @@ if strcmp(userstr,'sam')
 end
 MDSL(i).Notes = [];
 
+i = i+1;
+MDSL(i).Animal = 'Kerberos';
+MDSL(i).Date = '04_22_2018';
+MDSL(i).Session = 1;
+MDSL(i).Env = 'Plus1';
+MDSL(i).Room = '719h';
+MDSL(i).RecordStartTime = ' ';
+if strcmp(userstr,'sam')
+    MDSL(i).Location = 'E:\DoublePlus\Kerberos\Kerberos180422';
+end
+MDSL(i).Notes = [];
 %% Compile session_ref
 
 session_ref.Polaris_DNMP = Polaris_DNMP;

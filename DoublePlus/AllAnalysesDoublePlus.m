@@ -47,8 +47,9 @@ condNames = {cellTBT{1}.name};
 disp('Getting reliability')
 dayUse = cell(1,numMice); threshAndConsec = cell(1,numMice);
 for mouseI = 1:numMice
-    [dayUse{mouseI},threshAndConsec{mouseI}] = GetUseCells(cellTBT{mouseI}, lapPctThresh, consecLapThresh);
-    [trialReli{mouseI},aboveThresh{mouseI},~,~] = TrialReliability(cellTBT{mouseI}, lapPctThresh);
+    [dayUse{mouseI},threshAndConsec{mouseI}] = GetUseCells(cellTBT{mouseI}, lapPctThresh, consecLapThresh,[],[],[]);
+                            %(trialbytrial, lapPctThresh, consecLapThresh, poolConds,xBinLims,yBinLims)
+    [trialReli{mouseI},aboveThresh{mouseI},~,~] = TrialReliability(cellTBT{mouseI}, lapPctThresh,[],[],[]);
     cellsActiveToday{mouseI} = sum(dayUse{mouseI},1);
     daysEachCellActive{mouseI} = sum(dayUse{mouseI},2);
     %disp(['Mouse ' num2str(mouseI) ' completed'])
@@ -481,6 +482,9 @@ for mouseI = 1:numMice
             case num2cell(twoEnvMice)'
                 twoEnvSameArms{dpI} = [twoEnvSameArms{dpI}; sameArm];
         end
+        
+        sameArmEach{mouseI}{dpI} = sameArm;
+        fbd{mouseI}{dpI} = firedBothDays;
     end
 end
    
@@ -547,3 +551,75 @@ disp('Done single cell remapping')
 % Rate map correlations
 
 % Compare 4 vs 7 to 4 vs 8 within groups
+
+%% Remapping from assembly
+load(fullfile(mainFolder,'tnc.mat'));
+dayThree = [11 12 13 12 9 12];
+
+dayPairsForwardCheck = [1 2];
+% First break it down, then re-register it
+ensAggYes = [];
+ensAggNo = [];
+for mouseI = 1:numMice
+    nCells = max(cellSSI{mouseI}(:,1));
+    theseCells = cellSSI{mouseI}(:,1) >0;
+    try
+    theseCells(nCells+1:end) = [];
+    end
+    
+    for ii = 1:2
+        mapsHere{mouseI}{ii} = tnc{mouseI}{ii}{dayThree(mouseI)}(1:nCells,1:nCells);
+        ensembleT{mouseI}{ii} = mapsHere{mouseI}{ii}(cellSSI{mouseI}(theseCells,1),:);
+        ensemble{mouseI}{ii} = mapsHere{mouseI}{ii}(:,cellSSI{mouseI}(theseCells,1));
+    
+    end
+    
+    for dpJ = 1:length(dayPairsForwardCheck)
+        %sameArmEach{mouseI}{dpI} = sameArm;
+        %fbd{mouseI}{dpI} = firedBothDays;
+        dpI = dayPairsForwardCheck(dpJ);
+        fbdH = fbd{mouseI}{dpI}(theseCells);
+        ensH = [ensemble{mouseI}{1}(fbdH,:) ensemble{mouseI}{2}(fbdH,:)];
+        
+        yesArm = sameArmEach{mouseI}{dpI} == 1;
+        noArm = sameArmEach{mouseI}{dpI} == 0;
+        
+        ensPos = sum(ensH >0,2);
+        ensNan = ensH;
+        ensNan(ensNan==0) = NaN;
+        
+        ensAggYes = [ensAggYes; ensPos(yesArm)];
+        ensAggNo = [ensAggNo; ensPos(noArm)];
+        %{
+        figure; histogram(ensPos(yesArm))
+        figure; histogram(ensPos(noArm))
+        
+        figure;
+        cdfplot(ensPos(yesArm))
+        hold on
+        cdfplot(ensPos(noArm))
+        [hh,pp] = kstest2(ensPos(yesArm),ensPos(noArm))
+        
+        
+        figure; histogram(max(ensNan(yesArm),[],2))
+        figure; histogram(max(ensNan(noArm),[],2))
+        
+        figure;
+        cdfplot(max(ensNan(yesArm),[],2))
+        hold on
+        cdfplot(max(ensNan(noArm),[],2))
+        [hh,pp] = kstest2(max(ensNan(yesArm),[],2),max(ensNan(noArm),[],2))
+    
+        figure; histogram(nanmean(ensNan(yesArm),2))
+        figure; histogram(nanmean(ensNan(noArm),2))
+        
+        figure;
+        cdfplot(nanmean(ensNan(yesArm),2))
+        hold on
+        cdfplot(nanmean(ensNan(noArm),2))
+        [hh,pp] = kstest2(nanmean(ensNan(yesArm),2),nanmean(ensNan(noArm),2))
+    %}
+    end
+end
+
+    

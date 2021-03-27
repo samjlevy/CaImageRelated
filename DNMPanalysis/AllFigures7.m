@@ -170,6 +170,7 @@ for mouseI = 1:numMice
             cp = 356;
             pd = find(cellSSI{mouseI}(cp,:)>0);
             [figg] = PlotSplittingDotPlot(daybyday,cellTBTarm{mouseI},cp,pd,'arm','line','wholeLap');
+            [figg] = PlotSplittingDotPlot(daybyday,trialbytrial,17,7,'arm','line','wholeLap');
             %cellOutLinePlot...
              
             figHd = [];
