@@ -68,13 +68,16 @@ for condI = 1:numConds
                 BgainsMany = sum(BinA,2)>1;
                 BgainsAinds = repmat(BgainsMany(:)',nFieldsA,1);
                 fieldMerges{cellI,dpI,condI} = sum(AinB & BgainsAinds,2)>0;
-                    
+                fieldShifts{cellI,dpI,condI}(fieldMerges{cellI,dpI,condI}) = 0; 
+                fieldShifts{cellI,dpI,condI}(fieldSplits{cellI,dpI,condI}) = 0; % Maybe not necessary?
+                
                 overlapsAtAll{cellI,dpI,condI} = sum(tBinsA & tBinsA)>0;
                     
                 % Overlapped fields details
                 comShift{cellI,dpI,condI} = zeros(nFieldsA,1);
                 rateDiff{cellI,dpI,condI} = zeros(nFieldsA,1);
                 sizeDiff{cellI,dpI,condI} = zeros(nFieldsA,1);
+                %comShift{cellI,dpI,condI} = false(nFieldsA,1);
                 for fieldI = 1:nFieldsA
                     fieldA = afOns(fieldI):afOffs(fieldI);
                     
@@ -101,6 +104,7 @@ for condI = 1:numConds
                                 figure; plot(aField,'b'); hold on; plot(bField,'r')
                                 plot(comA*[1 1],[0 0.25],'b'); plot(comB*[1 1],[0 0.25],'r')
                             %}
+                            %oneToOneShift{cellI,dpI,condI}(fieldI,1) = true;
                             comShift{cellI,dpI,condI}(fieldI,1) = comB - comA;
                             rateDiff{cellI,dpI,condI}(fieldI,1) = max(aField) - max(bField);
                             sizeDiff{cellI,dpI,condI}(fieldI,1) = length(fieldB) - length(fieldA);
@@ -130,14 +134,28 @@ for condI = 1:numConds
     end
 end
 
-outputs = table2struct(table(aboveThreshOverlaps,fieldShifts,fieldSplits,fieldMerges,comShift,rateDiff,sizeDiff));
+%outputs = table2struct(table(aboveThreshOverlaps,fieldShifts,fieldSplits,fieldMerges,comShift,rateDiff,sizeDiff));
 %{
-aboveThreshOverlaps = aboveThreshOverlaps;
-fieldShifts = fieldShifts;
-fieldSplits = fieldSplits
-fieldMerges = fieldMerges
-comShift = comShift
-rateDiff = rateDiff
-sizeDiff = sizeDiff
+for cellI = 1:numCells
+    for dpI = 1:size(dayPairs,1)
+        for condI = 1:2
+            vv = outputs(cellI).fieldShifts{1,dpI,condI} + outputs(cellI).fieldSplits{1,dpI,condI} + outputs(cellI).fieldMerges{1,dpI,condI};
+            if any(any(vv>1))
+                disp('bing!')
+                keyboard
+            end
+        end
+    end
+end
+%}
+    
+
+outputs(1).aboveThreshOverlaps = aboveThreshOverlaps;
+outputs(1).fieldShifts = fieldShifts;
+outputs(1).fieldSplits = fieldSplits;
+outputs(1).fieldMerges = fieldMerges;
+outputs(1).comShift = comShift;
+outputs(1).rateDiff = rateDiff;
+outputs(1).sizeDiff = sizeDiff;
 %}
 end

@@ -1,4 +1,4 @@
-function [dayUse,trialReliability,threshAndConsec] = TrialReliability2(trialbytrial,boundary,lapPctThresh, consecLapThresh,condPairs)
+function [dayUse,trialReliability,threshAndConsec,cellTrials] = TrialReliability2(trialbytrial,boundary,lapPctThresh, consecLapThresh,condPairs)
 
 numConds = length(trialbytrial);
 if isempty(condPairs); condPairs = [1:numConds]'; end
@@ -27,7 +27,7 @@ for cpI=1:numCondPairs
             condFires = cellfun(@(x) sum(x,2)>0,trialbytrial(condI).trialPSAbool,'UniformOutput',false);
         else
         % Get pts in bounds
-            [ptsInBound,ptsOnBound] = cellfun(@(x,y) inpolygon(x,y,boundary{condI}.X,boundary{condI}.Y),...
+            [ptsInBound,ptsOnBound] = cellfun(@(x,y) inpolygon(x,y,boundary{cpI}.X,boundary{cpI}.Y),...
                 trialbytrial(condI).trialsX,trialbytrial(condI).trialsY,'UniformOutput',false);
             ptsUse = cellfun(@(x,y) x | y,ptsInBound,ptsOnBound,'UniformOutput',false);
 
@@ -50,6 +50,7 @@ for cpI=1:numCondPairs
         
     end
 end
+cellTrials = trialReliability;
 for cpI=1:numCondPairs
     for sessI = 1:length(sessHere)
         trialReliability(:,sessHere(sessI),cpI) = trialReliability(:,sessHere(sessI),cpI)/numTrials(cpI,sessI);

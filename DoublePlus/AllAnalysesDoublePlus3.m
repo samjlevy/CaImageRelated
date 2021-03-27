@@ -19,31 +19,74 @@ sessTypes = {'Turn','Turn','Turn','Place','Place','Place','Turn','Turn','Turn'};
 name = {'North-West','South-East';'North-East','South-East'};
 binLabelsUse = {['n','m','w'],['s','m','e'];['n','m','e'],['s','m','e']};
 armLabels = {'n','e','s','w'};
+sessDays(strcmpi(sessTypes,'Turn')) = 1; sessDays(strcmpi(sessTypes,'Place')) = 2;
 
 nArmBins = 14;
 lgAnchor = load(fullfile(mainFolder,'mainPosAnchor.mat'));
-[lgDataBins,lgPlotBins] = SmallPlusBounds(lgAnchor.posAnchorIdeal,nArmBins);
+[lgDataBins,lgPlotBins] = SmallPlusBounds(lgAnchor.posAnchorIdeal,nArmBins,nArmBins-2);
 lgBinVertices = {lgDataBins.X, lgDataBins.Y};
 binMidsX = mean(lgDataBins.X,2);
 binMidsY = mean(lgDataBins.Y,2);
 allMazeBound.Y = [lgDataBins.bounds.north.Y; lgDataBins.bounds.east.Y; lgDataBins.bounds.south.Y; flipud(lgDataBins.bounds.west.Y)];
 allMazeBound.X = [flipud(lgDataBins.bounds.north.X); lgDataBins.bounds.east.X; lgDataBins.bounds.south.X; lgDataBins.bounds.west.X];
+numBins = size(lgDataBins.X,1);
 %{
 figure; plot(allMazeBound.X,allMazeBound.Y)
 hold on
 plot(allMazeBound.X(1),allMazeBound.Y(1),'*r')
 plot(allMazeBound.X(end),allMazeBound.Y(end),'og')
 %}
-[binOrderIndex] = SetBinOrder(lgDataBins,binLabelsUse);
+
+% Validate bins
+%{
+startsB = cell(2,1); [startsB{:}] = deal(zeros(1,numBins));
+stopsB = cell(2,1); [stopsB{:}] = deal(zeros(1,numBins));
+stopsBt = cell(2,1); [stopsBt{:}] = deal(zeros(1,numBins));
+stopsBp = cell(2,1); [stopsBp{:}] = deal(zeros(1,numBins));
+for mouseI = 1:numMice 
+    [startHist{mouseI},stopHist{mouseI}] = GetStartStopCounts(cellTBT{mouseI},lgDataBins); 
+    %if mouseI == 1
+    %    startHist{mouseI}{1} = [startHist{mouseI}{1}
+    startsB{1} = [startsB{1} + sum(startHist{mouseI}{1},1)];
+    startsB{2} = [startsB{2} + sum(startHist{mouseI}{2},1)];
+    stopsB{1} = [stopsB{1} + sum(stopHist{mouseI}{1},1)];
+    stopsB{2} = [stopsB{2} + sum(stopHist{mouseI}{2},1)];
+    
+% Divide into turn and place
+    stopsBt{1} = [stopsBt{1} + sum(stopHist{mouseI}{1}(sessDays==1,:),1)];
+    stopsBt{2} = [stopsBt{2} + sum(stopHist{mouseI}{2}(sessDays==1,:),1)];
+    stopsBp{1} = [stopsBp{1} + sum(stopHist{mouseI}{1}(sessDays==2,:),1)];
+    stopsBp{2} = [stopsBp{2} + sum(stopHist{mouseI}{2}(sessDays==2,:),1)];
+    
+    badP = stopHist{mouseI}{1}(sessDays==2,29);
+    if any(badP)
+        disp(['Found it, mouse ' num2str(mouseI) ', place day ' num2str(find(badP))])
+    end
+end
+%}
+[binOrderIndex] = SetBinOrder(lgDataBins,binLabelsUse,[]);
+binsOrdered.X = cellfun(@(x) lgDataBins.X(x,:),binOrderIndex,'UniformOutput',false);
+binsOrdered.Y = cellfun(@(x) lgDataBins.Y(x,:),binOrderIndex,'UniformOutput',false);
 for condI = 1:2
     %for ll = 1:length(binLabelsUse{1,condI})
     turnBinsUse{condI} = logical(sum(lgDataBins.labels == binLabelsUse{1,condI},2));
     placeBinsUse{condI} = logical(sum(lgDataBins.labels == binLabelsUse{2,condI},2));
 end
-
+% Each Arm Bins
+binOrderArmsLabels = {'n','w','s','e'};
+[binOrderArms] = SetBinOrder(lgDataBins,binOrderArmsLabels,[]);
+binsOrderedArms.X = cellfun(@(x) lgDataBins.X(x,:),binOrderArms,'UniformOutput',false);
+binsOrderedArms.Y = cellfun(@(x) lgDataBins.Y(x,:),binOrderArms,'UniformOutput',false);
+eachArmBoundsT{1}.Y = lgDataBins.bounds.north.Y; eachArmBoundsT{2}.Y = lgDataBins.bounds.west.Y;
+eachArmBoundsT{3}.Y = lgDataBins.bounds.south.Y; eachArmBoundsT{4}.Y = lgDataBins.bounds.east.Y;
+eachArmBoundsT{1}.X = lgDataBins.bounds.north.X; eachArmBoundsT{2}.X = lgDataBins.bounds.west.X;
+eachArmBoundsT{3}.X = lgDataBins.bounds.south.X; eachArmBoundsT{4}.X = lgDataBins.bounds.east.X;
+eachArmBoundsP{1}.Y = lgDataBins.bounds.north.Y; eachArmBoundsP{2}.Y = lgDataBins.bounds.east.Y;
+eachArmBoundsP{3}.Y = lgDataBins.bounds.south.Y; eachArmBoundsP{4}.Y = lgDataBins.bounds.east.Y;
+eachArmBoundsP{1}.X = lgDataBins.bounds.north.X; eachArmBoundsP{2}.X = lgDataBins.bounds.east.X;
+eachArmBoundsP{3}.X = lgDataBins.bounds.south.X; eachArmBoundsP{4}.X = lgDataBins.bounds.east.X;
 mazeWidth = 5.7150; % cm
 binSize = lgBinVertices{1}(5,1) - lgBinVertices{1}(4,1);
-
 
 
 % Small maze:
@@ -81,13 +124,26 @@ for mouseI = 1:numMice
         save(fullfile(mainFolder,mice{mouseI},'trialbytrial.mat'),'trialbytrial','-append','-v7.3')
         disp('Fixed')
     end
-    
+
     cellTBT{mouseI} = trialbytrial;
     cellSSI{mouseI} = sortedSessionInds;
     
     cellAllFiles{mouseI} = allfiles;
     try cellRealDays{mouseI} = realDays; catch cellRealDays{mouseI} = realdays; end
     
+    % split up tbt to four conditions, each arm
+    [buTBTa] = BreakUpTrialbyTrial(trialbytrial,[1;1;2;2;],eachArmBoundsT,'firstlast');
+    [buTBTb] = BreakUpTrialbyTrial(trialbytrial,[1;1;2;2;],eachArmBoundsP,'firstlast');
+    for condI = 1:4
+        for sessI =4:6
+            sessTrials = buTBTa(condI).sessID == sessI;
+            buTBTa(condI).trialsX(sessTrials,1) = buTBTb(condI).trialsX(sessTrials,1);
+            buTBTa(condI).trialsY(sessTrials,1) = buTBTb(condI).trialsY(sessTrials,1);
+            buTBTa(condI).trialPSAbool(sessTrials,1) = buTBTb(condI).trialPSAbool(sessTrials,1);
+            buTBTa(condI).trialDFDTtrace(sessTrials,1) = buTBTb(condI).trialDFDTtrace(sessTrials,1);
+            buTBTa(condI).trialRawTrace(sessTrials,1) = buTBTb(condI).trialRawTrace(sessTrials,1);
+        end
+    end
     %load(fullfile(mainFolder,mice{mouseI},'sessType.mat'))
     %cellSessType{mouseI} = sessType;
     
@@ -115,24 +171,36 @@ numConds = length(cellTBT{1});
 disp('Getting reliability')
 for mouseI = 1:numMice
     reliFileName = fullfile(mainFolder,mice{mouseI},'trialReli.mat');
-    if exist(reliFileName,'file')==0
-        [dayUse,trialReli,threshAndConsec] = TrialReliability2(cellTBT{mouseI},allMazeBound,lapPctThresh, consecLapThresh,[1;2]);
-        [dayUseAll,trialReliAll,threshAndConsecAll] = TrialReliability2(cellTBT{mouseI},allMazeBound,lapPctThresh, consecLapThresh,[1 2]);
-        save(reliFileName,'dayUse','trialReli','threshAndConsec','dayUseAll','trialReliAll','threshAndConsecAll')
-    end
+    %if exist(reliFileName,'file')==0
+        [dayUse,trialReli,threshAndConsec,numTrials] = TrialReliability2(cellTBT{mouseI},allMazeBound,lapPctThresh, consecLapThresh,[1;2]);
+        [dayUseAll,trialReliAll,threshAndConsecAll,numTrialsAll] = TrialReliability2(cellTBT{mouseI},allMazeBound,lapPctThresh, consecLapThresh,[1 2]);
+        
+        [dayUseEach,trialReliEach,threshAndConsecEach,numTrialsEach] = TrialReliability2(cellTBT{mouseI},eachArmBoundsT,lapPctThresh, consecLapThresh,[1;1;2;2]);
+        [dayUseE,trialReliE,threshAndConsecE,numTrialsE] = TrialReliability2(cellTBT{mouseI},eachArmBoundsP,lapPctThresh, consecLapThresh,[1;1;2;2]);
+        dayUseEach(:,4:6,:) = dayUseE(:,4:6,:); trialReliEach(:,4:6,:) = trialReliE(:,4:6,:); threshAndConsecEach(:,4:6,:) = threshAndConsecE(:,4:6,:); numTrialsEach(:,4:6,:) = numTrialsE(:,4:6,:);
+
+        save(reliFileName,'dayUse','trialReli','threshAndConsec','numTrials','dayUseAll','trialReliAll','threshAndConsecAll','numTrialsAll','dayUseEach','trialReliEach','threshAndConsecEach','numTrialsEach')
+   % end
 
 end
-clear dayUse threshAndConsec trialReli%dayUse = cell(1,numMice); threshAndConsec = cell(1,numMice);
+clear dayUse threshAndConsec trialReli dayUseAll threshAndConsecAll trialReliAll dayUseEach trialReliEach threshAndConsecEach numTrialsEach%dayUse = cell(1,numMice); threshAndConsec = cell(1,numMice);
+nTrialsThresh = 1;
 for mouseI = 1:numMice
     reliFileName = fullfile(mainFolder,mice{mouseI},'trialReli.mat');
     reliLoad = load(reliFileName);
     
     dayUse{mouseI} = reliLoad.dayUse;
     trialReli{mouseI} = reliLoad.trialReli; 
+    trialReli{mouseI} = trialReli{mouseI}.*(reliLoad.numTrials>nTrialsThresh);
     threshAndConsec{mouseI} = reliLoad.threshAndConsec;
     dayUseAll{mouseI} = reliLoad.dayUseAll;
     trialReliAll{mouseI} = reliLoad.trialReliAll;
+    trialReliAll{mouseI} = trialReli{mouseI}.*(reliLoad.numTrialsAll>nTrialsThresh);
     threshAndConsecAll{mouseI} = reliLoad.threshAndConsecAll;
+    dayUseEach{mouseI} = reliLoad.dayUseEach;
+    trialReliEach{mouseI} = reliLoad.trialReliEach; 
+    trialReliEach{mouseI} = trialReliEach{mouseI}.*(reliLoad.numTrialsEach>nTrialsThresh);
+    threshAndConsecEach{mouseI} = reliLoad.threshAndConsecEach;
   
     disp(['Mouse ' num2str(mouseI) ' completed'])
 end
@@ -144,7 +212,7 @@ condPairs = [1; 2];
 numCondPairs = size(condPairs,1);
 for mouseI = 1:numMice
     pfName= fullfile(mainFolder,mice{mouseI},'PFsLin.mat');
-    if exist(pfName,'file')==0
+    %if exist(pfName,'file')==0
         disp(['no placefields found for ' mice{mouseI} ', making now'])
         binLabels = lgDataBins.labels;
         binVertices = lgBinVertices;
@@ -160,13 +228,14 @@ for mouseI = 1:numMice
             [TMap_unsmoothed{:,6,2}] = deal(zeros(length(lgDataBins.labels),1));
             %save(pfName,'TMap_unsmoothed','-append')
         end
+        %{
         TMap_unsmoothed(:,[1:3 7:9],1) = cellfun(@(x) x(binOrderIndex{1}),TMap_unsmoothed(:,[1:3 7:9],1),'UniformOutput',false);
-        TMap_unsmoothed(:,[1:3 7:9],2) = cellfun(@(x) x(binOrderIndex{2}),TMap_unsmoothed(:,[1:3 7:9],2),'UniformOutput',false);
-        TMap_unsmoothed(:,[4:6],1) = cellfun(@(x) x(binOrderIndex{3}),TMap_unsmoothed(:,[4:6],1),'UniformOutput',false);
+        TMap_unsmoothed(:,[1:3 7:9],2) = cellfun(@(x) x(binOrderIndex{3}),TMap_unsmoothed(:,[1:3 7:9],2),'UniformOutput',false);
+        TMap_unsmoothed(:,[4:6],1) = cellfun(@(x) x(binOrderIndex{2}),TMap_unsmoothed(:,[4:6],1),'UniformOutput',false);
         TMap_unsmoothed(:,[4:6],2) = cellfun(@(x) x(binOrderIndex{4}),TMap_unsmoothed(:,[4:6],2),'UniformOutput',false);
-        
+        %}
         save(pfName,'TMap_unsmoothed','binLabels','binVertices','-append')
-    end
+    %end
 end
 for mouseI = 1:numMice
     pfName= fullfile(mainFolder,mice{mouseI},'PFsLin.mat');
@@ -217,34 +286,31 @@ hold on
 plot(sns(tds),dd(tds),'r');
 end
 
-%% Re-mapping by Cell-coactivity
+%% Single neuron correlation by Cell-coactivity
 
 %tmapPooled
 turnDays = [1:3 7:9];
 placeDays = [4:6];
 condPairs = [1; 2]; numCondPairs = size(condPairs,1);
 
-dayPairs = [1 3; 2 3; 3 7; 3 8; 3 9];
+%dayPairs = [1 3; 2 3; 3 7; 3 8; 3 9];
+dayPairs = [3 7; 3 8; 7 8];
 
-% Ratemap corrs
-singleCellCorrsRho = []; singleCellCorrsP = [];
-for mouseI = 1:numMice
-    [singleCellCorrsRho{mouseI}, singleCellCorrsP{mouseI}] = singleNeuronCorrelations(cellTMap{mouseI},dayPairs,[]);%turnBinsUse
-    %{mouseI}{condI}{dayPairI}(cellI)
-    [allSingleCellCorrsRho{mouseI}, allSingleCellCorrsP{mouseI}] = singleNeuronCorrelations(allTMap{mouseI},dayPairs,[]);
-end
-disp('Done single-cell corrs across days')
-
+threshHere = 0.1;
 for mouseI = 1:numMice
     %[coactivity{mouseI},numTrialsActive{mouseI},pctTrialsActive{mouseI}] = findingEnsemblesNotes2(cellTBT{mouseI},condPairs);
-    [coactivity2{mouseI},pctTrialsActive2{mouseI},trialCoactiveAboveBaseline{mouseI},totalCoactiveAboveBaseline{mouseI},chanceCoactive{mouseI}] =...
+    [coactivity{mouseI},totalCoactivity{mouseI},pctTrialsActive{mouseI},trialCoactiveAboveBaseline{mouseI},totalCoactiveAboveBaseline{mouseI},chanceCoactive{mouseI}] =...
         findingEnsemblesNotes3(cellTBT{mouseI},allMazeBound,condPairs);
+
+[buTBT] = BreakUpTrialbyTrial(cellTBT{1},condBreak,binsBreak);
+[coactivity2,totalCoactivity2,pctTrialsActive2,trialCoactiveAboveBaseline2,totalCoactiveAboveBaseline2,chanceCoactive2] =...
+        findingEnsemblesNotes3(buTBT,allMazeBound,[1;2;3;4]);
     
-    aa = graph(trialCoactiveAboveBaseline{mouseI});
-    [bins,binsizes] = conncomp(aa);
+    %[ensemBins{mouseI},ensemBinSizes{mouseI}] = cellfun(@(x) conncomp(graph(x)),totalCoactiveAboveBaseline{mouseI},'UniformOutput',false);
+    %[~,V_temp,D_temp] = spectralcluster(X,5)
     
     %coactivity{mouseI}{dayI,condI}(cellI,cellJ)
-    trialNormalizedCoactivity,pctTrialsActive
+    %{
     nCellsToday = sum(cellSSI{mouseI}>0,1);
     numCellsToday = mat2cell(repmat(nCellsToday(:),1,numCondPairs),ones(9,1),ones(1,numCondPairs));
     isCoactive = cellfun(@(x) x>0,coactivity{mouseI},'UniformOutput',false);
@@ -253,13 +319,162 @@ for mouseI = 1:numMice
     pctCoactivePartners{mouseI} = cellfun(@(x,y) x/(y*ones(numCells(mouseI),1)),numCoactivePartners{mouseI},numCellsToday,'UniformOutput',false);
     totalCoactive{mouseI} = cellfun(@(x) sum(x,2),coactivity{mouseI},'UniformOutput',false);
     meanCoactivity{mouseI} = cellfun(@(x,y) x./y,totalCoactive{mouseI},numCoactivePartners{mouseI},'UniformOutput',false);
+    %}
+    
+    nCellsActiveToday{mouseI} = sum(trialReliAll{mouseI}>0,1);
+    nCellsActiveTodayCond{mouseI} = squeeze(sum(trialReli{mouseI}>0,1))'; %(condI,dayI)
+    
+    numCoactivePartners{mouseI} = cellfun(@(x) sum(x,2),totalCoactiveAboveBaseline{mouseI},'UniformOutput',false);
+    pctCoactivePartners{mouseI} = cellfun(@(x,y) x/y,numCoactivePartners{mouseI},num2cell(nCellsActiveTodayCond{mouseI}'),'UniformOutput',false);
+    
+    %{
+     cellsHere = trialReli{mouseI}>threshHere;
+    for dayI = 1:9
+        if any(any(totalCoactiveAboveBaseline{mouseI}{dayI,1}))
+        for condI = 1:2
+            cellsHere = trialReli{mouseI}(:,dayI) > threshHere;
+            
+            tcb{dayI,condI} = totalCoactiveAboveBaseline{mouseI}{dayI,condI}(cellsHere,:);
+            tcb{dayI,condI} = tcb{dayI,condI}(:,cellsHere);
+            
+            nCellsActiveTodayCond{dayI,condI} = sum(cellsHere);
+            numCoactivePartners{dayI,condI} = sum(tcb{dayI,condI},2);
+        end
+        end
+    end
+    pctCoactivePartners{mouseI} = cellfun(@(x,y) x/y,numCoactivePartners,nCellsActiveTodayCond,'UniformOutput',false);
+    %}
+
 end
 disp('Done getting coactivity')
 
-% Pool corrs by group
+% Change in coactivity
 
+for mouseI = 1:numMice 
+    for condI = 1:numConds
+        for dpI = 1:size(dayPairs,1)
+            cellsHere = cellSSI{mouseI}(:,dayPairs(dpI,1)) & cellSSI{mouseI}(:,dayPairs(dpI,2));
+            reliUse = trialReli{mouseI}(:,dayPairs(dpI,1),condI)>threshHere & trialReli{mouseI}(:,dayPairs(dpI,2),condI)>threshHere;
+            cellsHere = cellsHere & reliUse;
+
+            cellsHere = find(cellsHere);
+            
+            coactA = totalCoactivity{mouseI}{dayPairs(dpI,1),condI};
+            coactB = totalCoactivity{mouseI}{dayPairs(dpI,2),condI};
+            
+            coactA = coactA(cellsHere,:); coactA = coactA(:,cellsHere);
+            coactB = coactB(cellsHere,:); coactB = coactB(:,cellsHere);
+            
+            coactChange = coactB - coactA;
+            
+            triInd = ones(size(coactChange));
+            triInd = triu(triInd,1);
+            cChange{mouseI}{condI}{dpI} = coactChange(logical(triInd));
+        end
+    end
+end
+
+for groupI = 1:2
+    miceH = find(groupNum==groupI);
+    cChangePooled{groupI} = cell(size(dayPairs,1),numConds);
+    for dpI = 1:size(dayPairs,1)
+        for mouseI = 1:length(miceH)
+            for condI = 1:numConds
+                cChangePooled{groupI}{dpI,condI} = [cChangePooled{groupI}{dpI,condI}; cChange{miceH(mouseI)}{condI}{dpI}];
+            end
+        end
+    end
+end
+
+figure;
+numDayPairs = size(dayPairs,1);
+for dpI = 1:numDayPairs
+    for condI = 1:numConds
+        subplot(numConds,numDayPairs,dpI+numDayPairs*(condI-1))
+        %[f,x] = ecdf(abs(cChangePooled{1}{dpI,condI}));
+        [f,x] = ecdf(cChangePooled{1}{dpI,condI});
+        plot(x,f,groupColors{1},'LineWidth',2); hold on
+        %[f,x] = ecdf(abs(cChangePooled{2}{dpI,condI}));
+        [f,x] = ecdf(cChangePooled{2}{dpI,condI});
+        plot(x,f,groupColors{2},'LineWidth',2)
+        
+        %[h,p] = kstest2((abs(cChangePooled{1}{dpI,condI})),abs(cChangePooled{2}{dpI,condI}));
+        [h,p] = kstest2(cChangePooled{1}{dpI,condI},cChangePooled{2}{dpI,condI});
+        
+        title(['Days ' num2str(dayPairs(dpI,:)) ', cond ' num2str(condI) ', p = ' num2str(p)]) 
+        xlabel('Coactivity change')
+    end
+end
+suptitleSL('Absolute coactivity change')
+       
+
+            
+%adjustTmaps
+for mouseI = 1:numMice
+    tmapHere{mouseI}(:,[1:3 7:9],1) = cellfun(@(x) x(binOrderIndex{1}),cellTMap{mouseI}(:,[1:3 7:9],1),'UniformOutput',false);
+    tmapHere{mouseI}(:,[1:3 7:9],2) = cellfun(@(x) x(binOrderIndex{3}),cellTMap{mouseI}(:,[1:3 7:9],2),'UniformOutput',false);
+    tmapHere{mouseI}(:,[4:6],1) = cellfun(@(x) x(binOrderIndex{2}),cellTMap{mouseI}(:,[4:6],1),'UniformOutput',false);
+    tmapHere{mouseI}(:,[4:6],2) = cellfun(@(x) x(binOrderIndex{4}),cellTMap{mouseI}(:,[4:6],2),'UniformOutput',false);
+end
+
+% Ratemap corrs
+singleCellCorrsRho = []; singleCellCorrsP = [];
+for mouseI = 1:numMice
+    [singleCellCorrsRho{mouseI}, singleCellCorrsP{mouseI}] = singleNeuronCorrelations(tmapHere{mouseI},dayPairs,[]);%turnBinsUse
+    %{mouseI}{condI}{dayPairI}(cellI)
+    %[allSingleCellCorrsRho{mouseI}, allSingleCellCorrsP{mouseI}] = singleNeuronCorrelations(allTMap{mouseI},dayPairs,[]);
+end
+disp('Done single-cell corrs across days')
+
+% Cells with higher corr 3-8 vs. 3-7
+rPooled = cell(numConds,2);
+for mouseI = 1:numMice
+    for condI = 1:numConds
+        allDays = sum(cellSSI{mouseI}(:,[3 7 8]) > 0,2)==3;
+        reliUse = sum(trialReli{mouseI}(:,[3 7 8],condI) > threshHere,2)==3;
+        
+        cellsHere = allDays;
+
+        reinstate = singleCellCorrsRho{mouseI}{condI}{1}(cellsHere) < singleCellCorrsRho{mouseI}{condI}{2}(cellsHere);
+        rPooled{condI,groupNum(mouseI)} = [rPooled{condI,groupNum(mouseI)}; sum(reinstate)/sum(cellsHere)];
+    end
+end
+
+% Mean Correlation from day [1 2, 2 3] (1 3) related for [3 7, 3 8] (7 8)?
+daySetsTest{1} = {[1 2 3],[7 8]};
+
+numDaySetsTest = length(daySetsTest);
+stabilityAgg = cell(numDaySetsTest,numConds); [stabilityAgg{:}] = deal(cell(1,2));
+for dstI = 1:numDaySetsTest
+daysTestH = daySetsTest{dstI};
+for mouseI = 1:numMice
+    for condI = 1:numConds
+        cellsHere = [];
+        
+        stabilityA = []; %zeros(numCellsHere,1);
+        for ii = 1:numel(daysTestH{1})    
+            stabilityA = [stabilityA, singleCellCorrsRho{mouseI}{condI}{daysTestH(1)}(ii)];
+        end
+        % stabilityA(:,1) = [];
+        meanStabilityA = mean(stabilityA(cellsHere,:),2);
+
+        stabilityB = []; %zeros(numCellsHere,1);
+        for ii = 1:numel(daysTestH{2})    
+            stabilityB = [stabilityB, singleCellCorrsRho{mouseI}{condI}{daysTestH(2)}(ii)];
+        end
+        % stabilityA(:,1) = [];
+        meanStabilityB = mean(stabilityB(cellsHere,:),2);
+
+
+        stabilityAgg{dstI,condI}{groupNum(mouseI)} = [stabilityAgg{dstI,condI}{groupNum(mouseI)}; meanStabilityA meanSabilityB];
+    end
+end
+end
+
+% Pool corrs by group
 threshHere = 0.1;
 corrsPooled = cell(2,1); meanCorrPooled = []; semCorrPooled = [];
+meanCorrs = []; semCorrs = [];
 for groupI = 1:2
     for dpI = 1:size(dayPairs,1)
         corrsPooled{groupI}{dpI} = [];
@@ -269,9 +484,9 @@ for groupI = 1:2
                 cellsHere = cellSSI{miceH(mouseI)}(:,dayPairs(dpI,1)) & cellSSI{miceH(mouseI)}(:,dayPairs(dpI,2));
                 reliUse = trialReli{miceH(mouseI)}(:,dayPairs(dpI,1),condI)>threshHere & trialReli{miceH(mouseI)}(:,dayPairs(dpI,2),condI)>threshHere;
                 cellsHere = cellsHere & reliUse;
-                %corrsHere = singleCellCorrsRho{miceH(mouseI)}{condI}{dpI}(cellsHere);
-                corrsHere = allSingleCellCorrsRho{miceH(mouseI)}{condI}{dpI}(cellsHere);
-                meanCorrs{groupI,mouseI}(condI,dpI) = mean(corrsHere);
+                corrsHere = singleCellCorrsRho{miceH(mouseI)}{condI}{dpI}(cellsHere);
+                %corrsHere = allSingleCellCorrsRho{miceH(mouseI)}{condI}{dpI}(cellsHere);
+                meanCorrs{groupI,mouseI}(condI,dpI) = nanmean(corrsHere); % Some nans in corrs due to lots of zeros?
                 semCorrs{groupI,mouseI}(condI,dpI) = standarderrorSL(corrsHere);
                 corrsPooled{groupI}{dpI} = [corrsPooled{groupI}{dpI}; corrsHere];
             end
@@ -307,78 +522,103 @@ errorbar(meanCorrPooled(2,:),semCorrPooled(2,:),'Color',groupColors{2});
 
 
 % Scatter of ratemap correlations against coactivity, num coactive partners, etc. on 1st day in pair
-%threshHere = 0.1;
+%threshHere = 0.25;
+nReliBins = 3;
+%reliBins = linspace(threshHere,1.0001,nReliBins+1);
 xAgg = cell(size(dayPairs,1),1);
 yAgg = cell(size(dayPairs,1),1);
+xAggBlock = cell(size(dayPairs,1),1); [xAggBlock{:}] = deal(cell(nReliBins,1));
+yAggBlock = cell(size(dayPairs,1),1); [yAggBlock{:}] = deal(cell(nReliBins,1));
+condColors = ['r';'g'];
 for dpI = 1:size(dayPairs,1)
     figure('Position',[328.5000 130 1028 627.5000]);
     for mouseI = 1:numMice
         subplot(2,3,mouseI)
         %title([mice{mouseI} ' ' groups{mouseI}])
-        condColors = ['r';'g'];
+        
         for condI = 1:numCondPairs
             cellsHere = cellSSI{mouseI}(:,dayPairs(dpI,1)) & cellSSI{mouseI}(:,dayPairs(dpI,2));
-            %reliUse = trialReli{mouseI}(:,dayPairs(dpI,1),condI)>threshHere & trialReli{mouseI}(:,dayPairs(dpI,2),condI)>threshHere;
-            reliUse = trialReliAll{mouseI}(:,dayPairs(dpI,1),condI)>threshHere & trialReliAll{mouseI}(:,dayPairs(dpI,2),condI)>threshHere;
-            cellsHere = cellsHere & reliUse;
+            reliUse = trialReli{mouseI}(:,dayPairs(dpI,1),condI)>threshHere & trialReli{mouseI}(:,dayPairs(dpI,2),condI)>threshHere;
+            %reliUse = trialReliAll{mouseI}(:,dayPairs(dpI,1),condI)>threshHere & trialReliAll{mouseI}(:,dayPairs(dpI,2),condI)>threshHere;
+            %coactHere = pctCoactivePartners{mouseI}{min(dayPairs(dpI,:)),condI} < 0.95;
+            cellsHere = cellsHere & reliUse; % & coactHere;
             xPlot = pctCoactivePartners{mouseI}{min(dayPairs(dpI,:)),condI}(cellsHere); %needs to be restricted by cells carried over?
-            %yPlot = singleCellCorrsRho{mouseI}{condI}{dpI}(cellsHere);
-            yPlot = allSingleCellCorrsRho{mouseI}{condI}{dpI}(cellsHere);
+            yPlot = singleCellCorrsRho{mouseI}{condI}{dpI}(cellsHere);
+            %yPlot = allSingleCellCorrsRho{mouseI}{condI}{dpI}(cellsHere);
+            
+            tcb = totalCoactiveAboveBaseline{mouseI}{dayPairs(dpI,1),condI}(cellsHere,:); % number of cells coactive with
+            %tcb = coactivity{mouseI}{dayPairs(dpI,1),condI}(cellsHere,:); % coactivity scores
+            tcb = tcb(:,cellsHere);
+            nCoactivePartners = sum(tcb,2);
+            pctCoactPartners = nCoactivePartners/sum(cellsHere);
+            xPlot = pctCoactPartners;
+            
+            
             plot(xPlot,yPlot,'.','MarkerFaceColor',condColors(condI))
             hold on
             
             xAgg{dpI} = [xAgg{dpI}; xPlot];
             yAgg{dpI} = [yAgg{dpI}; yPlot];
+            
+            reliHere = trialReli{mouseI}(cellsHere,dayPairs(dpI,1),condI); % Should this pool across mice?
+            [reliSorted,ia] = sort(reliHere,'ascend');
+            reliBins = round(linspace(1,length(reliHere),nReliBins+1));
+            cellsHereInds = find(cellsHere);
+            for rgI = 1:length(reliBins)-1
+                theseRH = reliBins(rgI):reliBins(rgI+1)-1;
+                reliHinds = ia(theseRH);
+                xPlotBlock = xPlot(reliHinds);
+                yPlotBlock = yPlot(reliHinds);
+                
+                xAggBlock{dpI}{rgI} = [xAggBlock{dpI}{rgI}; xPlotBlock(:)];
+                yAggBlock{dpI}{rgI} = [yAggBlock{dpI}{rgI}; yPlotBlock(:)];
+            end
         end
         ylabel('PF corr')
-        xlabel('mean coactivity')
+        xlabel('Pct coactive / active')
     end
     suptitleSL(['Rate maps by coactivity day pair ' num2str(dayPairs(dpI,:))])
 end
 
-figure;
+figure('Position', [137.5000 154 1.3285e+03 627.5000]);
 for dpI = 1:size(dayPairs,1)
     subplot(1,size(dayPairs,1),dpI)
     plot(xAgg{dpI},yAgg{dpI},'.')
     [rho,p] = corr(xAgg{dpI},yAgg{dpI},'type','Spearman');
-    title(['rho ' num2str(rho) ' p: ' num2str(p)])
+    title({['day pair ' num2str(dayPairs(dpI,:))];['rho ' num2str(rho) ' p: ' num2str(p)]})
+    [fitVal,daysPlot] = FitLineForPlotting(yAgg{dpI},xAgg{dpI});
+    hold on
+    plot(daysPlot,fitVal,'r')
     ylabel('PF corr')
-    xlabel('mean coactivity')
+    xlabel('Pct coactive / active')
+    
 end
+suptitleSL(['Single-Neuron Rate map correlation overdays by pct coactive partners'])
 
-figure;
-for mouseI = 1:numMice
-    subplot(2,3,mouseI)
-    histogram(trialReli{mouseI}(trialReli{mouseI}>0))
-end
-
-% Change of connectivity across days
+% Same but reliability groups
+for rgI = 1:nReliBins
+figure('Position', [137.5000 154 1.3285e+03 627.5000]);
 for dpI = 1:size(dayPairs,1)
-    figure('Position',[328.5000 130 1028 627.5000]);
-    for mouseI = 1:numMice
-        subplot(2,3,mouseI)
-        title([mice{mouseI} ' ' groups{mouseI}])
-        for condI = 1:numConds
-            cellsHere = cellSSI{mouseI}(:,dayPairs(dpI,1)) & cellSSI{mouseI}(:,dayPairs(dpI,2));
-            
-            coactivityA = coactivity{mouseI}{dayPairs(dpI,1),condI}(cellsHere,:);
-            coactivityA = coactivityA(:,cellsHere);
-            coactivityB = coactivity{mouseI}{dayPairs(dpI,2),condI}(cellsHere,:);
-            coactivityB = coactivityB(:,cellsHere);
-            
-            coactivityDiff = coactivityA - coactivityB;
-            %meanCoactivityDiff = mean(coactivityA,2) - mean(coactivityB,2);
-            
-            [f,x] = ecdf(y);
-            plot(x,f,condColors(condI))
-            hold on
-        end
-        ylabel('CDF')
-        xlabel('Coactivity change')
-    end
-    suptitleSL(['Change in coactivity day pair ' num2str(dayPair(dpI,:))])
+    subplot(1,size(dayPairs,1),dpI)
+    plot(xAggBlock{dpI}{rgI},yAggBlock{dpI}{rgI},'.')
+    [rho,p] = corr(xAggBlock{dpI}{rgI},yAggBlock{dpI}{rgI},'type','Spearman');
+    title({['day pair ' num2str(dayPairs(dpI,:))];['rho ' num2str(rho) ' p: ' num2str(p)]})
+    [fitVal,daysPlot] = FitLineForPlotting(yAggBlock{dpI}{rgI},xAggBlock{dpI}{rgI});
+    hold on
+    plot(daysPlot,fitVal,'r')
+    ylabel('PF corr')
+    xlabel('Pct coactive / active')
+    
 end
-            
+suptitleSL(['Single-Neuron Rate map correlation overdays by pct coactive partners, trialReli ' num2str(rgI) ' / ' num2str(nReliBins)])
+end
+% Remapping on x-axis, change in coactivity with partner cells on y
+%           (% coactive partners, mean coactivity rate)
+
+
+
+
+
 % PLots if same, but aggregated by group assign...            
             
             
@@ -401,19 +641,136 @@ tbtfields =  {'trialsX',...
     'lapSequence',...
     'rule'};
 
+condBreak = [1;1;2;2];
+binsB = {'n' 'w' 's' 'e'};
+binsB = {'north' 'west' 'south' 'east'};
+for binsI = 1:4
+    %binsBH = lgDataBins.labels == binsB{binsI};
+    %binsBreak.X{binsI} = lgDataBins.X(binsBH,:);
+    %binsBreak.Y{binsI} = lgDataBins.X(binsBH,:);
+    binsBreak.X{binsI} =lgDataBins.bounds.(binsB{binsI}).X;
+    binsBreak.Y{binsI} =lgDataBins.bounds.(binsB{binsI}).Y;
+end
+[buTBT] = BreakUpTrialbyTrial(cellTBT{1},condBreak,binsBreak); % Would need to do again and smush together for place days...
+
 %% Single-neuron place field changes
+pctRemap = cell(numDayPairs,numConds); [pctRemap{:}] = deal(cell(1,2));
 for mouseI = 1:numMice
+    tmapHere{mouseI}(:,[1:3 7:9],1) = cellfun(@(x) x(binOrderIndex{1}),cellTMap{mouseI}(:,[1:3 7:9],1),'UniformOutput',false);
+    tmapHere{mouseI}(:,[1:3 7:9],2) = cellfun(@(x) x(binOrderIndex{3}),cellTMap{mouseI}(:,[1:3 7:9],2),'UniformOutput',false);
+    tmapHere{mouseI}(:,[4:6],1) = cellfun(@(x) x(binOrderIndex{2}),cellTMap{mouseI}(:,[4:6],1),'UniformOutput',false);
+    tmapHere{mouseI}(:,[4:6],2) = cellfun(@(x) x(binOrderIndex{4}),cellTMap{mouseI}(:,[4:6],2),'UniformOutput',false);
+    
+    allTMap{mouseI} = cellfun(@(y,z) [y(:); z(:)],tmapHere{mouseI}(:,:,1),tmapHere{mouseI}(:,:,2),'UniformOutput',false);
+
     TMapMeans{mouseI} = cellfun(@mean, allTMap{mouseI});
     TMapStds{mouseI} = cellfun(@std, allTMap{mouseI});
     sdM = 1.645; % 1 tailed t test
-    TMapThresh{mouseI} = cellfun(@(x,y) x+y*sdM,TmapMeans{mouseI},TMapStds{mouseI});
-    [TmapAboveThresh{mouseI}(:,:,1)] = cellfun(@(x,y) x>y,cellTMap{mouseI}(:,:,1),num2cell(TMapThresh{mouseI}),'UniformOutput',false);
-    [TmapAboveThresh{mouseI}(:,:,2)] = cellfun(@(x,y) x>y,cellTMap{mouseI}(:,:,2),num2cell(TMapThresh{mouseI}),'UniformOutput',false);
-    % Has to be >, >= lets 0 be above mean
+    TMapThresh{mouseI} = arrayfun(@(x,y) x+y*sdM,TMapMeans{mouseI},TMapStds{mouseI});
+    %TMapThresh{mouseI} = arrayfun(@(x,y,z) x+y*sdM,TMapMeans{mouseI},TMapStds{mouseI},num2cell(trialReli{mouseI},);
+        
+    %[TmapAboveThresh{mouseI}(:,:,1)] = cellfun(@(x,y) x>y,tmapHere{mouseI}(:,:,1),num2cell(TMapThresh{mouseI}),'UniformOutput',false);
+    %[TmapAboveThresh{mouseI}(:,:,2)] = cellfun(@(x,y) x>y,tmapHere{mouseI}(:,:,2),num2cell(TMapThresh{mouseI}),'UniformOutput',false);
+    [TmapAboveThresh{mouseI}(:,:,1)] = cellfun(@(x,y,z) logical((x>y).*z),tmapHere{mouseI}(:,:,1),num2cell(TMapThresh{mouseI}),num2cell(trialReli{mouseI}(:,:,1)>0),'UniformOutput',false);
+    [TmapAboveThresh{mouseI}(:,:,2)] = cellfun(@(x,y,z) logical((x>y).*z),tmapHere{mouseI}(:,:,2),num2cell(TMapThresh{mouseI}),num2cell(trialReli{mouseI}(:,:,2)>0),'UniformOutput',false);
     
-    [outputs] = PlaceFieldRemapping(cellTMap{mouseI},TmapAboveThresh{mouseI},dayPairs);
+% Has to be >, >= lets 0 be above mean
+
+    [outputs] = PlaceFieldRemapping(tmapHere{mouseI},TmapAboveThresh{mouseI},dayPairs);
+    
+    % Get mutually exclusive split, shift merge categories
+    overallShift = cellfun(@(x) sum(x)>0,outputs(1).fieldShifts);
+    overallSplit = cellfun(@(x) sum(x)>0,outputs(1).fieldSplits);
+    overallMerge = cellfun(@(x) sum(x)>0,outputs(1).fieldMerges);
+    onlyShifts{mouseI} = overallShift & ((overallSplit | overallMerge)==0);
+    onlySplits{mouseI} = overallSplit & ((overallShift | overallMerge)==0);
+    onlyMerges{mouseI} = overallMerge & ((overallSplit | overallShift)==0);
+    
+    allCellsAboveThresh = cellfun(@any, TmapAboveThresh{mouseI});
+    for dpI = 1:numDayPairs
+        for condI = 1:numConds
+            cellsSig = sum(allCellsAboveThresh(:,dayPairs(dpI,:),condI),2)==2;
+            
+            labeledRemappers = [onlyShifts{mouseI}(:,dpI,condI), onlySplits{mouseI}(:,dpI,condI), onlyMerges{mouseI}(:,dpI,condI)]; 
+            
+            numRemappers = sum(labeledRemappers(cellsSig,:),1);
+            totalCellsSig = sum(cellsSig);
+            numRemappers = [numRemappers totalCellsSig-sum(numRemappers)];
+            pctRemapping = numRemappers / totalCellsSig;
+
+            groupI = groupNum(mouseI);
+            pctRemap{dpI,condI}{groupI} = [pctRemap{dpI,condI}{groupI}; pctRemapping];
+        end
+    end
+    %pct distribution in each category
 end
 
+% Plot some examples
+%Shifter:
+mouseI = 1; cellI = 2; dpI = 1;
+PlotDotplotDoublePlus2(cellTBT{mouseI},cellI,[1;2],dayPairs(dpI,1),'dynamic',[],2.5)
+title(['Shift only: mouse ' num2str(mouseI) ', cell ' num2str(cellI) ', day ' num2str(dayPairs(dpI,1))])
+PlotDotplotDoublePlus2(cellTBT{mouseI},cellI,[1;2],dayPairs(dpI,2),'dynamic',[],2.5)
+title(['Shift only: mouse ' num2str(mouseI) ', cell ' num2str(cellI) ', day ' num2str(dayPairs(dpI,2))])
+
+
+binsH = TmapAboveThresh{mouseI}{cellI,dayPairs(dpI,1),1};
+binsAT.X{1} = binsOrdered.X{1}(binsH,:); binsAT.Y{1} = binsOrdered.Y{1}(binsH,:);
+binsH = TmapAboveThresh{mouseI}{cellI,dayPairs(dpI,1),2};
+binsAT.X{2} = binsOrdered.X{3}(binsH,:); binsAT.Y{2} = binsOrdered.Y{3}(binsH,:);
+PlotDotplotDoublePlus2(cellTBT{mouseI},cellI,[1;2],dayPairs(dpI,1),'aboveThresh',binsAT,[])
+title(['Shift only: mouse ' num2str(mouseI) ', cell ' num2str(cellI) ', day ' num2str(dayPairs(dpI,1))])
+binsH = TmapAboveThresh{mouseI}{cellI,dayPairs(dpI,2),1};
+binsAT.X{1} = binsOrdered.X{1}(binsH,:); binsAT.Y{1} = binsOrdered.Y{1}(binsH,:);
+binsH = TmapAboveThresh{mouseI}{cellI,dayPairs(dpI,2),2};
+binsAT.X{2} = binsOrdered.X{3}(binsH,:); binsAT.Y{2} = binsOrdered.Y{3}(binsH,:);
+PlotDotplotDoublePlus2(cellTBT{mouseI},cellI,[1;2],dayPairs(dpI,2),'aboveThresh',binsAT,[])
+title(['Shift only: mouse ' num2str(mouseI) ', cell ' num2str(cellI) ', day ' num2str(dayPairs(dpI,2))])
+
+% Field-Split
+mouseI = 1; cellI = 144; dpI = 1;
+PlotDotplotDoublePlus2(cellTBT{mouseI},cellI,[1;2],dayPairs(dpI,1),'dynamic',[],3.5)
+title(['Split only: mouse ' num2str(mouseI) ', cell ' num2str(cellI) ', day ' num2str(dayPairs(dpI,1))])
+PlotDotplotDoublePlus2(cellTBT{mouseI},cellI,[1;2],dayPairs(dpI,2),'dynamic',[],3.5)
+title(['Split only: mouse ' num2str(mouseI) ', cell ' num2str(cellI) ', day ' num2str(dayPairs(dpI,2))])
+
+binsH = TmapAboveThresh{mouseI}{cellI,dayPairs(dpI,1),1};
+binsAT.X{1} = binsOrdered.X{1}(binsH,:); binsAT.Y{1} = binsOrdered.Y{1}(binsH,:);
+binsH = TmapAboveThresh{mouseI}{cellI,dayPairs(dpI,1),2};
+binsAT.X{2} = binsOrdered.X{3}(binsH,:); binsAT.Y{2} = binsOrdered.Y{3}(binsH,:);
+PlotDotplotDoublePlus2(cellTBT{mouseI},cellI,[1;2],dayPairs(dpI,1),'aboveThresh',binsAT,[])
+title(['Split only: mouse ' num2str(mouseI) ', cell ' num2str(cellI) ', day ' num2str(dayPairs(dpI,1))])
+binsH = TmapAboveThresh{mouseI}{cellI,dayPairs(dpI,2),1};
+binsAT.X{1} = binsOrdered.X{1}(binsH,:); binsAT.Y{1} = binsOrdered.Y{1}(binsH,:);
+binsH = TmapAboveThresh{mouseI}{cellI,dayPairs(dpI,2),2};
+binsAT.X{2} = binsOrdered.X{3}(binsH,:); binsAT.Y{2} = binsOrdered.Y{3}(binsH,:);
+PlotDotplotDoublePlus2(cellTBT{mouseI},cellI,[1;2],dayPairs(dpI,2),'aboveThresh',binsAT,[])
+title(['Split only: mouse ' num2str(mouseI) ', cell ' num2str(cellI) ', day ' num2str(dayPairs(dpI,2))])
+
+% Field merge
+mouseI = 1; cellI = 107; dpI = 1;
+PlotDotplotDoublePlus2(cellTBT{mouseI},cellI,[1;2],dayPairs(dpI,1),'dynamic',[],2.5)
+title(['Merge only: mouse ' num2str(mouseI) ', cell ' num2str(cellI) ', day ' num2str(dayPairs(dpI,1))])
+PlotDotplotDoublePlus2(cellTBT{mouseI},cellI,[1;2],dayPairs(dpI,2),'dynamic',[],2.5)
+title(['Merge only: mouse ' num2str(mouseI) ', cell ' num2str(cellI) ', day ' num2str(dayPairs(dpI,2))])
+
+binsH = TmapAboveThresh{mouseI}{cellI,dayPairs(dpI,1),1};
+binsAT.X{1} = binsOrdered.X{1}(binsH,:); binsAT.Y{1} = binsOrdered.Y{1}(binsH,:);
+binsH = TmapAboveThresh{mouseI}{cellI,dayPairs(dpI,1),2};
+binsAT.X{2} = binsOrdered.X{3}(binsH,:); binsAT.Y{2} = binsOrdered.Y{3}(binsH,:);
+PlotDotplotDoublePlus2(cellTBT{mouseI},cellI,[1;2],dayPairs(dpI,1),'aboveThresh',binsAT,[])
+title(['Merge only: mouse ' num2str(mouseI) ', cell ' num2str(cellI) ', day ' num2str(dayPairs(dpI,1))])
+binsH = TmapAboveThresh{mouseI}{cellI,dayPairs(dpI,2),1};
+binsAT.X{1} = binsOrdered.X{1}(binsH,:); binsAT.Y{1} = binsOrdered.Y{1}(binsH,:);
+binsH = TmapAboveThresh{mouseI}{cellI,dayPairs(dpI,2),2};
+binsAT.X{2} = binsOrdered.X{3}(binsH,:); binsAT.Y{2} = binsOrdered.Y{3}(binsH,:);
+PlotDotplotDoublePlus2(cellTBT{mouseI},cellI,[1;2],dayPairs(dpI,2),'aboveThresh',binsAT,[])
+title(['Merge only: mouse ' num2str(mouseI) ', cell ' num2str(cellI) ', day ' num2str(dayPairs(dpI,2))])
+
+% Rates of these features diff between groups?
+
+
+% When cells (that are active both) remap between days, what is the most common form?
 
 %% Single-neuron rate map corrs (new whole lap tbt, new bins
 
@@ -492,20 +849,40 @@ for cpI = 1:numCondPairs
     %close(gg)
 end
 
-% ECDF for single Cell corrs differences
-4-7 - 4-8
-
 
 
 %% Pop vector corr analysis (most basic)
+
+% TMaps are whole trial, split to each arm
+for mouseI = 1:numMice
+    % Turn days
+    tmapHere{mouseI}(:,[1:3 7:9],1) = cellfun(@(x) x(binOrderArms{1}),cellTMap{mouseI}(:,[1:3 7:9],1),'UniformOutput',false);
+    tmapHere{mouseI}(:,[1:3 7:9],2) = cellfun(@(x) x(binOrderArms{2}),cellTMap{mouseI}(:,[1:3 7:9],1),'UniformOutput',false);
+    tmapHere{mouseI}(:,[1:3 7:9],3) = cellfun(@(x) x(binOrderArms{3}),cellTMap{mouseI}(:,[1:3 7:9],2),'UniformOutput',false);
+    tmapHere{mouseI}(:,[1:3 7:9],4) = cellfun(@(x) x(binOrderArms{4}),cellTMap{mouseI}(:,[1:3 7:9],2),'UniformOutput',false);
+
+    % Place days
+    tmapHere{mouseI}(:,[4:6],1) = cellfun(@(x) x(binOrderArms{1}),cellTMap{mouseI}(:,[4:6],1),'UniformOutput',false);
+    tmapHere{mouseI}(:,[4:6],2) = cellfun(@(x) x(binOrderArms{4}),cellTMap{mouseI}(:,[4:6],1),'UniformOutput',false);
+    tmapHere{mouseI}(:,[4:6],3) = cellfun(@(x) x(binOrderArms{3}),cellTMap{mouseI}(:,[4:6],2),'UniformOutput',false);
+    tmapHere{mouseI}(:,[4:6],4) = cellfun(@(x) x(binOrderArms{4}),cellTMap{mouseI}(:,[4:6],2),'UniformOutput',false);
+end
+
+for condI = 1:4
+    lgPlotHere{condI}.X = lgPlotBins.X(binOrderArms{condI},:);
+    lgPlotHere{condI}.Y = lgPlotBins.Y(binOrderArms{condI},:);
+end
+
 cellsUseOption = 'activeEither';
 corrType = 'Spearman';
 numPerms = 1000;
 
 condPairs = [1 1; 2 2; 3 3; 4 4]; numCondPairs = size(condPairs,1);
-dayPairs = [1 2; 1 3; 2 3]; numDayPairs = size(dayPairs,1);
+%dayPairs = [1 2; 1 3; 2 3]; numDayPairs = size(dayPairs,1); % old
+dayPairs = [3 7; 3 8; 7 8; 8 9]; numDayPairs = size(dayPairs,1);
 
-traitLogical = threshAndConsec;
+traitLogical = threshAndConsecEach;
+traitLogical = cellfun(@(x) x>lapPctThresh,trialReliEach,'UniformOutput',false);
 pvCorrs = cell(numMice,1); 
 meanCorr = cell(numMice,1); 
 numCellsUsed = cell(numMice,1); 
@@ -518,7 +895,7 @@ pooledNumCellsUsed = cell(numDayPairs,numCondPairs);
 for mouseI = 1:numMice
     
     [pvCorrs, meanCorr, numCellsUsed, numNans] =...
-        PVcorrsWrapperBasic(cellTMap_unsmoothed{mouseI},condPairs,dayPairs,traitLogical{mouseI},cellsUseOption,corrType);
+        PVcorrsWrapperBasic(tmapHere{mouseI},condPairs,dayPairs,traitLogical{mouseI},cellsUseOption,corrType);
     
     for cpI = 1:numCondPairs
         for dpI = 1:numDayPairs
@@ -553,6 +930,193 @@ for cpI = 1:numCondPairs
 end
 
 disp('done pv corrs basic')
+
+%% Single cell remapping
+
+for mouseI = 1:numMice
+    % Turn days
+    tmapHere{mouseI}(:,[1:3 7:9],1) = cellfun(@(x) x(binOrderArms{1}),cellTMap{mouseI}(:,[1:3 7:9],1),'UniformOutput',false);
+    tmapHere{mouseI}(:,[1:3 7:9],2) = cellfun(@(x) x(binOrderArms{2}),cellTMap{mouseI}(:,[1:3 7:9],1),'UniformOutput',false);
+    tmapHere{mouseI}(:,[1:3 7:9],3) = cellfun(@(x) x(binOrderArms{3}),cellTMap{mouseI}(:,[1:3 7:9],2),'UniformOutput',false);
+    tmapHere{mouseI}(:,[1:3 7:9],4) = cellfun(@(x) x(binOrderArms{4}),cellTMap{mouseI}(:,[1:3 7:9],2),'UniformOutput',false);
+
+    % Place days
+    tmapHere{mouseI}(:,[4:6],1) = cellfun(@(x) x(binOrderArms{1}),cellTMap{mouseI}(:,[4:6],1),'UniformOutput',false);
+    tmapHere{mouseI}(:,[4:6],2) = cellfun(@(x) x(binOrderArms{4}),cellTMap{mouseI}(:,[4:6],1),'UniformOutput',false);
+    tmapHere{mouseI}(:,[4:6],3) = cellfun(@(x) x(binOrderArms{3}),cellTMap{mouseI}(:,[4:6],2),'UniformOutput',false);
+    tmapHere{mouseI}(:,[4:6],4) = cellfun(@(x) x(binOrderArms{4}),cellTMap{mouseI}(:,[4:6],2),'UniformOutput',false);
+end
+
+
+numConds = length(cellTBT{1});
+numConds = 4;
+
+dayPairsForward = [3 7; 3 8; 7 8; 8 9]; numDayPairs = size(dayPairsForward,1);
+%Center of mass shift
+allFiringCOM = cell(numMice,1);
+oneEnvCOMchanges = cell(numDayPairs,1);
+twoEnvCOMchanges = cell(numDayPairs,1);
+
+for mouseI = 1:numMice
+    allFiringCOM{mouseI} = TMapFiringCOM(tmapHere{mouseI});
+    
+    for dpI = 1:numDayPairs
+        comsA = squeeze(allFiringCOM{mouseI}(:,dayPairsForward(dpI,1),:));
+        comsB = squeeze(allFiringCOM{mouseI}(:,dayPairsForward(dpI,2),:));
+        COMchanges{mouseI}{dpI} = abs(comsB - comsA); %(cell, cond)
+    
+        %Ultimately want to compare this to a shuffle, is diff greater than suffle
+        
+        switch mouseI
+            case num2cell(oneEnvMice)'
+                oneEnvCOMchanges{dpI} = [oneEnvCOMchanges{dpI}; COMchanges{mouseI}{dpI}];%(cell, cond)
+            case num2cell(twoEnvMice)'
+                twoEnvCOMchanges{dpI} = [twoEnvCOMchanges{dpI}; COMchanges{mouseI}{dpI}];
+        end
+    end
+end
+
+%Rate Remapping:
+maxRates = []; meanRates = []; maxRateDiffs = []; meanRateDiffs = []; pctChangeMax = []; pctChangeMean = [];
+oneEnvMaxRateDiffs = cell(numDayPairs,1); oneEnvMaxRatePctChange = cell(numDayPairs,1);
+twoEnvMaxRateDiffs = cell(numDayPairs,1); twoEnvMaxRatePctChange = cell(numDayPairs,1);
+oneEnvMeanRateDiffs = cell(numDayPairs,1); oneEnvMeanRatePctChange = cell(numDayPairs,1);
+oneEnvFiredEither = cell(numDayPairs,1); twoEnvFiredEither = cell(numDayPairs,1);
+twoEnvMeanRateDiffs = cell(numDayPairs,1); twoEnvMeanRatePctChange = cell(numDayPairs,1);
+for mouseI = 1:numMice
+    maxRates{mouseI} = cell2mat(cellfun(@max,tmapHere{mouseI},'UniformOutput',false));
+    for dpI = 1:numDayPairs
+        ratesA = squeeze(maxRates{mouseI}(:,dayPairsForward(dpI,1),:));
+        ratesB = squeeze(maxRates{mouseI}(:,dayPairsForward(dpI,2),:));
+        ratesAll = [];
+        ratesAll(:,:,1) = ratesA; 
+        ratesAll(:,:,2) = ratesB; 
+        firedEither = sum(ratesAll,3)>0;
+        maxRateDiffs{mouseI}{dpI} = max(ratesAll,[],3) - min(ratesAll,[],3);
+        pctChangeMax{mouseI}{dpI} = maxRateDiffs{mouseI}{dpI} ./ max(ratesAll,[],3);
+        
+        switch mouseI
+            case num2cell(oneEnvMice)'
+                oneEnvMaxRateDiffs{dpI} = [oneEnvMaxRateDiffs{dpI}; maxRateDiffs{mouseI}{dpI}];%(cell, cond)
+                oneEnvMaxRatePctChange{dpI} = [oneEnvMaxRatePctChange{dpI}; pctChangeMax{mouseI}{dpI}];
+            case num2cell(twoEnvMice)'
+                twoEnvMaxRateDiffs{dpI} = [twoEnvMaxRateDiffs{dpI}; maxRateDiffs{mouseI}{dpI}];
+                twoEnvMaxRatePctChange{dpI} = [twoEnvMaxRatePctChange{dpI}; pctChangeMax{mouseI}{dpI}];
+        end
+    end
+    
+    meanRates{mouseI} = cell2mat(cellfun(@mean,tmapHere{mouseI},'UniformOutput',false));
+    for dpI = 1:numDayPairs
+        mratesA = squeeze(meanRates{mouseI}(:,dayPairsForward(dpI,1),:));
+        mratesB = squeeze(meanRates{mouseI}(:,dayPairsForward(dpI,2),:));
+        mratesAll = [];
+        mratesAll(:,:,1) = mratesA; 
+        mratesAll(:,:,2) = mratesB;
+        mfiredEither = sum(mratesAll,3)>0;
+        meanRateDiffs{mouseI}{dpI} = max(mratesAll,[],3) - min(mratesAll,[],3);
+        pctChangeMean{mouseI}{dpI} = meanRateDiffs{mouseI}{dpI} ./ max(mratesAll,[],3);
+        
+        switch mouseI
+            case num2cell(oneEnvMice)'
+                oneEnvMeanRateDiffs{dpI} = [oneEnvMeanRateDiffs{dpI}; meanRateDiffs{mouseI}{dpI}];%(cell, cond)
+                oneEnvMeanRatePctChange{dpI} = [oneEnvMeanRatePctChange{dpI}; pctChangeMean{mouseI}{dpI}];
+                oneEnvFiredEither{dpI} = [oneEnvFiredEither{dpI}; mfiredEither];
+            case num2cell(twoEnvMice)'
+                twoEnvMeanRateDiffs{dpI} = [twoEnvMeanRateDiffs{dpI}; meanRateDiffs{mouseI}{dpI}];
+                twoEnvMeanRatePctChange{dpI} = [twoEnvMeanRatePctChange{dpI}; pctChangeMean{mouseI}{dpI}];
+                twoEnvFiredEither{dpI} = [twoEnvFiredEither{dpI}; mfiredEither];
+        end
+    end
+end
+
+%Arm preference
+oneEnvSameArms = cell(numDayPairs,1);
+twoEnvSameArms = cell(numDayPairs,1);
+for mouseI = 1:numMice
+    [armPref{mouseI}] = CondFiringPreference(tmapHere{mouseI});
+    firedAtAll = sum(trialReli{mouseI},3)>0;
+    
+    for dpI = 1:numDayPairs
+        firedBothDays = sum(firedAtAll(:,dayPairsForward(dpI,:)),2)==2;
+        armsA = armPref{mouseI}(firedBothDays,dayPairsForward(dpI,1));
+        armsB = armPref{mouseI}(firedBothDays,dayPairsForward(dpI,2));
+        
+        sameArm = armsA==armsB;
+        sameArmPct(mouseI,dpI) = sum(sameArm)/length(sameArm);
+        switch mouseI
+            case num2cell(oneEnvMice)'
+                oneEnvSameArms{dpI} = [oneEnvSameArms{dpI}; sameArm];
+            case num2cell(twoEnvMice)'
+                twoEnvSameArms{dpI} = [twoEnvSameArms{dpI}; sameArm];
+        end
+    end
+end
+   
+oneEnvSameArmsPct = cell2mat(cellfun(@(x) sum(x)/length(x),oneEnvSameArms,'UniformOutput',false));
+twoEnvSameArmsPct = cell2mat(cellfun(@(x) sum(x)/length(x),twoEnvSameArms,'UniformOutput',false));
+
+% Cells that totally stop/start firing
+regConfirmed = 0;
+oneEnvStoppedFiring = cell(numDayPairs,1);
+oneEnvStartedFiring = cell(numDayPairs,1);
+twoEnvStoppedFiring = cell(numDayPairs,1);
+twoEnvStartedFiring = cell(numDayPairs,1);
+for mouseI = 1:numMice
+    firedThisCond = trialReliEach{mouseI}>0;
+    
+    for dpI = 1:numDayPairs
+        firedA = squeeze(firedThisCond(:,dayPairsForward(dpI,1),:));
+        firedB = squeeze(firedThisCond(:,dayPairsForward(dpI,2),:));
+        
+        firedAll = []; firedAll(:,:,1) = firedA; firedAll(:,:,2) = firedB;
+        firedOne = sum(firedAll,3)==1;
+        
+        stoppedFiring = firedA & firedOne;
+        startedFiring = firedB & firedOne;
+        
+        %Make sure both cells were there
+        defHaveTheCells = cellSSI{mouseI}>0;
+        haveCellsBothDays = sum(defHaveTheCells(:,dayPairsForward(dpI,:)),2)==2;
+        dayPairMaxCells{mouseI}{dpI} = max(sum(defHaveTheCells(:,dayPairsForward(dpI,:)),1));
+        goodReg(mouseI,dpI) = sum(haveCellsBothDays,1)/size(cellSSI{mouseI},1);
+        if regConfirmed==1
+            stoppedFiring(haveCellsBothDays==0) = 0;
+            startedFiring(haveCellsBothDays==0) = 0;
+            
+            stoppedFiringAll(mouseI,dpI) = sum(sum(stoppedFiring))/(sum(haveCellsBothDays,1)*numConds);
+            startedFiringAll(mouseI,dpI) = sum(sum(startedFiring))/(sum(haveCellsBothDays,1)*numConds);
+        end
+            %could also do this for started or stopped in each mouse independently, add them up in the section vvvvv
+        
+        stoppedFiringAll(mouseI,dpI) = sum(sum(stoppedFiring))/(size(stoppedFiring,1)*numConds);
+        startedFiringAll(mouseI,dpI) = sum(sum(startedFiring))/(size(startedFiring,1)*numConds);
+         %could be normalized by dayPairMaxCells or defHaveboth
+        switch mouseI
+            case num2cell(oneEnvMice)'
+                oneEnvStoppedFiring{dpI} = [oneEnvStoppedFiring{dpI}; stoppedFiring];
+                oneEnvStartedFiring{dpI} = [oneEnvStartedFiring{dpI}; startedFiring];
+            case num2cell(twoEnvMice)'
+                twoEnvStoppedFiring{dpI} = [twoEnvStoppedFiring{dpI}; stoppedFiring];
+                twoEnvStartedFiring{dpI} = [twoEnvStartedFiring{dpI}; startedFiring];
+        end
+        
+        
+    end
+end
+ 
+
+oneEnvStoppedFiringPct = cell2mat(cellfun(@(x) sum(sum(x))/(size(x,1)*numConds),oneEnvStoppedFiring,'UniformOutput',false));
+oneEnvStartedFiringPct = cell2mat(cellfun(@(x) sum(sum(x))/(size(x,1)*numConds),oneEnvStartedFiring,'UniformOutput',false));
+twoEnvStoppedFiringPct = cell2mat(cellfun(@(x) sum(sum(x))/(size(x,1)*numConds),twoEnvStoppedFiring,'UniformOutput',false));
+twoEnvStartedFiringPct = cell2mat(cellfun(@(x) sum(sum(x))/(size(x,1)*numConds),twoEnvStartedFiring,'UniformOutput',false));
+
+disp('Done single cell remapping')
+
+% Rate map correlations
+
+% Compare 4 vs 7 to 4 vs 8 within groups
+
+
 
 %% PV corrs: portion of session
 cellsUseOption = 'activeEither';
@@ -776,184 +1340,3 @@ losesSameSamePct = [losesSame(oneEnvMice).overlapWithModel]; %(dayPair,mouseI)
 losesSameSig = PermutationTestSL(losesSameDiffPct(dDiff),losesSameSamePct(dSame),1000) > (1 - pThresh);
 
 
-%% Single cell remapping
-numConds = length(cellTBT{1});
-
-dayPairsForward = [1 2; 1 3; 2 3]; numDayPairs = size(dayPairsForward,1);
-%Center of mass shift
-allFiringCOM = cell(numMice,1);
-oneEnvCOMchanges = cell(numDayPairs,1);
-twoEnvCOMchanges = cell(numDayPairs,1);
-
-for mouseI = 1:numMice
-    allFiringCOM{mouseI} = TMapFiringCOM(cellTMap_unsmoothed{mouseI});
-    
-    for dpI = 1:numDayPairs
-        comsA = squeeze(allFiringCOM{mouseI}(:,dayPairsForward(dpI,1),:));
-        comsB = squeeze(allFiringCOM{mouseI}(:,dayPairsForward(dpI,2),:));
-        COMchanges{mouseI}{dpI} = abs(comsB - comsA); %(cell, cond)
-    
-        %Ultimately want to compare this to a shuffle, is diff greater than suffle
-        
-        switch mouseI
-            case num2cell(oneEnvMice)'
-                oneEnvCOMchanges{dpI} = [oneEnvCOMchanges{dpI}; COMchanges{mouseI}{dpI}];%(cell, cond)
-            case num2cell(twoEnvMice)'
-                twoEnvCOMchanges{dpI} = [twoEnvCOMchanges{dpI}; COMchanges{mouseI}{dpI}];
-        end
-    end
-end
-histBins = 0:1:10;
-oneEnvCOMchangeProps = []; twoEnvCOMchangeProps = [];
-oneEnvCOMchangeCDF = []; twoEnvCOMchangeCDF = [];
-for dpI = 1:numDayPairs
-    for condI = 1:numConds
-        oneEnvCOMchangeProps{dpI}{condI} = histcounts(oneEnvCOMchanges{dpI}(:,condI),histBins)...
-            / sum(~isnan(oneEnvCOMchanges{dpI}(:,condI)));
-        twoEnvCOMchangeProps{dpI}{condI} = histcounts(twoEnvCOMchanges{dpI}(:,condI),histBins)...
-            / sum(~isnan(twoEnvCOMchanges{dpI}(:,condI)));
-        
-        oneEnvCOMchangeCDF{dpI}{condI} = CDFfromHistcounts(oneEnvCOMchangeProps{dpI}{condI});
-        twoEnvCOMchangeCDF{dpI}{condI} = CDFfromHistcounts(twoEnvCOMchangeProps{dpI}{condI});
-    end
-end
-
-%Rate Remapping:
-maxRates = []; meanRates = []; maxRateDiffs = []; meanRateDiffs = []; pctChangeMax = []; pctChangeMean = [];
-oneEnvMaxRateDiffs = cell(numDayPairs,1); oneEnvMaxRatePctChange = cell(numDayPairs,1);
-twoEnvMaxRateDiffs = cell(numDayPairs,1); twoEnvMaxRatePctChange = cell(numDayPairs,1);
-oneEnvMeanRateDiffs = cell(numDayPairs,1); oneEnvMeanRatePctChange = cell(numDayPairs,1);
-oneEnvFiredEither = cell(numDayPairs,1); twoEnvFiredEither = cell(numDayPairs,1);
-twoEnvMeanRateDiffs = cell(numDayPairs,1); twoEnvMeanRatePctChange = cell(numDayPairs,1);
-for mouseI = 1:numMice
-    maxRates{mouseI} = cell2mat(cellfun(@max,cellTMap_unsmoothed{mouseI},'UniformOutput',false));
-    for dpI = 1:numDayPairs
-        ratesA = squeeze(maxRates{mouseI}(:,dayPairsForward(dpI,1),:));
-        ratesB = squeeze(maxRates{mouseI}(:,dayPairsForward(dpI,2),:));
-        ratesAll = [];
-        ratesAll(:,:,1) = ratesA; 
-        ratesAll(:,:,2) = ratesB; 
-        firedEither = sum(ratesAll,3)>0;
-        maxRateDiffs{mouseI}{dpI} = max(ratesAll,[],3) - min(ratesAll,[],3);
-        pctChangeMax{mouseI}{dpI} = maxRateDiffs{mouseI}{dpI} ./ max(ratesAll,[],3);
-        
-        switch mouseI
-            case num2cell(oneEnvMice)'
-                oneEnvMaxRateDiffs{dpI} = [oneEnvMaxRateDiffs{dpI}; maxRateDiffs{mouseI}{dpI}];%(cell, cond)
-                oneEnvMaxRatePctChange{dpI} = [oneEnvMaxRatePctChange{dpI}; pctChangeMax{mouseI}{dpI}];
-            case num2cell(twoEnvMice)'
-                twoEnvMaxRateDiffs{dpI} = [twoEnvMaxRateDiffs{dpI}; maxRateDiffs{mouseI}{dpI}];
-                twoEnvMaxRatePctChange{dpI} = [twoEnvMaxRatePctChange{dpI}; pctChangeMax{mouseI}{dpI}];
-        end
-    end
-    
-    meanRates{mouseI} = cell2mat(cellfun(@mean,cellTMap_unsmoothed{mouseI},'UniformOutput',false));
-    for dpI = 1:numDayPairs
-        mratesA = squeeze(meanRates{mouseI}(:,dayPairsForward(dpI,1),:));
-        mratesB = squeeze(meanRates{mouseI}(:,dayPairsForward(dpI,2),:));
-        mratesAll = [];
-        mratesAll(:,:,1) = mratesA; 
-        mratesAll(:,:,2) = mratesB;
-        mfiredEither = sum(mratesAll,3)>0;
-        meanRateDiffs{mouseI}{dpI} = max(mratesAll,[],3) - min(mratesAll,[],3);
-        pctChangeMean{mouseI}{dpI} = meanRateDiffs{mouseI}{dpI} ./ max(mratesAll,[],3);
-        
-        switch mouseI
-            case num2cell(oneEnvMice)'
-                oneEnvMeanRateDiffs{dpI} = [oneEnvMeanRateDiffs{dpI}; meanRateDiffs{mouseI}{dpI}];%(cell, cond)
-                oneEnvMeanRatePctChange{dpI} = [oneEnvMeanRatePctChange{dpI}; pctChangeMean{mouseI}{dpI}];
-                oneEnvFiredEither{dpI} = [oneEnvFiredEither{dpI}; mfiredEither];
-            case num2cell(twoEnvMice)'
-                twoEnvMeanRateDiffs{dpI} = [twoEnvMeanRateDiffs{dpI}; meanRateDiffs{mouseI}{dpI}];
-                twoEnvMeanRatePctChange{dpI} = [twoEnvMeanRatePctChange{dpI}; pctChangeMean{mouseI}{dpI}];
-                twoEnvFiredEither{dpI} = [twoEnvFiredEither{dpI}; mfiredEither];
-        end
-    end
-end
-
-%Arm preference
-oneEnvSameArms = cell(numDayPairs,1);
-twoEnvSameArms = cell(numDayPairs,1);
-for mouseI = 1:numMice
-    [armPref{mouseI}] = CondFiringPreference(cellTMap_unsmoothed{mouseI});
-    firedAtAll = sum(trialReli{mouseI},3)>0;
-    
-    for dpI = 1:numDayPairs
-        firedBothDays = sum(firedAtAll(:,dayPairsForward(dpI,:)),2)==2;
-        armsA = armPref{mouseI}(firedBothDays,dayPairsForward(dpI,1));
-        armsB = armPref{mouseI}(firedBothDays,dayPairsForward(dpI,2));
-        
-        sameArm = armsA==armsB;
-        sameArmPct(mouseI,dpI) = sum(sameArm)/length(sameArm);
-        switch mouseI
-            case num2cell(oneEnvMice)'
-                oneEnvSameArms{dpI} = [oneEnvSameArms{dpI}; sameArm];
-            case num2cell(twoEnvMice)'
-                twoEnvSameArms{dpI} = [twoEnvSameArms{dpI}; sameArm];
-        end
-    end
-end
-   
-oneEnvSameArmsPct = cell2mat(cellfun(@(x) sum(x)/length(x),oneEnvSameArms,'UniformOutput',false));
-twoEnvSameArmsPct = cell2mat(cellfun(@(x) sum(x)/length(x),twoEnvSameArms,'UniformOutput',false));
-
-% Cells that totally stop/start firing
-regConfirmed = 0;
-oneEnvStoppedFiring = cell(numDayPairs,1);
-oneEnvStartedFiring = cell(numDayPairs,1);
-twoEnvStoppedFiring = cell(numDayPairs,1);
-twoEnvStartedFiring = cell(numDayPairs,1);
-for mouseI = 1:numMice
-    firedThisCond = trialReli{mouseI}>0;
-    
-    for dpI = 1:numDayPairs
-        firedA = squeeze(firedThisCond(:,dayPairsForward(dpI,1),:));
-        firedB = squeeze(firedThisCond(:,dayPairsForward(dpI,2),:));
-        
-        firedAll = []; firedAll(:,:,1) = firedA; firedAll(:,:,2) = firedB;
-        firedOne = sum(firedAll,3)==1;
-        
-        stoppedFiring = firedA & firedOne;
-        startedFiring = firedB & firedOne;
-        
-        %Make sure both cells were there
-        defHaveTheCells = cellSSI{mouseI}>0;
-        haveCellsBothDays = sum(defHaveTheCells(:,dayPairsForward(dpI,:)),2)==2;
-        dayPairMaxCells{mouseI}{dpI} = max(sum(defHaveTheCells(:,dayPairsForward(dpI,:)),1));
-        goodReg(mouseI,dpI) = sum(haveCellsBothDays,1)/size(cellSSI{mouseI},1);
-        if regConfirmed==1
-            stoppedFiring(haveCellsBothDays==0) = 0;
-            startedFiring(haveCellsBothDays==0) = 0;
-            
-            stoppedFiringAll(mouseI,dpI) = sum(sum(stoppedFiring))/(sum(haveCellsBothDays,1)*numConds);
-            startedFiringAll(mouseI,dpI) = sum(sum(startedFiring))/(sum(haveCellsBothDays,1)*numConds);
-        end
-            %could also do this for started or stopped in each mouse independently, add them up in the section vvvvv
-        
-        stoppedFiringAll(mouseI,dpI) = sum(sum(stoppedFiring))/(size(stoppedFiring,1)*numConds);
-        startedFiringAll(mouseI,dpI) = sum(sum(startedFiring))/(size(startedFiring,1)*numConds);
-         %could be normalized by dayPairMaxCells or defHaveboth
-        switch mouseI
-            case num2cell(oneEnvMice)'
-                oneEnvStoppedFiring{dpI} = [oneEnvStoppedFiring{dpI}; stoppedFiring];
-                oneEnvStartedFiring{dpI} = [oneEnvStartedFiring{dpI}; startedFiring];
-            case num2cell(twoEnvMice)'
-                twoEnvStoppedFiring{dpI} = [twoEnvStoppedFiring{dpI}; stoppedFiring];
-                twoEnvStartedFiring{dpI} = [twoEnvStartedFiring{dpI}; startedFiring];
-        end
-        
-        
-    end
-end
- 
-
-oneEnvStoppedFiringPct = cell2mat(cellfun(@(x) sum(sum(x))/(size(x,1)*numConds),oneEnvStoppedFiring,'UniformOutput',false));
-oneEnvStartedFiringPct = cell2mat(cellfun(@(x) sum(sum(x))/(size(x,1)*numConds),oneEnvStartedFiring,'UniformOutput',false));
-twoEnvStoppedFiringPct = cell2mat(cellfun(@(x) sum(sum(x))/(size(x,1)*numConds),twoEnvStoppedFiring,'UniformOutput',false));
-twoEnvStartedFiringPct = cell2mat(cellfun(@(x) sum(sum(x))/(size(x,1)*numConds),twoEnvStartedFiring,'UniformOutput',false));
-
-disp('Done single cell remapping')
-
-% Rate map correlations
-
-% Compare 4 vs 7 to 4 vs 8 within groups

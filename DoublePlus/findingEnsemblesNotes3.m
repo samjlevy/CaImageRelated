@@ -1,4 +1,4 @@
-function [trialNormalizedCoactivity,pctTrialsActive,trialCoactiveAboveBaseline,totalCoactiveAboveBaseline,chanceCoactive] = ...
+function [trialNormalizedCoactivity,totalNormalizedCoactivity,pctTrialsActive,trialCoactiveAboveBaseline,totalCoactiveAboveBaseline,chanceCoactive] = ...
     findingEnsemblesNotes3(trialbytrial,boundary,condPairs)
 
 numConds = length(trialbytrial);
@@ -66,8 +66,10 @@ for cpI=1:numCondPairs
         
         chanceCoactive{sessI,cpI} = pctTrialsActive{sessI,cpI}(:) .* pctTrialsActive{sessI,cpI}(:)';
         
-        trialCoactiveAboveBaseline{sessI,cpI} = trialNormalizedCoactivity{sessI,cpI} > chanceCoactive{sessI,cpI};
-        totalCoactiveAboveBaseline{sessI,cpI} = totalNormalizedCoactivity{sessI,cpI} > chanceCoactive{sessI,cpI};
+        trialCoactiveAboveBaseline{sessI,cpI} = (trialNormalizedCoactivity{sessI,cpI} >= chanceCoactive{sessI,cpI})...
+            & (trialNormalizedCoactivity{sessI,cpI}>0);
+        totalCoactiveAboveBaseline{sessI,cpI} = (totalNormalizedCoactivity{sessI,cpI} >= chanceCoactive{sessI,cpI})...
+            & (totalNormalizedCoactivity{sessI,cpI} > 0);
     end
 end
 

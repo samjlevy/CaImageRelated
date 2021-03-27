@@ -1,4 +1,4 @@
-function [dataBins,plotBins] = SmallPlusBounds(posAnchorIdeal,nArmBins)
+function [dataBins,plotBins] = SmallPlusBounds(posAnchorIdeal,nArmBins,binsInnerKeep)
 % Not actually restricted to the small maze, runs based on posAnchorIdeal
 %nArmBins = 5;
 
@@ -44,6 +44,13 @@ for abI = 1:nArmBins
         plotTemplateX(abI,1:4) = [plotXtemp([1 2 4 3]+2*(abI-1))];
         plotTemplateY(abI,1:4) = [plotYtemp([1 2 4 3]+2*(abI-1))];
 end
+if any(binsInnerKeep)
+    armBinTemplateX = armBinTemplateX(1:binsInnerKeep,:);
+    armBinTemplateY = armBinTemplateY(1:binsInnerKeep,:);
+    plotTemplateX = plotTemplateX(1:binsInnerKeep,:);
+    plotTemplateY = plotTemplateY(1:binsInnerKeep,:);
+end
+nArmBins = binsInnerKeep;
 boundTemplateX = [armBinTemplateX(1,[1; 3]), armBinTemplateX(end,[3; 4]), armBinTemplateX(1,[4; 2])]';
 boundTemplateY = [armBinTemplateY(1,[1; 3]), armBinTemplateY(end,[3; 4]), armBinTemplateY(1,[4; 2])]';
 %{
