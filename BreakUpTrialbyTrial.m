@@ -32,10 +32,26 @@ for condI = 1:length(condBreak)
                     allIn(testStart:testStop) = true;
                     ptsH = allIn;
                     
-                    lengthCheck = (testStop - testStart) < 10 && (testStop - testStart) > 1;
+                    % Get dimensions of the boundary, ask if COM of points
+                    % is within the middle half of the boundary
+                    maxx = max(binsBreak{condI}.X(:)); minx = min(binsBreak{condI}.X(:)); lenx = maxx - minx; midx = mean([maxx minx]);
+                    maxy = max(binsBreak{condI}.Y(:)); miny = min(binsBreak{condI}.Y(:)); leny = maxy - miny; midy = mean([maxy miny]);
+                    comx = mean(px(ptsH)); comy = mean(py(ptsH));
+                    if lenx > leny
+                        xb = lenx/4;
+                        yb = leny;
+                    elseif leny > lenx
+                        xb = lenx;
+                        yb = leny/4;
+                    end
+                    withinMidX = (comx < (midx+xb)) && (comx > (midx-xb));
+                    withinMidY = (comy < (midy+yb)) && (comy > (midy-yb));
+                    withinMid = withinMidX && withinMidY;
+                    
+                    lengthCheck = (testStop - testStart) < 10 && (testStop - testStart) > 0;
                     tCheck = testStop == testStart;
                     pCheck = sum(in|on) > 1;
-                    if lengthCheck || (tCheck && pCheck)
+                    if lengthCheck || (tCheck && pCheck) || ~withinMid
                         bg = figure; plot(px,py,'.k')
                         hold on
                         plot(binsBreak{condI}.X,binsBreak{condI}.Y)
@@ -43,18 +59,33 @@ for condI = 1:length(condBreak)
                         title(['sess ' num2str(trialbytrial(condBreak(condI)).sessID(trialI)) ', trial ' num2str(trialI) ', '...
                             num2str(testStop-testStart+1) ' pts, ok?'])
                         if strcmpi(input('Is this ok? (y/n) >> ','s'),'n');
-                            disp([testStart(:) testStop(:)])
-                            testStart = str2double(input('Enter a new start frame number:','s'));
-                            testStop = str2double(input('Enter a new stop frame number:','s'));
+                            eLengths = posStops(:)-posStarts(:)+1;
+                            [~,indd] = max(eLengths);
+                            testStart = posStarts(indd);
+                            testStop = posStops(indd);
+                            figure(bg); hold off
+                            plot(px,py,'.k')
+                            hold on
+                            plot(binsBreak{condI}.X,binsBreak{condI}.Y) 
                             allIn = false(size(px));
                             allIn(testStart:testStop) = true;
                             ptsH = allIn;
                             plot(px(ptsH),py(ptsH),'.r')
-                            figure(bg);
-                            title(['sess ' num2str(trialbytrial(condBreak(condI)).sessID(trialI)) ', trial ' num2str(trialI) ', '...
-                            num2str(testStop-testStart+1) ' pts, ok?'])
+                            title('How about now?')
                             if strcmpi(input('Is this ok? (y/n) >> ','s'),'n');
-                            keyboard
+                                disp(num2str([posStarts(:) posStops(:)]))
+                                testStart = str2double(input('Enter a new start frame number:','s'));
+                                testStop = str2double(input('Enter a new stop frame number:','s'));
+                                allIn = false(size(px));
+                                allIn(testStart:testStop) = true;
+                                ptsH = allIn;
+                                plot(px(ptsH),py(ptsH),'.r')
+                                figure(bg);
+                                title(['sess ' num2str(trialbytrial(condBreak(condI)).sessID(trialI)) ', trial ' num2str(trialI) ', '...
+                                num2str(testStop-testStart+1) ' pts, ok?'])
+                                if strcmpi(input('Is this ok? (y/n) >> ','s'),'n');
+                                keyboard
+                                end
                             end
                         end
                         try; close(bg); end

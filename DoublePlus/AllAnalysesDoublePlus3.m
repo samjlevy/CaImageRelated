@@ -132,16 +132,16 @@ for mouseI = 1:numMice
     try cellRealDays{mouseI} = realDays; catch cellRealDays{mouseI} = realdays; end
     
     % split up tbt to four conditions, each arm
-    [buTBTa] = BreakUpTrialbyTrial(trialbytrial,[1;1;2;2;],eachArmBoundsT,'firstlast');
+    [trialbytrialEach] = BreakUpTrialbyTrial(trialbytrial,[1;1;2;2;],eachArmBoundsT,'firstlast');
     [buTBTb] = BreakUpTrialbyTrial(trialbytrial,[1;1;2;2;],eachArmBoundsP,'firstlast');
     for condI = 1:4
         for sessI =4:6
-            sessTrials = buTBTa(condI).sessID == sessI;
-            buTBTa(condI).trialsX(sessTrials,1) = buTBTb(condI).trialsX(sessTrials,1);
-            buTBTa(condI).trialsY(sessTrials,1) = buTBTb(condI).trialsY(sessTrials,1);
-            buTBTa(condI).trialPSAbool(sessTrials,1) = buTBTb(condI).trialPSAbool(sessTrials,1);
-            buTBTa(condI).trialDFDTtrace(sessTrials,1) = buTBTb(condI).trialDFDTtrace(sessTrials,1);
-            buTBTa(condI).trialRawTrace(sessTrials,1) = buTBTb(condI).trialRawTrace(sessTrials,1);
+            sessTrials = trialbytrialEach(condI).sessID == sessI;
+            trialbytrialEach(condI).trialsX(sessTrials,1) = buTBTb(condI).trialsX(sessTrials,1);
+            trialbytrialEach(condI).trialsY(sessTrials,1) = buTBTb(condI).trialsY(sessTrials,1);
+            trialbytrialEach(condI).trialPSAbool(sessTrials,1) = buTBTb(condI).trialPSAbool(sessTrials,1);
+            trialbytrialEach(condI).trialDFDTtrace(sessTrials,1) = buTBTb(condI).trialDFDTtrace(sessTrials,1);
+            trialbytrialEach(condI).trialRawTrace(sessTrials,1) = buTBTb(condI).trialRawTrace(sessTrials,1);
         end
     end
     %load(fullfile(mainFolder,mice{mouseI},'sessType.mat'))
@@ -219,6 +219,7 @@ for mouseI = 1:numMice
         tic
         %[TMap_unsmoothed,RunOccMap] = RateMapsDoublePlusV2(trialbytrial, bins, binType, condPairs, minSpeed, occNanSol, saveName, circShift)
         [~,~] = RateMapsDoublePlusV2(cellTBT{mouseI}, lgBinVertices, 'vertices', condPairs, 0, 'zeroOut', pfName, false);
+        
         toc
         load(pfName)
         if mouseI == 1
@@ -254,6 +255,68 @@ groupNum(strcmpi(groupAssign(:,2),'same')) = 1;
 groupNum(strcmpi(groupAssign(:,2),'diff')) = 2;
 
 disp('Done setup stuff')
+
+%%  Early/late similarity
+% comparing this across days requires only using north or south to account
+% for incorrect trials...
+northBins = lgDataBins.labels=='n';
+southBins = lgDataBins.labels=='s';
+[singleTmap,RunOccMapS] = RateMapsDoublePlusV2_singleTrial(trialbytrialAll, lgBinVertices, 'vertices', 0, 'zeroOut', [], false);
+singleTmap(:,:,1) = cellfun(@(x) x(northBins),singleTmap(:,:,1),'UniformOutput',false);       
+singleTmap(:,:,2) = cellfun(@(x) x(southBins),singleTmap(:,:,2),'UniformOutput',false);       
+
+condI = 1;
+sessI = 4;
+lapsH = find(trialbytrialAll(condI).sessID == sessI);
+lapG = lapsH(1)-1;
+%templateA = [singleTmap{:,lapG,condI}];
+templateA = [TMap_unsmoothed{:,sessI-1,condI}];
+templateA = templateA(northBins,:);
+mTemplateA = mean(templateA,1);
+lapI = lapsH(end)+1;
+%templateB = [singleTmap{:,lapI,condI}];
+templateB = [TMap_unsmoothed{:,sessI+1,condI}];
+templateB = templateB(northBins,:);
+mTemplateB = mean(templateB,1);
+
+for lapJ = 1:length(lapsH)
+    lapI = lapsH(lapJ);
+    pvH = [singleTmap{:,lapI,condI}];
+    cellsSharedA = sortedSessionInds(:,sessI)>0 & sortedSessionInds(:,sessI-1)>0;
+    cellsSharedA = numTrials(:,sessI,condI)>1 & numTrials(:,sessI-1,condI)>1;
+    
+    pvA = templateA(cellsSharedA);
+    pvHHa = mean(pvH(:,cellsSharedA),1);
+    gg = [pvA(:) pvHHa(:)];
+    
+    eDistA(lapJ) = euclideanDistanceSL1(pvA,pvHHa,[]);
+    
+    cellsSharedB = numTrials(:,sessI,condI)>1 & numTrials(:,sessI+1,condI)>1;
+    pvB = templateB(cellsSharedB);
+    pvHHb = mean(pvH(:,cellsSharedB),1);
+    hh = [pvB(:) pvHHb(:)];
+    
+    eDistB(lapJ) = euclideanDistanceSL1(pvB,pvHHb,[]);
+    
+end
+
+    for binI = 1:sum(northBins)
+        pvA = templateA(binI,cellsSharedA);
+        
+        pvHH = pvH(binI,cellsSharedA);
+        % gg = [pvA(:) pvHH(:)];
+        diffs = abs(pvA(:)-pvHH(:));
+        diffsP = diffs.^(size(diffs,1));
+        euclideanDistance = sum(diffsP)^(1/(size(diffs,1)));
+            
+%% Performance fit
+cHere = double(trialbytrialAll(condI).isCorrect(lapsH));
+cHere = [zeros(10,1); cHere];
+cHereD = ones(size(cHere));
+trialNum = [1:length(cHere)]';
+[logitCoef,dev] = glmfit(trialNum,[cHere cHereD],'binomial','logit');
+logitFit = glmval(logitCoef,trialNum,'logit');
+figure; plot(trialNum,cHere,'bs', trialNum,logitFit,'r-');
 
 %% Measuring Dimensionality
 for mouseI = 1:numMice
