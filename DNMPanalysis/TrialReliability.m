@@ -17,9 +17,9 @@ end
 
 if poolConds == false
     reliability = zeros(numCells, numDays, numConds);
-aboveThresh = cell(length(trialbytrial),1);
-lapSpikes = cell(length(trialbytrial),1);
-goodSpikes = cell(length(trialbytrial),1);
+    aboveThresh = cell(length(trialbytrial),1);
+    lapSpikes = cell(length(trialbytrial),1);
+    goodSpikes = cell(length(trialbytrial),1);
 
     for condType = 1:numConds
         for sess = 1:length(sessHere)

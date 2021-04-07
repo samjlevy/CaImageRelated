@@ -506,7 +506,7 @@ suptitleSL('Proportion of splitting type by group')
 
 saveFolder = 'G:\DoublePlus\SFNposter';
 for dpI = 1:numDayPairs
-    gg = figure('Position',[428 376 590 515]);%[428 613 897 278]
+    gg = figure; %('Position',[428 376 590 515]);%[428 613 897 278]
     for condI = 1:numConds
         xx = subplot(2,numConds/2,condI); hold on
         yy = cdfplot(oneEnvCOMchangeProps{dpI}{condI}); yy.Color = 'b'; yy.LineWidth = 2;
@@ -514,7 +514,7 @@ for dpI = 1:numDayPairs
         zz = cdfplot(twoEnvCOMchangeProps{dpI}{condI}); zz.Color = 'r'; zz.LineWidth = 2; 
         
         xlabel('CM change'); ylabel('Cumulative Proportion')
-        title(condNames{condI})
+        %title(condNames{condI})
         xlim([0 1])
         xx.XTick = [0 0.5 1]; xx.XTickLabel = {'0' num2str(numBins/2) num2str(numBins)};
         
@@ -623,7 +623,7 @@ for dpI = 1:numDayPairs
         
     xlabel(label(1:end-1))
     ylabel('Cumulative Proportion')
-    title(condNames{condI})
+    %title(condNames{condI})
     %xlim([0 1])
     %xx.XTick = [0 0.5 1]; xx.XTickLabel = {'0' num2str(numBins/2) num2str(numBins)};
         
@@ -632,7 +632,7 @@ for dpI = 1:numDayPairs
     text(0.4,0.5,['p=' num2str(round(p,3))])%'h=' num2str(h) ', 
     text(0.4,0.65,['KS p= ' num2str(pKS)])
     
-    suptitleSL(['Distribution of within-arm ' label ', day pair ' num2str(realDays{mouseI}(dayPairsForward(dpI,:))')])
+    %suptitleSL(['Distribution of within-arm ' label ', day pair ' num2str(realDays{mouseI}(dayPairsForward(dpI,:))')])
     
     %print(fullfile(saveFolder,['COMchangeKS' num2str(dpI)]),'-dpdf') 
     %close(gg)

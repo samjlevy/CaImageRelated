@@ -1,6 +1,7 @@
 MakeTBTwrapperDoublePlus
 
 mainFolder = 'G:\DoublePlus';
+mainFolder = 'E:\DoublePlus';
 mice = {'Kerberos','Marble07','Marble11','Pandora','Styx','Titan'};
 
 locInds = {1 'center'; 2 'north'; 3 'south'; 4 'east'; 5 'west'};
@@ -29,10 +30,16 @@ for mouseI = 1:numMice
 end
     
 %Now refine that struct into a trialbytrial
+
+%saveName = fullfile(mousePath,'trialbytrial.mat');
+%taskSegment = 'arm_only';
+
 for mouseI = 1:numMice 
     mousePath = fullfile(mainFolder,mice{mouseI});
+    saveName = fullfile(mousePath,'trialbytrialLAP.mat');
+    taskSegment = 'whole_trial';
     makeTBT = 1;
-    if exist(fullfile(mousePath,'trialbytrial.mat'),'file')==2
+    if exist(saveName,'file')==2
         makeTBT = 0;
         ssa = input('Found existing trialbytrial, replace? (y/n) > ','s');
         if strcmpi(ssa,'y')
@@ -41,7 +48,7 @@ for mouseI = 1:numMice
     end
         
     if makeTBT==1
-        [trialbytrial, allfiles, sortedSessionInds, realdays]= MakeTBTdoublePlus(mousePath,locInds);
+        [trialbytrial, allfiles, sortedSessionInds, realdays]= MakeTBTdoublePlus(mousePath,locInds,taskSegment);
     end
-    
+    save(fullfile(mousePath,'trialbytrialLAP.mat'),'trialbytrial','errorTBT','allfiles','sortedSessionInds','realdays','-v7.3')
 end

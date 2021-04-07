@@ -1,6 +1,6 @@
 function [maxConsec, enoughConsec] = ConsecutiveLaps(trialbytrial,lapThresh,xBinLims,yBinLims)
 
-numCells = length(trialbytrial(1).trialPSAbool{1});
+numCells = size(trialbytrial(1).trialPSAbool{1},1);
 sessions = unique(trialbytrial(1).sessID);
 maxConsec  = cell(1,4); enoughConsec = cell(1,4);
 for condType = 1:length(trialbytrial)
@@ -8,7 +8,7 @@ for condType = 1:length(trialbytrial)
     enoughConsec{condType} = zeros(numCells, length(sessions));
     
     for sess = 1:length(sessions)
-        for thisCell = 1:length(trialbytrial(1).trialPSAbool{1})
+        for thisCell = 1:numCells
             lapsUse = trialbytrial(condType).sessID == sess;
             %{
             psaLap = trialbytrial(condType).trialPSAbool{thisLap};

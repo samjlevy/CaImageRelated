@@ -22,8 +22,8 @@ switch cellsUseOption
         cellsUse = true(numCells,1);
 end
 
-TRatesA = cell2mat(TMapA(cellsUse));
-TRatesB = cell2mat(TMapB(cellsUse));
+TRatesA = cell2mat(TMapA(cellsUse)')';
+TRatesB = cell2mat(TMapB(cellsUse)')';
 
 
 numCellsUsed = sum(cellsUse);

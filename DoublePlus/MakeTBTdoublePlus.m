@@ -71,7 +71,11 @@ for sessI = 1:numSess
     eastInd = find(strcmpi(locInds(:,2),'east'));
     westInd = find(strcmpi(locInds(:,2),'west'));
 
-    numTrials = length(daybyday.behavior{sessI});
+    if iscell(daybyday.behavior{sessI})
+        numTrials = length(daybyday.behavior{sessI});
+    elseif istable(daybyday.behavior{sessI})
+        numTrials = height(daybyday.behavior{sessI});
+    end
     %Reorganize into cell arrays
     startMaze = []; startLap = []; enterMid = [];
     leaveMid = []; endLap = []; leaveMaze = [];
@@ -248,12 +252,14 @@ rootPath = strsplit(mousePath,'\'); rootPath = fullfile(rootPath{1:end-1});
 allfiles = cellfun(@(x) fullfile(rootPath,x),useDataTable.FolderName,'UniformOutput',false);
 realdays = useDataTable.RealDay;
 
-sdbd = input('Save trialbytrial? (y/n) >> ','s');
+saveName = fullfile(mousePath,'trialbytrialLAP.mat');
+sdbd = input(['Save trialbytrial as * ' saveName ' * (y/n) >> '],'s');
 if strcmpi(sdbd,'y')
-    save(fullfile(mousePath,'trialbytrial.mat'),'trialbytrial','errorTBT','allfiles','sortedSessionInds','realdays','-v7.3')
+    save(saveName,'trialbytrial','errorTBT','allfiles','sortedSessionInds','realdays','-v7.3')
+    disp('saved trialbytrial')
 end
 
-disp('done, saved trialbytrial')
+disp('done')
 
 end
 

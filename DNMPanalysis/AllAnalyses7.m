@@ -448,6 +448,7 @@ for sessI = 1:numDays(mouseI)
     condMarker = [];
     trialNums = [];
     lapLabels = {};
+    %Pool them all together cells x trials?
     for condI = 1:numConds
         trialsHere = cellTBT{mouseI}(condI).sessID==sessI;
         trialMat = [trialMat, singleTrialTMap{condI}{trialsHere}];
