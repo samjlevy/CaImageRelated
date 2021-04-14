@@ -79,7 +79,7 @@ for condI = 1:length(condBreak)
                                 allIn = false(size(px));
                                 allIn(testStart:testStop) = true;
                                 ptsH = allIn;
-                                plot(px(ptsH),py(ptsH),'.r')
+                                plot(px(ptsH),py(ptsH),'.g')
                                 figure(bg);
                                 title(['sess ' num2str(trialbytrial(condBreak(condI)).sessID(trialI)) ', trial ' num2str(trialI) ', '...
                                 num2str(testStop-testStart+1) ' pts, ok?'])

@@ -18,3 +18,5 @@ patchColors2(4,1,:) = green;
 patchColors2(5,1,:) = green;
 figHand = PlotNumberOverPatch(flipud(numbers2),flipud(patchColors2));
 figHand.Position = [50 50 116 625];
+
+% Easier figure if horizontal

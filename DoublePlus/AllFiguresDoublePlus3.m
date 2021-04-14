@@ -27,7 +27,7 @@ colors = [1.0000    1.0    1.000;
             0 0 0];
            
 newGradient = GradientMaker(colors,locations);
-dd =reshape(,256,1,3);
+%dd =reshape(,256,1,3);
 %figure; imagesc(dd)
 corrsPlot = cell2mat(sameMinusDiff);
 [figHand] = PlusMazePVcorrHeatmap3(corrsPlot,plotBins,'hot',[0.15, -0.25]);
@@ -39,9 +39,18 @@ suptitleSL('Diff one maze - two maze')
 for dpI = 1:numDayPairs
     gg = figure;%('Position',[428 376 590 515]);%[428 613 897 278]
     
-    yy = cdfplot(oneEnvCOMchanges{dpI}(:)); yy.Color = 'b'; yy.LineWidth = 2;
+    %oneData = oneEnvCOMchanges{dpI}(:);
+    oneData = oneEnvCOMchanges{dpI}(oneEnvCOMchangesCellsUse{dpI});
+    
+    yy = cdfplot(oneData); 
+    yy.Color = groupColors{1}; %yy.Color = 'b';
+    yy.LineWidth = 2;
     hold on
-    zz = cdfplot(twoEnvCOMchanges{dpI}(:)); zz.Color = 'r'; zz.LineWidth = 2; 
+    %twoData = twoEnvCOMchanges{dpI}(:);
+    twoData = twoEnvCOMchanges{dpI}(twoEnvCOMchangesCellsUse{dpI});
+    zz = cdfplot(twoData); 
+    zz.Color = groupColors{2}; %zz.Color = 'r'; 
+    zz.LineWidth = 2; 
     %}
     % Log scale
     %{
@@ -58,8 +67,8 @@ for dpI = 1:numDayPairs
         %xlim([0 1])
         %xx.XTick = [0 0.5 1]; xx.XTickLabel = {'0' num2str(numBins/2) num2str(numBins)};
         
-    [p,h] = ranksum(oneEnvCOMchanges{dpI}(:),twoEnvCOMchanges{dpI}(:));
-    [hKS,pKS] = kstest2(oneEnvCOMchanges{dpI}(:),twoEnvCOMchanges{dpI}(:));
+    [p,h] = ranksum(oneData,twoData);
+    [hKS,pKS] = kstest2(oneData,twoData);
     %text(4.5,0.5,['p=' num2str(round(p,3))])
     text(4.5,0.5,['RS p=' num2str(p)])
     text(4.5,0.65,['KS p=' num2str(pKS)])
