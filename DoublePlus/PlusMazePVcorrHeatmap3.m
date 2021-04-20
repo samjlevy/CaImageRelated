@@ -1,4 +1,4 @@
-function [figHand] = PlusMazePVcorrHeatmap3(corrsPlot,plotBins,gradientUse,gradientLims)
+function [figHand] = PlusMazePVcorrHeatmap3(corrsPlot,plotBins,gradientUse,gradientLims,titles)
 
 %numDayPairs = size(dayPairs,1);
 numDayPairs = size(corrsPlot,1);
@@ -11,7 +11,7 @@ for dpI = 1:numDayPairs
     axis equal
     dataHere = corrsPlot(dpI,:);
     
-    ptColors = rateColorMap(dataHere,gradientUse,gradientLims(1),gradientLims(2));%max(dataThisDP),min(dataThisDP)
+    ptColors = rateColorMap(dataHere,gradientUse,[gradientLims(1) gradientLims(2)]);%max(dataThisDP),min(dataThisDP)
     for binI = 1:numel(dataHere)
         if ~isnan(dataHere(binI))
             patch(plotBins.X(binI,:),plotBins.Y(binI,:),ptColors(binI,:))
@@ -20,7 +20,9 @@ for dpI = 1:numDayPairs
     axis equal
     xlim(xll); ylim(yll);
     %axis manual
-    %title(['Day Pair ' num2str(dayPairs(dpI,:))])
+    if ~isempty(titles)
+    title(titles{dpI})
+    end
 end
 
 end

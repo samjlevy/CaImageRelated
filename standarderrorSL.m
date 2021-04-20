@@ -1,5 +1,6 @@
 function SEM = standarderrorSL(inputVector)
 
-SEM = nanstd(inputVector)/sqrt(length(inputVector));
+nHere = sum(~isnan(inputVector));
+SEM = nanstd(inputVector)/sqrt(nHere);
 
 end

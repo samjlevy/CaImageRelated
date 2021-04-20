@@ -1,4 +1,238 @@
-%% PV corrs plot
+%% Remapping Turn1-Turn2
+
+% COM shift
+oneData = oneEnvCOMagg;
+twoData = twoEnvCOMagg;
+% Histogram
+rangeHere = [0 12];
+histbins = linspace(0,12,51);
+histcountsOne = histcounts(oneData,histbins);
+histcountsTwo = histcounts(twoData,histbins);
+oneFirst = histcountsOne < histcountsTwo;
+bd = find(oneFirst);
+figure;
+ii = histogram(oneData,histbins,'FaceColor',[0.0745    0.6235    1.0000],'FaceAlpha',1);
+ii.DisplayName = 'One-Maze';
+hold on
+hh = histogram(twoData,histbins,'FaceColor',[1 0.3235 0.0745],'FaceAlpha',1);
+hh.DisplayName = 'Two-Maze';
+%jj = histogram(twoData,histbins(bd==1),'FaceColor',[1 0.3235 0.0745],'FaceAlpha',1);
+%kk = histogram(oneData,histbins(bd==0),'FaceColor',[0.0745    0.6235    1.0000],'FaceAlpha',1);
+xlabel('Center-of-Mass shift (bins)')
+ylabel('Number of cells')
+%legend('Two-Maze','One-Maze','Location','NE')
+legend('Location','NE')
+MakePlotPrettySL(gca)
+
+% ECDF
+figure; 
+yy = cdfplot(oneData);
+yy.Color = groupColors{1}; %yy.Color = 'b';
+yy.LineWidth = 2;
+hold on
+zz = cdfplot(twoData);
+zz.Color = groupColors{2}; %zz.Color = 'r';
+zz.LineWidth = 2;
+xlabel('COM change (bin)'); ylabel('Cumulative Proportion')
+[p,h] = ranksum(oneData,twoData);
+[hKS,pKS,ksStat] = kstest2(oneData,twoData);
+textX = (max(rangeHere)-min(rangeHere))*0.45+min(rangeHere);
+text(textX,0.5,['RS p = ' num2str(p)])
+text(textX,0.65,['KS p = ' num2str(pKS)])
+text(textX,0.8,['KS stat = ' num2str(ksStat)])
+MakePlotPrettySL(gca);
+
+
+oneData = oneEnvRateAgg;
+twoData = twoEnvRateAgg;
+% Histogram
+rangeHere = [0 1];
+histbins = linspace(0,1,25);
+histcountsOne = histcounts(oneData,histbins);
+histcountsTwo = histcounts(twoData,histbins);
+oneFirst = histcountsOne < histcountsTwo;
+bd = 14;
+figure;
+ii = histogram(oneData,histbins,'FaceColor',[0.0745    0.6235    1.0000],'FaceAlpha',1);
+ii.DisplayName = 'One-Maze';
+hold on
+hh = histogram(twoData,histbins,'FaceColor',[1 0.3235 0.0745],'FaceAlpha',1);
+hh.DisplayName = 'Two-Maze';
+%hh = histogram(twoData,histbins(1:bd+1),'FaceColor',[1 0.3235 0.0745],'FaceAlpha',1);
+%hold on
+%ii = histogram(oneData,histbins(bd+1:end),'FaceColor',[0.0745    0.6235    1.0000],'FaceAlpha',1);
+%jj = histogram(twoData,histbins(bd+1:end),'FaceColor',[1 0.3235 0.0745],'FaceAlpha',1);
+%kk = histogram(oneData,histbins(1:bd+1),'FaceColor',[0.0745    0.6235    1.0000],'FaceAlpha',1);
+xlabel('Mean event likelihood change')
+ylabel('Number of cells')
+legend('Location','NW')
+MakePlotPrettySL(gca)
+
+% ECDF
+figure; 
+yy = cdfplot(oneData);
+yy.Color = groupColors{1}; %yy.Color = 'b';
+yy.LineWidth = 2;
+hold on
+zz = cdfplot(twoData);
+zz.Color = groupColors{2}; %zz.Color = 'r';
+zz.LineWidth = 2;
+xlabel('Mean event likelihood change'); ylabel('Cumulative Proportion')
+[p,h] = ranksum(oneData,twoData);
+[hKS,pKS,ksStat] = kstest2(oneData,twoData);
+textX = (max(rangeHere)-min(rangeHere))*0.45+min(rangeHere);
+text(textX,0.5,['RS p= ' num2str(p)])
+text(textX,0.65,['KS p= ' num2str(pKS)])
+text(textX,0.8,['KS stat = ' num2str(ksStat)])
+MakePlotPrettySL(gca);
+
+% Single neuron corrs
+
+oneData = oneEnvCorrsAgg;
+twoData = twoEnvCorrsAgg;
+% Histogram
+rangeHere = [-1 1];
+histbins = linspace(0,1,25);
+histcountsOne = histcounts(oneData,histbins);
+histcountsTwo = histcounts(twoData,histbins);
+oneFirst = histcountsOne < histcountsTwo;
+bd = 14;
+figure;
+ii = histogram(oneData,histbins,'FaceColor',[0.0745    0.6235    1.0000],'FaceAlpha',1);
+ii.DisplayName = 'One-Maze';
+hold on
+hh = histogram(twoData,histbins,'FaceColor',[1 0.3235 0.0745],'FaceAlpha',1);
+hh.DisplayName = 'Two-Maze';
+xlabel('Correlation (Spearman rho)')
+ylabel('Number of cells')
+legend('Location','NW')
+MakePlotPrettySL(gca)
+
+% ECDF
+figure; 
+yy = cdfplot(oneData);
+yy.Color = groupColors{1}; %yy.Color = 'b';
+yy.LineWidth = 2;
+hold on
+zz = cdfplot(twoData);
+zz.Color = groupColors{2}; %zz.Color = 'r';
+zz.LineWidth = 2;
+xlabel('Correlation (Spearman rho)'); 
+ylabel('Cumulative Proportion')
+[p,h] = ranksum(oneData,twoData);
+[hKS,pKS,ksStat] = kstest2(oneData,twoData);
+textX = (max(rangeHere)-min(rangeHere))*0.45+min(rangeHere);
+text(textX,0.5,['RS p= ' num2str(p)])
+text(textX,0.65,['KS p= ' num2str(pKS)])
+text(textX,0.8,['KS stat = ' num2str(ksStat)])
+MakePlotPrettySL(gca);
+
+%% PV corrs Turn1-Turn2
+
+
+
+%% Remapping 3-7, 3-8, 7-8
+
+%COM change:
+gg = figure('Position',[186.5000 310.5000 1.1485e+03 315]);
+for dpI = 1:numDayPairs
+    subplot(1,numDayPairs,dpI)
+
+    oneData = oneEnvCOMchanges{dpI}(oneEnvCOMchangesCellsUse{dpI});
+    twoData = twoEnvCOMchanges{dpI}(twoEnvCOMchangesCellsUse{dpI});
+    
+    yy = cdfplot(oneData); 
+    yy.Color = groupColors{1}; %yy.Color = 'b';
+    yy.LineWidth = 2;
+    hold on
+    zz = cdfplot(twoData); 
+    zz.Color = groupColors{2}; %zz.Color = 'r'; 
+    zz.LineWidth = 2; 
+
+    xlabel('COM change (bin)'); ylabel('Cumulative Proportion')
+       
+    [p,h] = ranksum(oneData,twoData);
+    [hKS,pKS,ksStat] = kstest2(oneData,twoData);
+    text(4.5,0.5,['RS p=' num2str(p)])
+    text(4.5,0.65,['KS p=' num2str(pKS)])
+    text(4.5,0.8,['KS p=' num2str(ksStat)])
+    title(['Yithin-arm COM changes, day pair ' num2str(dayPairsForward(dpI,:))])
+    
+    MakePlotPrettySL(gca)
+    
+    ksPvals(dpI) = pKS;
+end
+
+% Rate remapping
+label = 'mean firing rate pct changes';
+gg = figure('Position',[186.5000 310.5000 1.1485e+03 315]);
+for dpI = 1:numDayPairs
+    subplot(1,3,dpI)
+    
+    oneCellsUse = oneEnvMeanRateCellsUse{dpI}; % This adds the >=3 laps one day; says max but it's the same
+    changesHereOne = oneEnvMeanRatePctChange{dpI}; 
+    changesHereOne(oneEnvFiredBoth{dpI}==0) = NaN;
+    %oneData = changesHereOne;
+    oneData = changesHereOne(oneCellsUse);
+    
+    twoCellsUse = twoEnvMeanRateCellsUse{dpI}; 
+    changesHereTwo = twoEnvMeanRatePctChange{dpI}; 
+    changesHereTwo(twoEnvFiredBoth{dpI}==0) = NaN;
+    %twoData = changesHereTwo;
+    twoData = changesHereTwo(twoCellsUse);
+    
+    yy = cdfplot(oneData(:)); yy.Color = groupColors{1}; 
+    yy.LineWidth = 2;
+    hold on
+    zz = cdfplot(twoData(:)); zz.Color = groupColors{2}; 
+    zz.LineWidth = 2; 
+        
+    xlabel(label(1:end-1))
+    ylabel('Cumulative Proportion')
+
+    [h,pKS] = kstest2(oneData(:),twoData(:));
+    [p,h] = ranksum(oneData(:),twoData(:));
+    text(0.4,0.5,['ranksum p=' num2str(p)])
+    text(0.4,0.65,['KS p= ' num2str(pKS)])
+    
+    title(['With arm mean rate changes days ' num2str(dayPairsForward(dpI,:))])
+    
+    MakePlotPrettySL(gca);
+end
+
+% Rate map corrs
+gg = figure('Position',[186.5000 310.5000 1.1485e+03 315]);
+for dpI = 1:numDayPairs
+    subplot(1,numDayPairs,dpI)
+    
+    dataOne = oneEnvCorrsAll{dpI};
+    dataTwo = twoEnvCorrsAll{dpI};
+    %dataOne = abs(oneEnvCorrsSingle{dpI});
+    %dataTwo = abs(twoEnvCorrsSingle{dpI});
+    yy = cdfplot(dataOne); 
+    yy.Color = groupColors{1};
+    yy.LineWidth = 2;
+    hold on
+        
+    zz = cdfplot(dataTwo); 
+    zz.Color = groupColors{2};
+    zz.LineWidth = 2;
+    
+    xlabel('Rho')
+    ylabel('ECDF')
+    title([num2str(dayPairsForward(dpI,:))])
+    
+    [h,pKS,ksstats] = kstest2(dataOne,dataTwo);
+    [p,h] = ranksum(dataOne,dataTwo);
+    text(0.4,0.5,['ranksum p=' num2str(round(p,3))])%'h=' num2str(h) ', 
+    text(0.4,0.65,['KS p= ' num2str(pKS)])
+    text(0.4,0.8,['KS stat ' num2str(ksstats)])
+    
+    MakePlotPrettySL(gca);
+end
+suptitleSL('Single Neuron Ratemap correlations')
+
+%% PV corrs plot 3-7, 3-8, 7-8
 
 % Each group
 locations = [0 0.5 1];
@@ -66,49 +300,11 @@ for dpI = 1:numDayPairs
 end
 end
 
-%% Pooled COM change across arms
 
-for dpI = 1:numDayPairs
-    gg = figure;%('Position',[428 376 590 515]);%[428 613 897 278]
-    
-    %oneData = oneEnvCOMchanges{dpI}(:);
-    oneData = oneEnvCOMchanges{dpI}(oneEnvCOMchangesCellsUse{dpI});
-    
-    yy = cdfplot(oneData); 
-    yy.Color = groupColors{1}; %yy.Color = 'b';
-    yy.LineWidth = 2;
-    hold on
-    %twoData = twoEnvCOMchanges{dpI}(:);
-    twoData = twoEnvCOMchanges{dpI}(twoEnvCOMchangesCellsUse{dpI});
-    zz = cdfplot(twoData); 
-    zz.Color = groupColors{2}; %zz.Color = 'r'; 
-    zz.LineWidth = 2; 
-    %}
-    % Log scale
-    %{
-    [yy,xxy] = ecdf(oneEnvCOMchanges{dpI}(:));
-    [zz,xxz] = ecdf(twoEnvCOMchanges{dpI}(:));
-    plot(log10(xxy),yy,'b','LineWidth',2)
-    hold on
-    plot(log10(xxz),zz,'r','LineWidth',2)
-    xlim([-1 1])
-    %}
-    
-    xlabel('COM change'); ylabel('Cumulative Proportion')
-    %    title(condNames{condI})
-        %xlim([0 1])
-        %xx.XTick = [0 0.5 1]; xx.XTickLabel = {'0' num2str(numBins/2) num2str(numBins)};
-        
-    [p,h] = ranksum(oneData,twoData);
-    [hKS,pKS] = kstest2(oneData,twoData);
-    %text(4.5,0.5,['p=' num2str(round(p,3))])
-    text(4.5,0.5,['RS p=' num2str(p)])
-    text(4.5,0.65,['KS p=' num2str(pKS)])
-    title(['Distribution of within-arm COM changes, day pair ' num2str(dayPairsForward(dpI,:))])
-    
-end
 
-% Each condition individually
+%% Single-cell remapping 3-7, 3-8, 7-8 arms individually
+
+% COM shifts
 for dpI = 1:numDayPairs
     gg = figure('Position',[530 303 450 370.5000]);
     
@@ -148,46 +344,78 @@ for dpI = 1:numDayPairs
 end
 
 
-% Greater N-W than S-E
+% Rate remapping
 for dpI = 1:numDayPairs
-    gg = figure;%('Position');
+    gg = figure('Position',[530 303 450 370.5000]);
     
-    oneCOM = oneEnvCOMchanges{dpI};
-    oneCells = oneEnvCOMchangesCellsUse{dpI};
+    for condI = 1:numConds
+        subplot(2,2,condI)
+        oneCellsUse = oneEnvMeanRateCellsUse{dpI}(:,condI); % This adds the >=3 laps one day; says max but it's the same
+        changesHereOne = oneEnvMeanRatePctChange{dpI}(:,condI); 
+        changesHereOne(oneEnvFiredBoth{dpI}(:,condI)==0) = NaN;
+        oneData = changesHereOne(oneCellsUse);
+
+        twoCellsUse = twoEnvMeanRateCellsUse{dpI}(:,condI); 
+        changesHereTwo = twoEnvMeanRatePctChange{dpI}(:,condI); 
+        changesHereTwo(twoEnvFiredBoth{dpI}(:,condI)==0) = NaN;
+        twoData = changesHereTwo(twoCellsUse);
+
+        yy = cdfplot(oneData(:)); yy.Color = groupColors{1}; 
+        yy.LineWidth = 2;
+        hold on
+        zz = cdfplot(twoData(:)); zz.Color = groupColors{2}; 
+        zz.LineWidth = 2; 
+
+        xlabel(label(1:end-1))
+        ylabel('Cumulative Proportion')
+
+        [h,pKS,ksstats] = kstest2(oneData(:),twoData(:));
+        [p,h] = ranksum(oneData(:),twoData(:));
+        text(0.4,0.5,['ranksum p=' num2str(round(p,3))])%'h=' num2str(h) ', 
+        text(0.4,0.65,['KS p= ' num2str(pKS)])
+        text(0.4,0.8,['KS stat ' num2str(ksstats)])
+        title(['Cond ' num2str(condI)])
+        
+        MakePlotPrettySL(gca);
+    end
     
-    nwOne = oneCOM(:,[1 2]); 
-    nwOneCells = oneCells(:,[1 2]);
-    
-    seOne = oneCOM(:,[3 4]);
-    seOneCells = oneCells(:,[3 4]);
-    
-    %NWoneData = nwOne(:);
-    NWoneData = nwOne(nwOneCells);
-    %SEoneData = seOne(:);
-    SEoneData = seOne(seOneCells);
-    
-    yy = cdfplot(NWoneData); 
-    yy.Color = groupColors{1}; %yy.Color = 'b';
-    yy.LineWidth = 2;
-    yy.LineStyle = '--';
-    yy.DisplayName = 'NW';
-    hold on
-    zz = cdfplot(SEoneData); 
-    zz.Color = groupColors{1}; %zz.Color = 'r'; 
-    zz.LineWidth = 2; 
-    zz.LineStyle = ':';
-    zz.DisplayName = 'SE';
-    
-    xlabel('COM change'); ylabel('Cumulative Proportion')
-    [p,h] = ranksum(NWoneData,SEoneData);
-    [hKS,pKS] = kstest2(NWoneData,SEoneData);
-    %text(4.5,0.5,['p=' num2str(round(p,3))])
-    text(4.5,0.5,['RS p=' num2str(p)])
-    text(4.5,0.65,['KS p=' num2str(pKS)])
-    legend
-    
-    title(['Distribution of within-arm COM changes, OneMaze, day pair ' num2str(dayPairsForward(dpI,:))])
+    suptitleSL(['Distribution of within-arm ' label ', day pair ' num2str(dayPairsForward(dpI,:))])
 end
+
+
+% Single neuron rate map corrs
+for dpI = 1:numDayPairs
+    figure('Position',[420.5000 238 531 442]);
+    for condI = 1:numConds
+        subplot(2,2,condI)
+        %dataOne = abs(oneEnvCorrsEach{dpI,condI});
+        %dataTwo = abs(twoEnvCorrsEach{dpI,condI});
+        dataOne = oneEnvCorrsEach{dpI,condI};
+        dataTwo = twoEnvCorrsEach{dpI,condI};
+        yy = cdfplot(dataOne);
+        yy.Color = groupColors{1};
+        yy.LineWidth = 2;
+        hold on
+        
+        zz = cdfplot(dataTwo);
+        zz.Color = groupColors{2};
+        zz.LineWidth = 2;
+        
+        xlabel('Rho')
+        ylabel('ECDF')
+        title(upper(turnArmLabels{condI}))
+        
+        [h,pKS,ksstats] = kstest2(dataOne,dataTwo);
+        [p,h] = ranksum(dataOne,dataTwo);
+        text(0.4,0.5,['ranksum p=' num2str(round(p,3))])%'h=' num2str(h) ',
+        text(0.4,0.65,['KS p= ' num2str(pKS)])
+        text(0.4,0.8,['KS stat ' num2str(ksstats)])
+        MakePlotPrettySL(gca);
+    end 
+    suptitleSL(['Days ' num2str(dayPairsForward(dpI,:))])
+end
+
+%% Pooled COM change across arms
 
 % Greater N than each other
 for dpI = 1:numDayPairs
@@ -283,111 +511,6 @@ for dpI = 1:numDayPairs
 end
 %% Pooled rate change across arms
 
- %thingUseOne = oneEnvMeanRatePctChange;
- %thingUseTwo = twoEnvMeanRatePctChange;
- label = 'mean firing rate pct changes';
-for dpI = 1:numDayPairs
-    gg = figure;%('Position'); %,[428 376 590 515]);%[428 613 897 278]
-    
-    oneCellsUse = oneEnvMaxRateCellsUse{dpI}; % This adds the >=3 laps one day; says max but it's the same
-    changesHereOne = oneEnvMeanRatePctChange{dpI}; 
-    %changesHereOne(oneEnvFiredEither{dpI}==0) = NaN; % Forces it to have fired on both days in the arm
-        % This might be unnecessary...
-    %changesHereOne(changesHereOne==1) = NaN;
-    changesHereOne(oneEnvFiredBoth{dpI}==0) = NaN;
-    %oneData = changesHereOne;
-    oneData = changesHereOne(oneCellsUse);
-    
-    twoCellsUse = twoEnvMaxRateCellsUse{dpI}; 
-    changesHereTwo = twoEnvMeanRatePctChange{dpI}; 
-    %changesHereTwo(twoEnvFiredEither{dpI}==0) = NaN;
-    %changesHereTwo(changesHereTwo==1) = NaN;
-    changesHereTwo(twoEnvFiredBoth{dpI}==0) = NaN;
-    %twoData = changesHereTwo;
-    twoData = changesHereTwo(twoCellsUse);
-    
-    yy = cdfplot(oneData(:)); yy.Color = groupColors{1}; 
-    yy.LineWidth = 2;
-    hold on
-    zz = cdfplot(twoData(:)); zz.Color = groupColors{2}; 
-    zz.LineWidth = 2; 
-        
-    xlabel(label(1:end-1))
-    ylabel('Cumulative Proportion')
-    %title(condNames{condI})
-    %xlim([0 1])
-    %xx.XTick = [0 0.5 1]; xx.XTickLabel = {'0' num2str(numBins/2) num2str(numBins)};
-        
-    [h,pKS] = kstest2(oneData(:),twoData(:));
-    [p,h] = ranksum(oneData(:),twoData(:));
-    text(0.4,0.5,['ranksum p=' num2str(round(p,3))])%'h=' num2str(h) ', 
-    text(0.4,0.65,['KS p= ' num2str(pKS)])
-    
-    suptitleSL(['Distribution of within-arm ' label ', day pair ' num2str(dayPairsForward(dpI,:))])
-    
-    %print(fullfile(saveFolder,['COMchangeKS' num2str(dpI)]),'-dpdf') 
-    %close(gg)
-end
-    
-% Individual arms
-for dpI = 1:numDayPairs
-    gg = figure('Position',[530 303 450 370.5000]);
-    
-    for condI = 1:numConds
-        subplot(2,2,condI)
-        oneCellsUse = oneEnvMaxRateCellsUse{dpI}(:,condI); % This adds the >=3 laps one day; says max but it's the same
-        changesHereOne = oneEnvMeanRatePctChange{dpI}(:,condI); 
-        changesHereOne(oneEnvFiredBoth{dpI}(:,condI)==0) = NaN;
-        oneData = changesHereOne(oneCellsUse);
-
-        twoCellsUse = twoEnvMaxRateCellsUse{dpI}(:,condI); 
-        changesHereTwo = twoEnvMeanRatePctChange{dpI}(:,condI); 
-        changesHereTwo(twoEnvFiredBoth{dpI}(:,condI)==0) = NaN;
-        twoData = changesHereTwo(twoCellsUse);
-
-        yy = cdfplot(oneData(:)); yy.Color = groupColors{1}; 
-        yy.LineWidth = 2;
-        hold on
-        zz = cdfplot(twoData(:)); zz.Color = groupColors{2}; 
-        zz.LineWidth = 2; 
-
-        xlabel(label(1:end-1))
-        ylabel('Cumulative Proportion')
-
-        [h,pKS,ksstats] = kstest2(oneData(:),twoData(:));
-        [p,h] = ranksum(oneData(:),twoData(:));
-        text(0.4,0.5,['ranksum p=' num2str(round(p,3))])%'h=' num2str(h) ', 
-        text(0.4,0.65,['KS p= ' num2str(pKS)])
-        text(0.4,0.8,['KS stat ' num2str(ksstats)])
-        title(['Cond ' num2str(condI)])
-        
-        MakePlotPrettySL(gca);
-    end
-    
-    suptitleSL(['Distribution of within-arm ' label ', day pair ' num2str(dayPairsForward(dpI,:))])
-end
-
-ppKS = cell(1,numDayPairs); ppRS = cell(1,numDayPairs);
-for dpI = 1:numDayPairs
-    for condJ = 1:numConds
-        for condI = 1:numConds
-            %subplot(2,2,condI)
-            oneCellsUse = oneEnvMaxRateCellsUse{dpI}(:,condI); % This adds the >=3 laps one day; says max but it's the same
-            changesHereOne = oneEnvMeanRatePctChange{dpI}(:,condI);
-            changesHereOne(oneEnvFiredBoth{dpI}(:,condI)==0) = NaN;
-            oneData = changesHereOne(oneCellsUse);
-            
-            twoCellsUse = oneEnvMaxRateCellsUse{dpI}(:,condJ);
-            changesHereTwo = oneEnvMeanRatePctChange{dpI}(:,condJ);
-            changesHereTwo(oneEnvFiredBoth{dpI}(:,condI)==0) = NaN;
-            twoData = changesHereTwo(twoCellsUse);
-            
-            [h,ppKS{dpI}(condJ,condI),ksstats(condJ,condI)] = kstest2(oneData(:),twoData(:));
-            [ppRS{dpI}(condJ,condI),h] = ranksum(oneData(:),twoData(:));
-        end
-    end
-end
-
 % More in North than others
 for dpI = 1:numDayPairs
     gg = figure('Position', [418.5000 326.5000 810.5000 299.5000]);
@@ -395,12 +518,12 @@ for dpI = 1:numDayPairs
     for condI = 2:numConds
         subplot(1,numConds-1,condI-1)
         
-        oneCellsUse = oneEnvMaxRateCellsUse{dpI}(:,condI); % This adds the >=3 laps one day; says max but it's the same
+        oneCellsUse = oneEnvMeanRateCellsUse{dpI}(:,condI); % This adds the >=3 laps one day; says max but it's the same
         changesHereOne = oneEnvMeanRatePctChange{dpI}(:,condI); 
         changesHereOne(oneEnvFiredBoth{dpI}(:,condI)==0) = NaN;
         oneData = changesHereOne(oneCellsUse);
         
-        northCellsUse = oneEnvMaxRateCellsUse{dpI}(:,1);
+        northCellsUse = oneEnvMeanRateCellsUse{dpI}(:,1);
         northChangesHereOne = oneEnvMeanRatePctChange{dpI}(:,1); 
         northChangesHereOne(oneEnvFiredBoth{dpI}(:,1)==0) = NaN;
         northData = northChangesHereOne(northCellsUse);
@@ -436,12 +559,12 @@ end
 for dpI = 1:numDayPairs
     for condJ = 1:numConds
     for condI = 1:numConds
-        oneCellsUse = oneEnvMaxRateCellsUse{dpI}(:,condI); % This adds the >=3 laps one day; says max but it's the same
+        oneCellsUse = oneEnvMeanRateCellsUse{dpI}(:,condI); % This adds the >=3 laps one day; says max but it's the same
         changesHereOne = oneEnvMeanRatePctChange{dpI}(:,condI); 
         changesHereOne(oneEnvFiredBoth{dpI}(:,condI)==0) = NaN;
         oneData = changesHereOne(oneCellsUse);
         
-        northCellsUse = oneEnvMaxRateCellsUse{dpI}(:,condJ);
+        northCellsUse = oneEnvMeanRateCellsUse{dpI}(:,condJ);
         northChangesHereOne = oneEnvMeanRatePctChange{dpI}(:,condJ); 
         northChangesHereOne(oneEnvFiredBoth{dpI}(:,condJ)==0) = NaN;
         northData = northChangesHereOne(northCellsUse);
@@ -460,12 +583,12 @@ for dpI = 1:numDayPairs
     for condI = 2:numConds
         subplot(1,numConds-1,condI-1)
         
-        oneCellsUse = oneEnvMaxRateCellsUse{dpI}(:,condI) & oneEnvFiredBoth{dpI}(:,condI); 
+        oneCellsUse = oneEnvMeanRateCellsUse{dpI}(:,condI) & oneEnvFiredBoth{dpI}(:,condI); 
             % This adds the >=3 laps one day; says max but it's the same
         changesHereOne = oneEnvMeanRatePctChange{dpI}(:,condI); 
         changesHereOne(oneEnvFiredBoth{dpI}(:,condI)==0) = NaN;
         
-        northCellsUse = oneEnvMaxRateCellsUse{dpI}(:,1) & oneEnvFiredBoth{dpI}(:,1);
+        northCellsUse = oneEnvMeanRateCellsUse{dpI}(:,1) & oneEnvFiredBoth{dpI}(:,1);
         northChangesHereOne = oneEnvMeanRatePctChange{dpI}(:,1); 
         northChangesHereOne(oneEnvFiredBoth{dpI}(:,1)==0) = NaN;
         
@@ -590,72 +713,8 @@ for dpI = 1:numDayPairs
 end
 
 
-%% Rate map corrs
+%% Single cell corrs
 
-
-figure;
-for dpI = 1:numDayPairs
-    subplot(1,numDayPairs,dpI)
-    
-    dataOne = oneEnvCorrsAll{dpI};
-    dataTwo = twoEnvCorrsAll{dpI};
-    %dataOne = abs(oneEnvCorrsSingle{dpI});
-    %dataTwo = abs(twoEnvCorrsSingle{dpI});
-    yy = cdfplot(dataOne); 
-    yy.Color = groupColors{1};
-    yy.LineWidth = 2;
-    hold on
-        
-    zz = cdfplot(dataTwo); 
-    zz.Color = groupColors{2};
-    zz.LineWidth = 2;
-    
-    xlabel('Rho')
-    ylabel('ECDF')
-    title([num2str(dayPairsForward(dpI,:))])
-    
-    [h,pKS,ksstats] = kstest2(dataOne,dataTwo);
-    [p,h] = ranksum(dataOne,dataTwo);
-    text(0.4,0.5,['ranksum p=' num2str(round(p,3))])%'h=' num2str(h) ', 
-    text(0.4,0.65,['KS p= ' num2str(pKS)])
-    text(0.4,0.8,['KS stat ' num2str(ksstats)])
-    
-    MakePlotPrettySL(gca);
-end
-suptitleSL('Single Neuron Ratemap correlations')
-
-
-% Each arm individually
-for dpI = 1:numDayPairs
-    figure('Position',[420.5000 238 531 442]);
-    for condI = 1:numConds
-        subplot(2,2,condI)
-        %dataOne = abs(oneEnvCorrsEach{dpI,condI});
-        %dataTwo = abs(twoEnvCorrsEach{dpI,condI});
-        dataOne = oneEnvCorrsEach{dpI,condI};
-        dataTwo = twoEnvCorrsEach{dpI,condI};
-        yy = cdfplot(dataOne);
-        yy.Color = groupColors{1};
-        yy.LineWidth = 2;
-        hold on
-        
-        zz = cdfplot(dataTwo);
-        zz.Color = groupColors{2};
-        zz.LineWidth = 2;
-        
-        xlabel('Rho')
-        ylabel('ECDF')
-        title(upper(turnArmLabels{condI}))
-        
-        [h,pKS,ksstats] = kstest2(dataOne,dataTwo);
-        [p,h] = ranksum(dataOne,dataTwo);
-        text(0.4,0.5,['ranksum p=' num2str(round(p,3))])%'h=' num2str(h) ',
-        text(0.4,0.65,['KS p= ' num2str(pKS)])
-        text(0.4,0.8,['KS stat ' num2str(ksstats)])
-        MakePlotPrettySL(gca);
-    end 
-    suptitleSL(['Days ' num2str(dayPairsForward(dpI,:))])
-end
 
 
 % North vs. others
