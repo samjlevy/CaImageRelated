@@ -13,8 +13,10 @@ groupNames = unique(groupAssign(:,2));
 twoEnvMice = find(strcmpi('diff',groupAssign(:,2)));
 oneEnvMice = find(strcmpi('same',groupAssign(:,2)));
 numMice = length(mice);
-groupColors = {'b','r'}; %OneMaze blue, TwoMaze red
-
+%groupColors = {'b','r'}; %OneMaze blue, TwoMaze red
+groupColors = {[0.3922    0.8314    0.0745],[0.7176    0.2745    1]}; 
+    % OneMaze green, TwoMaze purple
+    
 %dayThree = [11 12 13 12 9 12];
 dayThree = 3*ones(numMice,1);
 
@@ -86,6 +88,8 @@ for mouseI = 1:numMice
     
     disp(['Mouse ' num2str(mouseI) ' completed'])
 end
+cellSSI{1}(:,[5 6]) = 0;
+% zeroed out cellSSE for mouse 1 days 5-6
 
 numConds = length(cellTBT{1}); % should be 4
 
@@ -209,23 +213,39 @@ corrsLoaded = load(fullfile(mainFolder,'singelCellCorrs.mat'));
 
 disp('Done setup stuff')
 
-msgbox('Remapping: figures line 1035')
-msgbox('One maze day 6 abnormally low correlations?')
+msgbox('example heatmaps for reinstatement')
+msgbox('Predicting remapping: line 820')
+msgbox('day use changes across arms (absolute)')
+msgbox('Remapping: figures line 1035 ???')
+msgbox('One maze day 6 abnormally low correlations within? plot mice individually?')
 msgbox('Pandora day 6 low correlation from day 5?')
+msgbox('Performance from south vs north')
 
 %% Turn1-Turn2 remapping, all day pairs
 %Run this bit
 dayPairsForward = GetAllCombs(1:3,7:9);
+dayPairs = dayPairsForward;
 numDayPairs = size(dayPairsForward,1);
 condsUse = 1:4;
+numConds = numel(condsUse);
+
+condsCompare = combnk(condsUse,2);
 
 cellTMapH = cellfun(@(x) x(:,:,condsUse),cellTMap,'UniformOutput',false);
 
 SingleCellRemapping4_2
 
 oneEnvCOMagg = []; twoEnvCOMagg = [];
+oneEnvCOMaggEach = cell(1,numConds); twoEnvCOMaggEach = cell(1,length(condsUse));
 oneEnvRateAgg = []; twoEnvRateAgg = [];
+oneEnvRateAggEach = cell(1,numConds); twoEnvRateAggEach = cell(1,numConds);
 oneEnvCorrsAgg = []; twoEnvCorrsAgg = [];
+oneEnvCorrsAggEach = cell(1,numConds); twoEnvCorrsAggEach = cell(1,numConds);
+oneHaveBoth = []; oneStartFiring = []; oneStopFiring = [];
+twoHaveBoth = []; twoStartFiring = []; twoStopFiring = [];
+oneHaveBothEach = cell(1,numConds); oneStartFiringEach = cell(1,numConds); oneStopFiringEach = cell(1,numConds);
+twoHaveBothEach = cell(1,numConds); twoStartFiringEach = cell(1,numConds); twoStopFiringEach = cell(1,numConds);
+oneArmPctChange = []; twoArmPctChange = [];
 for dpI = 1:numDayPairs
     % COM shift:
     oneData = oneEnvCOMchanges{dpI}(oneEnvCOMchangesCellsUse{dpI});
@@ -234,6 +254,12 @@ for dpI = 1:numDayPairs
     twoData = twoEnvCOMchanges{dpI}(twoEnvCOMchangesCellsUse{dpI});
     twoEnvCOMagg = [twoEnvCOMagg; twoData];
     
+    for condI = 1:length(condsUse)
+        oneDataE = oneEnvCOMchanges{dpI}(oneEnvCOMchangesCellsUse{dpI}(:,condI),condI);
+        oneEnvCOMaggEach{condI} = [oneEnvCOMaggEach{condI}; oneDataE];
+        twoDataE = twoEnvCOMchanges{dpI}(twoEnvCOMchangesCellsUse{dpI}(:,condI),condI);
+        twoEnvCOMaggEach{condI} = [twoEnvCOMaggEach{condI}; twoDataE];
+    end
     % Rate changes:
   
     oneCellsUse = oneEnvMeanRateCellsUse{dpI}; % This adds the >=3 laps one day; says max but it's the same
@@ -249,22 +275,45 @@ for dpI = 1:numDayPairs
     twoData = changesHereTwo(twoCellsUse);
     twoEnvRateAgg = [twoEnvRateAgg; twoData];
 
+    for condI = 1:length(condsUse)
+        oneDataE = changesHereOne(oneCellsUse(:,condI),condI);
+        oneEnvRateAggEach{condI} = [oneEnvRateAggEach{condI}; oneDataE];
+        twoDataE = changesHereTwo(twoCellsUse(:,condI),condI);
+        twoEnvRateAggEach{condI} = [twoEnvRateAggEach{condI}; twoDataE];
+    end
+    
     % Single cell corrs:
     oneEnvCorrsAgg = [oneEnvCorrsAgg; oneEnvCorrsAll{dpI}];
     twoEnvCorrsAgg = [twoEnvCorrsAgg; twoEnvCorrsAll{dpI}];
+    
+    for condI = 1:length(condsUse)
+        oneEnvCorrsAggEach{condI} = [oneEnvCorrsAggEach{condI}; oneEnvCorrsEach{dpI,condI}];
+        twoEnvCorrsAggEach{condI} = [twoEnvCorrsAggEach{condI}; twoEnvCorrsEach{dpI,condI}];
+    end
+    
+    % Absolute
+    oneHaveBoth = [oneHaveBoth; oneMazeHaveBothAgg{dpI}];
+    oneStartFiring = [oneStartFiring; oneMazeStartFiringAgg{dpI}];
+    oneStopFiring = [oneStopFiring; oneMazeStopFiringAgg{dpI}];
+    twoHaveBoth = [twoHaveBoth; twoMazeHaveBothAgg{dpI}];
+    twoStartFiring = [twoStartFiring; twoMazeStartFiringAgg{dpI}];
+    twoStopFiring = [twoStopFiring; twoMazeStopFiringAgg{dpI}];
+    
+    for condI = 1:numConds
+        oneHaveBothEach{condI} = [oneHaveBothEach{condI}; oneMazeHaveBothEachAgg{dpI,condI}];
+        oneStartFiringEach{condI} = [oneStartFiringEach{condI}; oneMazeStartFiringEachAgg{dpI,condI}];
+        oneStopFiringEach{condI} = [oneStopFiringEach{condI}; oneMazeStopFiringEachAgg{dpI,condI}];
+        twoHaveBothEach{condI} = [twoHaveBothEach{condI}; twoMazeHaveBothEachAgg{dpI,condI}];
+        twoStartFiringEach{condI} = [twoStartFiringEach{condI}; twoMazeStartFiringEachAgg{dpI,condI}];
+        twoStopFiringEach{condI} = [twoStopFiringEach{condI}; twoMazeStopFiringEachAgg{dpI,condI}];
+    end
+    
+    oneArmPctChange = [oneArmPctChange; oneArmActiveChange{dpI}];
+    twoArmPctChange = [twoArmPctChange; twoArmActiveChange{dpI}];
 end
 
-%% Day to day drift
-
-dayPairsForward = [1 2; 2 3; 3 4; 4 5; 5 6; 6 7; 7 8; 8 9];
-dayPairs = dayPairsForward;
-numDayPairs = size(dayPairs,1);
-
-condsUse = [1 3 4];
-epochPairs = [1; 1; 0; 2; 2; 0; 3; 3];
-
-% Single neuron corrs, population vector corrs
-condPairs = [1 1; 3 3; 4 4];
+% PV corrs
+condPairs = [1 1; 2 2; 3 3; 4 4];
 numCondPairs = size(condPairs,1);
 
 PopulationVectorCorrs4_2;
@@ -294,19 +343,54 @@ for dpI = 1:numDayPairs
     twoEnvPVsemAll(dpI) = standarderrorSL([twoEnvMicePVcorrs{dpI,:}]);
 end
 
-gg = figure;
-errorbar([1:numDayPairs]-0.1,oneEnvPVmeansAll,oneEnvPVsemAll,groupColors{1},'LineWidth',2)
-hold on
-errorbar([1:numDayPairs]+0.1,twoEnvPVmeansAll,twoEnvPVsemAll,groupColors{2},'LineWidth',2)
+oneEnvPVcorrs = mean(cell2mat(oneEnvMicePVcorrsMeans),1);
+twoEnvPVcorrs = mean(cell2mat(twoEnvMicePVcorrsMeans),1);
 
-xlim([0.8 8.2])
-gg.Children.XTick = 1:numDayPairs;
-gg.Children.XTickLabel = num2str(dayPairsForward);
-xlabel('Day Pairs')
-ylabel('Correlation (Spearman rho)')
-MakePlotPrettySL(gg.Children);
 
-%% PV corrs across rule epochs
+%% Day to day drift
+
+dayPairsForward = [1 2; 2 3; 3 4; 4 5; 5 6; 6 7; 7 8; 8 9];
+dayPairs = dayPairsForward;
+numDayPairs = size(dayPairs,1);
+
+condsUse = [1 3 4];
+epochPairs = [1; 1; 0; 2; 2; 0; 3; 3];
+
+% Single neuron corrs, population vector corrs
+condPairs = [1 1; 3 3; 4 4];
+numCondPairs = size(condPairs,1);
+
+cellTMapH = cellfun(@(x) x(:,:,condsUse),cellTMap,'UniformOutput',false);
+SingleCellRemapping4_2
+PopulationVectorCorrs4_2;
+
+oneEnvMicePVcorrs = []; oneEnvMicePVcorrsMeans = [];
+twoEnvMicePVcorrs = []; twoEnvMicePVcorrsMeans = [];
+oneEnvPVmeansAll = []; oneEnvPVsemAll = [];
+twoEnvPVmeansAll = []; twoEnvPVsemAll = [];
+for dpI = 1:numDayPairs
+    for cpI = 1:numCondPairs
+        oneEnvMicePVcorrs{dpI,cpI} = pooledPVcorrs{dpI,cpI}(oneEnvMice,:);
+        oneEnvMicePVcorrsMeans{dpI,cpI} = nanmean(oneEnvMicePVcorrs{dpI,cpI},1);
+        for binI = 1:size(oneEnvMicePVcorrs{dpI,cpI},2)
+            oneEnvMicePVcorrsSEM{dpI,cpI}(1,binI) = standarderrorSL(oneEnvMicePVcorrs{dpI,cpI}(:,binI));
+        end
+        
+        twoEnvMicePVcorrs{dpI,cpI} = pooledPVcorrs{dpI,cpI}(twoEnvMice,:);
+        twoEnvMicePVcorrsMeans{dpI,cpI} = nanmean(twoEnvMicePVcorrs{dpI,cpI},1);
+        for binI = 1:size(twoEnvMicePVcorrs{dpI,cpI},2)
+            twoEnvMicePVcorrsSEM{dpI,cpI}(1,binI) = standarderrorSL(twoEnvMicePVcorrs{dpI,cpI}(:,binI));
+        end
+    end
+    
+    oneEnvPVmeansAll(dpI) = nanmean(nanmean([oneEnvMicePVcorrs{dpI,:}]));
+    oneEnvPVsemAll(dpI) = standarderrorSL([oneEnvMicePVcorrs{dpI,:}]);
+    twoEnvPVmeansAll(dpI) = nanmean(nanmean([twoEnvMicePVcorrs{dpI,:}]));
+    twoEnvPVsemAll(dpI) = standarderrorSL([twoEnvMicePVcorrs{dpI,:}]);
+end
+
+
+%% PV corrs across rule epochs (Separate states)
 
 numPerms = 1000;
 
@@ -319,8 +403,6 @@ dayPairs = [tonepdays; tonettwodays; pttwodays];
 dayGroups = [1*ones(size(tonepdays,1),1); 2*ones(size(tonettwodays,1),1); 3*ones(size(pttwodays,1),1)];  
 dayGroupLabels = {'Turn1 vs. Place';'Turn1 vs. Turn 2';'Place vs. Turn 2'};
 numDayPairs = size(dayPairs,1);
-
-disp('Need this for plotting...')
 
 PopulationVectorCorrs4_2;
 
@@ -371,46 +453,308 @@ for cpI = 1:numCondPairs
     end
 end
 
-figure;
-for dpgI = 1:3
-    for condI = 1:3
-        subplot(3,3,condI+3*(dpgI-1))
-        %plot(oneEnvDGcorrsMean{dpgI}{cpI},groupColors{1})
-        errorbar(oneEnvDGcorrsMean{dpgI}{condI},oneEnvDGcorrsSEM{dpgI}{condI},groupColors{1},'LineWidth',2)
-        hold on
-        %plot(twoEnvDGcorrsMean{dpgI}{cpI},groupColors{2})
-        errorbar(twoEnvDGcorrsMean{dpgI}{condI},twoEnvDGcorrsSEM{dpgI}{condI},groupColors{2},'LineWidth',2)
-        title([dayGroupLabels{dpgI} ' ' armLabels{condsHere(condI)}])
-        xlabel('Bin'); ylabel('Corr. (rho)')
-        MakePlotPrettySL(gca);
+%% 3 way remapping (reinstatement)
+
+aa = GetAllCombs(1:3,4:6);
+bb = GetAllCombs(1:9,7:9);
+allTriplePairs = [aa(bb(:,1),:) bb(:,2)];
+oneTwoPairs = allTriplePairs(:,[1 2]);
+oneThreePairs = allTriplePairs(:,[1 3]);
+
+numDayTrips = size(allTriplePairs,1);
+
+condsUse = [1 3 4];
+numConds = numel(condsUse);
+cellTMapH = cellfun(@(x) x(:,:,condsUse),cellTMap,'UniformOutput',false);
+
+dayPairsForward = oneTwoPairs;
+SingleCellRemapping4_2;
+
+singleCellCorrsRhoAB = singleCellCorrsRho;
+singleCellCorrsPab = singleCellCorrsP;
+singleCellAllCorrsRhoAB = singleCellAllCorrsRho;
+singleCellAllCorrsPab = singleCellAllCorrsP;
+
+dayPairsForward = oneThreePairs;
+SingleCellRemapping4_2;
+
+singleCellCorrsRhoCD = singleCellCorrsRho;
+singleCellCorrsPcd = singleCellCorrsP;
+singleCellAllCorrsRhoCD = singleCellAllCorrsRho;
+singleCellAllCorrsPcd = singleCellAllCorrsP;
+
+% Lots of pre-allocating for aggregation
+%{
+oneEnvCOMchangeAB = cell(numDayTrips,1); oneEnvCOMchangeCD = cell(numDayTrips,1);
+oneEnvCOMchangeComp = cell(numDayTrips,1); oneEnvCOMchangeCellsUse = cell(numDayTrips,1);
+twoEnvCOMchangeAB = cell(numDayTrips,1); twoEnvCOMchangeCD = cell(numDayTrips,1);
+twoEnvCOMchangeComp = cell(numDayTrips,1); twoEnvCOMchangeCellsUse = cell(numDayTrips,1);
+
+oneEnvMeanRatePctChangeAB = cell(numDayTrips,1); oneEnvMeanRatePctChangeCD = cell(numDayTrips,1);
+oneEnvRateChangeComp = cell(numDayTrips,1); oneEnvRateDiffCellsUse = cell(numDayTrips,1);
+twoEnvMeanRatePctChangeAB = cell(numDayTrips,1); twoEnvMeanRatePctChangeCD = cell(numDayTrips,1);
+twoEnvRateChangeComp = cell(numDayTrips,1); twoEnvRateDiffCellsUse = cell(numDayTrips,1);
+oneEnvAbsMagEachPos = cell(numDayTrips,1); oneEnvAbsMagEachNeg = cell(numDayTrips,1);
+twoEnvAbsMagEachPos = cell(numDayTrips,1); twoEnvAbsMagEachNeg = cell(numDayTrips,1);
+%}
+oneEnvRhosABAgg = cell(1,numDayTrips); oneEnvRhosCDAgg = cell(1,numDayTrips);
+oneEnvRhoDiffsAgg = cell(1,numDayTrips); oneEnvRhosABAggAll = cell(1,numDayTrips);
+oneEnvRhosCDAggAll = cell(1,numDayTrips); oneEnvRhoDiffsAggAll = cell(1,numDayTrips);
+twoEnvRhosABAgg = cell(1,numDayTrips); twoEnvRhosCDAgg = cell(1,numDayTrips);
+twoEnvRhoDiffsAgg = cell(1,numDayTrips); twoEnvRhosABAggAll = cell(1,numDayTrips);
+twoEnvRhosCDAggAll = cell(1,numDayTrips); twoEnvRhoDiffsAggAll = cell(1,numDayTrips);
+oneEnvPvalsABAgg = cell(1,numDayTrips); oneEnvPvalsCDAgg = cell(1,numDayTrips);
+twoEnvPvalsABAgg = cell(1,numDayTrips); twoEnvPvalsCDAgg = cell(1,numDayTrips);
+oneEnvPvalsABAggAll = cell(1,numDayTrips); oneEnvPvalsCDAggAll = cell(1,numDayTrips);
+twoEnvPvalsABAggAll = cell(1,numDayTrips); twoEnvPvalsCDAggAll = cell(1,numDayTrips);
+oneEnvMouseIDtracker = cell(1,numDayTrips); oneEnvCellTracker = cell(1,numDayTrips);
+twoEnvMouseIDtracker = cell(1,numDayTrips); twoEnvCellTracker = cell(1,numDayTrips);
+for mouseI = 1:numMice
+    % Center of mass
+    %{
+    allFiringCOM{mouseI} = TMapFiringCOM(cellTMapH{mouseI});
+    
+    for dpI = 1:numDayTrips
+        daysH = allTriplePairs(dpI,:);
+        comsA = squeeze(allFiringCOM{mouseI}(:,oneTwoPairs(dpI,1),:));
+        comsB = squeeze(allFiringCOM{mouseI}(:,oneTwoPairs(dpI,2),:));
+        COMchangesAB{mouseI}{dpI} = abs(comsB - comsA);
+
+        comsC = squeeze(allFiringCOM{mouseI}(:,oneThreePairs(dpI,1),:));
+        comsD = squeeze(allFiringCOM{mouseI}(:,oneThreePairs(dpI,2),:));
+        COMchangesCD{mouseI}{dpI} = abs(comsD - comsC);
+
+        COMchangeMagnitudeComparison{mouseI}{dpI} = COMchangesCD{mouseI}{dpI} - COMchangesAB{mouseI}{dpI};
+        % Negative value means greater magnitude COM change Turn 1 place than turn 1 - turn 2
+        
+        cellsUseHere = sum(sum(dayUse{mouseI}(:,daysH,condsUse),3)>0,2) > 0; 
+        % One cond on One day out of each trip above threshold
+        haveCell = sum(cellSSI{mouseI}(:,daysH)>0,2)==3;
+        % Do we need active on arm all 3 days? Probably for this metric yes
+        aa = trialReli{mouseI}(:,daysH,condsUse) > 0; % Cell active this arm this cond
+        bb = sum(aa,2) == 3; % active this arm all days, (numCells x 1 x numConds)
+        activeCondAcrossDays = squeeze(bb); % (numCells x numConds)
+        
+        %cellsUseHere = cellsUseHere & haveCell;
+        
+        cellsUseHere = cellsUseHere & haveCell & activeCondAcrossDays;
+        
+        % Aggregate data
+        switch groupNum(mouseI)
+            case 1
+                oneEnvCOMchangeAB{dpI} = [oneEnvCOMchangeAB{dpI}; COMchangesAB{mouseI}{dpI}];
+                oneEnvCOMchangeCD{dpI} = [oneEnvCOMchangeCD{dpI}; COMchangesCD{mouseI}{dpI}];
+                oneEnvCOMchangeComp{dpI} = [oneEnvCOMchangeComp{dpI}; COMchangeMagnitudeComparison{mouseI}{dpI}];
+                %oneEnvCOMchangeCellsUse{dpI} = logical([oneEnvCOMchangeCellsUse{dpI}; repmat(cellsUseHere,1,numConds)]);
+                oneEnvCOMchangeCellsUse{dpI} = logical([oneEnvCOMchangeCellsUse{dpI}; cellsUseHere]);
+            case 2
+                twoEnvCOMchangeAB{dpI} = [twoEnvCOMchangeAB{dpI}; COMchangesAB{mouseI}{dpI}];
+                twoEnvCOMchangeCD{dpI} = [twoEnvCOMchangeCD{dpI}; COMchangesCD{mouseI}{dpI}];
+                twoEnvCOMchangeComp{dpI} = [twoEnvCOMchangeComp{dpI}; COMchangeMagnitudeComparison{mouseI}{dpI}];
+                %twoEnvCOMchangeCellsUse{dpI} = logical([twoEnvCOMchangeCellsUse{dpI}; repmat(cellsUseHere,1,numConds)]);
+                twoEnvCOMchangeCellsUse{dpI} = logical([twoEnvCOMchangeCellsUse{dpI}; cellsUseHere]);
+        end
+        
     end
+    %}
+    % Rate remapping
+    %{
+    meanRates{mouseI} = cell2mat(cellfun(@mean,cellTMapH{mouseI},'UniformOutput',false));
+    for dpI = 1:numDayTrips
+        mratesA = squeeze(meanRates{mouseI}(:,oneTwoPairs(dpI,1),:));
+        mratesB = squeeze(meanRates{mouseI}(:,oneTwoPairs(dpI,2),:));
+        mratesAll = [];
+        mratesAll(:,:,1) = mratesA; 
+        mratesAll(:,:,2) = mratesB;
+        mfiredEither = sum(mratesAll,3)>0;
+        mfiredBoth = sum(mratesAll>0,3)==2;
+        meanRateDiffsAB{mouseI}{dpI} = max(mratesAll,[],3) - min(mratesAll,[],3);
+        pctChangeMeanAB{mouseI}{dpI} = meanRateDiffsAB{mouseI}{dpI} ./ max(mratesAll,[],3);
+        
+        mratesC = squeeze(meanRates{mouseI}(:,oneThreePairs(dpI,1),:));
+        mratesD = squeeze(meanRates{mouseI}(:,oneThreePairs(dpI,2),:));
+        mratesAll = [];
+        mratesAll(:,:,1) = mratesC; 
+        mratesAll(:,:,2) = mratesD;
+        mfiredEither = sum(mratesAll,3)>0;
+        mfiredBoth = sum(mratesAll>0,3)==2;
+        meanRateDiffsCD{mouseI}{dpI} = max(mratesAll,[],3) - min(mratesAll,[],3);
+        pctChangeMeanCD{mouseI}{dpI} = meanRateDiffsCD{mouseI}{dpI} ./ max(mratesAll,[],3);
+        
+        rateDiffsMagnitudeComparison{mouseI}{dpI} = abs(pctChangeMeanCD{mouseI}{dpI}) - abs(pctChangeMeanAB{mouseI}{dpI});
+        % Negative value means greater magnitude COM change Turn 1 place than turn 1 - turn 2
+        
+        % This might just be identical to above...
+        cellsUseHere = sum(sum(dayUse{mouseI}(:,allTriplePairs(dpI,:),condsUse)>0,3),2) > 0;
+        haveCell = sum(cellSSI{mouseI}(:,allTriplePairs(dpI,:))>0,2)==3;
+        
+        aa = trialReli{mouseI}(:,allTriplePairs(dpI,:),condsUse) > 0; % Cell active this arm this cond
+        bb = sum(aa,2) == 3; % active this arm all days, (numCells x 1 x numConds)
+        activeCondAcrossDays = squeeze(bb); % (numCells x numConds)
+        
+        cellsUseHere = cellsUseHere & haveCell & activeCondAcrossDays;
+        
+        % pct of cells across all three, is the difference in magnitude positive or negative
+        absoluteMag{mouseI}{dpI} = rateDiffsMagnitudeComparison{mouseI}{dpI} ./ abs(rateDiffsMagnitudeComparison{mouseI}{dpI});
+        absMag = absoluteMag{mouseI}{dpI}(cellsUseHere);
+        pctPos = sum(absMag>0) / sum(sum(cellsUseHere));
+        pctNeg = sum(absMag<0) / sum(sum(cellsUseHere));
+        
+        switch groupNum(mouseI)
+            case 1
+                %oneEnvMeanRateDiffsAB{dpI} = [oneEnvMeanRateDiffsAB{dpI}; meanRateDiffsAB{mouseI}{dpI}];%(cell, cond)
+                oneEnvMeanRatePctChangeAB{dpI} = [oneEnvMeanRatePctChangeAB{dpI}; pctChangeMeanAB{mouseI}{dpI}];
+                oneEnvMeanRatePctChangeCD{dpI} = [oneEnvMeanRatePctChangeCD{dpI}; pctChangeMeanCD{mouseI}{dpI}];
+                oneEnvRateChangeComp{dpI} = [oneEnvRateChangeComp{dpI}; rateDiffsMagnitudeComparison{mouseI}{dpI}];
+                oneEnvRateDiffCellsUse{dpI} = logical([oneEnvRateDiffCellsUse{dpI}; cellsUseHere]);
+                
+                %oneEnvAbsoluteMagnitude{dpI} = [oneEnvAbsoluteMagnitude{dpI}; absMag];
+                oneEnvAbsMagEachPos{dpI} = [oneEnvAbsMagEachPos{dpI}; pctPos];
+                oneEnvAbsMagEachNeg{dpI} = [oneEnvAbsMagEachNeg{dpI}; pctNeg];
+            case 2
+                %twoEnvMeanRateDiffsCD{dpI} = [twoEnvMeanRateDiffsCD{dpI}; meanRateDiffsCD{mouseI}{dpI}];
+                twoEnvMeanRatePctChangeAB{dpI} = [twoEnvMeanRatePctChangeAB{dpI}; pctChangeMeanAB{mouseI}{dpI}];
+                twoEnvMeanRatePctChangeCD{dpI} = [twoEnvMeanRatePctChangeCD{dpI}; pctChangeMeanCD{mouseI}{dpI}];
+                twoEnvRateChangeComp{dpI} = [twoEnvRateChangeComp{dpI}; rateDiffsMagnitudeComparison{mouseI}{dpI}];
+                twoEnvRateDiffCellsUse{dpI} = logical([twoEnvRateDiffCellsUse{dpI}; cellsUseHere]);
+                
+                twoEnvAbsMagEachPos{dpI} = [twoEnvAbsMagEachPos{dpI}; pctPos];
+                twoEnvAbsMagEachNeg{dpI} = [twoEnvAbsMagEachNeg{dpI}; pctNeg];
+        end
+    end
+    %}
+    
+    % Single neuron corrs:
+    %{
+    [singleCellCorrsRhoAB{mouseI}, singleCellCorrsPab{mouseI}] = singleNeuronCorrelations(cellTMapH{mouseI},oneTwoPairs,[]);
+    [singleCellCorrsRhoCD{mouseI}, singleCellCorrsPcd{mouseI}] = singleNeuronCorrelations(cellTMapH{mouseI},oneThreePairs,[]);%turnBinsUse
+    %{mouseI}{condI}{dayPairI}(cellI)
+    pooledTmap = cell(numCells(mouseI),9);
+    for cellI = 1:numCells(mouseI)
+        for dayI = 1:9
+            pooledTmap{cellI,dayI} = vertcat(cellTMapH{mouseI}{cellI,dayI,:});
+        end
+    end
+    [singleCellAllCorrsRhoAB{mouseI}, singleCellAllCorrsPab{mouseI}] = singleNeuronCorrelations(pooledTmap,oneTwoPairs,[]);%turnBinsUse
+    [singleCellAllCorrsRhoCD{mouseI}, singleCellAllCorrsPcd{mouseI}] = singleNeuronCorrelations(pooledTmap,oneThreePairs,[]);
+    
+    %}
+    
+    %}
+    for dpI = 1:numDayTrips
+        daysH = allTriplePairs(dpI,:);
+        
+        nCellsHere = sum(cellSSI{mouseI}(:,daysH)>0,1);
+        if sum(nCellsHere>0)==3
+        
+        cellsUseHere = sum(sum(dayUse{mouseI}(:,daysH,condsUse)>0,3),2) > 0;
+        haveCell = sum(cellSSI{mouseI}(:,daysH)>0,2)==3;
+        
+        
+        
+        aa = trialReli{mouseI}(:,daysH,condsUse) > 0; % Cell active this arm this cond
+        bb = sum(aa,2) == 3; % active this arm all days, (numCells x 1 x numConds)
+        activeCondAcrossDays = squeeze(bb); % (numCells x numConds)
+        
+        cellsUseHere = cellsUseHere & haveCell & activeCondAcrossDays; %(cellI, condI)
+        
+        singlePVcellsUse{mouseI}{dpI} = cellsUseHere;
+        for condI = 1:numConds
+            rhosAB = singleCellCorrsRhoAB{mouseI}{condI}{dpI}(cellsUseHere(:,condI));
+            rhosCD = singleCellCorrsRhoCD{mouseI}{condI}{dpI}(cellsUseHere(:,condI));
+            pValsAB = singleCellCorrsPab{mouseI}{condI}{dpI}(cellsUseHere(:,condI));
+            pValsCD = singleCellCorrsPcd{mouseI}{condI}{dpI}(cellsUseHere(:,condI));
+            rhoDiffs = rhosCD - rhosAB; % negative when higher rho in Turn1-Place than Turn1-Turn2
+            
+            switch groupNum(mouseI)
+                case 1
+                    oneEnvRhosABAgg{dpI} = [oneEnvRhosABAgg{dpI}; rhosAB];
+                    oneEnvRhosCDAgg{dpI} = [oneEnvRhosCDAgg{dpI}; rhosCD];
+                    oneEnvRhoDiffsAgg{dpI} = [oneEnvRhoDiffsAgg{dpI}; rhoDiffs];
+                    
+                    oneEnvPvalsABAgg{dpI} = [oneEnvPvalsABAgg{dpI}; pValsAB];
+                    oneEnvPvalsCDAgg{dpI} = [oneEnvPvalsCDAgg{dpI}; pValsCD];
+                    
+                    oneEnvMouseIDtracker{dpI} = [oneEnvMouseIDtracker{dpI}; mouseI*ones(size(rhosAB))];
+                    oneEnvCellTracker{dpI} = [oneEnvCellTracker{dpI}; find(cellsUseHere)];
+                case 2
+                    twoEnvRhosABAgg{dpI} = [twoEnvRhosABAgg{dpI}; rhosAB];
+                    twoEnvRhosCDAgg{dpI} = [twoEnvRhosCDAgg{dpI}; rhosCD];
+                    twoEnvRhoDiffsAgg{dpI} = [twoEnvRhoDiffsAgg{dpI}; rhoDiffs];
+                    
+                    twoEnvPvalsABAgg{dpI} = [twoEnvPvalsABAgg{dpI}; pValsAB];
+                    twoEnvPvalsCDAgg{dpI} = [twoEnvPvalsCDAgg{dpI}; pValsCD];
+                    
+                    twoEnvMouseIDtracker{dpI} = [twoEnvMouseIDtracker{dpI}; mouseI*ones(size(rhosAB))];
+                    twoEnvCellTracker{dpI} = [twoEnvCellTracker{dpI}; find(cellsUseHere)];
+            end
+        end
+        
+        % Whole maze
+        rhosABall = singleCellAllCorrsRhoAB{mouseI}{1}{dpI}(sum(cellsUseHere,2)>0);
+        rhosCDall = singleCellAllCorrsRhoCD{mouseI}{1}{dpI}(sum(cellsUseHere,2)>0);
+        
+        pValsABall = singleCellAllCorrsPab{mouseI}{1}{dpI}(sum(cellsUseHere,2)>0);
+        pValsCDall = singleCellAllCorrsPcd{mouseI}{1}{dpI}(sum(cellsUseHere,2)>0);
+        
+        rhoDiffsAll = rhosCDall - rhosABall;
+        switch groupNum(mouseI)
+            case 1
+                oneEnvRhosABAggAll{dpI} = [oneEnvRhosABAggAll{dpI}; rhosAB];
+                oneEnvRhosCDAggAll{dpI} = [oneEnvRhosCDAggAll{dpI}; rhosCD];
+                oneEnvRhoDiffsAggAll{dpI} = [oneEnvRhoDiffsAggAll{dpI}; rhoDiffs];
+                
+                oneEnvPvalsABAggAll{dpI} = [oneEnvPvalsABAggAll{dpI}; pValsABall];
+                oneEnvPvalsCDAggAll{dpI} = [oneEnvPvalsCDAggAll{dpI}; pValsCDall];
+            case 2
+                twoEnvRhosABAggAll{dpI} = [twoEnvRhosABAggAll{dpI}; rhosAB];
+                twoEnvRhosCDAggAll{dpI} = [twoEnvRhosCDAggAll{dpI}; rhosCD];
+                twoEnvRhoDiffsAggAll{dpI} = [twoEnvRhoDiffsAggAll{dpI}; rhoDiffs];
+                
+                twoEnvPvalsABAggAll{dpI} = [twoEnvPvalsABAggAll{dpI}; pValsABall];
+                twoEnvPvalsCDAggAll{dpI} = [twoEnvPvalsCDAggAll{dpI}; pValsCDall];
+        end
+        
+        end
+    end
+    
+    % Of cells there for T1-P, how many also T2?
+    % Of cells there for T1-T2, how many also P?
+    
+    % Within arm reli change, each of these
+    %{
+    for dpI = 1:numDayTrips
+        haveCell = sum(cellSSI{mouseI}(:,allTriplePairs(dpI,:))>0,2)==3;
+        
+        % above thresh at all
+        aboveThreshAtAll = dayUse{mouseI}(haveCell,allTriplePairs(dpI,:));
+        
+        atAllThree = sum(aboveThreshAtAll,2)==3;
+        
+        TaTb = sum(aboveThreshAtAll(:,[1 3]),2)==2;
+        TaP = sum(aboveThreshAtAll(:,[1 2]),2)==2;
+        
+        turnTurnDenom = sum(sum(TaTb));
+        turnPlaceDenom = sum(sum(TaP));
+        
+        
+        switch groupNum(mouseI)
+            case 1
+                oneEnvTurnTurnThresh{dpI} = [oneEnvTurnTurnThresh{dpI}; 
+            case 2
+        
+    end
+    %}
 end
-suptitleSL('PV corrs averaged across all day pairs for epoch indicated')
 
 
-locations = [0 0.5 1];
-colors = [1.0000    0.0    0.000;
-            1 1 1;
-            0    0.45   0.74];           
-newGradient = GradientMaker(colors,locations);
 
-oneEnvDGmeanAll = cell2mat(oneEnvDGmeanAgg);
-twoEnvDGmeanAll = cell2mat(twoEnvDGmeanAgg);
-plotBins.X = []; plotBins.Y = [];
-for condI = 1:length(condsUse)
-    plotBins.X = [plotBins.X; lgPlotHere{condsUse(condI)}.X];
-    plotBins.Y = [plotBins.Y; lgPlotHere{condsUse(condI)}.Y];
-end
-[figHand] = PlusMazePVcorrHeatmap3(oneEnvDGmeanAll,plotBins,newGradient,[-0.3, 0.3],dayGroupLabels);
-for ii = 1:3; subplot(1,3,ii); MakePlotPrettySL(gca); end
-suptitleSL('One-Maze')
+% Plotting: could either KS each day pair changeAB vs. change CD, or show
+% changeComp is negative (greater change turn 1 to place than turn 1 to turn 2)
 
-[figHand] = PlusMazePVcorrHeatmap3(twoEnvDGmeanAll,plotBins,newGradient,[-0.3, 0.3],dayGroupLabels);
-for ii = 1:3; subplot(1,3,ii); MakePlotPrettySL(gca); end
-suptitleSL('Two-Maze')
 
-labelsH = {'0.3','0','-0.3'};
-PlotColorbar(newGradient,labelsH)
+
+
 
 
 %% Turn1-Turn2 remapping
@@ -746,281 +1090,6 @@ dayPairsForward = [GetAllCombs(1:3,7:9);  [7 8; 7 9; 8 9]];
 epochConds = [zeros(9,1); ones(3,1)];
 
 condsUse = 1:4;
-%% 3 way remapping (reinstatement)
-
-aa = GetAllCombs(1:3,4:6);
-bb = GetAllCombs(1:9,7:9);
-allTriplePairs = [aa(bb(:,1),:) bb(:,2)];
-oneTwoPairs = allTriplePairs(:,[1 2]);
-oneThreePairs = allTriplePairs(:,[1 3]);
-
-numDayTrips = size(allTriplePairs,1);
-
-condsUse = [1 3 4];
-numConds = numel(condsUse);
-cellTMapH = cellfun(@(x) x(:,:,condsUse),cellTMap,'UniformOutput',false);
-
-% Lots of pre-allocating for aggregation
-oneEnvCOMchangeAB = cell(numDayTrips,1); oneEnvCOMchangeCD = cell(numDayTrips,1);
-oneEnvCOMchangeComp = cell(numDayTrips,1); oneEnvCOMchangeCellsUse = cell(numDayTrips,1);
-twoEnvCOMchangeAB = cell(numDayTrips,1); twoEnvCOMchangeCD = cell(numDayTrips,1);
-twoEnvCOMchangeComp = cell(numDayTrips,1); twoEnvCOMchangeCellsUse = cell(numDayTrips,1);
-
-oneEnvMeanRatePctChangeAB = cell(numDayTrips,1); oneEnvMeanRatePctChangeCD = cell(numDayTrips,1);
-oneEnvRateChangeComp = cell(numDayTrips,1); oneEnvRateDiffCellsUse = cell(numDayTrips,1);
-twoEnvMeanRatePctChangeAB = cell(numDayTrips,1); twoEnvMeanRatePctChangeCD = cell(numDayTrips,1);
-twoEnvRateChangeComp = cell(numDayTrips,1); twoEnvRateDiffCellsUse = cell(numDayTrips,1);
-oneEnvAbsMagEachPos = cell(numDayTrips,1); oneEnvAbsMagEachNeg = cell(numDayTrips,1);
-twoEnvAbsMagEachPos = cell(numDayTrips,1); twoEnvAbsMagEachNeg = cell(numDayTrips,1);
-
-oneEnvRhosABAgg = cell(1,numDayTrips); oneEnvRhosCDAgg = cell(1,numDayTrips);
-oneEnvRhoDiffsAgg = cell(1,numDayTrips); oneEnvRhosABAggAll = cell(1,numDayTrips);
-oneEnvRhosCDAggAll = cell(1,numDayTrips); oneEnvRhoDiffsAggAll = cell(1,numDayTrips);
-twoEnvRhosABAgg = cell(1,numDayTrips); twoEnvRhosCDAgg = cell(1,numDayTrips);
-twoEnvRhoDiffsAgg = cell(1,numDayTrips); twoEnvRhosABAggAll = cell(1,numDayTrips);
-twoEnvRhosCDAggAll = cell(1,numDayTrips); twoEnvRhoDiffsAggAll = cell(1,numDayTrips);
-oneEnvPvalsABAgg = cell(1,numDayTrips); oneEnvPvalsCDAgg = cell(1,numDayTrips);
-twoEnvPvalsABAgg = cell(1,numDayTrips); twoEnvPvalsCDAgg = cell(1,numDayTrips);
-oneEnvPvalsABAggAll = cell(1,numDayTrips); oneEnvPvalsCDAggAll = cell(1,numDayTrips);
-twoEnvPvalsABAggAll = cell(1,numDayTrips); twoEnvPvalsCDAggAll = cell(1,numDayTrips);
-oneEnvMouseIDtracker = cell(1,numDayTrips); oneEnvCellTracker = cell(1,numDayTrips);
-twoEnvMouseIDtracker = cell(1,numDayTrips); twoEnvCellTracker = cell(1,numDayTrips);
-for mouseI = 1:numMice
-    % Center of mass
-    %{
-    allFiringCOM{mouseI} = TMapFiringCOM(cellTMapH{mouseI});
-    
-    for dpI = 1:numDayTrips
-        daysH = allTriplePairs(dpI,:);
-        comsA = squeeze(allFiringCOM{mouseI}(:,oneTwoPairs(dpI,1),:));
-        comsB = squeeze(allFiringCOM{mouseI}(:,oneTwoPairs(dpI,2),:));
-        COMchangesAB{mouseI}{dpI} = abs(comsB - comsA);
-
-        comsC = squeeze(allFiringCOM{mouseI}(:,oneThreePairs(dpI,1),:));
-        comsD = squeeze(allFiringCOM{mouseI}(:,oneThreePairs(dpI,2),:));
-        COMchangesCD{mouseI}{dpI} = abs(comsD - comsC);
-
-        COMchangeMagnitudeComparison{mouseI}{dpI} = COMchangesCD{mouseI}{dpI} - COMchangesAB{mouseI}{dpI};
-        % Negative value means greater magnitude COM change Turn 1 place than turn 1 - turn 2
-        
-        cellsUseHere = sum(sum(dayUse{mouseI}(:,daysH,condsUse),3)>0,2) > 0; 
-        % One cond on One day out of each trip above threshold
-        haveCell = sum(cellSSI{mouseI}(:,daysH)>0,2)==3;
-        % Do we need active on arm all 3 days? Probably for this metric yes
-        aa = trialReli{mouseI}(:,daysH,condsUse) > 0; % Cell active this arm this cond
-        bb = sum(aa,2) == 3; % active this arm all days, (numCells x 1 x numConds)
-        activeCondAcrossDays = squeeze(bb); % (numCells x numConds)
-        
-        %cellsUseHere = cellsUseHere & haveCell;
-        
-        cellsUseHere = cellsUseHere & haveCell & activeCondAcrossDays;
-        
-        % Aggregate data
-        switch groupNum(mouseI)
-            case 1
-                oneEnvCOMchangeAB{dpI} = [oneEnvCOMchangeAB{dpI}; COMchangesAB{mouseI}{dpI}];
-                oneEnvCOMchangeCD{dpI} = [oneEnvCOMchangeCD{dpI}; COMchangesCD{mouseI}{dpI}];
-                oneEnvCOMchangeComp{dpI} = [oneEnvCOMchangeComp{dpI}; COMchangeMagnitudeComparison{mouseI}{dpI}];
-                %oneEnvCOMchangeCellsUse{dpI} = logical([oneEnvCOMchangeCellsUse{dpI}; repmat(cellsUseHere,1,numConds)]);
-                oneEnvCOMchangeCellsUse{dpI} = logical([oneEnvCOMchangeCellsUse{dpI}; cellsUseHere]);
-            case 2
-                twoEnvCOMchangeAB{dpI} = [twoEnvCOMchangeAB{dpI}; COMchangesAB{mouseI}{dpI}];
-                twoEnvCOMchangeCD{dpI} = [twoEnvCOMchangeCD{dpI}; COMchangesCD{mouseI}{dpI}];
-                twoEnvCOMchangeComp{dpI} = [twoEnvCOMchangeComp{dpI}; COMchangeMagnitudeComparison{mouseI}{dpI}];
-                %twoEnvCOMchangeCellsUse{dpI} = logical([twoEnvCOMchangeCellsUse{dpI}; repmat(cellsUseHere,1,numConds)]);
-                twoEnvCOMchangeCellsUse{dpI} = logical([twoEnvCOMchangeCellsUse{dpI}; cellsUseHere]);
-        end
-        
-    end
-    %}
-    % Rate remapping
-    %{
-    meanRates{mouseI} = cell2mat(cellfun(@mean,cellTMapH{mouseI},'UniformOutput',false));
-    for dpI = 1:numDayTrips
-        mratesA = squeeze(meanRates{mouseI}(:,oneTwoPairs(dpI,1),:));
-        mratesB = squeeze(meanRates{mouseI}(:,oneTwoPairs(dpI,2),:));
-        mratesAll = [];
-        mratesAll(:,:,1) = mratesA; 
-        mratesAll(:,:,2) = mratesB;
-        mfiredEither = sum(mratesAll,3)>0;
-        mfiredBoth = sum(mratesAll>0,3)==2;
-        meanRateDiffsAB{mouseI}{dpI} = max(mratesAll,[],3) - min(mratesAll,[],3);
-        pctChangeMeanAB{mouseI}{dpI} = meanRateDiffsAB{mouseI}{dpI} ./ max(mratesAll,[],3);
-        
-        mratesC = squeeze(meanRates{mouseI}(:,oneThreePairs(dpI,1),:));
-        mratesD = squeeze(meanRates{mouseI}(:,oneThreePairs(dpI,2),:));
-        mratesAll = [];
-        mratesAll(:,:,1) = mratesC; 
-        mratesAll(:,:,2) = mratesD;
-        mfiredEither = sum(mratesAll,3)>0;
-        mfiredBoth = sum(mratesAll>0,3)==2;
-        meanRateDiffsCD{mouseI}{dpI} = max(mratesAll,[],3) - min(mratesAll,[],3);
-        pctChangeMeanCD{mouseI}{dpI} = meanRateDiffsCD{mouseI}{dpI} ./ max(mratesAll,[],3);
-        
-        rateDiffsMagnitudeComparison{mouseI}{dpI} = abs(pctChangeMeanCD{mouseI}{dpI}) - abs(pctChangeMeanAB{mouseI}{dpI});
-        % Negative value means greater magnitude COM change Turn 1 place than turn 1 - turn 2
-        
-        % This might just be identical to above...
-        cellsUseHere = sum(sum(dayUse{mouseI}(:,allTriplePairs(dpI,:),condsUse)>0,3),2) > 0;
-        haveCell = sum(cellSSI{mouseI}(:,allTriplePairs(dpI,:))>0,2)==3;
-        
-        aa = trialReli{mouseI}(:,allTriplePairs(dpI,:),condsUse) > 0; % Cell active this arm this cond
-        bb = sum(aa,2) == 3; % active this arm all days, (numCells x 1 x numConds)
-        activeCondAcrossDays = squeeze(bb); % (numCells x numConds)
-        
-        cellsUseHere = cellsUseHere & haveCell & activeCondAcrossDays;
-        
-        % pct of cells across all three, is the difference in magnitude positive or negative
-        absoluteMag{mouseI}{dpI} = rateDiffsMagnitudeComparison{mouseI}{dpI} ./ abs(rateDiffsMagnitudeComparison{mouseI}{dpI});
-        absMag = absoluteMag{mouseI}{dpI}(cellsUseHere);
-        pctPos = sum(absMag>0) / sum(sum(cellsUseHere));
-        pctNeg = sum(absMag<0) / sum(sum(cellsUseHere));
-        
-        switch groupNum(mouseI)
-            case 1
-                %oneEnvMeanRateDiffsAB{dpI} = [oneEnvMeanRateDiffsAB{dpI}; meanRateDiffsAB{mouseI}{dpI}];%(cell, cond)
-                oneEnvMeanRatePctChangeAB{dpI} = [oneEnvMeanRatePctChangeAB{dpI}; pctChangeMeanAB{mouseI}{dpI}];
-                oneEnvMeanRatePctChangeCD{dpI} = [oneEnvMeanRatePctChangeCD{dpI}; pctChangeMeanCD{mouseI}{dpI}];
-                oneEnvRateChangeComp{dpI} = [oneEnvRateChangeComp{dpI}; rateDiffsMagnitudeComparison{mouseI}{dpI}];
-                oneEnvRateDiffCellsUse{dpI} = logical([oneEnvRateDiffCellsUse{dpI}; cellsUseHere]);
-                
-                %oneEnvAbsoluteMagnitude{dpI} = [oneEnvAbsoluteMagnitude{dpI}; absMag];
-                oneEnvAbsMagEachPos{dpI} = [oneEnvAbsMagEachPos{dpI}; pctPos];
-                oneEnvAbsMagEachNeg{dpI} = [oneEnvAbsMagEachNeg{dpI}; pctNeg];
-            case 2
-                %twoEnvMeanRateDiffsCD{dpI} = [twoEnvMeanRateDiffsCD{dpI}; meanRateDiffsCD{mouseI}{dpI}];
-                twoEnvMeanRatePctChangeAB{dpI} = [twoEnvMeanRatePctChangeAB{dpI}; pctChangeMeanAB{mouseI}{dpI}];
-                twoEnvMeanRatePctChangeCD{dpI} = [twoEnvMeanRatePctChangeCD{dpI}; pctChangeMeanCD{mouseI}{dpI}];
-                twoEnvRateChangeComp{dpI} = [twoEnvRateChangeComp{dpI}; rateDiffsMagnitudeComparison{mouseI}{dpI}];
-                twoEnvRateDiffCellsUse{dpI} = logical([twoEnvRateDiffCellsUse{dpI}; cellsUseHere]);
-                
-                twoEnvAbsMagEachPos{dpI} = [twoEnvAbsMagEachPos{dpI}; pctPos];
-                twoEnvAbsMagEachNeg{dpI} = [twoEnvAbsMagEachNeg{dpI}; pctNeg];
-        end
-    end
-    %}
-    
-    % Single neuron corrs:
-    
-    [singleCellCorrsRhoAB{mouseI}, singleCellCorrsPab{mouseI}] = singleNeuronCorrelations(cellTMapH{mouseI},oneTwoPairs,[]);
-    [singleCellCorrsRhoCD{mouseI}, singleCellCorrsPcd{mouseI}] = singleNeuronCorrelations(cellTMapH{mouseI},oneThreePairs,[]);%turnBinsUse
-    %{mouseI}{condI}{dayPairI}(cellI)
-    pooledTmap = cell(numCells(mouseI),9);
-    for cellI = 1:numCells(mouseI)
-        for dayI = 1:9
-            pooledTmap{cellI,dayI} = vertcat(cellTMapH{mouseI}{cellI,dayI,:});
-        end
-    end
-    [singleCellAllCorrsRhoAB{mouseI}, singleCellAllCorrsPab{mouseI}] = singleNeuronCorrelations(pooledTmap,oneTwoPairs,[]);%turnBinsUse
-    [singleCellAllCorrsRhoCD{mouseI}, singleCellAllCorrsPcd{mouseI}] = singleNeuronCorrelations(pooledTmap,oneThreePairs,[]);
-    %}
-    for dpI = 1:numDayTrips
-        daysH = allTriplePairs(dpI,:);
-        cellsUseHere = sum(sum(dayUse{mouseI}(:,daysH,condsUse)>0,3),2) > 0;
-        haveCell = sum(cellSSI{mouseI}(:,daysH)>0,2)==3;
-        
-        aa = trialReli{mouseI}(:,daysH,condsUse) > 0; % Cell active this arm this cond
-        bb = sum(aa,2) == 3; % active this arm all days, (numCells x 1 x numConds)
-        activeCondAcrossDays = squeeze(bb); % (numCells x numConds)
-        
-        cellsUseHere = cellsUseHere & haveCell & activeCondAcrossDays; %(cellI, condI)
-        
-        singlePVcellsUse{mouseI}{dpI} = cellsUseHere;
-        for condI = 1:numConds
-            rhosAB = singleCellCorrsRhoAB{mouseI}{condI}{dpI}(cellsUseHere(:,condI));
-            rhosCD = singleCellCorrsRhoCD{mouseI}{condI}{dpI}(cellsUseHere(:,condI));
-            pValsAB = singleCellCorrsPab{mouseI}{condI}{dpI}(cellsUseHere(:,condI));
-            pValsCD = singleCellCorrsPcd{mouseI}{condI}{dpI}(cellsUseHere(:,condI));
-            rhoDiffs = rhosCD - rhosAB; % negative when higher rho in Turn1-Place than Turn1-Turn2
-            
-            switch groupNum(mouseI)
-                case 1
-                    oneEnvRhosABAgg{dpI} = [oneEnvRhosABAgg{dpI}; rhosAB];
-                    oneEnvRhosCDAgg{dpI} = [oneEnvRhosCDAgg{dpI}; rhosCD];
-                    oneEnvRhoDiffsAgg{dpI} = [oneEnvRhoDiffsAgg{dpI}; rhoDiffs];
-                    
-                    oneEnvPvalsABAgg{dpI} = [oneEnvPvalsABAgg{dpI}; pValsAB];
-                    oneEnvPvalsCDAgg{dpI} = [oneEnvPvalsCDAgg{dpI}; pValsCD];
-                    
-                    oneEnvMouseIDtracker{dpI} = [oneEnvMouseIDtracker{dpI}; mouseI*ones(size(rhosAB))];
-                    oneEnvCellTracker{dpI} = [oneEnvCellTracker{dpI}; find(cellsUseHere)];
-                case 2
-                    twoEnvRhosABAgg{dpI} = [twoEnvRhosABAgg{dpI}; rhosAB];
-                    twoEnvRhosCDAgg{dpI} = [twoEnvRhosCDAgg{dpI}; rhosCD];
-                    twoEnvRhoDiffsAgg{dpI} = [twoEnvRhoDiffsAgg{dpI}; rhoDiffs];
-                    
-                    twoEnvPvalsABAgg{dpI} = [twoEnvPvalsABAgg{dpI}; pValsAB];
-                    twoEnvPvalsCDAgg{dpI} = [twoEnvPvalsCDAgg{dpI}; pValsCD];
-                    
-                    twoEnvMouseIDtracker{dpI} = [twoEnvMouseIDtracker{dpI}; mouseI*ones(size(rhosAB))];
-                    twoEnvCellTracker{dpI} = [twoEnvCellTracker{dpI}; find(cellsUseHere)];
-            end
-        end
-        
-        % Whole maze
-        rhosABall = singleCellAllCorrsRhoAB{mouseI}{1}{dpI}(sum(cellsUseHere,2)>0);
-        rhosCDall = singleCellAllCorrsRhoCD{mouseI}{1}{dpI}(sum(cellsUseHere,2)>0);
-        
-        pValsABall = singleCellAllCorrsPab{mouseI}{1}{dpI}(sum(cellsUseHere,2)>0);
-        pValsCDall = singleCellAllCorrsPcd{mouseI}{1}{dpI}(sum(cellsUseHere,2)>0);
-        
-        rhoDiffsAll = rhosCDall - rhosABall;
-        switch groupNum(mouseI)
-            case 1
-                oneEnvRhosABAggAll{dpI} = [oneEnvRhosABAggAll{dpI}; rhosAB];
-                oneEnvRhosCDAggAll{dpI} = [oneEnvRhosCDAggAll{dpI}; rhosCD];
-                oneEnvRhoDiffsAggAll{dpI} = [oneEnvRhoDiffsAggAll{dpI}; rhoDiffs];
-                
-                oneEnvPvalsABAggAll{dpI} = [oneEnvPvalsABAggAll{dpI}; pValsABall];
-                oneEnvPvalsCDAggAll{dpI} = [oneEnvPvalsCDAggAll{dpI}; pValsCDall];
-            case 2
-                twoEnvRhosABAggAll{dpI} = [twoEnvRhosABAggAll{dpI}; rhosAB];
-                twoEnvRhosCDAggAll{dpI} = [twoEnvRhosCDAggAll{dpI}; rhosCD];
-                twoEnvRhoDiffsAggAll{dpI} = [twoEnvRhoDiffsAggAll{dpI}; rhoDiffs];
-                
-                twoEnvPvalsABAggAll{dpI} = [twoEnvPvalsABAggAll{dpI}; pValsABall];
-                twoEnvPvalsCDAggAll{dpI} = [twoEnvPvalsCDAggAll{dpI}; pValsCDall];
-        end
-    end
-    
-    % Of cells there for T1-P, how many also T2?
-    % Of cells there for T1-T2, how many also P?
-    
-    % Within arm reli change, each of these
-    %{
-    for dpI = 1:numDayTrips
-        haveCell = sum(cellSSI{mouseI}(:,allTriplePairs(dpI,:))>0,2)==3;
-        
-        % above thresh at all
-        aboveThreshAtAll = dayUse{mouseI}(haveCell,allTriplePairs(dpI,:));
-        
-        atAllThree = sum(aboveThreshAtAll,2)==3;
-        
-        TaTb = sum(aboveThreshAtAll(:,[1 3]),2)==2;
-        TaP = sum(aboveThreshAtAll(:,[1 2]),2)==2;
-        
-        turnTurnDenom = sum(sum(TaTb));
-        turnPlaceDenom = sum(sum(TaP));
-        
-        
-        switch groupNum(mouseI)
-            case 1
-                oneEnvTurnTurnThresh{dpI} = [oneEnvTurnTurnThresh{dpI}; 
-            case 2
-        
-    end
-    %}
-end
-
-
-
-% Plotting: could either KS each day pair changeAB vs. change CD, or show
-% changeComp is negative (greater change turn 1 to place than turn 1 to turn 2)
-
-
-
-
-
 
 %%  Early/late similarity
 % comparing this across days requires only using north or south to account

@@ -44,13 +44,33 @@ for mouseI = 1:6
             twoEnvRhoMeans = [twoEnvRhoMeans; meanRho];
     end
     
-    plot(meanRho,groupColors{groupNum(mouseI)})
+    plot(meanRho,'Color',groupColors{groupNum(mouseI)})
     %plot(oneEnvCorrsAll{dpI},groupColors{1})
     hold on
     %plot(twoEnvCorrsAll{dpI},groupColors{2})
     
 end
 
+
+oneEnvRho = nanmean(oneEnvRhoMeans,1);
+twoEnvRho = nanmean(twoEnvRhoMeans,1);
+oneEnvRhoStd = nanstd(oneEnvRhoMeans,1);
+oneEnvRhoSEM = oneEnvRhoStd./sum(~isnan(oneEnvRhoMeans),1);
+twoEnvRhoStd = nanstd(twoEnvRhoMeans,1);
+twoEnvRhoSEM = twoEnvRhoStd./sum(~isnan(twoEnvRhoMeans),1);
+gg = figure; 
+%plot(oneEnvRho,groupColors{1},'LineWidth',2)
+errorbar([1:numDayPairs]-0.075,oneEnvRho,oneEnvRhoSEM,'Color',groupColors{1},'LineWidth',2)
+hold on
+%plot(twoEnvRho,groupColors{2},'LineWidth',2)
+errorbar([1:numDayPairs]+0.075,twoEnvRho,twoEnvRhoSEM,'Color',groupColors{2},'LineWidth',2)
+xlabs = cellfun(@num2str,mat2cell(dayPairsForward,ones(numDayPairs,1),2),'UniformOutput',false);
+gg.Children(1).XTick = 1:numDayPairs;
+gg.Children(1).XTickLabels = xlabs;
+xlabel('Day Pair')
+ylabel('Group rho Mean +/- SEM')
+MakePlotPrettySL(gca);
+xlim([0.5 numDayPairs+0.5])
 %{
 aggLabels = {'w/Turn1','Across','w/Place','w/Turn2'};
 figure;
@@ -77,6 +97,7 @@ legend('Location','NW')
 %text(-0.75,0.6,['KS stat = ' num2str(kst)])
 %}
 % Difference of within vs. Across rules
+
 figure;
 subplot(2,2,1)
 zz = cdfplot(oneEnvWithinAll); zz.Color = groupColors{1}; zz.LineWidth = 2;
@@ -144,25 +165,6 @@ MakePlotPrettySL(gca);
 suptitleSL('CDF of single neuron rate-map correlations across vs. within rule epochs')
 %
 
-oneEnvRho = nanmean(oneEnvRhoMeans,1);
-twoEnvRho = nanmean(twoEnvRhoMeans,1);
-oneEnvRhoStd = nanstd(oneEnvRhoMeans,1);
-oneEnvRhoSEM = oneEnvRhoStd./sum(~isnan(oneEnvRhoMeans),1);
-twoEnvRhoStd = nanstd(twoEnvRhoMeans,1);
-twoEnvRhoSEM = twoEnvRhoStd./sum(~isnan(twoEnvRhoMeans),1);
-gg = figure; 
-%plot(oneEnvRho,groupColors{1},'LineWidth',2)
-errorbar([1:numDayPairs]-0.075,oneEnvRho,oneEnvRhoSEM,'Color',groupColors{1},'LineWidth',2)
-hold on
-%plot(twoEnvRho,groupColors{2},'LineWidth',2)
-errorbar([1:numDayPairs]+0.075,twoEnvRho,twoEnvRhoSEM,'Color',groupColors{2},'LineWidth',2)
-xlabs = cellfun(@num2str,mat2cell(dayPairsForward,ones(numDayPairs,1),2),'UniformOutput',false);
-gg.Children(1).XTick = 1:numDayPairs;
-gg.Children(1).XTickLabels = xlabs;
-xlabel('Day Pair')
-ylabel('Group rho Mean +/- SEM')
-MakePlotPrettySL(gca);
-xlim([0.5 numDayPairs+0.5])
 %% COM changes, within vs. across conditions
 
 for dpI = 1:numDayPairs

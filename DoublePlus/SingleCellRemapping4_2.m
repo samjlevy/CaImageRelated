@@ -161,11 +161,11 @@ for mouseI = 1:numMice
     switch length(condsUse)
         case 3
             disp('Assuming condsUse is [1 3 4]')
-            singleCellAllCorrsRho{mouseI} = corrsLoaded.singleCellThreeCorrsRho{mouseI};
-            singleCellAllCorrsP{mouseI} = corrsLoaded.singleCellThreeCorrsP{mouseI};
+            singleCellAllCorrsRho{mouseI}{1} = corrsLoaded.singleCellThreeCorrsRho{mouseI}{1}(dayPairsH);
+            singleCellAllCorrsP{mouseI}{1} = corrsLoaded.singleCellThreeCorrsP{mouseI}{1}(dayPairsH);
         case 4
-            singleCellAllCorrsRho{mouseI} = corrsLoaded.singleCellAllCorrsRho{mouseI};
-            singleCellAllCorrsP{mouseI} = corrsLoaded.singleCellAllCorrsP{mouseI};
+            singleCellAllCorrsRho{mouseI}{1} = corrsLoaded.singleCellAllCorrsRho{mouseI}{1}(dayPairsH);
+            singleCellAllCorrsP{mouseI}{1} = corrsLoaded.singleCellAllCorrsP{mouseI}{1}(dayPairsH);
         otherwise
             disp('Unaccounted for conds use')
     end
@@ -173,10 +173,10 @@ for mouseI = 1:numMice
    
     for dpI = 1:numDayPairs
         %cellBothDays{mouseI}{dpI} = sum(dayUseAll{mouseI}(:,dayPairsForward(dpI,:)),2) > 0;
-        cellBothDays{mouseI}{dpI} = sum(sum(dayUse{mouseI}(:,dayPairsForward(dpI,:),condsUse),3)>0,2) > 0;
+        cellBothDays = sum(sum(dayUse{mouseI}(:,dayPairsForward(dpI,:),condsUse),3)>0,2) > 0;
         haveCellBothDays = sum(cellSSI{mouseI}(:,dayPairsForward(dpI,:))>0,2)==2;
         
-        cellsUseHere = cellBothDays{mouseI}{dpI} & haveCellBothDays;
+        cellsUseHere = cellBothDays & haveCellBothDays;
         
         pvCellsUse{mouseI}{dpI} = cellsUseHere;
         
@@ -206,13 +206,130 @@ for mouseI = 1:numMice
         switch groupNum(mouseI)
             case 1
                 oneEnvCorrsPallPct{dpI} = [oneEnvCorrsPallPct{dpI}; sum(pValsAgg<pThresh)/length(pValsAgg)];
-                oneEnvCorrsSingle{dpI} = [oneEnvCorrsSingle{dpI}; singleCellAllCorrsRho{mouseI}{1}{dpI}(cellBothDays{mouseI}{dpI})];
-                oneEnvCorrsSingleP{dpI} = [oneEnvCorrsSingleP{dpI}; singleCellAllCorrsP{mouseI}{1}{dpI}(cellBothDays{mouseI}{dpI})];
+                oneEnvCorrsSingle{dpI} = [oneEnvCorrsSingle{dpI}; singleCellAllCorrsRho{mouseI}{1}{dpI}(cellBothDays)];
+                oneEnvCorrsSingleP{dpI} = [oneEnvCorrsSingleP{dpI}; singleCellAllCorrsP{mouseI}{1}{dpI}(cellBothDays)];
             case 2
                 twoEnvCorrsPallPct{dpI} = [twoEnvCorrsPallPct{dpI}; sum(pValsAgg<pThresh)/length(pValsAgg)];
-                twoEnvCorrsSingle{dpI} = [twoEnvCorrsSingle{dpI}; singleCellAllCorrsRho{mouseI}{1}{dpI}(cellBothDays{mouseI}{dpI})];
-                twoEnvCorrsSingleP{dpI} = [twoEnvCorrsSingleP{dpI}; singleCellAllCorrsP{mouseI}{1}{dpI}(cellBothDays{mouseI}{dpI})];
+                twoEnvCorrsSingle{dpI} = [twoEnvCorrsSingle{dpI}; singleCellAllCorrsRho{mouseI}{1}{dpI}(cellBothDays)];
+                twoEnvCorrsSingleP{dpI} = [twoEnvCorrsSingleP{dpI}; singleCellAllCorrsP{mouseI}{1}{dpI}(cellBothDays)];
         end
         
     end
+    
+        
+        
+        
 end     
+
+
+%Absolute remapping
+%{
+oneMazeHaveBothAgg = cell(1,numDayPairs);
+oneMazeStartFiringAgg = cell(1,numDayPairs);
+oneMazeStopFiringAgg = cell(1,numDayPairs);
+
+twoMazeHaveBothAgg = cell(1,numDayPairs);
+twoMazeStartFiringAgg = cell(1,numDayPairs);
+twoMazeStopFiringAgg = cell(1,numDayPairs);
+oneMazeHaveBothEachAgg = cell(numDayPairs,numConds);
+oneMazeStartFiringEachAgg = cell(numDayPairs,numConds);
+oneMazeStopFiringEachAgg = cell(numDayPairs,numConds);
+
+twoMazeHaveBothEachAgg = cell(numDayPairs,numConds);
+twoMazeStartFiringEachAgg = cell(numDayPairs,numConds);
+twoMazeStopFiringEachAgg = cell(numDayPairs,numConds);
+
+oneArmActiveChange = cell(1,numDayPairs); twoArmActiveChange = cell(1,numDayPairs);
+for mouseI = 1:numMice
+    for dpI = 1:numDayPairs
+        anyActive = sum(dayUseAll{mouseI}(:,dayPairsForward(dpI,:)),1);
+        if sum(anyActive>0) == 2
+            % Day change at all above thresh
+            cellAboveThresh = sum(dayUse{mouseI}(:,dayPairsForward(dpI,:),condsUse),3)>0;
+            haveCellBothDays = sum(cellSSI{mouseI}(:,dayPairsForward(dpI,:))>0,2)==2;
+            cellsUseHere = sum(cellAboveThresh,2)>0 & haveCellBothDays;
+            
+            cellBothDays = sum(cellAboveThresh(cellsUseHere,:),2)==2;
+            cellOneDay = sum(cellAboveThresh(cellsUseHere,:),2)==1;
+            
+            cellFirstDay = cellAboveThresh(cellsUseHere,1);
+            cellSecondDay = cellAboveThresh(cellsUseHere,2);
+            
+            startsFiring = cellSecondDay & cellOneDay;
+            stopsFiring = cellFirstDay & cellOneDay;
+            
+            nHaveBoth = sum(haveCellBothDays);
+            
+            pctHaveBoth{mouseI}(dpI,1) = sum(cellBothDays)/nHaveBoth;
+            pctStartFiring{mouseI}(dpI,1) = sum(startsFiring)/nHaveBoth;
+            pctStopFiring{mouseI}(dpI,1) = sum(stopsFiring)/nHaveBoth;
+            
+            switch groupNum(mouseI)
+                case 1
+                    oneMazeHaveBothAgg{dpI} = [oneMazeHaveBothAgg{dpI}; pctHaveBoth{mouseI}(dpI)];
+                    oneMazeStartFiringAgg{dpI} = [oneMazeStartFiringAgg{dpI}; pctStartFiring{mouseI}(dpI)];
+                    oneMazeStopFiringAgg{dpI} = [oneMazeStopFiringAgg{dpI}; pctStopFiring{mouseI}(dpI)];
+                case 2
+                    twoMazeHaveBothAgg{dpI} = [twoMazeHaveBothAgg{dpI}; pctHaveBoth{mouseI}(dpI)];
+                    twoMazeStartFiringAgg{dpI} = [twoMazeStartFiringAgg{dpI}; pctStartFiring{mouseI}(dpI)];
+                    twoMazeStopFiringAgg{dpI} = [twoMazeStopFiringAgg{dpI}; pctStopFiring{mouseI}(dpI)];
+            end
+                
+            for condI = 1:numel(condsUse)
+                cellAboveThresh = dayUse{mouseI}(:,dayPairsForward(dpI,:),condsUse(condI));
+                haveCellBothDays = sum(cellSSI{mouseI}(:,dayPairsForward(dpI,:))>0,2)==2;
+                cellsUseHere = sum(cellAboveThresh,2)>0 & haveCellBothDays;
+            
+                cellBothDays = sum(cellAboveThresh(cellsUseHere,:),2)==2;
+                cellOneDay = sum(cellAboveThresh(cellsUseHere,:),2)==1;
+            
+                cellFirstDay = cellAboveThresh(cellsUseHere,1);
+                cellSecondDay = cellAboveThresh(cellsUseHere,2);
+            
+                startsFiring = cellSecondDay & cellOneDay;
+                stopsFiring = cellFirstDay & cellOneDay;
+            
+                nHaveBoth = sum(haveCellBothDays);
+            
+                pctHaveBothEach{mouseI}(dpI,condI) = sum(cellBothDays)/nHaveBoth;
+                pctStartFiringEach{mouseI}(dpI,condI) = sum(startsFiring)/nHaveBoth;
+                pctStopFiringEach{mouseI}(dpI,condI) = sum(stopsFiring)/nHaveBoth;
+                
+                switch groupNum(mouseI)
+                    case 1
+                        oneMazeHaveBothEachAgg{dpI,condI} = [oneMazeHaveBothEachAgg{dpI,condI}; pctHaveBothEach{mouseI}(dpI,condI)];
+                        oneMazeStartFiringEachAgg{dpI,condI} = [oneMazeStartFiringEachAgg{dpI,condI}; pctStartFiringEach{mouseI}(dpI,condI)];
+                        oneMazeStopFiringEachAgg{dpI,condI} = [oneMazeStopFiringEachAgg{dpI,condI}; pctStopFiringEach{mouseI}(dpI,condI)];
+                    case 2
+                        twoMazeHaveBothEachAgg{dpI,condI} = [twoMazeHaveBothEachAgg{dpI,condI}; pctHaveBothEach{mouseI}(dpI,condI)];
+                        twoMazeStartFiringEachAgg{dpI,condI} = [twoMazeStartFiringEachAgg{dpI,condI}; pctStartFiringEach{mouseI}(dpI,condI)];
+                        twoMazeStopFiringEachAgg{dpI,condI} = [twoMazeStopFiringEachAgg{dpI,condI}; pctStopFiringEach{mouseI}(dpI,condI)];
+                end
+            end
+            
+            % Distribution across arms
+            %haveCellBothDays = sum(cellSSI{mouseI}(:,dayPairsForward(dpI,:))>0,2)==2;
+            armActiveA = squeeze(dayUse{mouseI}(:,dayPairsForward(dpI,1),condsUse));
+            nActiveA = sum(armActiveA,1);
+            totalActiveA = sum(dayUseAll{mouseI}(:,dayPairsForward(dpI,1)));
+            pctActiveA = nActiveA/totalActiveA;
+            
+            armActiveB = squeeze(dayUse{mouseI}(:,dayPairsForward(dpI,2),condsUse));
+            nActiveB = sum(armActiveB,1);
+            totalActiveB = sum(dayUseAll{mouseI}(:,dayPairsForward(dpI,2)));
+            pctActiveB = nActiveB/totalActiveB;
+            
+            pctArmActiveChange{mouseI}(dpI,:) = pctActiveB-pctActiveA;
+            
+            switch groupNum(mouseI)
+                case 1
+                    oneArmActiveChange{dpI} = [oneArmActiveChange{dpI}; pctArmActiveChange{mouseI}];
+                case 2
+                    twoArmActiveChange{dpI} = [twoArmActiveChange{dpI}; pctArmActiveChange{mouseI}];
+            end
+        end
+            
+    end   
+end
+
+%}

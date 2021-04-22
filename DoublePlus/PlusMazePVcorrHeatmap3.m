@@ -1,6 +1,10 @@
 function [figHand] = PlusMazePVcorrHeatmap3(corrsPlot,plotBins,gradientUse,gradientLims,titles)
 
 %numDayPairs = size(dayPairs,1);
+% if ~iscell(corrsPlot)
+%     cp = corrsPlot;
+%     corrsPlot = {cp};
+% end
 numDayPairs = size(corrsPlot,1);
 numBins = size(corrsPlot,2);
 

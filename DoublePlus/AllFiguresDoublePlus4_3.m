@@ -5,7 +5,7 @@ oneData = oneEnvCOMagg;
 twoData = twoEnvCOMagg;
 % Histogram
 rangeHere = [0 12];
-histbins = linspace(0,12,51);
+histbins = linspace(min(rangeHere),max(rangeHere),51);
 histcountsOne = histcounts(oneData,histbins);
 histcountsTwo = histcounts(twoData,histbins);
 oneFirst = histcountsOne < histcountsTwo;
@@ -23,6 +23,32 @@ ylabel('Number of cells')
 %legend('Two-Maze','One-Maze','Location','NE')
 legend('Location','NE')
 MakePlotPrettySL(gca)
+
+
+figure('Position',[661.5000 184.5000 303 351.5000]); subplot(2,1,1)
+ii = histogram(oneData,histbins,'FaceColor',groupColors{1},'FaceAlpha',1); %[0.0745    0.6235    1.0000]
+ii.DisplayName = 'One-Maze';
+title('One-Maze')
+%ylabel('Number of cells')
+ylabel('Proportion of cells')
+xlabel('Center-of-Mass shift (bins)')
+ii.Normalization = 'probability';
+ylim([0 0.04])
+xlim(rangeHere)
+MakePlotPrettySL(gca)
+
+subplot(2,1,2)
+hh = histogram(twoData,histbins,'FaceColor',groupColors{2},'FaceAlpha',1);%[1 0.3235 0.0745]
+hh.DisplayName = 'Two-Maze';
+hh.Normalization = 'probability';
+ylim([0 0.04])
+xlim(rangeHere)
+title('Two-Maze')
+xlabel('Center-of-Mass shift (bins)')
+%ylabel('Number of cells')
+ylabel('Proportion of cells')
+MakePlotPrettySL(gca)
+suptitleSL('Turn Right 1 vs. Turn Right 2')
 
 % ECDF
 figure; 
@@ -47,7 +73,7 @@ oneData = oneEnvRateAgg;
 twoData = twoEnvRateAgg;
 % Histogram
 rangeHere = [0 1];
-histbins = linspace(0,1,25);
+histbins = linspace(min(rangeHere),max(rangeHere),25);
 histcountsOne = histcounts(oneData,histbins);
 histcountsTwo = histcounts(twoData,histbins);
 oneFirst = histcountsOne < histcountsTwo;
@@ -67,6 +93,31 @@ xlabel('Mean event likelihood change')
 ylabel('Number of cells')
 legend('Location','NW')
 MakePlotPrettySL(gca)
+
+figure; subplot(2,1,1)
+ii = histogram(oneData,histbins,'FaceColor',groupColors{1},'FaceAlpha',1); %[0.0745    0.6235    1.0000]
+ii.DisplayName = 'One-Maze';
+title('One-Maze')
+%ylabel('Number of cells')
+ylabel('Proportion of cells')
+xlabel('Mean event likelihood change')
+ii.Normalization = 'probability';
+ylim([0 0.025])
+xlim(rangeHere)
+MakePlotPrettySL(gca)
+
+subplot(2,1,2)
+hh = histogram(twoData,histbins,'FaceColor',groupColors{2},'FaceAlpha',1);%[1 0.3235 0.0745]
+hh.DisplayName = 'Two-Maze';
+hh.Normalization = 'probability';
+ylim([0 0.025])
+xlim(rangeHere)
+title('Two-Maze')
+xlabel('Mean event likelihood change')
+%ylabel('Number of cells')
+ylabel('Proportion of cells')
+MakePlotPrettySL(gca)
+suptitleSL('Turn Right 1 vs. Turn Right 2')
 
 % ECDF
 figure; 
@@ -92,31 +143,56 @@ oneData = oneEnvCorrsAgg;
 twoData = twoEnvCorrsAgg;
 % Histogram
 rangeHere = [-1 1];
-histbins = linspace(0,1,25);
+histbins = linspace(min(rangeHere),max(rangeHere),25);
 histcountsOne = histcounts(oneData,histbins);
 histcountsTwo = histcounts(twoData,histbins);
 oneFirst = histcountsOne < histcountsTwo;
 bd = 14;
 figure;
-ii = histogram(oneData,histbins,'FaceColor',[0.0745    0.6235    1.0000],'FaceAlpha',1);
+ii = histogram(oneData,histbins,'FaceColor',groupColors{1},'FaceAlpha',1); %[0.0745    0.6235    1.0000]
 ii.DisplayName = 'One-Maze';
 hold on
-hh = histogram(twoData,histbins,'FaceColor',[1 0.3235 0.0745],'FaceAlpha',1);
+hh = histogram(twoData,histbins,'FaceColor',groupColors{2},'FaceAlpha',1);%[1 0.3235 0.0745]
 hh.DisplayName = 'Two-Maze';
 xlabel('Correlation (Spearman rho)')
 ylabel('Number of cells')
 legend('Location','NW')
 MakePlotPrettySL(gca)
 
+figure; subplot(2,1,1)
+ii = histogram(oneData,histbins,'FaceColor',groupColors{1},'FaceAlpha',1); %[0.0745    0.6235    1.0000]
+ii.DisplayName = 'One-Maze';
+title('One-Maze')
+%ylabel('Number of cells')
+ylabel('Proportion of cells')
+xlabel('Correlation (Spearman rho)')
+ii.Normalization = 'probability';
+ylim([0 0.04])
+xlim(rangeHere)
+MakePlotPrettySL(gca)
+
+subplot(2,1,2)
+hh = histogram(twoData,histbins,'FaceColor',groupColors{2},'FaceAlpha',1);%[1 0.3235 0.0745]
+hh.DisplayName = 'Two-Maze';
+hh.Normalization = 'probability';
+ylim([0 0.04])
+xlim(rangeHere)
+title('Two-Maze')
+xlabel('Correlation (Spearman rho)')
+%ylabel('Number of cells')
+ylabel('Proportion of cells')
+MakePlotPrettySL(gca)
+suptitleSL('Turn Right 1 vs. Turn Right 2')
+
 % ECDF
 figure; 
 yy = cdfplot(oneData);
 yy.Color = groupColors{1}; %yy.Color = 'b';
-yy.LineWidth = 2;
+yy.LineWidth = 4;
 hold on
 zz = cdfplot(twoData);
-zz.Color = groupColors{2}; %zz.Color = 'r';
-zz.LineWidth = 2;
+zz.Color = [0.9294    0.6941    0.1255];%groupColors{2}; %zz.Color = 'r';
+zz.LineWidth = 4;
 xlabel('Correlation (Spearman rho)'); 
 ylabel('Cumulative Proportion')
 [p,h] = ranksum(oneData,twoData);
@@ -125,11 +201,784 @@ textX = (max(rangeHere)-min(rangeHere))*0.45+min(rangeHere);
 text(textX,0.5,['RS p= ' num2str(p)])
 text(textX,0.65,['KS p= ' num2str(pKS)])
 text(textX,0.8,['KS stat = ' num2str(ksStat)])
+title('Turn Right 1 vs. Turn Right 2')
 MakePlotPrettySL(gca);
 
+%% Each arms
+% COM shift
+
+for groupI = 1:2
+figure('Position',[520 131 735.5000 667]); 
+craw = numel(condsUse)-1;
+for ccI = 1:size(condsCompare,1)
+    cRow = condsCompare(ccI,1);
+    cCol = condsCompare(ccI,2);
+    subplot(craw,craw,(cRow-1)*craw+cCol-1)
+    
+    switch groupI
+        case 1
+            oneData = oneEnvCOMaggEach{cRow};
+            twoData = oneEnvCOMaggEach{cCol};
+            sTitle = 'One';
+        case 2
+            oneData = twoEnvCOMaggEach{cRow};
+            twoData = twoEnvCOMaggEach{cCol};
+            sTitle = 'Two';
+    end
+    
+    oneLab = armLabels{condsUse(cRow)};
+    twoLab = armLabels{condsUse(cCol)};
+
+    yy = cdfplot(oneData);
+    yy.Color = groupColors{groupI}; %yy.Color = 'b';
+    yy.LineWidth = 2;
+    yy.LineStyle = ':';
+    yy.DisplayName = upper(oneLab);
+    hold on
+    zz = cdfplot(twoData);
+    zz.Color = groupColors{groupI}; %zz.Color = 'r';
+    zz.LineWidth = 2;
+    zz.DisplayName = upper(twoLab);
+    zz.LineStyle = '--';
+    xlabel('Mean COM shift'); ylabel('Cumulative Proportion')
+    [p,h] = ranksum(oneData,twoData);
+    [hKS,pKS,ksStat] = kstest2(oneData,twoData);
+    textX = (max(rangeHere)-min(rangeHere))*0.45+min(rangeHere);
+    text(textX,0.5,['RS p= ' num2str(p)])
+    text(textX,0.65,['KS p= ' num2str(pKS)])
+    text(textX,0.8,['KS stat = ' num2str(ksStat)])
+    %title([upper(oneLab) ' vs. ' upper(twoLab)])
+    legend('Location','SE')
+    MakePlotPrettySL(gca);
+end
+suptitleSL([sTitle '-Maze COM shifts'])
+end
+
+% Rate remapping
+rangeHere = [0 1];
+for groupI = 1:2
+figure('Position',[520 131 735.5000 667]); 
+craw = numel(condsUse)-1;
+for ccI = 1:size(condsCompare,1)
+    cRow = condsCompare(ccI,1);
+    cCol = condsCompare(ccI,2);
+    subplot(craw,craw,(cRow-1)*craw+cCol-1)
+    
+    switch groupI
+        case 1
+            oneData = oneEnvRateAggEach{cRow};
+            twoData = oneEnvRateAggEach{cCol};
+            sTitle = 'One';
+        case 2
+            oneData = twoEnvRateAggEach{cRow};
+            twoData = twoEnvRateAggEach{cCol};
+            sTitle = 'Two';
+    end
+    
+    oneLab = armLabels{condsUse(cRow)};
+    twoLab = armLabels{condsUse(cCol)};
+
+    yy = cdfplot(oneData);
+    yy.Color = groupColors{groupI}; %yy.Color = 'b';
+    yy.LineWidth = 2;
+    yy.LineStyle = ':';
+    yy.DisplayName = upper(oneLab);
+    hold on
+    zz = cdfplot(twoData);
+    zz.Color = groupColors{groupI}; %zz.Color = 'r';
+    zz.LineWidth = 2;
+    zz.DisplayName = upper(twoLab);
+    zz.LineStyle = '--';
+    xlabel('Mean event likelihood change'); ylabel('Cumulative Proportion')
+    [p,h] = ranksum(oneData,twoData);
+    [hKS,pKS,ksStat] = kstest2(oneData,twoData);
+    textX = (max(rangeHere)-min(rangeHere))*0.45+min(rangeHere);
+    text(textX,0.5,['RS p= ' num2str(p)])
+    text(textX,0.65,['KS p= ' num2str(pKS)])
+    text(textX,0.8,['KS stat = ' num2str(ksStat)])
+    %title([upper(oneLab) ' vs. ' upper(twoLab)])
+    legend('Location','SE')
+    MakePlotPrettySL(gca);
+end
+suptitleSL([sTitle '-Maze Event Likelihood change'])
+end
+
+% Plot all...
+lineStyles = {':','--','-.','-'};
+for groupI = 1:2
+    figure;
+    for condI = 1:4
+         switch groupI
+        case 1
+            oneData = oneEnvRateAggEach{condI};
+            sTitle = 'One';
+        case 2
+            oneData = twoEnvRateAggEach{condI};
+            sTitle = 'Two';
+         end
+    yy = cdfplot(oneData);
+    %yy.Color = groupColors{groupI}; %yy.Color = 'b';
+    yy.LineWidth = 2;
+    yy.LineStyle = lineStyles{condI};
+    yy.DisplayName = upper(armLabels{condI});
+    hold on
+    end
+    legend('Location','SE')
+    title([sTitle '-Maze Event Likelihood change'])
+    xlabel('Mean event likelihood change'); ylabel('Cumulative Proportion')
+end
+   
+
+% Corrs 
+rangeHere = [-1 1];
+for groupI = 1:2
+figure('Position',[520 131 735.5000 667]); 
+craw = numel(condsUse)-1;
+for ccI = 1:size(condsCompare,1)
+    cRow = condsCompare(ccI,1);
+    cCol = condsCompare(ccI,2);
+    subplot(craw,craw,(cRow-1)*craw+cCol-1)
+    
+    switch groupI
+        case 1
+            oneData = oneEnvCorrsAggEach{cRow};
+            twoData = oneEnvCorrsAggEach{cCol};
+            sTitle = 'One';
+        case 2
+            oneData = twoEnvCorrsAggEach{cRow};
+            twoData = twoEnvCorrsAggEach{cCol};
+            sTitle = 'Two';
+    end
+    
+    oneLab = armLabels{condsUse(cRow)};
+    twoLab = armLabels{condsUse(cCol)};
+
+    yy = cdfplot(oneData);
+    yy.Color = groupColors{groupI}; %yy.Color = 'b';
+    yy.LineWidth = 2;
+    yy.LineStyle = ':';
+    yy.DisplayName = upper(oneLab);
+    hold on
+    zz = cdfplot(twoData);
+    zz.Color = groupColors{groupI}; %zz.Color = 'r';
+    zz.LineWidth = 2;
+    zz.DisplayName = upper(twoLab);
+    zz.LineStyle = '--';
+    xlabel('Rho'); ylabel('Cumulative Proportion')
+    [p,h] = ranksum(oneData,twoData);
+    [hKS,pKS,ksStat] = kstest2(oneData,twoData);
+    textX = (max(rangeHere)-min(rangeHere))*0.45+min(rangeHere);
+    text(textX,0.5,['RS p= ' num2str(p)])
+    text(textX,0.65,['KS p= ' num2str(pKS)])
+    text(textX,0.8,['KS stat = ' num2str(ksStat)])
+    %title([upper(oneLab) ' vs. ' upper(twoLab)])
+    legend('Location','SE')
+    MakePlotPrettySL(gca);
+end
+suptitleSL([sTitle '-Maze Single Cell Correlations'])
+end
 %% PV corrs Turn1-Turn2
 
+locations = [0 0.5 1];
+colors = [1.0000    0.0    0.000;
+            1 1 1;
+            0    0.45   0.74];           
+newGradient = GradientMaker(colors,locations);
 
+plotBins.X = []; plotBins.Y = [];
+for condI = 1:numel(condsUse)
+    plotBins.X = [plotBins.X; lgPlotHere{condsUse(condI)}.X];
+    plotBins.Y = [plotBins.Y; lgPlotHere{condsUse(condI)}.Y];
+end
+[figHand] = PlusMazePVcorrHeatmap3(oneEnvPVcorrs,plotBins,newGradient,[-0.1, 0.3],[]);
+figHand.Position=[243.5000 212.5000 531.5000 399.5000];
+title('One-Maze')
+
+[figHand] = PlusMazePVcorrHeatmap3(twoEnvPVcorrs,plotBins,newGradient,[-0.1, 0.3],[]);
+figHand.Position=[243.5000 212.5000 531.5000 399.5000];
+title('Two-Maze')
+
+labelsH = {'0.3','0.1','-0.1'};
+PlotColorbar(newGradient,labelsH)
+
+condsCompare
+for ccI = 1:size(condsCompare,1)
+    condA = condsCompare(ccI,1);
+    condB = condsCompare(ccI,2);
+    
+    binsA = [1:nArmBins]+nArmBins*(condA-1);
+    binsB = [1:nArmBins]+nArmBins*(condB-1);
+    [p,~] = ranksum(oneEnvPVcorrs(binsA(:)),oneEnvPVcorrs(binsB(:)));
+    %oneEnvMicePVcorrsMeans(:,binsA(:)),
+    oneEnvCorrsP(condA,condB) = p;
+
+    [p,~] = ranksum(twoEnvPVcorrs(binsA(:)),twoEnvPVcorrs(binsB(:)));
+    
+    twoEnvCorrsP(condA,condB) = p;
+    
+end
+
+%% Adj days
+
+% This is for change across rule epochs vs. change within
+daysAcross = zeros(8,1);
+daysAcross([3 6]) = 1;
+
+%figure;
+oneEnvRhoMeans = []; twoEnvRhoMeans = [];
+oneEnvWithinAll = []; oneEnvAcrossAll = [];
+twoEnvWithinAll = []; twoEnvAcrossAll = [];
+oneEnvAggGroup = cell(1,4); twoEnvAggGroup = cell(1,4);
+for mouseI = 1:6
+    meanRho = [];
+    for dpI = 1:numDayPairs
+        dataH = singleCellAllCorrsRho{mouseI}{1}{dpI}(pvCellsUse{mouseI}{dpI});
+        meanRho(dpI) = nanmean(dataH);
+        
+        switch groupNum(mouseI)
+        case 1
+            %oneEnvAggGroup{aggGroups(dpI)} = [oneEnvAggGroup{aggGroups(dpI)}; dataH];
+            
+            if daysAcross(dpI) == 0
+                oneEnvWithinAll = [oneEnvWithinAll; dataH];
+            elseif daysAcross(dpI) == 1
+                oneEnvAcrossAll = [oneEnvAcrossAll; dataH];
+            end
+            %}
+        case 2
+            %twoEnvAggGroup{aggGroups(dpI)} = [twoEnvAggGroup{aggGroups(dpI)}; dataH];
+            
+            if daysAcross(dpI) == 0
+                twoEnvWithinAll = [twoEnvWithinAll; dataH];
+            elseif daysAcross(dpI) == 1
+                twoEnvAcrossAll = [twoEnvAcrossAll; dataH];
+            end
+            %}
+    end
+    end
+    
+    switch groupNum(mouseI)
+        case 1
+            oneEnvRhoMeans = [oneEnvRhoMeans; meanRho];
+        case 2
+            twoEnvRhoMeans = [twoEnvRhoMeans; meanRho];
+    end
+    
+    %plot(meanRho,'Color',groupColors{groupNum(mouseI)})
+    %plot(oneEnvCorrsAll{dpI},groupColors{1})
+    %hold on
+    %plot(twoEnvCorrsAll{dpI},groupColors{2})
+    
+end
+
+%{
+oneEnvRho = nanmean(oneEnvRhoMeans,1);
+twoEnvRho = nanmean(twoEnvRhoMeans,1);
+oneEnvRhoStd = nanstd(oneEnvRhoMeans,1);
+oneEnvRhoSEM = oneEnvRhoStd./sum(~isnan(oneEnvRhoMeans),1);
+twoEnvRhoStd = nanstd(twoEnvRhoMeans,1);
+twoEnvRhoSEM = twoEnvRhoStd./sum(~isnan(twoEnvRhoMeans),1);
+gg = figure; 
+%plot(oneEnvRho,groupColors{1},'LineWidth',2)
+errorbar([1:numDayPairs]-0.075,oneEnvRho,oneEnvRhoSEM,'Color',groupColors{1},'LineWidth',2)
+hold on
+%plot(twoEnvRho,groupColors{2},'LineWidth',2)
+errorbar([1:numDayPairs]+0.075,twoEnvRho,twoEnvRhoSEM,'Color',groupColors{2},'LineWidth',2)
+xlabs = cellfun(@num2str,mat2cell(dayPairsForward,ones(numDayPairs,1),2),'UniformOutput',false);
+gg.Children(1).XTick = 1:numDayPairs;
+gg.Children(1).XTickLabels = xlabs;
+xlabel('Day Pair')
+ylabel('Group rho Mean +/- SEM')
+MakePlotPrettySL(gca);
+xlim([0.5 numDayPairs+0.5])
+%}
+
+figure;
+subplot(2,2,1)
+zz = cdfplot(oneEnvWithinAll); zz.Color = groupColors{1}; zz.LineWidth = 2;
+zz.DisplayName = 'Within'; zz.LineStyle = ':';
+hold on
+yy = cdfplot(oneEnvAcrossAll); yy.Color = groupColors{1}; yy.LineWidth = 2;
+yy.DisplayName = 'Across'; yy.LineStyle = '-.';
+[~,kss,kst] = kstest2(oneEnvWithinAll,oneEnvAcrossAll);
+title('One-Maze')
+legend('Location','NW')
+text(-0.75,0.7,['KS p = ' num2str(kss)])
+text(-0.75,0.6,['KS stat = ' num2str(kst)])
+xlabel('Rho')
+ylabel('ECDF')
+MakePlotPrettySL(gca);
+
+subplot(2,2,2)
+zz = cdfplot(twoEnvWithinAll); zz.Color = groupColors{2}; zz.LineWidth = 2;
+zz.DisplayName = 'Within'; zz.LineStyle = ':';
+hold on
+yy = cdfplot(twoEnvAcrossAll); yy.Color = groupColors{2}; yy.LineWidth = 2;
+yy.DisplayName = 'Across'; yy.LineStyle = '-.';
+[~,kss,kst] = kstest2(twoEnvWithinAll,twoEnvAcrossAll);
+title('Two-Maze')
+legend('Location','NW')
+text(-0.75,0.7,['KS p = ' num2str(kss)])
+text(-0.75,0.6,['KS stat = ' num2str(kst)])
+xlabel('Rho')
+ylabel('ECDF')
+MakePlotPrettySL(gca);
+%suptitleSL('CDF of single neuron rate-map correlations across vs. within rule epochs')
+
+% One vs Two within/across
+%figure;
+subplot(2,2,3)
+zz = cdfplot(oneEnvWithinAll); zz.Color = groupColors{1}; zz.LineWidth = 2;
+zz.DisplayName = 'OneMaze'; zz.LineStyle = ':';
+hold on
+yy = cdfplot(twoEnvWithinAll); yy.Color = groupColors{2}; yy.LineWidth = 2;
+yy.DisplayName = 'TwoMaze'; yy.LineStyle = ':';
+[~,kss,kst] = kstest2(oneEnvWithinAll,twoEnvWithinAll);
+title('Within Rules')
+legend('Location','NW')
+text(-0.75,0.7,['KS p = ' num2str(kss)])
+text(-0.75,0.6,['KS stat = ' num2str(kst)])
+xlabel('Rho')
+ylabel('ECDF')
+MakePlotPrettySL(gca);
+
+subplot(2,2,4)
+zz = cdfplot(oneEnvAcrossAll); zz.Color = groupColors{1}; zz.LineWidth = 2;
+zz.DisplayName = 'OneMaze'; zz.LineStyle = '-.';
+hold on
+yy = cdfplot(twoEnvAcrossAll); yy.Color = groupColors{2}; yy.LineWidth = 2;
+yy.DisplayName = 'TwoMaze'; yy.LineStyle = '-.';
+[~,kss,kst] = kstest2(oneEnvAcrossAll,twoEnvAcrossAll);
+title('Across Rules')
+legend('Location','NW')
+text(-0.75,0.7,['KS p = ' num2str(kss)])
+text(-0.75,0.6,['KS stat = ' num2str(kst)])
+xlabel('Rho')
+ylabel('ECDF')
+MakePlotPrettySL(gca);
+
+suptitleSL('CDF of single neuron rate-map correlations across vs. within rule epochs')
+%
+
+% PV Corrs
+gg = figure;
+errorbar([1:numDayPairs]-0.1,oneEnvPVmeansAll,oneEnvPVsemAll,'Color',groupColors{1},'LineWidth',2)
+hold on
+errorbar([1:numDayPairs]+0.1,twoEnvPVmeansAll,twoEnvPVsemAll,'Color',groupColors{2},'LineWidth',2)
+
+xlim([0.8 8.2])
+gg.Children.XTick = 1:numDayPairs;
+gg.Children.XTickLabel = num2str(dayPairsForward);
+xlabel('Day Pairs')
+ylabel('Correlation (Spearman rho)')
+MakePlotPrettySL(gg.Children);
+
+%% Separate states
+
+figure;
+for dpgI = 1:3
+    for condI = 1:3
+        subplot(3,3,condI+3*(dpgI-1))
+        %plot(oneEnvDGcorrsMean{dpgI}{cpI},groupColors{1})
+        errorbar(oneEnvDGcorrsMean{dpgI}{condI},oneEnvDGcorrsSEM{dpgI}{condI},groupColors{1},'LineWidth',2)
+        hold on
+        %plot(twoEnvDGcorrsMean{dpgI}{cpI},groupColors{2})
+        errorbar(twoEnvDGcorrsMean{dpgI}{condI},twoEnvDGcorrsSEM{dpgI}{condI},groupColors{2},'LineWidth',2)
+        title([dayGroupLabels{dpgI} ' ' armLabels{condsHere(condI)}])
+        xlabel('Bin'); ylabel('Corr. (rho)')
+        MakePlotPrettySL(gca);
+    end
+end
+suptitleSL('PV corrs averaged across all day pairs for epoch indicated')
+
+
+locations = [0 0.5 1];
+colors = [1.0000    0.0    0.000;
+            1 1 1;
+            0    0.45   0.74];           
+newGradient = GradientMaker(colors,locations);
+
+oneEnvDGmeanAll = cell2mat(oneEnvDGmeanAgg);
+twoEnvDGmeanAll = cell2mat(twoEnvDGmeanAgg);
+plotBins.X = []; plotBins.Y = [];
+for condI = 1:length(condsUse)
+    plotBins.X = [plotBins.X; lgPlotHere{condsUse(condI)}.X];
+    plotBins.Y = [plotBins.Y; lgPlotHere{condsUse(condI)}.Y];
+end
+[figHand] = PlusMazePVcorrHeatmap3(oneEnvDGmeanAll,plotBins,newGradient,[-0.3, 0.3],dayGroupLabels);
+for ii = 1:3; subplot(1,3,ii); MakePlotPrettySL(gca); end
+suptitleSL('One-Maze')
+
+[figHand] = PlusMazePVcorrHeatmap3(twoEnvDGmeanAll,plotBins,newGradient,[-0.3, 0.3],dayGroupLabels);
+for ii = 1:3; subplot(1,3,ii); MakePlotPrettySL(gca); end
+suptitleSL('Two-Maze')
+
+labelsH = {'0.3','0','-0.3'};
+PlotColorbar(newGradient,labelsH)
+
+
+%% Reinstatement
+
+% Aggregate aggregate
+oneEnvABall = [];
+oneEnvCDall = [];
+twoEnvABall = [];
+twoEnvCDall = [];
+for dpI = 1:numDayTrips
+    pData = oneEnvRhosABAggAll{dpI};
+    tData = oneEnvRhosCDAggAll{dpI};
+    oneEnvABall = [oneEnvABall; pData];
+    oneEnvCDall = [oneEnvCDall; tData];
+    
+    pData = twoEnvRhosABAggAll{dpI};
+    tData = twoEnvRhosCDAggAll{dpI};
+    twoEnvABall = [twoEnvABall; pData];
+    twoEnvCDall = [twoEnvCDall; tData];
+end
+
+figure; 
+yy = cdfplot(oneEnvCDall - oneEnvABall);
+%yy.LineStyle = ':';
+yy.Color = groupColors{1};
+yy.DisplayName = 'One-Maze';
+yy.LineWidth = 2;
+hold on
+zz = cdfplot(twoEnvCDall - twoEnvABall);
+%zz.LineStyle = '--';
+zz.Color = groupColors{2};
+zz.DisplayName = 'Two-Maze';
+zz.LineWidth = 2;
+xlabel('Correlation Difference')
+title('corr(Turn1, Turn2) - corr(Turn1, Place)')
+ylabel('Cumulative proportion')
+[h,pKS,kstat] = kstest2(twoEnvCDall - twoEnvABall,oneEnvCDall - oneEnvABall);
+text(-1.5,0.7,['KS p = ' num2str(pKS)])
+text(-1.5,0.8,['KS stat = ' num2str(kstat)])
+MakePlotPrettySL(gca);
+
+% Pct cells with higher positive correlation in Turn1-Turn2 than
+% Turn1-Place
+% Re-extracting mouse, cell from this might be tough...
+for dpI = 1:numDayTrips
+    % Positive diffs: 
+    aa = oneEnvRhoDiffsAgg{dpI} > 0;
+    % Significant p val:
+    bb = oneEnvPvalsCDAgg{dpI} < pThresh;
+    % Positive Turn1-Turn2 rho
+    cc = oneEnvRhosCDAgg{dpI} > 0;
+    % Negative Turn1-place rho:
+    dd = oneEnvRhosABAgg{dpI} < 0;
+    % Significantly negative?
+    ff = oneEnvPvalsABAgg{dpI} < pThresh;
+    
+    ee = aa & bb & cc & dd & ff;%;
+    ee = aa & dd;
+    
+    oneEnvEE(dpI) = sum(ee)/length(ee);
+    
+    aa = twoEnvRhoDiffsAgg{dpI} > 0;
+    % Significant p val:
+    bb = twoEnvPvalsCDAgg{dpI} < pThresh;
+    % Positive Turn1-Turn2 rho
+    cc = twoEnvRhosCDAgg{dpI} > 0;
+    % Negative Turn1-place rho:
+    dd = twoEnvRhosABAgg{dpI} < 0;
+    % Significantly negative?
+    ff = twoEnvPvalsABAgg{dpI} < pThresh;
+    
+    ee = aa & bb & cc & dd & ff;%;
+    ee = aa & dd;
+    
+    twoEnvEE(dpI) = sum(ee)/length(ee);
+    
+end
+figure('Position',[247 246.5000 252.5000 423.5000]); 
+for ii = 1:27; plot([1 2],[oneEnvEE(ii) twoEnvEE(ii)],'Color',[0.4 0.4 0.4]); hold on; end
+title({'Pct cells with higher rho Turn1-Turn2 than Turn1-Place';'p<0.05 only'})
+set(gca,'XTick',[1 2])
+set(gca,'XTickLabels',{'OneMaze','TwoMaze'})
+xlim([0.75 2.25])
+
+% Finding cells for example reinstatement
+   %{
+    mouseI = oneEnvMouseIDtracker{dpI}(1)
+    cellI = oneEnvCellTracker{dpI}(1)
+    vv = [cellTMap{mouseI}{cellI,1,:}];
+    mm = [cellTMap{mouseI}{cellI,8,:}];
+    nn = [cellTMap{mouseI}{cellI,4,:}];
+    [vv(:), nn(:), mm(:)]
+    [rr,pp] = corr(vv(:),nn(:))
+    [rr,pp] = corr(vv(:),mm(:))
+    %}
+
+% Single-cell ratemap corr all day triplets
+for groupI = 1:2
+figure;
+for dpI = 1:numDayTrips
+    subplot(3,9,dpI)
+    switch groupI
+        case 1
+            pData = oneEnvRhosABAggAll{dpI};
+            tData = oneEnvRhosCDAggAll{dpI};
+        case 2
+            pData = twoEnvRhosABAggAll{dpI};
+            tData = twoEnvRhosCDAggAll{dpI};
+    end
+    yy = cdfplot(pData);
+    yy.Color = groupColors{groupI};
+    yy.LineStyle = ':';
+    yy.LineWidth = 1.5;
+    %yy.DisplayName = 'Turn1-Place';
+    yy.DisplayName = num2str(oneTwoPairs(dpI,:));
+    
+    hold on
+    
+    zz = cdfplot(tData);
+    zz.Color = groupColors{groupI};
+    zz.LineStyle = '--';
+    zz.LineWidth = 1.5;
+    %zz.DisplayName = 'Turn1-Turn2';
+    zz.DisplayName = num2str(oneThreePairs(dpI,:));
+    
+    [h,pKS] = kstest2(pData(:),tData(:));
+    [p,h] = ranksum(pData(:),tData(:));
+    
+    %disp(['Day trip ' num2str(allTriplePairs(dpI,:)) ', Ranksum p = ' num2str(p) ', KS p = ' num2str(pKS)])
+    
+    RSps(dpI) = p;
+    KSps(dpI) = pKS;
+    
+    legend('location','NW')
+    title(num2str(allTriplePairs(dpI,:)))
+end
+suptitleSL(['All day triplets, cumulative rhos, group ' num2str(groupI)])
+end
+xlabel('Rho')
+ylabel('ECDF')
+
+figure; 
+for groupI = 1:2
+subplot(1,2,groupI)
+for dpI = 1:numDayTrips
+    switch groupI
+        case 1
+            pData = oneEnvRhosABAggAll{dpI};
+            tData = oneEnvRhosCDAggAll{dpI};
+        case 2
+            pData = twoEnvRhosABAggAll{dpI};
+            tData = twoEnvRhosCDAggAll{dpI};
+    end
+    yy = cdfplot(pData);
+    yy.Color = groupColors{groupI};
+    yy.LineStyle = ':';
+    yy.LineWidth = 1.5;
+    %yy.DisplayName = 'Turn1-Place';
+    yy.DisplayName = num2str(oneTwoPairs(dpI,:));
+    
+    hold on
+    
+    zz = cdfplot(tData);
+    zz.Color = groupColors{groupI};
+    zz.LineStyle = '--';
+    zz.LineWidth = 1.5;
+    %zz.DisplayName = 'Turn1-Turn2';
+    zz.DisplayName = num2str(oneThreePairs(dpI,:));
+    
+    [h,pKS] = kstest2(pData(:),tData(:));
+    [p,h] = ranksum(pData(:),tData(:));
+    
+    %disp(['Day trip ' num2str(allTriplePairs(dpI,:)) ', Ranksum p = ' num2str(p) ', KS p = ' num2str(pKS)])
+    
+    RSps(dpI) = p;
+    KSps(dpI) = pKS;
+    
+    legend('location','NW')
+    title(num2str(allTriplePairs(dpI,:)))
+end
+end
+
+figure; 
+for dpI = 1:numDayTrips
+    cData = oneEnvRhoDiffsAggAll{dpI};
+    %cData = oneEnvCOMchangeComp{dpI}(oneEnvCOMchangeCellsUse{dpI});
+    cdfplot(cData)
+    hold on
+    
+    x = cData(~isnan(cData));
+    SEM = std(x)/sqrt(length(x));               % Standard Error
+    ts = tinv([0.025  0.975],length(x)-1);      % T-Score
+    CI = mean(x) + ts*SEM;
+    disp([num2str(dpI) ' ' num2str(mean(x)) ' ' num2str(CI)])
+end             
+
+title('Cumulative Magnitud of Turn-place-turn COM change differences')
+
+    
+%% Relationship between remapping and activity rate
+
+% Whole maze
+oneEnvRemapReli = cell(1,numDayPairs); oneEnvRemapRho = cell(1,numDayPairs); oneEnvRemapP = cell(1,numDayPairs);
+twoEnvRemapReli = cell(1,numDayPairs); twoEnvRemapRho = cell(1,numDayPairs); twoEnvRemapP = cell(1,numDayPairs);
+
+oneEnvRemapReliEach = cell(numDayPairs,numConds); oneEnvRemapRhoEach = cell(numDayPairs,numConds); oneEnvRemapPEach = cell(numDayPairs,numConds);
+twoEnvRemapReliEach = cell(numDayPairs,numConds); twoEnvRemapRhoEach = cell(numDayPairs,numConds); twoEnvRemapPEach = cell(numDayPairs,numConds);
+for mouseI = 1:numMice
+    for dpI = 1:numDayPairs
+        haveCellBothDays = sum(cellSSI{mouseI}(:,dayPairsForward(dpI,:))>0,2)==2;
+        %aboveThreshOneDay = sum(dayUseAll{mouseI}(:,dayPairsForward(dpI,:)),2) >= 1;
+        firedOnMazeOneDays = sum(trialReliAll{mouseI}(:,dayPairsForward(dpI,:))>0,2) >= 1;
+        firedOnMazeBothDays = sum(trialReliAll{mouseI}(:,dayPairsForward(dpI,:))>0,2) == 2;
+        
+        reliAllH = trialReliAll{mouseI}(:,dayPairsForward(dpI,1));
+        
+        cellsUseH = haveCellBothDays & firedOnMazeBothDays; %& aboveThreshOneDay;
+        switch groupNum(mouseI)
+            case 1
+                oneEnvRemapReli{dpI} = [oneEnvRemapReli{dpI}; reliAllH(cellsUseH)];
+                oneEnvRemapRho{dpI} = [oneEnvRemapRho{dpI}; singleCellAllCorrsRho{mouseI}{1}{dpI}(cellsUseH)];
+                oneEnvRemapP{dpI} = [oneEnvRemapP{dpI}; singleCellAllCorrsP{mouseI}{1}{dpI}(cellsUseH)];
+            case 2
+                twoEnvRemapReli{dpI} = [twoEnvRemapReli{dpI}; reliAllH(cellsUseH)];
+                twoEnvRemapRho{dpI} = [twoEnvRemapRho{dpI}; singleCellAllCorrsRho{mouseI}{1}{dpI}(cellsUseH)];
+                twoEnvRemapP{dpI} = [twoEnvRemapP{dpI}; singleCellAllCorrsP{mouseI}{1}{dpI}(cellsUseH)];
+        end
+        
+        for condI = 1:numConds
+            if numSessTrials{mouseI}(dayPairsForward(dpI,1),condI) > 1
+            firedOnMazeOneDays = sum(trialReli{mouseI}(:,dayPairsForward(dpI,:),condI)>0,2) >= 1;
+            firedOnMazeBothDays = sum(trialReli{mouseI}(:,dayPairsForward(dpI,:),condI)>0,2) == 2;
+            
+            % Need something here to kick out cond with less than 1 trial
+            
+            
+            reliAllH = trialReli{mouseI}(:,dayPairsForward(dpI,1),condI);
+            cellsUseH = haveCellBothDays & firedOnMazeBothDays;
+            switch groupNum(mouseI)
+                case 1
+                    oneEnvRemapReliEach{dpI,condI} = [oneEnvRemapReliEach{dpI,condI}; reliAllH(cellsUseH)];
+                    oneEnvRemapRhoEach{dpI,condI} = [oneEnvRemapRhoEach{dpI,condI}; singleCellCorrsRho{mouseI}{condI}{dpI}(cellsUseH)];
+                    oneEnvRemapPEach{dpI,condI} = [oneEnvRemapPEach{dpI,condI}; singleCellCorrsP{mouseI}{condI}{dpI}(cellsUseH)];
+                case 2
+                    twoEnvRemapReliEach{dpI,condI} = [twoEnvRemapReliEach{dpI,condI}; reliAllH(cellsUseH)];
+                    twoEnvRemapRhoEach{dpI,condI} = [twoEnvRemapRhoEach{dpI,condI}; singleCellCorrsRho{mouseI}{condI}{dpI}(cellsUseH)];
+                    twoEnvRemapPEach{dpI,condI} = [twoEnvRemapPEach{dpI,condI}; singleCellCorrsP{mouseI}{condI}{dpI}(cellsUseH)];
+            end
+            
+            end
+        end
+    end
+end
+
+% Whole maze
+for dpI = 1:numDayPairs
+    figure;
+    subplot(1,2,1)
+    %yData = oneEnvRemapRho{dpI};
+    yData = oneEnvRemapP{dpI};
+    plot(oneEnvRemapReli{dpI},yData,'.','MarkerFaceColor',groupColors{1},'MarkerEdgeColor',groupColors{1})
+    xlabel('trialReli'); ylabel('rho');
+    [rr,pp] = corr(oneEnvRemapReli{dpI},yData,'type','Spearman');
+    title(['p=' num2str(pp) ' rho=' num2str(rr)])
+    
+    subplot(1,2,2)
+    %yData = twoEnvRemapRho{dpI};
+    yData = twoEnvRemapP{dpI};
+    plot(twoEnvRemapReli{dpI},yData,'.','MarkerFaceColor',groupColors{2},'MarkerEdgeColor',groupColors{2})
+    xlabel('trialReli'); ylabel('rho');
+    [rr,pp] = corr(twoEnvRemapReli{dpI},yData,'type','Spearman');
+    title(['p=' num2str(pp) ' rho=' num2str(rr)])
+    
+    suptitleSL(num2str(dayPairsForward(dpI,:)))
+end
+
+%Each Cond
+for dpI = 1:numDayPairs
+    figure;
+    for condI = 1:numConds
+        subplot(2,4,condI*2-1)
+        plot(oneEnvRemapReliEach{dpI,condI},oneEnvRemapRhoEach{dpI,condI},'.','MarkerFaceColor',groupColors{1},'MarkerEdgeColor',groupColors{1})
+        xlabel('trialReli'); ylabel('rho');
+        [rr,pp] = corr(oneEnvRemapReliEach{dpI,condI},oneEnvRemapRhoEach{dpI,condI},'type','Spearman');
+        title(['p=' num2str(pp) ' rho=' num2str(rr)])
+
+        subplot(2,4,condI*2)
+        plot(twoEnvRemapReliEach{dpI,condI},twoEnvRemapRhoEach{dpI,condI},'.','MarkerFaceColor',groupColors{2},'MarkerEdgeColor',groupColors{2})
+        xlabel('trialReli'); ylabel('rho');
+        [rr,pp] = corr(twoEnvRemapReliEach{dpI,condI},twoEnvRemapRhoEach{dpI,condI},'type','Spearman');
+        title(['p=' num2str(pp) ' rho=' num2str(rr)])
+    end
+    suptitleSL(num2str(dayPairsForward(dpI,:)))
+end
+% How to use p values here?
+
+% Each cond
+singleCellCorrsRho{mouseI}{condI}{dayPairI}
+
+%% Absolute remapping
+
+figure; 
+subplot(1,3,1)
+oneData = oneHaveBoth;
+twoData = twoHaveBoth;
+plot(ones(size(oneData)),oneData,'.','MarkerSize',12,'MarkerFaceColor',groupColors{1})
+hold on
+plot(2*ones(size(twoData)),twoData,'.','MarkerSize',12,'MarkerFaceColor',groupColors{2})
+title('Pct cells active both days')
+
+subplot(1,3,2)
+oneData = oneStartFiring;
+twoData = twoStartFiring;
+plot(ones(size(oneData)),oneData,'.','MarkerSize',12,'MarkerFaceColor',groupColors{1})
+hold on
+plot(2*ones(size(twoData)),twoData,'.','MarkerSize',12,'MarkerFaceColor',groupColors{2})
+title('Pct cells start firing')
+
+subplot(1,3,3)
+oneData = oneStopFiring;
+twoData = twoStopFiring;
+plot(ones(size(oneData)),oneData,'.','MarkerSize',12,'MarkerFaceColor',groupColors{1})
+hold on
+plot(2*ones(size(twoData)),twoData,'.','MarkerSize',12,'MarkerFaceColor',groupColors{2})
+title('Pct cells stop firing')
+
+for condI = 1:numConds
+figure; 
+subplot(1,3,1)
+oneData = oneHaveBothEach{condI};
+twoData = twoHaveBothEach{condI};
+plot(ones(size(oneData)),oneData,'.','MarkerSize',12,'MarkerFaceColor',groupColors{1})
+hold on
+plot(2*ones(size(twoData)),twoData,'.','MarkerSize',12,'MarkerFaceColor',groupColors{2})
+title('Pct cells active both days')
+
+subplot(1,3,2)
+oneData = oneStartFiringEach{condI};
+twoData = twoStartFiringEach{condI};
+plot(ones(size(oneData)),oneData,'.','MarkerSize',12,'MarkerFaceColor',groupColors{1})
+hold on
+plot(2*ones(size(twoData)),twoData,'.','MarkerSize',12,'MarkerFaceColor',groupColors{2})
+title('Pct cells start firing')
+
+subplot(1,3,3)
+oneData = oneStopFiringEach{condI};
+twoData = twoStopFiringEach{condI};
+plot(ones(size(oneData)),oneData,'.','MarkerSize',12,'MarkerFaceColor',groupColors{1})
+hold on
+plot(2*ones(size(twoData)),twoData,'.','MarkerSize',12,'MarkerFaceColor',groupColors{2})
+title('Pct cells stop firing')
+
+suptitleSL(upper(armLabels{condsUse(condI)}))
+end
+
+% Change in pct cells on arms
+figure;
+for condI = 1:numConds
+    oneData = oneArmPctChange(:,condI);
+    twoData = twoArmPctChange(:,condI);
+    plot((0.8+(condI-1))*ones(size(oneData)),oneData,'.','MarkerSize',12,'MarkerFaceColor',groupColors{1},'MarkerEdgeColor',groupColors{1})
+    hold on
+    plot((1.2+(condI-1))*ones(size(twoData)),twoData,'.','MarkerSize',12,'MarkerFaceColor',groupColors{2},'MarkerEdgeColor',groupColors{2})
+end
 
 %% Remapping 3-7, 3-8, 7-8
 
