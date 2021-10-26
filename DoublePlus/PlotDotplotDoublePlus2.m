@@ -12,6 +12,12 @@ end
 numConds = length(condPlot);
 eachSpikeColor = []; ptsClose = cell(numConds,1); maxRate = [];
 
+spikePosXagg = [];
+spikePosYagg = [];
+xHagg = [];
+yHagg = [];
+spikingHagg = [];
+                
 figure;
 for condJ = 1:length(condPlot)
     condI = condPlot(condJ);
@@ -35,8 +41,13 @@ for condJ = 1:length(condPlot)
     if sum(spikingH{condJ}) > 0
     switch coloring
         case 'dynamic'
-            [eachSpikeColor{condJ},ptsClose{condJ},maxRate(condJ)] = DynamicColorMap(...
-                spikePosX{condJ},spikePosY{condJ},xH{condJ},yH{condJ},spikingH{condJ},radiusLimit,[]);
+            spikePosXagg = [spikePosXagg; spikePosX{condJ}(:)];
+            spikePosYagg = [spikePosYagg; spikePosY{condJ}(:)];
+            xHagg = [xHagg; xH{condJ}(:)];
+            yHagg = [yHagg; yH{condJ}(:)];
+            spikingHagg = [spikingHagg; spikingH{condJ}(:)];
+            %[eachSpikeColor{condJ},ptsClose{condJ},maxRate(condJ)] = DynamicColorMap(...
+            %    spikePosX{condJ},spikePosY{condJ},xH{condJ},yH{condJ},spikingH{condJ},radiusLimit,[]);
         case 'aboveThresh'
             plot(spikePosX{condJ},spikePosY{condJ},'.','MarkerEdgeColor',[0.7000    0.3118    0.1608])
             nBins = size(aboveThreshBins.X{condJ},1);
@@ -52,10 +63,20 @@ for condJ = 1:length(condPlot)
 end
 maxClose = max(maxRate);
 
+[eachSpikeColor,ptsClose,maxRate] = DynamicColorMap(...
+            spikePosXagg,spikePosYagg,xHagg,yHagg,spikingHagg,radiusLimit,[]);
+[~,rateIndexOrder] = sort(ptsClose,'ascend');
+reorderedX = spikePosXagg(rateIndexOrder);
+reorderedY = spikePosYagg(rateIndexOrder);
+reorderedColors = eachSpikeColor(rateIndexOrder,:);
+for ptI = 1:length(spikePosXagg)
+    plot(reorderedX(ptI),reorderedY(ptI),'.','Color',reorderedColors(ptI,:),'MarkerSize',9)
+end
+        %{
 for condJ = 1:length(condPlot)
     if strcmpi(coloring,'dynamic')
     if sum(spikingH{condJ}) > 0
-        eachSpikeColor{condJ} = rateColorMap(ptsClose{condJ},'jet',maxClose);
+        eachSpikeColor{condJ} = rateColorMap(ptsClose{condJ},'jet',[0 maxClose]);
         [~,rateIndexOrder] = sort(ptsClose{condJ},'ascend');
         reorderedX = spikePosX{condJ}(rateIndexOrder);
         reorderedY = spikePosY{condJ}(rateIndexOrder);
@@ -66,5 +87,5 @@ for condJ = 1:length(condPlot)
     end
     end
 end
-   
+   %}
 end

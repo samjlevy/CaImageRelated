@@ -1,5 +1,5 @@
-function [trialNormalizedCoactivity,totalNormalizedCoactivity,pctTrialsActive,trialCoactiveAboveBaseline,totalCoactiveAboveBaseline,chanceCoactive] = ...
-    findingEnsemblesNotes3(trialbytrial,boundary,condPairs)
+function [coactivityScore,numTrialsActive,numTrialsCoactive,numTotalTrials] = ...
+    findingEnsemblesNotes4(trialbytrial,boundary,condPairs,shuffleLaps)
 
 numConds = length(trialbytrial);
 if isempty(condPairs); condPairs = [1:numConds]'; end
@@ -16,6 +16,7 @@ if isstruct(boundary)
 end
 end
 
+% Get a binary vector of whether each cell fired each lap
 for condI = 1:numConds
     if isempty(boundary)
         condFires{condI} = cellfun(@(x) sum(x,2)>0,trialbytrial(condI).trialPSAbool,'UniformOutput',false);
@@ -45,44 +46,71 @@ for cpI=1:numCondPairs
 
         end
         
-        % Gets number of trials coactive
+        % Here is where we can shuffle which trials each cells is active on
+        if shuffleLaps == true
+            for cellI = 1:numCells
+                newOrder = randPerm(size(activeHere,2));
+                activeHere(cellI,:) = activeHere(cellI,newOrder);
+            end
+        end
+        
+        % Gets number of trials coactive, vector against self
         numTrialsH = numTrials(cpI,sessI);
-        cellsCoactive  = zeros(numCells,numCells);
+        Nab  = zeros(numCells,numCells);
+        tic
         for trialI = 1:numTrialsH
-            cellsCoactiveHere = activeHere(:,trialI) & activeHere(:,trialI)';
-            cellsCoactive = cellsCoactive + cellsCoactiveHere;
+            cellsCoactiveHere = activeHere(:,trialI) * activeHere(:,trialI)';
+            Nab = Nab + cellsCoactiveHere;
             %numTrialsActive{condI}{sessI} = numTrialsActive{condI}{sessI}+cellFiresAtAll{trialI}(:);
         end
+toc
 
+% This seems to work and can cut 0.3s per run...
+tic
+        activeHereThree = reshape(activeHere,1380,1,102);
+activeHereThreeT = permute(activeHereThree,[2 1 3]);
+aaa = activeHereThree .* activeHereThreeT;
+NN  = sum(aaa,3);
+toc
         numTrialsActive{sessI,cpI} = sum(activeHere,2);
         pctTrialsActive{sessI,cpI} = numTrialsActive{sessI,cpI}/numTrialsH; % Same as trialReli?
         I = logical(eye(numCells));
-        cellsCoactive(I) = 0; % Number of trials this pair of cells is coactive
+        Nab(I) = 0; % Number of trials this pair of cells is coactive
         
-        % num trials cell pair (i,j) was coactive / num trials cell i was active
-        trialNormalizedCoactivity{sessI,cpI} = cellsCoactive ./ repmat(numTrialsActive{sessI,cpI}(:),1,numCells);
-        trialNormalizedCoactivity{sessI,cpI}(isnan(trialNormalizedCoactivity{sessI,cpI})) = 0;
+        % Mari's coactivity formula
+        %{
+        Nevents = 10;
+        Na = 9;
+        Nb = 3;
+        Nab = 0:min([Na Nb]);
         
-        % num trials cell pair (i,j) was coactive / trials Run this session
-        totalNormalizedCoactivity{sessI,cpI} = cellsCoactive / numTrialsH;
+        for ii = 1:numel(Nab)
+        Z(ii) = (Nab(ii) - (Na*Nb)/Nevents) / sqrt( (Na*Nb*(Nevents-Na)*(Nevents-Nb)) / ((Nevents^2)*(Nevents-1)) );
+        end
+        %}
         
-        % pct likelihood of coactivity for cell pair (i,j)
-        chanceCoactive{sessI,cpI} = pctTrialsActive{sessI,cpI}(:) .* pctTrialsActive{sessI,cpI}(:)';
+        Nevents = numTrialsH;
+        Na = numTrialsActive{sessI,cpI}(:);
+        Nb = Na';
+        %{
+        Nab = [2, 2, 1; 2, 5, 4; 1, 4, 9]
+        Na = [2; 5; 9]; Nb = Na';
+        Nevents = 20;
         
-        % Binary output metrics
-        trialCoactiveAboveBaseline{sessI,cpI} = (trialNormalizedCoactivity{sessI,cpI} > chanceCoactive{sessI,cpI})...
-            & (trialNormalizedCoactivity{sessI,cpI}>0);
-        totalCoactiveAboveBaseline{sessI,cpI} = (totalNormalizedCoactivity{sessI,cpI} > chanceCoactive{sessI,cpI})...
-            & (totalNormalizedCoactivity{sessI,cpI} > 0);
+        Na = 10;
+        Nb = 10; 
+        Nab = 10;
+        %}
         
-        % graded output metrix
-        trialCoactivityScore{sessI,cpI} = (trialNormalizedCoactivity{sessI,cpI} ./ chanceCoactive{sessI,cpI});
-        totalCoactivityScore{sessI,cpI} = (totalNormalizedCoactivity{sessI,cpI} ./ chanceCoactive{sessI,cpI});
+        %Z
+        coactivityScore{cpI,sessI} = (Nab - ((Na(:)*Nb(:)') / Nevents)) ./ sqrt( (Na(:)*Nb(:)').*((Nevents-Na(:))*(Nevents-Nb(:)')) / ...
+                                                        (Nevents*Nevents*(Nevents-1)) );
+        numTrialsActive{cpI,sessI} = Na;
+        numTrialsCoactive{cpI,sessI} = Nab;
+        numTotalTrials(cpI,sessI) = Nevents;
         
     end
 end
 
-trialCoactiveAboveBaseline = trialCoactivityScore;
-totalCoactiveAboveBaseline = totalCoactivityScore;
 
 end

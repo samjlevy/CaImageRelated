@@ -2,7 +2,7 @@
 
 %mainFolder = 'G:\DoublePlus';
 %mainFolder = 'C:\Users\Sam\Desktop\DoublePlusFinalData';
-mainFolder = 'F:\DoublePlus';
+mainFolder = 'E:\DoublePlus';
 %mainFolder = 'C:\Users\samwi_000\Desktop\DoublePlus';
 load(fullfile(mainFolder,'groupAssign.mat'))
 groupNum(strcmpi(groupAssign(:,2),'same')) = 1;
@@ -65,18 +65,17 @@ minspeed = 0;
 
 pThresh = 0.05;
 lapsActiveThresh = 3;
-
 lapPctThresh = 0.25;
 consecLapThresh = 3;
 
 disp('loading root data')
 for mouseI = 1:numMice
-    load(fullfile(mainFolder,mice{mouseI},'trialbytrial.mat'),'trialbytrialEach')
-    %load(fullfile(mainFolder,mice{mouseI},'trialbytrial.mat'),'trialbytrialAllEach')
+    %load(fullfile(mainFolder,mice{mouseI},'trialbytrial.mat'),'trialbytrialEach')
+    load(fullfile(mainFolder,mice{mouseI},'trialbytrial.mat'),'trialbytrialThresh')
     load(fullfile(mainFolder,mice{mouseI},'trialbytrial.mat'),'sortedSessionInds','allfiles','realDays')
     
-    cellTBT{mouseI} = trialbytrialEach;
-    %cellTBTall{mouseI} = trialbytrialAllEach;
+    %cellTBT{mouseI} = trialbytrialEach;
+    cellTBT{mouseI} = trialbytrialThresh;
     cellSSI{mouseI} = sortedSessionInds;
     cellAllFiles{mouseI} = allfiles;
     cellRealDays{mouseI} = realDays;
@@ -86,16 +85,47 @@ for mouseI = 1:numMice
     
     clear trialbytrialEach sortedSessionInds allFiles
     
+    load(fullfile(mainFolder,mice{mouseI},'trialbytrial.mat'),'trialbytrialAllEach')
+    cellTBTall{mouseI} = trialbytrialAllEach;
+    clear trialbytrialAllEach
+    
     disp(['Mouse ' num2str(mouseI) ' completed'])
 end
 cellSSI{1}(:,[5 6]) = 0;
-% zeroed out cellSSE for mouse 1 days 5-6
+% zeroed out cellSSI for mouse 1 days 5-6
 
 numConds = length(cellTBT{1}); % should be 4
 
-disp('Getting reliability')
+%Threshold data by deleting pts below threshold
+speedThresh = 1; % cm/s
 for mouseI = 1:numMice
-    reliFileName = fullfile(mainFolder,mice{mouseI},'trialReli.mat');
+    for condI = 1:numConds
+        for lapI = 1:numel(cellTBT{mouseI}(condI).trialsX)
+            badSpd = cellTBT{mouseI}(condI).trialVelocity{lapI} < speedThresh;
+            
+            cellTBT{mouseI}(condI).trialsX{lapI}(badSpd) = [];
+            cellTBT{mouseI}(condI).trialsY{lapI}(badSpd) = [];
+            cellTBT{mouseI}(condI).trialPSAbool{lapI}(:,badSpd) = [];
+            cellTBT{mouseI}(condI).trialDFDTtrace{lapI}(:,badSpd) = [];
+            cellTBT{mouseI}(condI).trialRawTrace{lapI}(:,badSpd) = [];
+            cellTBT{mouseI}(condI).trialVelocity{lapI}(badSpd) = [];
+        end
+    end
+end
+%{
+aa = allMazeBound.Y(2);
+bb = allMazeBound.Y(3);
+cc = [-aa aa; -aa bb; aa bb; aa aa; bb aa; bb -aa; aa -aa; aa -bb; -aa -bb; -aa -aa; -bb -aa; -bb aa];
+dd = allMazeBounds.Y(1); 
+allMazeBound.X = cc(:,1); allMazeBounds.Y = cc(:,2); 
+allMazeBound.exclude.X = [-dd; dd; dd; -dd]; 
+allMazeBound.exclude.Y = [dd; dd; -dd; -dd];
+%}
+disp('Getting reliability')
+%reliFileUse = 'trialReli.mat';
+reliFileUse = 'trialReliThresh.mat';
+for mouseI = 1:numMice
+    reliFileName = fullfile(mainFolder,mice{mouseI},reliFileUse);
     if exist(reliFileName,'file')==0
         [dayUse,trialReli,threshAndConsec,numTrials] = TrialReliability2(cellTBT{mouseI},allMazeBound,lapPctThresh, consecLapThresh,[1;2;3;4]);
         [dayUseAll,trialReliAll,threshAndConsecAll,numTrialsAll] = TrialReliability2(cellTBT{mouseI},allMazeBound,lapPctThresh, consecLapThresh,[1 2 3 4]);
@@ -106,7 +136,7 @@ end
 clear dayUse threshAndConsec trialReli dayUseAll threshAndConsecAll trialReliAll %dayUseEach trialReliEach threshAndConsecEach numTrialsEach%dayUse = cell(1,numMice); threshAndConsec = cell(1,numMice);
 
 for mouseI = 1:numMice
-    reliFileName = fullfile(mainFolder,mice{mouseI},'trialReli.mat');
+    reliFileName = fullfile(mainFolder,mice{mouseI},reliFileUse);
     reliLoad = load(reliFileName);
     
     %dayUse{mouseI} = reliLoad.dayUse;
@@ -119,6 +149,7 @@ for mouseI = 1:numMice
     dayUse{mouseI} = reliLoad.numTrials >= lapsActiveThresh;
     dayUseAll{mouseI} = sum(dayUse{mouseI},3)>0;
 
+    numTrialsFired{mouseI} = reliLoad.numTrials;
     for condI = 1:numConds
         for dayI = 1:9
             numSessTrials{mouseI}(dayI,condI) = sum(cellTBT{mouseI}(condI).sessID == dayI);
@@ -134,10 +165,12 @@ disp('done reliability')
 %}
 
 disp('checking place fields')
+%pfNameUse = 'PFsLinEach.mat';
+pfNameUse = 'PFsLinEachThresh.mat';
 condPairs = [1; 2; 3; 4];
 numCondPairs = size(condPairs,1);
 for mouseI = 1:numMice
-    pfName= fullfile(mainFolder,mice{mouseI},'PFsLinEach.mat');
+    pfName= fullfile(mainFolder,mice{mouseI},pfNameUse);
     if exist(pfName,'file')==0
         disp(['no placefields found for ' mice{mouseI} ', making now'])
         binLabels = lgDataBins.labels;
@@ -168,7 +201,7 @@ for mouseI = 1:numMice
     clear TMap_unsmoothedEach
 end
 for mouseI = 1:numMice
-    pfName= fullfile(mainFolder,mice{mouseI},'PFsLinEach.mat');
+    pfName= fullfile(mainFolder,mice{mouseI},pfNameUse);
     load(pfName);
     cellTMap{mouseI} = TMap_unsmoothedEach;
     cellFiresAtAll{mouseI} = TMap_firesAtAll;
@@ -179,8 +212,9 @@ clear TMap_unsmoothed TMap_firesAtAll
 disp('Done loading place fields')
 
 % All single cell corrs
-if ~exist(fullfile(mainFolder,'singelCellCorrs.mat'),'file')==2
-    
+%corrsFile = 'singelCellCorrs.mat'
+corrsFile ='singelCellCorrsThresh.mat';
+if ~(exist(fullfile(mainFolder,corrsFile),'file')==2)
     for mouseI = 1:numMice
         
         allDayPairs = combnk(1:9,2);
@@ -206,23 +240,20 @@ if ~exist(fullfile(mainFolder,'singelCellCorrs.mat'),'file')==2
         end
         [singleCellThreeCorrsRho{mouseI}, singleCellThreeCorrsP{mouseI}] = singleNeuronCorrelations(pooledTmapThree,allDayPairs,[]);%turnBinsUse
     end
-    save(fullfile(mainFolder,'singelCellCorrs.mat'),'singleCellCorrsRho','singleCellCorrsP','singleCellAllCorrsRho','singleCellAllCorrsP','singleCellThreeCorrsRho','singleCellThreeCorrsP','threeConds','allDayPairs')
+    save(fullfile(mainFolder,corrsFile),'singleCellCorrsRho','singleCellCorrsP','singleCellAllCorrsRho','singleCellAllCorrsP','singleCellThreeCorrsRho','singleCellThreeCorrsP','threeConds','allDayPairs')
     clear singleCellCorrsRho singleCellCorrsP singleCellAllCorrsRho singleCellAllCorrsP singleCellThreeCorrsRho singleCellThreeCorrsP threeConds allDayPairs 
 end
-corrsLoaded = load(fullfile(mainFolder,'singelCellCorrs.mat'));
+corrsLoaded = load(fullfile(mainFolder,corrsFile));
 
 disp('Done setup stuff')
 
-msgbox('example heatmaps for reinstatement')
-msgbox('Predicting remapping: line 820')
 msgbox('day use changes across arms (absolute)')
 msgbox('Remapping: figures line 1035 ???')
 msgbox('One maze day 6 abnormally low correlations within? plot mice individually?')
 msgbox('Pandora day 6 low correlation from day 5?')
-msgbox('Performance from south vs north')
 
 %% Turn1-Turn2 remapping, all day pairs
-%Run this bit
+
 dayPairsForward = GetAllCombs(1:3,7:9);
 dayPairs = dayPairsForward;
 numDayPairs = size(dayPairsForward,1);
@@ -234,6 +265,43 @@ condsCompare = combnk(condsUse,2);
 cellTMapH = cellfun(@(x) x(:,:,condsUse),cellTMap,'UniformOutput',false);
 
 SingleCellRemapping4_2
+
+
+oneEnvMIagg = []; twoEnvMIagg = [];
+for dpI = 1:numDayPairs
+    for mouseI = 1:numMice
+        miHere = MIdiff{mouseI}{dpI};
+        switch groupNum(mouseI)
+            case 1
+                oneEnvMIagg = [oneEnvMIagg; miHere(:)];
+            case 2
+                twoEnvMIagg = [twoEnvMIagg; miHere(:)];
+        end
+    end
+end
+
+figure('Position',[389 309 748.5000 331.5000]); 
+subplot(1,2,1); histogram(oneEnvMIagg,19,'FaceColor',groupColors{1},'Normalization','probability');  %[-1 -0.95:0.1:0.95 1]
+title('OneMaze')
+xlabel('MI score change'); ylabel('Proportion of cells')
+MakePlotPrettySL(gca);
+subplot(1,2,2); histogram(twoEnvMIagg,19,'FaceColor',groupColors{2},'Normalization','probability');
+xlabel('MI score change'); ylabel('Proportion of cells')
+title('TwoMaze')
+MakePlotPrettySL(gca);
+ylim([0 0.07])
+
+figure('Position',[645 306.5000 321 332]); 
+[f,x] = ecdf(oneEnvMIagg); 
+plot(x,f,'Color',groupColors{1},'LineWidth',1.5,'DisplayName','OneMaze'); 
+hold on 
+[f,x] = ecdf(twoEnvMIagg); 
+plot(x,f,'Color',groupColors{2},'LineWidth',1.5,'DisplayName','TwoMaze');
+xlabel('MI score change'); ylabel('Cumuluative Proportion')
+legend('location','NW')
+[~,p] = kstest2(oneEnvMIagg,twoEnvMIagg);
+title(['Turn 1 - Turn 2 change in MI score, p=' num2str(p)])
+
 
 oneEnvCOMagg = []; twoEnvCOMagg = [];
 oneEnvCOMaggEach = cell(1,numConds); twoEnvCOMaggEach = cell(1,length(condsUse));
@@ -291,8 +359,9 @@ for dpI = 1:numDayPairs
         twoEnvCorrsAggEach{condI} = [twoEnvCorrsAggEach{condI}; twoEnvCorrsEach{dpI,condI}];
     end
     
-    % Absolute
-    oneHaveBoth = [oneHaveBoth; oneMazeHaveBothAgg{dpI}];
+    % Absolute %missing all of this?
+    %{
+    oneHaveBoth = [oneHaveBoth; oneMazeHaveBothAgg{dpI}]; 
     oneStartFiring = [oneStartFiring; oneMazeStartFiringAgg{dpI}];
     oneStopFiring = [oneStopFiring; oneMazeStopFiringAgg{dpI}];
     twoHaveBoth = [twoHaveBoth; twoMazeHaveBothAgg{dpI}];
@@ -310,6 +379,7 @@ for dpI = 1:numDayPairs
     
     oneArmPctChange = [oneArmPctChange; oneArmActiveChange{dpI}];
     twoArmPctChange = [twoArmPctChange; twoArmActiveChange{dpI}];
+    %}
 end
 
 % PV corrs
@@ -343,8 +413,170 @@ for dpI = 1:numDayPairs
     twoEnvPVsemAll(dpI) = standarderrorSL([twoEnvMicePVcorrs{dpI,:}]);
 end
 
+oneEnvPVcorrs = cell2mat(oneEnvMicePVcorrsMeans);
+twoEnvPVcorrs = cell2mat(twoEnvMicePVcorrsMeans);
+
+for binI = 1:(nArmBins*numConds)
+    [pPvs(binI),~] = ranksum(oneEnvPVcorrs(:,binI),twoEnvPVcorrs(:,binI));
+end
+
+%figure;
+%plot([-52 52],[-52 52],'k')
+%for ii = 1:48; text(mean(plotBins.X(ii)),mean(plotBins.Y(ii)),num2str(round(pPvs(ii),3))); hold on; end
+
 oneEnvPVcorrs = mean(cell2mat(oneEnvMicePVcorrsMeans),1);
 twoEnvPVcorrs = mean(cell2mat(twoEnvMicePVcorrsMeans),1);
+
+%% Coactivity again...
+oneEnvAllCoactivity = [];
+twoEnvAllCoactivity = [];
+
+tic
+condPairs = [1 2 3 4];
+for mouseI = 1:numMice
+    
+    [coactivityScore{mouseI},numTrialsActive{mouseI},numTrialsCoactive{mouseI},numTotalTrials{mouseI}] = ...
+        findingEnsemblesNotes4(cellTBT{mouseI},allMazeBound,condPairs,false);
+     
+    %Should shuffle laps to test for significance: just compare coactivity
+    %score against each shuffle, get num greater
+    % May need to profile this to make it run a bit faster...
+    
+    % Normalize some how?
+end
+toc
+
+% Example dotplot, Example heatmap, rasters of cells with, make sure rois are distant
+cellI = 2;
+condPlot = [1 2 3 4];
+dayI = 1;
+
+PlotDotplotDoublePlus2(cellTBT{1},cellI,condPlot,dayI,'dynamic',[],3)%
+there = [cellTMap{mouseI}{cellI,dayI,:}]; there = [NaN; there(:)]';
+gradientLims = []; titles = [];
+[figHand] = PlusMazePVcorrHeatmap3(there,lgPlotBins,'jet',gradientLims,titles);
+figHand.Position=[243.5000 207 447 405];
+PlotDoublePlusRaster(trialbytrial,cellI,dayI,condPlot,armLabels)
+
+
+% Is coactivity correlated with spatial map? yes, should be true for both groups
+tic
+oneEnvTmapRhos = [];
+oneEnvTmapPs = [];
+oneEnvCoactRhos = [];
+oneEnvCoactPs = [];
+oneEnvCoact = [];
+twoEnvTmapRhos = [];
+twoEnvTmapPs = [];
+twoEnvCoactRhos = [];
+twoEnvCoactPs = [];
+twoEnvCoact = [];
+
+for mouseI = 1:numMice
+    
+    tmapHere = cell(numCells(mouseI),9);
+    for condI = 1:4
+        tmapHere = cellfun(@(x,y) [x;y],tmapHere,cellTMap{mouseI}(:,:,condI),'UniformOutput',false);
+    end
+    
+    for sessI = 1:9
+        cellsActive = dayUseAll{mouseI}(:,sessI); 
+        % With this we could pre-allocate the gather arrays, though would then need to index them...
+        
+        cellPairsHere = nchoosek(find(cellsActive),2);
+        cphInds = sub2ind(size(coactivityScore{mouseI}{sessI}),cellPairsHere(:,1),cellPairsHere(:,2));
+        
+        % Trim out unwanted rows (not in cells use) from coactivityScore, again correlate columns
+        coactHere = coactivityScore{mouseI}{sessI}(cellsActive,:);
+        if any(any(coactHere))
+        [coactRhos,coactPs] = corr(coactHere,'type','Spearman');
+        
+        tmm = cell2mat(tmapHere(:,sessI)');
+        [tmapRhos,tmapPs] = corr(tmm,'type','Spearman');
+        
+        tmapRhosHere = tmapRhos(cphInds);
+        tmapPsHere = tmapPs(cphInds);
+        coactRhosHere = coactRhos(cphInds);
+        coactPsHere = coactPs(cphInds);
+        coactScoresHere = coactivityScore{mouseI}{sessI}(cphInds);
+
+        switch groupNum(mouseI)
+            case 1
+                oneEnvTmapRhos = [oneEnvTmapRhos; tmapRhosHere];
+                oneEnvTmapPs = [oneEnvTmapPs; tmapPsHere];
+                oneEnvCoactRhos = [oneEnvCoactRhos; coactRhosHere];
+                oneEnvCoactPs = [oneEnvCoactPs; coactPsHere];
+                oneEnvCoact = [oneEnvCoact; coactScoresHere];
+            case 2
+                twoEnvTmapRhos = [twoEnvTmapRhos; tmapRhosHere];
+                twoEnvTmapPs = [twoEnvTmapPs; tmapPsHere];
+                twoEnvCoactRhos = [twoEnvCoactRhos; coactRhosHere];
+                twoEnvCoactPs = [twoEnvCoactPs; coactPsHere];
+                twoEnvCoact = [twoEnvCoact; coactScoresHere];
+        end
+            %{
+            rhosH = [rhosH; rr];
+            psH = [psH; pp];
+            zsH = [zsH; coactivityScore{mouseI}{sessI}(cellPairsHere(cpI,1),cellPairsHere(cpI,2))];
+            %}
+        end
+        %{
+        figure; plot(zsH,rhosH,'.')
+        xlabel('Coactivity Score'); ylabel('Spearman rho')
+        [rho,ppp] = corr(zsH,rhosH,'type','Spearman');
+        %}
+        
+    
+    end
+end
+toc
+
+% Eaxmple dotplot, Example heatmap, rasters of cells with, make sure rois are distant
+    %{
+    high coactivity, high correlation - active together on same arms
+    top quarter vs. low quarter?
+    low coactivity, low correlation - active different arms
+    low coactivity, high correlation - active different laps
+    high coactivity, low correlation - active same laps but different parts of arms (just indicates bad temporal resolotion of coactivity)
+    
+    can create filter by trialReli to search for good examples here... better yet rank possible examples by trialReli
+    %}
+
+
+
+% OneMaze vs. TwoMaze: diff in proportion that have the 4 categories above?
+% OneMaze vs. TwoMaze: diff in num of cells which change among the 4
+% categories above?
+
+% Change in coactivity: if cell becomes uncorrelated with one set of cells
+% and now correlated with a new set, is it also coactive with that new set?
+for mouseI = 1:numMice   
+        
+    for dpI = 1:numDayPairs
+        haveCellBothDays = sum(cellSSI{mouseI}(:,dayPairs(dpI,:))>0,2)==2;
+        cellActiveOneDay = sum(dayUseAll{mouseI}(:,dayPairs(dpI,:))>0,2)==2;
+        
+        
+
+
+    for condI = 1:numel(condPairs)
+        for sessI = 1:9
+            cHere = trialCoactiveAboveBaseline{mouseI}{sessI,condI};
+            switch groupNum(mouseI)
+                case 1
+                    oneEnvAllCoactivity = [oneEnvAllCoactivity; cHere(~isnan(cHere))];
+                case 2
+                    twoEnvAllCoactivity = [twoEnvAllCoactivity; cHere(~isnan(cHere))];
+            end
+        end
+    end
+    
+    end
+end
+
+figure; 
+subplot(1,2,1); histogram(oneEnvAllCoactivity(oneEnvAllCoactivity~=0) );
+subplot(1,2,2); histogram(twoEnvAllCoactivity(twoEnvAllCoactivity~=0));
 
 
 %% Day to day drift
@@ -352,6 +584,8 @@ twoEnvPVcorrs = mean(cell2mat(twoEnvMicePVcorrsMeans),1);
 dayPairsForward = [1 2; 2 3; 3 4; 4 5; 5 6; 6 7; 7 8; 8 9];
 dayPairs = dayPairsForward;
 numDayPairs = size(dayPairs,1);
+daysAcross = zeros(8,1);
+daysAcross([3 6]) = 1;
 
 condsUse = [1 3 4];
 epochPairs = [1; 1; 0; 2; 2; 0; 3; 3];
@@ -404,6 +638,9 @@ dayGroups = [1*ones(size(tonepdays,1),1); 2*ones(size(tonettwodays,1),1); 3*ones
 dayGroupLabels = {'Turn1 vs. Place';'Turn1 vs. Turn 2';'Place vs. Turn 2'};
 numDayPairs = size(dayPairs,1);
 
+dayIntervals{1} = [diff(tonepdays,[],2); diff(pttwodays,[],2)]
+dayIntervals{2} = diff(tonettwodays,[],2);
+
 PopulationVectorCorrs4_2;
 
 oneEnvMicePVcorrs = []; oneEnvMicePVcorrsMeans = [];
@@ -437,7 +674,7 @@ for cpI = 1:numCondPairs
         end
         
         % Mean across dayPairs
-        corrsHereOne = cell2mat([oneEnvMicePVcorrs{dpgI}(:,cpI)]);
+        corrsHereOne = cell2mat([oneEnvMicePVcorrs{dpgI}(:,cpI)]); %{dayPairI,condI}(mouseI,binI)
         corrsHereTwo = cell2mat([twoEnvMicePVcorrs{dpgI}(:,cpI)]);
         
         oneEnvDGcorrsMean{dpgI}{cpI} = nanmean(corrsHereOne,1);
@@ -453,6 +690,13 @@ for cpI = 1:numCondPairs
     end
 end
 
+% Breakdown by day pair lag
+dayGroupsX = dayGroups; dayGroupsX(dayGroupsX~=2) = 1;
+oneEnvPVCorrsX{1} = [oneEnvMicePVcorrs{1}; oneEnvMicePVcorrs{3}];
+oneEnvPVCorrsX{2} = oneEnvMicePVcorrs{2};
+twoEnvPVCorrsX{1} = [twoEnvMicePVcorrs{1}; twoEnvMicePVcorrs{3}];
+twoEnvPVCorrsX{2} = twoEnvMicePVcorrs{2};
+    
 %% 3 way remapping (reinstatement)
 
 aa = GetAllCombs(1:3,4:6);
@@ -700,16 +944,16 @@ for mouseI = 1:numMice
         rhoDiffsAll = rhosCDall - rhosABall;
         switch groupNum(mouseI)
             case 1
-                oneEnvRhosABAggAll{dpI} = [oneEnvRhosABAggAll{dpI}; rhosAB];
-                oneEnvRhosCDAggAll{dpI} = [oneEnvRhosCDAggAll{dpI}; rhosCD];
-                oneEnvRhoDiffsAggAll{dpI} = [oneEnvRhoDiffsAggAll{dpI}; rhoDiffs];
+                oneEnvRhosABAggAll{dpI} = [oneEnvRhosABAggAll{dpI}; rhosABall];
+                oneEnvRhosCDAggAll{dpI} = [oneEnvRhosCDAggAll{dpI}; rhosCDall];
+                oneEnvRhoDiffsAggAll{dpI} = [oneEnvRhoDiffsAggAll{dpI}; rhoDiffsAll];
                 
                 oneEnvPvalsABAggAll{dpI} = [oneEnvPvalsABAggAll{dpI}; pValsABall];
                 oneEnvPvalsCDAggAll{dpI} = [oneEnvPvalsCDAggAll{dpI}; pValsCDall];
             case 2
-                twoEnvRhosABAggAll{dpI} = [twoEnvRhosABAggAll{dpI}; rhosAB];
-                twoEnvRhosCDAggAll{dpI} = [twoEnvRhosCDAggAll{dpI}; rhosCD];
-                twoEnvRhoDiffsAggAll{dpI} = [twoEnvRhoDiffsAggAll{dpI}; rhoDiffs];
+                twoEnvRhosABAggAll{dpI} = [twoEnvRhosABAggAll{dpI}; rhosABall];
+                twoEnvRhosCDAggAll{dpI} = [twoEnvRhosCDAggAll{dpI}; rhosCDall];
+                twoEnvRhoDiffsAggAll{dpI} = [twoEnvRhoDiffsAggAll{dpI}; rhoDiffsAll];
                 
                 twoEnvPvalsABAggAll{dpI} = [twoEnvPvalsABAggAll{dpI}; pValsABall];
                 twoEnvPvalsCDAggAll{dpI} = [twoEnvPvalsCDAggAll{dpI}; pValsCDall];
@@ -747,15 +991,202 @@ for mouseI = 1:numMice
     %}
 end
 
+oneReallyAggAB = [];
+oneReallyAggCD = [];
+oneReallyAggDiffs = [];
+twoReallyAggAB = [];
+twoReallyAggCD = [];
+twoReallyAggDiffs = [];
+for dpI = 1:numDayTrips
+    oneReallyAggAB = [oneReallyAggAB; oneEnvRhosABAggAll{dpI}];
+oneReallyAggCD = [oneReallyAggCD; oneEnvRhosCDAggAll{dpI}];
+oneReallyAggDiffs = [oneReallyAggDiffs; oneEnvRhoDiffsAggAll{dpI}];
+twoReallyAggAB = [twoReallyAggAB; twoEnvRhosABAggAll{dpI}];
+twoReallyAggCD = [twoReallyAggCD; twoEnvRhosCDAggAll{dpI}];
+twoReallyAggDiffs = [twoReallyAggDiffs; twoEnvRhoDiffsAggAll{dpI}];
 
-
+end
 % Plotting: could either KS each day pair changeAB vs. change CD, or show
 % changeComp is negative (greater change turn 1 to place than turn 1 to turn 2)
 
+figure;
+subplot(1,2,1);
+yy = cdfplot(oneReallyAggAB);
+yy.Color = groupColors{1};
+yy.LineStyle = ':';
+hold on
+zz = cdfplot(oneReallyAggCD);
+zz.Color = groupColors{1};
+zz.LineStyle = '--';
+
+[h,p] = kstest2(oneReallyAggAB,oneReallyAggCD)
+[p] = ranksum(oneReallyAggAB,oneReallyAggCD)
+
+%% PV corr by day interval
+dayPairsForward = nchoosek(1:9,2);
+dayPairs = dayPairsForward;
+numDayPairs = size(dayPairsForward,1);
+condsUse = [1 3 4];
+condPairs = [1 1; 3 3; 4 4];
+numCondPairs = size(condPairs,1);
+
+PopulationVectorCorrs4_2;
+
+eastDays = [4 5 6];
+acrossRule = sum((dayPairs==4 | dayPairs==5 | dayPairs==6),2)>0;
+dayPairDiffs = diff(dayPairs,1,2);
+% Aggregate the data; mean within arms; sort by day interval
 
 
+oneEnvMicePVcorrs = []; oneEnvMicePVcorrsMeans = [];
+twoEnvMicePVcorrs = []; twoEnvMicePVcorrsMeans = [];
+oneEnvPVmeansAll = []; oneEnvPVsemAll = [];
+twoEnvPVmeansAll = []; twoEnvPVsemAll = [];
+oneEnvDGmeanAgg = cell(3,1); twoEnvDGmeanAgg = cell(3,1);
+[oneEnvMicePVcorrs{1:3}] = deal(cell(8,3));
+[oneEnvMicePVcorrsMeans{1:3}] = deal(cell(8,3));
+[oneEnvPVcorrsDiff{1:3}] = deal(cell(8,3));
+[oneEnvPVcorrsMeanDiff{1:3}] = deal(cell(8,3));
+[twoEnvMicePVcorrs{1:3}] = deal(cell(8,3));
+[twoEnvMicePVcorrsMeans{1:3}] = deal(cell(8,3));
+[twoEnvPVcorrsDiff{1:3}] = deal(cell(8,3));
+[twoEnvPVcorrsMeanDiff{1:3}] = deal(cell(8,3));
 
+for cpI = 1:numCondPairs
+    for dpgI = 1:2 %1 Turn1-Turn2, 2=x-Place
+        dayGroupsHere = acrossRule==(dpgI-1);
+        for ddI = 1:8 % Day diff interval
+            dayDiffsHere = dayPairDiffs==ddI;
+            dayPairsHere = find(dayDiffsHere & dayGroupsHere);
+            for dpI = 1:length(dayPairsHere)
+                dpJ = dayPairsHere(dpI);
 
+                oneCorrs = pooledPVcorrs{dpJ,cpI}(oneEnvMice,:);
+                nansH = sum(isnan(oneCorrs),2)==size(oneCorrs,2);
+                oneCorrs(nansH,:) = [];
+                oneEnvMicePVcorrs{dpgI}{ddI,cpI} = [oneEnvMicePVcorrs{dpgI}{ddI,cpI}; oneCorrs];
+                oneEnvMicePVcorrsMeans{dpgI}{ddI,cpI} = [oneEnvMicePVcorrsMeans{dpgI}{ddI,cpI}; nanmean(oneCorrs,1)];
+
+                oneEnvPVcorrsDiff{dpgI}{ddI,cpI} = [oneEnvPVcorrsDiff{dpgI}{ddI,cpI}; ddI*ones(size(oneCorrs))];
+                oneEnvPVcorrsMeanDiff{dpgI}{ddI,cpI} = [oneEnvPVcorrsMeanDiff{dpgI}{ddI,cpI}; ddI*ones(size(nanmean(oneCorrs,1)))];
+
+                twoCorrs = pooledPVcorrs{dpJ,cpI}(twoEnvMice,:);
+                nansH = sum(isnan(twoCorrs),2)==size(twoCorrs,2);
+                twoCorrs(nansH,:) = [];
+                twoEnvMicePVcorrs{dpgI}{ddI,cpI} = [twoEnvMicePVcorrs{dpgI}{ddI,cpI}; twoCorrs];
+                twoEnvMicePVcorrsMeans{dpgI}{ddI,cpI} = [twoEnvMicePVcorrsMeans{dpgI}{ddI,cpI}; nanmean(twoCorrs,1)];
+
+                twoEnvPVcorrsDiff{dpgI}{ddI,cpI} = [twoEnvPVcorrsDiff{dpgI}{ddI,cpI}; ddI*ones(size(twoCorrs))];
+                twoEnvPVcorrsMeanDiff{dpgI}{ddI,cpI} = [twoEnvPVcorrsMeanDiff{dpgI}{ddI,cpI}; ddI*ones(size(nanmean(twoCorrs,1)))];
+
+                %sameMinusDiff{dpgI}{dpI,cpI} = oneEnvMicePVcorrsMeans{dpgI}{dpI,cpI} - twoEnvMicePVcorrsMeans{dpgI}{dpI,cpI};
+
+                %sepMinusInt{dI,cpI} = twoEnvMicePVcorrsMeans{dpI,cpI} - oneEnvMicePVcorrsMeans{dpI,cpI};
+
+                for binI = 1:numBins
+                    %[pPVs{dpI,cpI}(binI),hPVs{dpI,cpI}(binI)] = ranksum(oneEnvMicePVcorrs{dpI,cpI}(:,binI),...
+                    %twoEnvMicePVcorrs{dpI,cpI}(:,binI));
+                end
+        
+                %diffRank{dpI,cpI} = PermutationTestSL(oneEnvMicePVcorrs{dpI,cpI},twoEnvMicePVcorrs{dpI,cpI},numPerms);
+                %isSig{dpI,cpI} = diffRank{dpI,cpI} > (1-pThresh);
+            end
+            
+            %{
+            % Mean across dayPairs
+            corrsHereOne = cell2mat([oneEnvMicePVcorrs{dpgI}(:,cpI)]); %{dayPairI,condI}(mouseI,binI)
+            corrsHereTwo = cell2mat([twoEnvMicePVcorrs{dpgI}(:,cpI)]);
+            
+            oneEnvDGcorrsMean{dpgI}{cpI} = nanmean(corrsHereOne,1);
+            twoEnvDGcorrsMean{dpgI}{cpI} = nanmean(corrsHereTwo,1);
+            
+            for binI = 1:nArmBins
+                oneEnvDGcorrsSEM{dpgI}{cpI}(1,binI) = standarderrorSL(corrsHereOne(:,binI));
+                twoEnvDGcorrsSEM{dpgI}{cpI}(1,binI) = standarderrorSL(corrsHereTwo(:,binI));
+            end
+            
+            oneEnvDGmeanAgg{dpgI,cpI} = [oneEnvDGcorrsMean{dpgI}{cpI}(:)'];
+            twoEnvDGmeanAgg{dpgI,cpI} = [twoEnvDGcorrsMean{dpgI}{cpI}(:)'];
+            %}
+        end
+    end
+end
+
+dpgI = 3; % All
+for cpI = 1:numCondPairs
+    for ddI = 1:8 % Day diff interval
+        dayDiffsHere = dayPairDiffs==ddI;
+        dayPairsHere = find(dayDiffsHere);
+        for dpI = 1:length(dayPairsHere)
+            dpJ = dayPairsHere(dpI);
+            
+                oneCorrs = pooledPVcorrs{dpJ,cpI}(oneEnvMice,:);
+                nansH = sum(isnan(oneCorrs),2)==size(oneCorrs,2);
+                oneCorrs(nansH,:) = [];
+                oneEnvMicePVcorrs{dpgI}{ddI,cpI} = [oneEnvMicePVcorrs{dpgI}{ddI,cpI}; oneCorrs];
+                oneEnvMicePVcorrsMeans{dpgI}{ddI,cpI} = [oneEnvMicePVcorrsMeans{dpgI}{ddI,cpI}; nanmean(oneCorrs,1)];
+
+                oneEnvPVcorrsDiff{dpgI}{ddI,cpI} = [oneEnvPVcorrsDiff{dpgI}{ddI,cpI}; ddI*ones(size(oneCorrs))];
+                oneEnvPVcorrsMeanDiff{dpgI}{ddI,cpI} = [oneEnvPVcorrsMeanDiff{dpgI}{ddI,cpI}; ddI*ones(size(nanmean(oneCorrs,1)))];
+
+                twoCorrs = pooledPVcorrs{dpJ,cpI}(twoEnvMice,:);
+                nansH = sum(isnan(twoCorrs),2)==size(twoCorrs,2);
+                twoCorrs(nansH,:) = [];
+                twoEnvMicePVcorrs{dpgI}{ddI,cpI} = [twoEnvMicePVcorrs{dpgI}{ddI,cpI}; twoCorrs];
+                twoEnvMicePVcorrsMeans{dpgI}{ddI,cpI} = [twoEnvMicePVcorrsMeans{dpgI}{ddI,cpI}; nanmean(twoCorrs,1)];
+
+                twoEnvPVcorrsDiff{dpgI}{ddI,cpI} = [twoEnvPVcorrsDiff{dpgI}{ddI,cpI}; ddI*ones(size(twoCorrs))];
+                twoEnvPVcorrsMeanDiff{dpgI}{ddI,cpI} = [twoEnvPVcorrsMeanDiff{dpgI}{ddI,cpI}; ddI*ones(size(nanmean(twoCorrs,1)))];
+        end
+    end
+end
+
+for dpgI = 1:3 %1 Turn1-Turn2, 2=x-Place
+    for ddI = 1:8 % Day diff interval
+        %for cpI = 1:numCondPairs
+            oneEnvCorrs = [oneEnvMicePVcorrsMeans{dpgI}{ddI,:}];
+            
+            oneEnvMeans{dpgI}(ddI,1) = mean(oneEnvCorrs(:));
+            oneEnvSEMs{dpgI}(ddI,1) = standarderrorSL(oneEnvCorrs(:));
+            
+            twoEnvCorrs = [twoEnvMicePVcorrsMeans{dpgI}{ddI,:}];
+            
+            twoEnvMeans{dpgI}(ddI,1) = mean(twoEnvCorrs(:));
+            twoEnvSEMs{dpgI}(ddI,1) = standarderrorSL(twoEnvCorrs(:));
+    end
+end
+
+figure;
+subplot(2,1,1)
+errorbar(oneEnvMeans{3},oneEnvSEMs{3},'Color',groupColors{1},'LineWidth',2,'LineStyle','-','DisplayName','One All')
+hold on
+errorbar(twoEnvMeans{3},twoEnvSEMs{3},'Color',groupColors{2},'LineWidth',2,'LineStyle','-','DisplayName','Two All')
+legend('location','NE')
+ylabel('Mean PV corr')
+xlabel('Day Interval')
+title('PV corr by Day Interval')
+MakePlotPrettySL(gca);
+xlim([0.8 8.2])
+ylim([-0.2 0.5])
+
+subplot(2,1,2)
+errorbar(oneEnvMeans{1},oneEnvSEMs{1},'Color',groupColors{1},'LineWidth',2,'LineStyle',':','DisplayName','One Within')
+hold on
+errorbar(oneEnvMeans{2},oneEnvSEMs{2},'Color',groupColors{1},'LineWidth',2,'LineStyle','--','DisplayName','One Across')
+%legend('Location','NE')
+%title('One-Maze')
+%ylabel('Mean PV corr')
+%subplot(2,1,2)
+errorbar(twoEnvMeans{1},twoEnvSEMs{1},'Color',groupColors{2},'LineWidth',2,'LineStyle',':','DisplayName','Two Within')
+hold on
+errorbar(twoEnvMeans{2},twoEnvSEMs{2},'Color',groupColors{2},'LineWidth',2,'LineStyle','--','DisplayName','Two Across')
+legend('Location','NE')
+%title('Two-Maze')
+ylabel('Mean PV corr')
+xlabel('Day Interval')
+title('PV corr by Day Interval')
+MakePlotPrettySL(gca);
+xlim([0.8 8.2])
 
 %% Turn1-Turn2 remapping
 dayPairsForward = [3 7; 3 8; 7 8]; 

@@ -33,7 +33,12 @@ if isempty(saveName)
     saveThis = 0;
 end
 
-sessions = unique(trialbytrial(1).sessID);
+condss = [];
+for condI = 1:length(trialbytrial)
+    condss = [condss; unique(trialbytrial(condI).sessID)];
+end
+sessions = unique(condss);
+%sessions = unique(trialbytrial(1).sessID);
 numSess = length(sessions);
 numCells = length(trialbytrial(1).trialPSAbool{1,1});
 
@@ -67,9 +72,10 @@ for condI = 1:numConds
         for chJ  = 1:numCondsHere
             pxHere = [trialbytrial(condsHere(chJ)).trialsX{lapsUse{chJ},1}];
             pyHere = [trialbytrial(condsHere(chJ)).trialsY{lapsUse{chJ},1}];
+            velHere = [trialbytrial(condsHere(chJ)).trialVelocity{lapsUse{chJ},1}];
             posX = [posX pxHere];
             posY = [posY pyHere];
-            
+            velH = [velH velHere];
             %{
             if any(velThresh)
                 velHere = [trialbytrial(condsHere(chJ)).trialVel{lapsUse{chJ},1}];
@@ -79,15 +85,13 @@ for condI = 1:numConds
         end 
         
         % deal with velocity
-        %{
-        good = true(1,length(posX));
-        isrunning = good;                         %Running frames that were not excluded.
-        if any(velThresh)
-        %isrunning(velocity < minspeed) = false;
-            isrunning(velH < velThresh) = false;
+        isRunning = true(size(posX));                        %Running frames that were not excluded.
+        if any(minSpeed)
+            isRunning(velH < minSpeed) = false;
         end
-        %}
-        
+
+        posX = posX(isRunning);
+        posY = posY(isRunning);
         %linearEdges = binEdges;
         %linearEdges = sort(linearEdges,'ascend');
         

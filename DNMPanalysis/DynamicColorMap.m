@@ -48,7 +48,7 @@ if any(normX) && any(normY)
     [distancesNorm, ptsCloseNorm] = GetAllPtToPtDistances(normX,normY,radiusLimit);
     
     if any(indexIntoNorm)
-        ptsCloseNorm = ptsCloseNorm(indexIntoNorm);
+        ptsCloseNorm = ptsCloseNorm(logical(indexIntoNorm));
     end
     
     
@@ -60,7 +60,7 @@ end
 if isempty(maxClose)
     maxClose = max(ptsClose);
 end
-ptColors = rateColorMap(ptsClose,'jet',maxClose);
+ptColors = rateColorMap(ptsClose,'jet',[0 maxClose]); % Was just max close...
 outputClose = max(ptsClose);
 %{
 if isempty(maxClose)

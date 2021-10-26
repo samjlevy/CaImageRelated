@@ -2,7 +2,7 @@
 
 %mainFolder = 'G:\DoublePlus';
 %mainFolder = 'C:\Users\Sam\Desktop\DoublePlusFinalData';
-mainFolder = 'F:\DoublePlus';
+mainFolder = 'E:\DoublePlus';
 %mainFolder = 'C:\Users\samwi_000\Desktop\DoublePlus';
 load(fullfile(mainFolder,'groupAssign.mat'))
 groupNum(strcmpi(groupAssign(:,2),'same')) = 1;
@@ -77,10 +77,12 @@ binOrderArmsLabels = {'n','w','s','e'};
 [binOrderArms] = SetBinOrder(lgDataBins,binOrderArmsLabels,[]);
 binsOrderedArms.X = cellfun(@(x) lgDataBins.X(x,:),binOrderArms,'UniformOutput',false);
 binsOrderedArms.Y = cellfun(@(x) lgDataBins.Y(x,:),binOrderArms,'UniformOutput',false);
+% n w s e
 eachArmBoundsT{1}.Y = lgDataBins.bounds.north.Y; eachArmBoundsT{2}.Y = lgDataBins.bounds.west.Y;
 eachArmBoundsT{3}.Y = lgDataBins.bounds.south.Y; eachArmBoundsT{4}.Y = lgDataBins.bounds.east.Y;
 eachArmBoundsT{1}.X = lgDataBins.bounds.north.X; eachArmBoundsT{2}.X = lgDataBins.bounds.west.X;
 eachArmBoundsT{3}.X = lgDataBins.bounds.south.X; eachArmBoundsT{4}.X = lgDataBins.bounds.east.X;
+% n e s e
 eachArmBoundsP{1}.Y = lgDataBins.bounds.north.Y; eachArmBoundsP{2}.Y = lgDataBins.bounds.east.Y;
 eachArmBoundsP{3}.Y = lgDataBins.bounds.south.Y; eachArmBoundsP{4}.Y = lgDataBins.bounds.east.Y;
 eachArmBoundsP{1}.X = lgDataBins.bounds.north.X; eachArmBoundsP{2}.X = lgDataBins.bounds.east.X;

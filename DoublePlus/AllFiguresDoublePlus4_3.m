@@ -191,7 +191,7 @@ yy.Color = groupColors{1}; %yy.Color = 'b';
 yy.LineWidth = 4;
 hold on
 zz = cdfplot(twoData);
-zz.Color = [0.9294    0.6941    0.1255];%groupColors{2}; %zz.Color = 'r';
+zz.Color = groupColors{2}; %zz.Color = 'r';
 zz.LineWidth = 4;
 xlabel('Correlation (Spearman rho)'); 
 ylabel('Cumulative Proportion')
@@ -390,15 +390,15 @@ for condI = 1:numel(condsUse)
     plotBins.X = [plotBins.X; lgPlotHere{condsUse(condI)}.X];
     plotBins.Y = [plotBins.Y; lgPlotHere{condsUse(condI)}.Y];
 end
-[figHand] = PlusMazePVcorrHeatmap3(oneEnvPVcorrs,plotBins,newGradient,[-0.1, 0.3],[]);
+[figHand] = PlusMazePVcorrHeatmap3(oneEnvPVcorrs,plotBins,newGradient,[-0.3, 0.3],[]);
 figHand.Position=[243.5000 212.5000 531.5000 399.5000];
 title('One-Maze')
 
-[figHand] = PlusMazePVcorrHeatmap3(twoEnvPVcorrs,plotBins,newGradient,[-0.1, 0.3],[]);
+[figHand] = PlusMazePVcorrHeatmap3(twoEnvPVcorrs,plotBins,newGradient,[-0.3, 0.3],[]);
 figHand.Position=[243.5000 212.5000 531.5000 399.5000];
 title('Two-Maze')
 
-labelsH = {'0.3','0.1','-0.1'};
+labelsH = {'0.3','0','-0.3'};
 PlotColorbar(newGradient,labelsH)
 
 condsCompare
@@ -418,11 +418,56 @@ for ccI = 1:size(condsCompare,1)
     
 end
 
-%% Adj days
+%% Day 1 - day 2 singleNeuron corr by MI change
+
+oneEnvClusterRemapCorrs = [];
+oneEnvClusterRemapMIdiff = [];
+twoEnvClusterRemapCorrs = [];
+twoEnvClusterRemapMIdiff = [];
+for mouseI = 1:numMice
+    for dpI = 1:numDayPairs
+         haveCellBothDays = sum(cellSSI{mouseI}(:,dayPairsForward(dpI,:))>0,2)==2;
+         aboveThreshOneDay = sum(dayUseAll{mouseI}(:,dayPairsForward(dpI,:)),2) >= 1;
+         firedOnMazeOneDays = sum(trialReliAll{mouseI}(:,dayPairsForward(dpI,:))>0,2) >= 1;
+         firedOnMazeBothDays = sum(trialReliAll{mouseI}(:,dayPairsForward(dpI,:))>0,2) == 2;
+         % This version restricts to conds used...
+         % firedOnMazeBothDays = sum(sum(trialReli{mouseI}(:,dayPairsForward(dpI,:),condsUse),3)>0,2) == 2;
+         
+         cellsUseH = haveCellBothDays & firedOnMazeBothDays & aboveThreshOneDay;
+         
+         corrsH = singleCellAllCorrsRho{mouseI}{1}{dpI}(cellsUseH);
+         MIdiffHere = MIdiff{mouseI}{dpI}(cellsUseH);
+         
+         switch groupNum(mouseI)
+             case 1
+                 oneEnvClusterRemapCorrs = [oneEnvClusterRemapCorrs; corrsH(:)];
+                 oneEnvClusterRemapMIdiff = [oneEnvClusterRemapMIdiff; MIdiffHere(:)];
+             case 2
+                 twoEnvClusterRemapCorrs = [twoEnvClusterRemapCorrs; corrsH(:)];
+                 twoEnvClusterRemapMIdiff = [twoEnvClusterRemapMIdiff; MIdiffHere(:)];
+         end
+    end
+end
+
+figure('Position',[338 210.5000 692.5000 349.5000]);
+subplot(1,2,1); 
+plot(oneEnvClusterRemapMIdiff,oneEnvClusterRemapCorrs,'.','MarkerFaceColor',groupColors{1},'MarkerEdgeColor',groupColors{1})
+[rr,pp] = corr(oneEnvClusterRemapMIdiff,oneEnvClusterRemapCorrs,'type','Spearman');
+title(['OneEnv rho=' num2str(rr) ', p=' num2str(pp)])
+xlabel('MI change'); ylabel('rho de Spearman')
+MakePlotPrettySL(gca);
+subplot(1,2,2); 
+plot(twoEnvClusterRemapMIdiff,twoEnvClusterRemapCorrs,'.','MarkerFaceColor',groupColors{2},'MarkerEdgeColor',groupColors{2})
+[rr,pp] = corr(twoEnvClusterRemapMIdiff,twoEnvClusterRemapCorrs,'type','Spearman');
+title(['TwoEnv rho=' num2str(rr) ', p=' num2str(pp)])
+xlabel('MI change'); ylabel('rho de Spearman')
+MakePlotPrettySL(gca);
+suptitleSL('Turn1 - Turn2')
+
+%% Adj days (day to day drift)
 
 % This is for change across rule epochs vs. change within
-daysAcross = zeros(8,1);
-daysAcross([3 6]) = 1;
+
 
 %figure;
 oneEnvRhoMeans = []; twoEnvRhoMeans = [];
@@ -573,6 +618,289 @@ xlabel('Day Pairs')
 ylabel('Correlation (Spearman rho)')
 MakePlotPrettySL(gg.Children);
 
+% Single cell PV corr by reliability
+% Relationship between remapping and activity rate
+
+% Bias of activity to a particular arm, does that change (Modulation index)
+
+
+% Whole maze
+oneEnvRemapRhoValsWithin = []; 
+oneEnvRemapReliValsWithin = [];
+oneEnvRemapPvalsWithin = [];
+oneEnvRemapRhoValsAcross = []; 
+oneEnvRemapReliValsAcross = [];
+oneEnvRemapPvalsAcross = [];
+oneEnvRemapReliChangeWithin = [];
+oneEnvRemapReliChangeAcross = [];
+twoEnvRemapRhoValsWithin = []; 
+twoEnvRemapReliValsWithin = [];
+twoEnvRemapPvalsWithin = [];
+twoEnvRemapRhoValsAcross = []; 
+twoEnvRemapReliValsAcross = [];
+twoEnvRemapPvalsAcross = [];
+twoEnvRemapReliChangeWithin = [];
+twoEnvRemapReliChangeAcross = [];
+
+for mouseI = 1:6
+    for dpI = 1:numDayPairs
+        switch daysAcross(dpI)
+            case 0
+                switch groupNum(mouseI)
+                    case 1
+                        oneEnvRemapRhoValsWithin = [oneEnvRemapRhoValsWithin; oneEnvRemapRho{mouseI}{dpI}];
+                        oneEnvRemapReliValsWithin = [oneEnvRemapReliValsWithin; oneEnvRemapReli{mouseI}{dpI}];
+                        oneEnvRemapPvalsWithin = [oneEnvRemapPvalsWithin; oneEnvRemapP{mouseI}{dpI}];
+                        oneEnvRemapReliChangeWithin = [oneEnvRemapReliChangeWithin; oneEnvRemapReliChange{mouseI}{dpI}];
+                    case 2
+                        twoEnvRemapRhoValsWithin = [twoEnvRemapRhoValsWithin; twoEnvRemapRho{mouseI}{dpI}];
+                        twoEnvRemapReliValsWithin = [twoEnvRemapReliValsWithin; twoEnvRemapReli{mouseI}{dpI}];
+                        twoEnvRemapPvalsWithin = [twoEnvRemapPvalsWithin; twoEnvRemapP{mouseI}{dpI}];
+                        twoEnvRemapReliChangeWithin = [twoEnvRemapReliChangeWithin; twoEnvRemapReliChange{mouseI}{dpI}];
+                end
+            case 1
+                switch groupNum(mouseI)
+                    case 1
+                        oneEnvRemapRhoValsAcross = [oneEnvRemapRhoValsAcross; oneEnvRemapRho{mouseI}{dpI}];
+                        oneEnvRemapReliValsAcross = [oneEnvRemapReliValsAcross; oneEnvRemapReli{mouseI}{dpI}];
+                        oneEnvRemapPvalsAcross = [oneEnvRemapPvalsAcross; oneEnvRemapP{mouseI}{dpI}];
+                        oneEnvRemapReliChangeAcross = [oneEnvRemapReliChangeAcross; oneEnvRemapReliChange{mouseI}{dpI}];
+                    case 2
+                        twoEnvRemapRhoValsAcross = [twoEnvRemapRhoValsAcross; twoEnvRemapRho{mouseI}{dpI}];
+                        twoEnvRemapReliValsAcross = [twoEnvRemapReliValsAcross; twoEnvRemapReli{mouseI}{dpI}];
+                        twoEnvRemapPvalsAcross = [twoEnvRemapPvalsAcross; twoEnvRemapP{mouseI}{dpI}];
+                        twoEnvRemapReliChangeAcross = [twoEnvRemapReliChangeAcross; twoEnvRemapReliChange{mouseI}{dpI}];
+                end
+        end
+    end
+end
+
+figure; 
+subplot(1,2,1)
+xData = [oneEnvRemapReliValsWithin(:); oneEnvRemapReliValsAcross(:)];
+yData = [oneEnvRemapRhoValsWithin(:); oneEnvRemapRhoValsAcross(:)];
+goodDat = (~isnan(xData)) & ~(isnan(yData));
+plot(xData,yData,'.','MarkerFaceColor',groupColors{1},'MarkerEdgeColor',groupColors{1})
+xlabel('trialReli'); ylabel('rho');
+[rr,pp] = corr(xData(goodDat),yData(goodDat),'type','Spearman');
+title(['OneMaze, p=' num2str(pp) ' rho=' num2str(rr)])
+[SEM, means] = BinnedMean(yData(goodDat),xData(goodDat),[0:0.1:1]);
+hold on; errorbar([0.05:0.1:0.95],means,SEM,'k','LineWidth',1.5)
+
+subplot(1,2,2)
+xData = [twoEnvRemapReliValsWithin(:); twoEnvRemapReliValsAcross(:)];
+yData = [twoEnvRemapRhoValsWithin(:); twoEnvRemapRhoValsAcross(:)];
+goodDat = (~isnan(xData)) & ~(isnan(yData));
+plot(xData,yData,'.','MarkerFaceColor',groupColors{2},'MarkerEdgeColor',groupColors{2})
+xlabel('trialReli'); ylabel('rho');
+[rr,pp] = corr(xData(goodDat),yData(goodDat),'type','Spearman');
+title(['TwoMaze, p=' num2str(pp) ' rho=' num2str(rr)])
+[SEM, means] = BinnedMean(yData(goodDat),xData(goodDat),[0:0.1:1]);
+hold on; errorbar([0.05:0.1:0.95],means,SEM,'k','LineWidth',1.5)       
+       
+       
+figure('Position',[370.5000 87.5000 852 636.5000]);
+subplot(2,2,1)
+xData = oneEnvRemapReliValsWithin;
+yData = oneEnvRemapRhoValsWithin;
+goodDat = (~isnan(xData)) & ~(isnan(yData));
+plot(xData,yData,'.','MarkerFaceColor',groupColors{1},'MarkerEdgeColor',groupColors{1})
+xlabel('trialReli'); ylabel('rho');
+[rr,pp] = corr(xData(goodDat),yData(goodDat),'type','Spearman');
+title(['OneMaze, Within, p=' num2str(pp) ' rho=' num2str(rr)])
+[SEM, means] = BinnedMean(yData(goodDat),xData(goodDat),[0:0.1:1]);
+hold on; errorbar([0.05:0.1:0.95],means,SEM,'k','LineWidth',1.5)
+
+subplot(2,2,2)
+xData = twoEnvRemapReliValsWithin;
+yData = twoEnvRemapRhoValsWithin;
+goodDat = (~isnan(xData)) & ~(isnan(yData));
+plot(xData,yData,'.','MarkerFaceColor',groupColors{2},'MarkerEdgeColor',groupColors{2})
+xlabel('trialReli'); ylabel('rho');
+[rr,pp] = corr(xData(goodDat),yData(goodDat),'type','Spearman');
+title(['TwoMaze, Within, p=' num2str(pp) ' rho=' num2str(rr)])
+[SEM, means] = BinnedMean(yData(goodDat),xData(goodDat),[0:0.1:1]);
+hold on; errorbar([0.05:0.1:0.95],means,SEM,'k','LineWidth',1.5)
+
+subplot(2,2,3)
+xData = oneEnvRemapReliValsAcross;
+yData = oneEnvRemapRhoValsAcross;
+goodDat = (~isnan(xData)) & ~(isnan(yData));
+plot(xData,yData,'.','MarkerFaceColor',groupColors{1},'MarkerEdgeColor',groupColors{1})
+xlabel('trialReli'); ylabel('rho');
+[rr,pp] = corr(xData(goodDat),yData(goodDat),'type','Spearman');
+title(['OneMaze, Across, p=' num2str(pp) ' rho=' num2str(rr)])
+[SEM, means] = BinnedMean(yData(goodDat),xData(goodDat),[0:0.1:1]);
+hold on; errorbar([0.05:0.1:0.95],means,SEM,'k','LineWidth',1.5)
+
+subplot(2,2,4)
+xData = twoEnvRemapReliValsAcross;
+yData = twoEnvRemapRhoValsAcross;
+goodDat = (~isnan(xData)) & ~(isnan(yData));
+plot(xData,yData,'.','MarkerFaceColor',groupColors{2},'MarkerEdgeColor',groupColors{2})
+xlabel('trialReli'); ylabel('rho');
+[rr,pp] = corr(xData(goodDat),yData(goodDat),'type','Spearman');
+title(['TwoMaze, Across, p=' num2str(pp) ' rho=' num2str(rr)])
+[SEM, means] = BinnedMean(yData(goodDat),xData(goodDat),[0:0.1:1]);
+hold on; errorbar([0.05:0.1:0.95],means,SEM,'k','LineWidth',1.5)
+
+suptitleSL('Single-Cell Corr DayN-N+1 by DayN reliability')
+
+% Comparisons here:
+binsH = 0:0.1:1; nBins = numel(binsH)-1;
+
+xxData{1} = oneEnvRemapReliValsWithin;
+yyData{1} = oneEnvRemapRhoValsWithin;
+labelsH{1} = 'One-Within';
+
+xxData{2} = twoEnvRemapReliValsWithin;
+yyData{2} = twoEnvRemapRhoValsWithin;
+labelsH{2} = 'Two-Within';
+
+xxData{3} = oneEnvRemapReliValsAcross;
+yyData{3} = oneEnvRemapRhoValsAcross;
+labelsH{3} = 'One-Across';
+
+xxData{4} = twoEnvRemapReliValsAcross;
+yyData{4} = twoEnvRemapRhoValsAcross;
+labelsH{4} = 'Two-Across';
+
+compsH = [1 3; 1 2; 2 4; 3 4];
+for compI = 1:size(compsH,1)
+    pVals = nan(1,nBins);
+    hVals = nan(1,nBins);
+        
+    datA = compsH(compI,1);
+    datB = compsH(compI,2);
+        
+    for binI = 1:nBins
+        
+        try
+        [pVals(binI),hVals(binI)] = ranksum(...
+            yyData{datA}((xxData{datA} >= binsH(binI)) & (xxData{datA} < binsH(binI+1))),...
+            yyData{datB}((xxData{datB} >= binsH(binI)) & (xxData{datB} < binsH(binI+1))) );
+        end
+        
+    end
+    
+    disp([labelsH{datA} ' vs ' labelsH{datB}]);
+    pVals
+end
+
+% Same as above, but reli change
+bbinsH = [-0.55:0.1:0.55];
+figure('Position',[370.5000 87.5000 852 636.5000]);
+subplot(2,2,1)
+xData = oneEnvRemapReliChangeWithin;
+yData = oneEnvRemapRhoValsWithin;
+goodDat = (~isnan(xData)) & ~(isnan(yData));
+plot(xData,yData,'.','MarkerFaceColor',groupColors{1},'MarkerEdgeColor',groupColors{1})
+xlabel('trialReli Change'); ylabel('rho');
+[rr,pp] = corr(xData(goodDat & (xData < 0)),yData(goodDat& (xData < 0)),'type','Spearman');
+[rr2,pp2] = corr(xData(goodDat & (xData > 0)),yData(goodDat & (xData > 0)),'type','Spearman');
+title({'TwoMaze, Across'; ['Pos: p=' num2str(pp) ' rho=' num2str(rr)];['Neg: p=' num2str(pp2) ' rho=' num2str(rr2)]})
+[SEM, means] = BinnedMean(yData(goodDat),xData(goodDat),bbinsH);
+hold on; errorbar([-0.5:0.1:0.5],means,SEM,'k','LineWidth',1.5)
+MakePlotPrettySL(gca);
+
+subplot(2,2,2)
+xData = twoEnvRemapReliChangeWithin;
+yData = twoEnvRemapRhoValsWithin;
+goodDat = (~isnan(xData)) & ~(isnan(yData));
+plot(xData,yData,'.','MarkerFaceColor',groupColors{2},'MarkerEdgeColor',groupColors{2})
+xlabel('trialReli change'); ylabel('rho');
+[rr,pp] = corr(xData(goodDat& (xData < 0)),yData(goodDat& (xData < 0)),'type','Spearman');
+[rr2,pp2] = corr(xData(goodDat & (xData > 0)),yData(goodDat & (xData > 0)),'type','Spearman');
+title({'TwoMaze, Across'; ['Pos: p=' num2str(pp) ' rho=' num2str(rr)];['Neg: p=' num2str(pp2) ' rho=' num2str(rr2)]})
+[SEM, means] = BinnedMean(yData(goodDat),xData(goodDat),bbinsH);
+hold on; errorbar([-0.5:0.1:0.5],means,SEM,'k','LineWidth',1.5)
+MakePlotPrettySL(gca);
+
+subplot(2,2,3)
+xData = oneEnvRemapReliChangeAcross;
+yData = oneEnvRemapRhoValsAcross;
+goodDat = (~isnan(xData)) & ~(isnan(yData));
+plot(xData,yData,'.','MarkerFaceColor',groupColors{1},'MarkerEdgeColor',groupColors{1})
+xlabel('trialReli change'); ylabel('rho');
+[rr,pp] = corr(xData(goodDat & (xData < 0)),yData(goodDat & (xData < 0)),'type','Spearman');
+[rr2,pp2] = corr(xData(goodDat & (xData > 0)),yData(goodDat & (xData > 0)),'type','Spearman');
+title({'TwoMaze, Across'; ['Pos: p=' num2str(pp) ' rho=' num2str(rr)];['Neg: p=' num2str(pp2) ' rho=' num2str(rr2)]})
+[SEM, means] = BinnedMean(yData(goodDat),xData(goodDat),bbinsH);
+hold on; errorbar([-0.5:0.1:0.5],means,SEM,'k','LineWidth',1.5)
+MakePlotPrettySL(gca);
+
+subplot(2,2,4)
+xData = twoEnvRemapReliChangeAcross;
+yData = twoEnvRemapRhoValsAcross;
+goodDat = (~isnan(xData)) & ~(isnan(yData));
+plot(xData,yData,'.','MarkerFaceColor',groupColors{2},'MarkerEdgeColor',groupColors{2})
+xlabel('trialReli change'); ylabel('rho');
+[rr,pp] = corr(xData(goodDat & (xData < 0)),yData(goodDat & (xData < 0)),'type','Spearman');
+[rr2,pp2] = corr(xData(goodDat & (xData > 0)),yData(goodDat & (xData > 0)),'type','Spearman');
+title({'TwoMaze, Across'; ['Pos: p=' num2str(pp) ' rho=' num2str(rr)];['Neg: p=' num2str(pp2) ' rho=' num2str(rr2)]})
+[SEM, means] = BinnedMean(yData(goodDat),xData(goodDat),bbinsH);
+hold on; errorbar([-0.5:0.1:0.5],means,SEM,'k','LineWidth',1.5)
+MakePlotPrettySL(gca);
+
+suptitleSL('Single-Cell Corr DayN-N+1 by reliability change')
+
+
+%{            
+for dpI = 1:numDayPairs
+    figure;
+    subplot(1,2,1)
+    yData = oneEnvRemapRho{dpI};
+    xData = oneEnvRemapReli{dpI};
+    goodDat = (~isnan(xData)) & ~(isnan(yData));
+    %yData = oneEnvRemapP{dpI};
+    plot(xData,yData,'.','MarkerFaceColor',groupColors{1},'MarkerEdgeColor',groupColors{1})
+    xlabel('trialReli'); ylabel('rho');
+    [rr,pp] = corr(xData(goodDat),yData(goodDat),'type','Spearman');
+    title(['OneMaze, p=' num2str(pp) ' rho=' num2str(rr)])
+    
+    subplot(1,2,2)
+    yData = twoEnvRemapRho{dpI};
+    %yData = twoEnvRemapP{dpI};
+    xData = twoEnvRemapReli{dpI};
+    goodDat = (~isnan(xData)) & ~(isnan(yData));
+    plot(xData(goodDat),yData(goodDat),'.','MarkerFaceColor',groupColors{2},'MarkerEdgeColor',groupColors{2})
+    xlabel('trialReli'); ylabel('rho');
+    [rr,pp] = corr(xData(goodDat),yData(goodDat),'type','Spearman');
+    title(['TwoMaze, p=' num2str(pp) ' rho=' num2str(rr)])
+    
+    suptitleSL(num2str(dayPairsForward(dpI,:)))
+end
+%}
+%Each Cond
+for dpI = 1:numDayPairs
+    figure;
+    for condI = 1:numel(condsUse)
+        subplot(2,4,condI*2-1)
+        xData = oneEnvRemapReliEach{dpI,condI};
+        yData = oneEnvRemapRhoEach{dpI,condI};
+        goodDat = (~isnan(xData)) & ~(isnan(yData));
+        plot(xData(goodDat),yData(goodDat),'.','MarkerFaceColor',groupColors{1},'MarkerEdgeColor',groupColors{1})
+        xlabel('trialReli'); ylabel('rho');
+        [rr,pp] = corr(xData(goodDat),yData(goodDat),'type','Spearman');
+        title(['p=' num2str(pp) ' rho=' num2str(rr)])
+
+        subplot(2,4,condI*2)
+        xData = twoEnvRemapReliEach{dpI,condI};
+        yData = twoEnvRemapRhoEach{dpI,condI};
+        goodDat = (~isnan(xData)) & ~(isnan(yData));
+        plot(xData(goodDat),yData(goodDat),'.','MarkerFaceColor',groupColors{2},'MarkerEdgeColor',groupColors{2})
+        xlabel('trialReli'); ylabel('rho');
+        [rr,pp] = corr(xData(goodDat),yData(goodDat),'type','Spearman');
+        title(['p=' num2str(pp) ' rho=' num2str(rr)])
+    end
+    suptitleSL(num2str(dayPairsForward(dpI,:)))
+end
+% How to use p values here?
+
+% Each cond
+
+
+
 %% Separate states
 
 figure;
@@ -580,10 +908,10 @@ for dpgI = 1:3
     for condI = 1:3
         subplot(3,3,condI+3*(dpgI-1))
         %plot(oneEnvDGcorrsMean{dpgI}{cpI},groupColors{1})
-        errorbar(oneEnvDGcorrsMean{dpgI}{condI},oneEnvDGcorrsSEM{dpgI}{condI},groupColors{1},'LineWidth',2)
+        errorbar(oneEnvDGcorrsMean{dpgI}{condI},oneEnvDGcorrsSEM{dpgI}{condI},'Color',groupColors{1},'LineWidth',2)
         hold on
         %plot(twoEnvDGcorrsMean{dpgI}{cpI},groupColors{2})
-        errorbar(twoEnvDGcorrsMean{dpgI}{condI},twoEnvDGcorrsSEM{dpgI}{condI},groupColors{2},'LineWidth',2)
+        errorbar(twoEnvDGcorrsMean{dpgI}{condI},twoEnvDGcorrsSEM{dpgI}{condI},'Color',groupColors{2},'LineWidth',2)
         title([dayGroupLabels{dpgI} ' ' armLabels{condsHere(condI)}])
         xlabel('Bin'); ylabel('Corr. (rho)')
         MakePlotPrettySL(gca);
@@ -811,108 +1139,7 @@ for dpI = 1:numDayTrips
     disp([num2str(dpI) ' ' num2str(mean(x)) ' ' num2str(CI)])
 end             
 
-title('Cumulative Magnitud of Turn-place-turn COM change differences')
-
-    
-%% Relationship between remapping and activity rate
-
-% Whole maze
-oneEnvRemapReli = cell(1,numDayPairs); oneEnvRemapRho = cell(1,numDayPairs); oneEnvRemapP = cell(1,numDayPairs);
-twoEnvRemapReli = cell(1,numDayPairs); twoEnvRemapRho = cell(1,numDayPairs); twoEnvRemapP = cell(1,numDayPairs);
-
-oneEnvRemapReliEach = cell(numDayPairs,numConds); oneEnvRemapRhoEach = cell(numDayPairs,numConds); oneEnvRemapPEach = cell(numDayPairs,numConds);
-twoEnvRemapReliEach = cell(numDayPairs,numConds); twoEnvRemapRhoEach = cell(numDayPairs,numConds); twoEnvRemapPEach = cell(numDayPairs,numConds);
-for mouseI = 1:numMice
-    for dpI = 1:numDayPairs
-        haveCellBothDays = sum(cellSSI{mouseI}(:,dayPairsForward(dpI,:))>0,2)==2;
-        %aboveThreshOneDay = sum(dayUseAll{mouseI}(:,dayPairsForward(dpI,:)),2) >= 1;
-        firedOnMazeOneDays = sum(trialReliAll{mouseI}(:,dayPairsForward(dpI,:))>0,2) >= 1;
-        firedOnMazeBothDays = sum(trialReliAll{mouseI}(:,dayPairsForward(dpI,:))>0,2) == 2;
-        
-        reliAllH = trialReliAll{mouseI}(:,dayPairsForward(dpI,1));
-        
-        cellsUseH = haveCellBothDays & firedOnMazeBothDays; %& aboveThreshOneDay;
-        switch groupNum(mouseI)
-            case 1
-                oneEnvRemapReli{dpI} = [oneEnvRemapReli{dpI}; reliAllH(cellsUseH)];
-                oneEnvRemapRho{dpI} = [oneEnvRemapRho{dpI}; singleCellAllCorrsRho{mouseI}{1}{dpI}(cellsUseH)];
-                oneEnvRemapP{dpI} = [oneEnvRemapP{dpI}; singleCellAllCorrsP{mouseI}{1}{dpI}(cellsUseH)];
-            case 2
-                twoEnvRemapReli{dpI} = [twoEnvRemapReli{dpI}; reliAllH(cellsUseH)];
-                twoEnvRemapRho{dpI} = [twoEnvRemapRho{dpI}; singleCellAllCorrsRho{mouseI}{1}{dpI}(cellsUseH)];
-                twoEnvRemapP{dpI} = [twoEnvRemapP{dpI}; singleCellAllCorrsP{mouseI}{1}{dpI}(cellsUseH)];
-        end
-        
-        for condI = 1:numConds
-            if numSessTrials{mouseI}(dayPairsForward(dpI,1),condI) > 1
-            firedOnMazeOneDays = sum(trialReli{mouseI}(:,dayPairsForward(dpI,:),condI)>0,2) >= 1;
-            firedOnMazeBothDays = sum(trialReli{mouseI}(:,dayPairsForward(dpI,:),condI)>0,2) == 2;
-            
-            % Need something here to kick out cond with less than 1 trial
-            
-            
-            reliAllH = trialReli{mouseI}(:,dayPairsForward(dpI,1),condI);
-            cellsUseH = haveCellBothDays & firedOnMazeBothDays;
-            switch groupNum(mouseI)
-                case 1
-                    oneEnvRemapReliEach{dpI,condI} = [oneEnvRemapReliEach{dpI,condI}; reliAllH(cellsUseH)];
-                    oneEnvRemapRhoEach{dpI,condI} = [oneEnvRemapRhoEach{dpI,condI}; singleCellCorrsRho{mouseI}{condI}{dpI}(cellsUseH)];
-                    oneEnvRemapPEach{dpI,condI} = [oneEnvRemapPEach{dpI,condI}; singleCellCorrsP{mouseI}{condI}{dpI}(cellsUseH)];
-                case 2
-                    twoEnvRemapReliEach{dpI,condI} = [twoEnvRemapReliEach{dpI,condI}; reliAllH(cellsUseH)];
-                    twoEnvRemapRhoEach{dpI,condI} = [twoEnvRemapRhoEach{dpI,condI}; singleCellCorrsRho{mouseI}{condI}{dpI}(cellsUseH)];
-                    twoEnvRemapPEach{dpI,condI} = [twoEnvRemapPEach{dpI,condI}; singleCellCorrsP{mouseI}{condI}{dpI}(cellsUseH)];
-            end
-            
-            end
-        end
-    end
-end
-
-% Whole maze
-for dpI = 1:numDayPairs
-    figure;
-    subplot(1,2,1)
-    %yData = oneEnvRemapRho{dpI};
-    yData = oneEnvRemapP{dpI};
-    plot(oneEnvRemapReli{dpI},yData,'.','MarkerFaceColor',groupColors{1},'MarkerEdgeColor',groupColors{1})
-    xlabel('trialReli'); ylabel('rho');
-    [rr,pp] = corr(oneEnvRemapReli{dpI},yData,'type','Spearman');
-    title(['p=' num2str(pp) ' rho=' num2str(rr)])
-    
-    subplot(1,2,2)
-    %yData = twoEnvRemapRho{dpI};
-    yData = twoEnvRemapP{dpI};
-    plot(twoEnvRemapReli{dpI},yData,'.','MarkerFaceColor',groupColors{2},'MarkerEdgeColor',groupColors{2})
-    xlabel('trialReli'); ylabel('rho');
-    [rr,pp] = corr(twoEnvRemapReli{dpI},yData,'type','Spearman');
-    title(['p=' num2str(pp) ' rho=' num2str(rr)])
-    
-    suptitleSL(num2str(dayPairsForward(dpI,:)))
-end
-
-%Each Cond
-for dpI = 1:numDayPairs
-    figure;
-    for condI = 1:numConds
-        subplot(2,4,condI*2-1)
-        plot(oneEnvRemapReliEach{dpI,condI},oneEnvRemapRhoEach{dpI,condI},'.','MarkerFaceColor',groupColors{1},'MarkerEdgeColor',groupColors{1})
-        xlabel('trialReli'); ylabel('rho');
-        [rr,pp] = corr(oneEnvRemapReliEach{dpI,condI},oneEnvRemapRhoEach{dpI,condI},'type','Spearman');
-        title(['p=' num2str(pp) ' rho=' num2str(rr)])
-
-        subplot(2,4,condI*2)
-        plot(twoEnvRemapReliEach{dpI,condI},twoEnvRemapRhoEach{dpI,condI},'.','MarkerFaceColor',groupColors{2},'MarkerEdgeColor',groupColors{2})
-        xlabel('trialReli'); ylabel('rho');
-        [rr,pp] = corr(twoEnvRemapReliEach{dpI,condI},twoEnvRemapRhoEach{dpI,condI},'type','Spearman');
-        title(['p=' num2str(pp) ' rho=' num2str(rr)])
-    end
-    suptitleSL(num2str(dayPairsForward(dpI,:)))
-end
-% How to use p values here?
-
-% Each cond
-singleCellCorrsRho{mouseI}{condI}{dayPairI}
+title('Cumulative Magnitude of Turn-place-turn COM change differences')   
 
 %% Absolute remapping
 
@@ -1143,8 +1370,7 @@ for dpI = 1:numDayPairs
         
         pp = ranksum(dataA,dataB);
         
-        disp(['For days ' num2str(dayPairs(dpI,:)) ' N vs ' armLabels{condI} ', p = ' num2str(pp)])
-        ) '+/-' std(dataB)])
+        %disp(['For days ' num2str(dayPairs(dpI,:)) ' N vs ' armLabels{condI} ', p = ' num2str(pp)]) '+/-' std(dataB)])
     end
 end
 end
@@ -1622,7 +1848,7 @@ for dpI = 1:numDayPairs
     end 
     suptitleSL(['Days ' num2str(dayPairsForward(dpI,:))])
 end
-
+end
 % Pct pvals significant
 gg=figure;
 for dpI = 1:numDayPairs

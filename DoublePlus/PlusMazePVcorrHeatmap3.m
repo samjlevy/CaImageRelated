@@ -8,6 +8,10 @@ function [figHand] = PlusMazePVcorrHeatmap3(corrsPlot,plotBins,gradientUse,gradi
 numDayPairs = size(corrsPlot,1);
 numBins = size(corrsPlot,2);
 
+if isempty(gradientLims)
+    gradientLims = [min(corrsPlot(:)) max(corrsPlot(:))];
+end
+
 bff = 10; xll = [min(plotBins.X(:))-bff max(plotBins.X(:))+bff]; yll = [min(plotBins.Y(:))-bff max(plotBins.Y(:))+bff];
 figHand = figure('Position',[243.5000 207 1.0605e+03 405]);
 for dpI = 1:numDayPairs

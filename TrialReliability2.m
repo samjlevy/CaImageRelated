@@ -29,6 +29,14 @@ for cpI=1:numCondPairs
         % Get pts in bounds
             [ptsInBound,ptsOnBound] = cellfun(@(x,y) inpolygon(x,y,boundary{cpI}.X,boundary{cpI}.Y),...
                 trialbytrial(condI).trialsX,trialbytrial(condI).trialsY,'UniformOutput',false);
+            %{
+            xx = trialbytrial(condI).trialsX{1};
+            yy = trialbytrial(condI).trialsY{1};
+            bx = boundary{cpI}.X;
+            by = boundary{cpI}.Y;
+            ptt = inin | onon;
+            plot(xx(ptt),yy(ptt),'*')
+            %}
             ptsUse = cellfun(@(x,y) x | y,ptsInBound,ptsOnBound,'UniformOutput',false);
 
             condFires = cellfun(@(x,y) sum(x(:,y),2)>0,trialbytrial(condI).trialPSAbool,ptsUse,'UniformOutput',false);
@@ -38,8 +46,11 @@ for cpI=1:numCondPairs
         for sessI = 1:length(sessHere)
             trialsHere = trialbytrial(condI).sessID==sessHere(sessI);
             numTrials(cpI,sessI) = numTrials(cpI,sessI) + sum(trialsHere);
-
+try
             activeHere = cell2mat([condFires(trialsHere)]');
+catch
+    keyboard
+end
             %trialReliability(:,sessHere(sessI),cpI) = sum(activeHere,2)/numTrials;
             trialReliability(:,sessHere(sessI),cpI) = trialReliability(:,sessHere(sessI),cpI)+sum(activeHere,2);
 

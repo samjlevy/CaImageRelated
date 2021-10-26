@@ -181,7 +181,7 @@ for mouseI = 1:numMice
         pvCellsUse{mouseI}{dpI} = cellsUseHere;
         
         pValsAgg = [];
-        for condI = 1:numConds
+        for condI = 1:numel(condsUse)
             corrsHere = singleCellCorrsRho{mouseI}{condI}{dpI}(cellsUseHere);
             pValsHere = singleCellCorrsP{mouseI}{condI}{dpI}(cellsUseHere);
             pValsAgg = [pValsAgg; pValsHere];
@@ -221,7 +221,150 @@ for mouseI = 1:numMice
         
 end     
 
+% Reliability changes
+% Should break this up by whether same rule or different rule
+% Maybe do it for all days, etc. 
+% Also this probably needs to be moved into main analysis...
 
+% Questions: 
+%     Does remapping happen preferentially to low activity cells?
+%     Is there any relationship with remapping and changing reliability?
+%     Same cell: across multiple pairs of days, remaps more or less with
+%     its own differences in reliability?
+
+%oneEnvRemapReli = cell(1,numDayPairs); oneEnvRemapRho = cell(1,numDayPairs); oneEnvRemapP = cell(1,numDayPairs);
+%twoEnvRemapReli = cell(1,numDayPairs); twoEnvRemapRho = cell(1,numDayPairs); twoEnvRemapP = cell(1,numDayPairs);
+
+oneEnvRemapReliEach = cell(numDayPairs,numel(condsUse)); oneEnvRemapRhoEach = cell(numDayPairs,numel(condsUse)); oneEnvRemapPEach = cell(numDayPairs,numel(condsUse));
+twoEnvRemapReliEach = cell(numDayPairs,numel(condsUse)); twoEnvRemapRhoEach = cell(numDayPairs,numel(condsUse)); twoEnvRemapPEach = cell(numDayPairs,numel(condsUse));
+for mouseI = 1:numMice
+    for dpI = 1:numDayPairs
+        haveCellBothDays = sum(cellSSI{mouseI}(:,dayPairsForward(dpI,:))>0,2)==2;
+        %aboveThreshOneDay = sum(dayUseAll{mouseI}(:,dayPairsForward(dpI,:)),2) >= 1;
+        firedOnMazeOneDays = sum(trialReliAll{mouseI}(:,dayPairsForward(dpI,:))>0,2) >= 1;
+        firedOnMazeBothDays = sum(trialReliAll{mouseI}(:,dayPairsForward(dpI,:))>0,2) == 2;
+        % This version restricts to conds used...
+        % firedOnMazeBothDays = sum(sum(trialReli{mouseI}(:,dayPairsForward(dpI,:),condsUse),3)>0,2) == 2;
+        
+        reliAllH = trialReliAll{mouseI}(:,dayPairsForward(dpI,1));
+        
+        cellsUseH = haveCellBothDays & firedOnMazeBothDays; %& aboveThreshOneDay;
+        
+        reliChange = trialReliAll{mouseI}(:,dayPairsForward(dpI,2)) - trialReliAll{mouseI}(:,dayPairsForward(dpI,1));
+        switch groupNum(mouseI)
+            case 1
+                oneEnvRemapReli{mouseI}{dpI} = reliAllH(cellsUseH);
+                oneEnvRemapReliChange{mouseI}{dpI} = reliChange(cellsUseH);
+                oneEnvRemapRho{mouseI}{dpI} = singleCellAllCorrsRho{mouseI}{1}{dpI}(cellsUseH);
+                oneEnvRemapP{mouseI}{dpI} = singleCellAllCorrsP{mouseI}{1}{dpI}(cellsUseH);
+                oneEnvRemapCellsUse{mouseI}{dpI} = cellsUseH;
+            case 2
+                twoEnvRemapReli{mouseI}{dpI} = reliAllH(cellsUseH);
+                twoEnvRemapReliChange{mouseI}{dpI} = reliChange(cellsUseH);
+                twoEnvRemapRho{mouseI}{dpI} = singleCellAllCorrsRho{mouseI}{1}{dpI}(cellsUseH);
+                twoEnvRemapP{mouseI}{dpI} = singleCellAllCorrsP{mouseI}{1}{dpI}(cellsUseH);
+                twoEnvRemapCellsUse{mouseI}{dpI} = cellsUseH;
+        end
+        
+        %{
+        switch groupNum(mouseI)
+            case 1
+                oneEnvRemapReli{dpI} = [oneEnvRemapReli{dpI}; reliAllH(cellsUseH)];
+                oneEnvRemapRho{dpI} = [oneEnvRemapRho{dpI}; singleCellAllCorrsRho{mouseI}{1}{dpI}(cellsUseH)];
+                oneEnvRemapP{dpI} = [oneEnvRemapP{dpI}; singleCellAllCorrsP{mouseI}{1}{dpI}(cellsUseH)];
+            case 2
+                twoEnvRemapReli{dpI} = [twoEnvRemapReli{dpI}; reliAllH(cellsUseH)];
+                twoEnvRemapRho{dpI} = [twoEnvRemapRho{dpI}; singleCellAllCorrsRho{mouseI}{1}{dpI}(cellsUseH)];
+                twoEnvRemapP{dpI} = [twoEnvRemapP{dpI}; singleCellAllCorrsP{mouseI}{1}{dpI}(cellsUseH)];
+        end
+        %}
+        
+        %Each arm
+        for condI = 1:numel(condsUse)
+            % Need something here to kick out cond with less than 1 trial;
+            % covered by this?
+            if numSessTrials{mouseI}(dayPairsForward(dpI,1),condI) > 1
+            firedOnMazeOneDays = sum(trialReli{mouseI}(:,dayPairsForward(dpI,:),condI)>0,2) >= 1;
+            firedOnMazeBothDays = sum(trialReli{mouseI}(:,dayPairsForward(dpI,:),condI)>0,2) == 2;
+                        
+            reliAllH = trialReli{mouseI}(:,dayPairsForward(dpI,1),condI);
+            cellsUseH = haveCellBothDays & firedOnMazeBothDays;
+            switch groupNum(mouseI)
+                case 1
+                    oneEnvRemapReliEach{dpI,condI} = [oneEnvRemapReliEach{dpI,condI}; reliAllH(cellsUseH)];
+                    oneEnvRemapRhoEach{dpI,condI} = [oneEnvRemapRhoEach{dpI,condI}; singleCellCorrsRho{mouseI}{condI}{dpI}(cellsUseH)];
+                    oneEnvRemapPEach{dpI,condI} = [oneEnvRemapPEach{dpI,condI}; singleCellCorrsP{mouseI}{condI}{dpI}(cellsUseH)];
+                case 2
+                    twoEnvRemapReliEach{dpI,condI} = [twoEnvRemapReliEach{dpI,condI}; reliAllH(cellsUseH)];
+                    twoEnvRemapRhoEach{dpI,condI} = [twoEnvRemapRhoEach{dpI,condI}; singleCellCorrsRho{mouseI}{condI}{dpI}(cellsUseH)];
+                    twoEnvRemapPEach{dpI,condI} = [twoEnvRemapPEach{dpI,condI}; singleCellCorrsP{mouseI}{condI}{dpI}(cellsUseH)];
+            end
+            
+            end
+        end
+    end
+end
+
+
+% MI of activity across arms
+MI = [];
+for mouseI = 1:numMice
+    for sessI = 1:9
+        for condI = 1:4
+            nDayTrials(condI) = sum(cellTBT{mouseI}(condI).sessID == sessI);
+        end
+        
+        if any(nDayTrials)
+            for cellI = 1:numCells(mouseI)
+                [MI{mouseI}(cellI,sessI)] = ModulationIndex(squeeze(numTrialsFired{mouseI}(cellI,sessI,:)));
+            end
+        end
+    end
+end
+
+MIthree = [];
+for mouseI = 1:numMice
+    for sessI = 1:9
+        for condI = 1:4
+            nDayTrials(condI) = sum(cellTBT{mouseI}(condI).sessID == sessI);
+        end
+        
+        if any(nDayTrials)
+            for cellI = 1:numCells(mouseI)
+                [MIthree{mouseI}(cellI,sessI)] = ModulationIndex(squeeze(numTrialsFired{mouseI}(cellI,sessI,condsUse)));
+            end
+        end
+    end
+end
+
+for mouseI = 1:numMice
+    for dpI = 1:numDayPairs
+        
+        haveCellBothDays = sum(cellSSI{mouseI}(:,dayPairsForward(dpI,:))>0,2)==2;
+        aboveThreshOneDay = sum(dayUseAll{mouseI}(:,dayPairsForward(dpI,:)),2) >= 1;
+        firedOnMazeOneDays = sum(trialReliAll{mouseI}(:,dayPairsForward(dpI,:))>0,2) >= 1;
+        firedOnMazeBothDays = sum(trialReliAll{mouseI}(:,dayPairsForward(dpI,:))>0,2) == 2;
+        % This version restricts to conds used...
+        % firedOnMazeBothDays = sum(sum(trialReli{mouseI}(:,dayPairsForward(dpI,:),condsUse),3)>0,2) == 2;
+        
+        cellsUseH = haveCellBothDays & firedOnMazeBothDays & aboveThreshOneDay;
+        
+        MIdiffs = MI{mouseI}(:,dayPairsForward(dpI,2)) - MI{mouseI}(:,dayPairsForward(dpI,1));
+        %MIdiff{mouseI}{dpI} = MIdiffs(cellsUseH);
+        MIdiff{mouseI}{dpI} = MIdiffs;
+        
+        % 3 cond
+        aboveThreshOneDay = sum(sum(dayUse{mouseI}(:,dayPairsForward(dpI,:),condsUse),2),3) >= 1;
+        firedOnMazeOneDays = sum(sum(trialReli{mouseI}(:,dayPairsForward(dpI,:),condsUse)>0,3),2) >= 1;
+        firedOnMazeBothDays = sum(sum(trialReli{mouseI}(:,dayPairsForward(dpI,:),condsUse)>0,3),2) == 2;
+        
+        cellsUseHeach  = haveCellBothDays & firedOnMazeBothDays & aboveThreshOneDay;
+        MIthreeDiffs = MIthree{mouseI}(:,dayPairsForward(dpI,2)) - MIthree{mouseI}(:,dayPairsForward(dpI,1));
+        %MIthreeDiff{mouseI}{dpI} = MIthreeDiffs(cellsUseH);
+        MIthreeDiff{mouseI}{dpI} = MIthreeDiffs;
+        
+    end
+end
 %Absolute remapping
 %{
 oneMazeHaveBothAgg = cell(1,numDayPairs);
