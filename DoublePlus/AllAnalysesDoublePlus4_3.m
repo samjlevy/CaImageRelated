@@ -40,9 +40,13 @@ allMazeBound.Y = [lgDataBins.bounds.north.Y; lgDataBins.bounds.east.Y; lgDataBin
 allMazeBound.X = [flipud(lgDataBins.bounds.north.X); lgDataBins.bounds.east.X; lgDataBins.bounds.south.X; lgDataBins.bounds.west.X];
 numBins = size(lgDataBins.X,1);
 [binOrderIndex] = SetBinOrder(lgDataBins,armLabels,[]);
+lgPlotAll.X = [];
+lgPlotAll.Y = [];
 for condI = 1:4
     lgPlotHere{condI}.X = lgPlotBins.X(binOrderIndex{condI},:);
     lgPlotHere{condI}.Y = lgPlotBins.Y(binOrderIndex{condI},:);
+    lgPlotAll.X = [lgPlotAll.X; lgPlotBins.X(binOrderIndex{condI},:)];
+    lgPlotAll.Y = [lgPlotAll.Y; lgPlotBins.Y(binOrderIndex{condI},:)];
 end
 %{
 figure; plot(allMazeBound.X,allMazeBound.Y); hold on
@@ -247,11 +251,10 @@ corrsLoaded = load(fullfile(mainFolder,corrsFile));
 
 disp('Done setup stuff')
 
-msgbox('day use changes across arms (absolute)')
-msgbox('Remapping: figures line 1035 ???')
 msgbox('One maze day 6 abnormally low correlations within? plot mice individually?')
 msgbox('Pandora day 6 low correlation from day 5?')
 
+msgbox('Possible that all PV corrs were plotted incorrect order; see new plot bins')
 %% Turn1-Turn2 remapping, all day pairs
 
 dayPairsForward = GetAllCombs(1:3,7:9);
@@ -432,32 +435,134 @@ oneEnvAllCoactivity = [];
 twoEnvAllCoactivity = [];
 
 tic
-condPairs = [1 2 3 4];
+
+nCoactBins = 2;
+for mouseI = 2:numMice
+    tic
+    coactivityScoreEachBin = cell(4,9,2);
+    for bbI = 1:nCoactBins
+        for condI = 1:4
+            binsHH = lgDataBins.labels==armLabels{condI};
+            xLimsH = [min(min(lgDataBins.X(binsHH,:))) max(max(lgDataBins.X(binsHH,:)))];
+            yLimsH = [min(min(lgDataBins.Y(binsHH,:))) max(max(lgDataBins.Y(binsHH,:)))];
+
+            %This isn't perfect and we'll need to adjust somehow for days 4:6
+            switch armLabels{condI}
+                case 'n'
+                    xBox = [xLimsH fliplr(xLimsH)];
+                    yBoundsUse = linspace(max(yLimsH),min(yLimsH),nCoactBins+1);
+
+                    xB = xBox;
+                    yB = yBoundsUse([bbI bbI bbI+1 bbI+1]); 
+
+                    %bounds = [];
+                    %for bbI = 1:nCoactBins
+                        %bounds{bbI}.X = xBox;
+                        %bounds{bbI}.Y = yBoundsUse([bbI bbI bbI+1 bbI+1]); 
+                    %end
+                case 'w'
+                    yBox = [yLimsH fliplr(yLimsH)];
+                    xBoundsUse = linspace(max(xLimsH),min(xLimsH),nCoactBins+1);
+
+                    xB = xBoundsUse([bbI bbI bbI+1 bbI+1]);
+                    yB = yBox;
+                case 's'
+                    xBox = [xLimsH fliplr(xLimsH)];
+                    yBoundsUse = linspace(min(yLimsH),max(yLimsH),nCoactBins+1);
+
+                    xB = xBox;
+                    yB = yBoundsUse([bbI bbI bbI+1 bbI+1]); 
+                case 'e'
+                    yBox = [yLimsH fliplr(yLimsH)];
+                    xBoundsUse = linspace(min(xLimsH),max(xLimsH),nCoactBins+1);
+
+                    xB = xBoundsUse([bbI bbI bbI+1 bbI+1]);
+                    yB = yBox;
+            end
+
+            bounds{condI}.X = xB;
+            bounds{condI}.Y = yB;
+
+        end
+
+        condPairs = [1;2;3;4];
+        
+        daysR = [1 2 3 7 8 9];
+        [cse,ntae,ntce,ntte] = ...
+        findingEnsemblesNotes4(cellTBT{mouseI},bounds,condPairs,false,daysR);
+        % Slot into the right days (columns) and binNum (3rd dimension)
+        coactivityScoreEachBin(:,daysR,bbI) = cse(:,daysR);
+
+        daysR = [4 5 6];
+        if mouseI == 1
+            daysR = 4;
+        end
+        binsHH = lgDataBins.labels==armLabels{4};
+        xLimsH = [min(min(lgDataBins.X(binsHH,:))) max(max(lgDataBins.X(binsHH,:)))];
+        yLimsH = [min(min(lgDataBins.Y(binsHH,:))) max(max(lgDataBins.Y(binsHH,:)))];
+        xBoundsUse = linspace(min(xLimsH),max(xLimsH),nCoactBins+1);
+        xB = xBoundsUse([bbI bbI bbI+1 bbI+1]);
+        yB = yBox;
+        bounds{2}.X = xB;
+        bounds{2}.Y = yB;
+        [cse,ntae,ntce,ntte] = ...
+        findingEnsemblesNotes4(cellTBT{mouseI},bounds,condPairs,false,daysR);
+        % Slot into the right days (columns) and binNum (3rd dimension)
+        coactivityScoreEachBin(:,daysR,bbI) = cse(:,daysR);
+
+        allBounds{bbI} = bounds;
+    end
+    save(fullfile(mainFolder,mice{mouseI},'coactivityScoresBins.mat'),...
+            'coactivityScoreEachBin','bounds','-v7.3')
+    toc
+end
+
+
 for mouseI = 1:numMice
-    
-    [coactivityScore{mouseI},numTrialsActive{mouseI},numTrialsCoactive{mouseI},numTotalTrials{mouseI}] = ...
-        findingEnsemblesNotes4(cellTBT{mouseI},allMazeBound,condPairs,false);
+    tic
+    condPairs = [1 2 3 4];
+    % Would be great to adjust this to only run certain sessions...
+    [coactivityScoreAll,numTrialsActiveAll,numTrialsCoactiveAll,numTotalTrialsAll] = ...
+        findingEnsemblesNotes4(cellTBT{mouseI},allMazeBound,condPairs,false,[]);
      
+    condPairs = [1;2;3;4];
+    [coactivityScoreEach,numTrialsActiveEach,numTrialsCoactiveEach,numTotalTrialsEach] = ...
+        findingEnsemblesNotes4(cellTBT{mouseI},allMazeBound,condPairs,false,[]);
+    
+    toc
+    
+    % Smaller bins in coactivity; maybe just give it bins, iterate from
+    % there? Or could use smaller bins as a replacement for allMazeBound,
+    % work with one cond at a time
+        % the way this is setup, we should do each cond together but go by
+        % the same subset of boundary bins
+    
     %Should shuffle laps to test for significance: just compare coactivity
     %score against each shuffle, get num greater
     % May need to profile this to make it run a bit faster...
     
     % Normalize some how?
+    save(fullfile(mainFolder,mice{mouseI},'coactivityScores.mat'),...
+        'coactivityScoreAll','numTrialsActiveAll','numTrialsCoactiveAll','numTotalTrialsAll',...
+        'coactivityScoreEach','numTrialsActiveEach','numTrialsCoactiveEach','numTotalTrialsEach')
 end
 toc
+
+coactivityScore{mouseI},numTrialsActive{mouseI},numTrialsCoactive{mouseI},numTotalTrials{mouseI}
 
 % Example dotplot, Example heatmap, rasters of cells with, make sure rois are distant
 cellI = 2;
 condPlot = [1 2 3 4];
 dayI = 1;
 
-PlotDotplotDoublePlus2(cellTBT{1},cellI,condPlot,dayI,'dynamic',[],3)%
+mouseI = 1;
+PlotDotplotDoublePlus2(cellTBT{mouseI},cellI,condPlot,dayI,'dynamic',[],3)%
 there = [cellTMap{mouseI}{cellI,dayI,:}]; there = [NaN; there(:)]';
 gradientLims = []; titles = [];
 [figHand] = PlusMazePVcorrHeatmap3(there,lgPlotBins,'jet',gradientLims,titles);
 figHand.Position=[243.5000 207 447 405];
-PlotDoublePlusRaster(trialbytrial,cellI,dayI,condPlot,armLabels)
-
+PlotDoublePlusRaster(cellTBT{mouseI},cellI,dayI,condPlot,armLabels)
+% Also ROI, leave that for now
 
 % Is coactivity correlated with spatial map? yes, should be true for both groups
 tic
@@ -466,12 +571,17 @@ oneEnvTmapPs = [];
 oneEnvCoactRhos = [];
 oneEnvCoactPs = [];
 oneEnvCoact = [];
+oneEnvCellPairs = [];
+oneEnvMouseNum = [];
+oneEnvSessNum = [];
 twoEnvTmapRhos = [];
 twoEnvTmapPs = [];
 twoEnvCoactRhos = [];
 twoEnvCoactPs = [];
 twoEnvCoact = [];
-
+twoEnvCellPairs = [];
+twoEnvMouseNum = [];
+twoEnvSessNum = [];
 for mouseI = 1:numMice
     
     tmapHere = cell(numCells(mouseI),9);
@@ -483,12 +593,13 @@ for mouseI = 1:numMice
         cellsActive = dayUseAll{mouseI}(:,sessI); 
         % With this we could pre-allocate the gather arrays, though would then need to index them...
         
-        cellPairsHere = nchoosek(find(cellsActive),2);
+        cellPairsHere = nchoosek(find(cellsActive),2); 
         cphInds = sub2ind(size(coactivityScore{mouseI}{sessI}),cellPairsHere(:,1),cellPairsHere(:,2));
         
         % Trim out unwanted rows (not in cells use) from coactivityScore, again correlate columns
         coactHere = coactivityScore{mouseI}{sessI}(cellsActive,:);
         if any(any(coactHere))
+            %{
         [coactRhos,coactPs] = corr(coactHere,'type','Spearman');
         
         tmm = cell2mat(tmapHere(:,sessI)');
@@ -496,23 +607,39 @@ for mouseI = 1:numMice
         
         tmapRhosHere = tmapRhos(cphInds);
         tmapPsHere = tmapPs(cphInds);
-        coactRhosHere = coactRhos(cphInds);
+        coactRhosHere = coactRhos(cphInds); % Correlation of coactivity scores
         coactPsHere = coactPs(cphInds);
         coactScoresHere = coactivityScore{mouseI}{sessI}(cphInds);
+        
+        [tmapVcoactRho(mouseI,sessI),tmapVcoactP(mouseI,sessI)] = corr(tmapRhosHere,coactScoresHere,'type','Spearman');  
+        [tmapVcoactVectorRho(mouseI,sessI),tmapVcoactVectorP(mouseI,sessI)] = corr(tmapRhosHere,coactRhosHere,'type','Spearman');  
+        %}
 
         switch groupNum(mouseI)
             case 1
+                oneEnvCellPairs = [oneEnvCellPairs; cellPairsHere];
+                %{
                 oneEnvTmapRhos = [oneEnvTmapRhos; tmapRhosHere];
                 oneEnvTmapPs = [oneEnvTmapPs; tmapPsHere];
                 oneEnvCoactRhos = [oneEnvCoactRhos; coactRhosHere];
                 oneEnvCoactPs = [oneEnvCoactPs; coactPsHere];
                 oneEnvCoact = [oneEnvCoact; coactScoresHere];
+                
+                oneEnvMouseNum = [oneEnvMouseNum; mouseI*ones(size(tmapRhosHere))];
+                oneEnvSessNum = [oneEnvSessNum; sessI*ones(size(tmapRhosHere))];
+                %}
             case 2
+                twoEnvCellPairs = [twoEnvCellPairs; cellPairsHere];
+                %{
                 twoEnvTmapRhos = [twoEnvTmapRhos; tmapRhosHere];
                 twoEnvTmapPs = [twoEnvTmapPs; tmapPsHere];
                 twoEnvCoactRhos = [twoEnvCoactRhos; coactRhosHere];
                 twoEnvCoactPs = [twoEnvCoactPs; coactPsHere];
                 twoEnvCoact = [twoEnvCoact; coactScoresHere];
+                
+                twoEnvMouseNum = [twoEnvMouseNum; mouseI*ones(size(tmapRhosHere))];
+                twoEnvSessNum = [twoEnvSessNum; sessI*ones(size(tmapRhosHere))];
+                %}
         end
             %{
             rhosH = [rhosH; rr];
@@ -530,6 +657,36 @@ for mouseI = 1:numMice
     end
 end
 toc
+
+% num elements in nchoosek is n!/((n–k)! k!)
+
+mouseI = 1;
+sessI = 3;
+datInds = (oneEnvMouseNum==mouseI) & (oneEnvSessNum==sessI);
+tmapRhosH = oneEnvTmapRhos(datInds);
+coactH = oneEnvCoact(datInds);
+figure; plot(coactH,tmapRhosH,'.'); ylabel('Spatial Activity Correlation (rho)'); xlabel('Coactivity Score')
+[rr,pp] = corr(coactH,tmapRhosH,'type','Pearson');
+title({['Mouse ' num2str(mouseI) ', session ' num2str(sessI)];['r = ' num2str(rr) ', p = ' num2str(pp)]})
+MakePlotPrettySL(gca);
+cellPairsH = oneEnvCellPairs(datInds,:);
+% High coacativit, high corr
+pairI = 305954;
+% Low coactivity, low corr:
+pairI = 118679;
+% Low coactivity, high corr:
+pairI = 141791;
+pairI = 136625;
+% High coactivity, low corr:
+pairI = 173280;
+
+cellPair = cellPairsH(pairI,:);
+condPlot = [1 2 3 4];
+cellI = cellPair(1);
+activityPlotStuff;
+cellI = cellPair(2);
+activityPlotStuff;
+disp(['Correlation rho = ' num2str(tmapRhosH(pairI)) '; coactivity score = ' num2str(coactH(pairI))]) 
 
 % Eaxmple dotplot, Example heatmap, rasters of cells with, make sure rois are distant
     %{

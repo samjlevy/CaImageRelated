@@ -1,3 +1,126 @@
+%% Registration Statistics
+
+% ROI overlaps and center distances
+for mouseI = 1:numMice
+    cellCenters = [];
+    cellCenterDistances = [];
+    cellROIoverlapTotal = [];
+    cellROIoverlapCellI = [];
+    
+    footprintsFolder = fullfile(mainFolder,mice{mouseI},[mice{mouseI} 'Footprints']);
+    cd(footprintsFolder)
+    fpFiles = ls('NeuronFootprint*.mat');
+    
+    for fileI = 1:9
+        disp(['Doing Session ' num2str(fileI)])
+        tic
+        NeuronFootprintCell = [];
+        %fpts = strsplit(cellAllFiles{mouseI}{fileI},'\');
+        %fileH = fullfile(mainFolder,mice{mouseI},fpts{end},'RegisteredImageSL2buffered.mat');
+        load(fpFiles(fileI,:))
+        
+        nCellsHere = size(NeuronFootprint,1);
+        for cellI = 1:nCellsHere
+            NeuronFootprintCell{cellI} = squeeze(NeuronFootprint(cellI,:,:));
+        end
+        
+        cellCenters{fileI} = getAllCellCenters(NeuronFootprintCell,true);
+        
+        
+        
+        cellCenterDistances{fileI} = GetAllPtToPtDistances2(cellCenters{fileI}(:,1),cellCenters{fileI}(:,2),cellCenters{fileI}(:,1),cellCenters{fileI}(:,2),[]);
+        
+        cellPairsCheck = cellCenterDistances{fileI} < 50;
+        cellPairsCheck(logical(eye(nCellsHere))) = false;
+        cellPairsCheck = find(cellPairsCheck);
+        
+        
+        [cellsI,cellsJ] = ind2sub([nCellsHere nCellsHere],cellPairsCheck);
+        %allCellCombs = nchoosek(1:size(NeuronFootprint,3),2);
+        
+        
+        %cellROIoverlaps{fileI} = arrayfun(@(x,y) sum(sum(NeuronFootprint(:,:,x) & NeuronFootprint(:,:,y))) / sum(sum(NeuronFootprint(:,:,x) | NeuronFootprint(:,:,y))),...
+        %    allCellCombs(:,1),allCellCombs(:,2));
+        
+        % Slow, but it works
+        cellROIoverlaps{fileI} = zeros(nCellsHere,nCellsHere);
+        for pairI = 1:numel(cellsI)
+            cellI = cellsI(pairI);
+            cellJ = cellsJ(pairI);
+                
+            cellROIoverlapTotal{fileI}(cellI,cellJ) = ...
+                    sum(sum(NeuronFootprintCell{cellI} & NeuronFootprintCell{cellJ})) / ...
+                    sum(sum(NeuronFootprintCell{cellI} | NeuronFootprintCell{cellJ}));
+                
+            cellROIoverlapCellI{fileI}(cellI,cellJ) = ...
+                    sum(sum(NeuronFootprintCell{cellI} & NeuronFootprintCell{cellJ})) / ...
+                    sum(sum(NeuronFootprintCell{cellI}));
+        end
+        %}
+        toc
+    end
+    
+    save(fullfile(mainFolder,mice{mouseI},'ROIinfo.mat'),'cellCenters','cellCenterDistances','cellROIoverlapTotal','cellROIoverlapCellI')
+    disp(['Done mouse ' num2str(mouseI)])
+end
+
+% Registration
+for mouseI = 1:numMice
+    if mouseI == 1
+        load(fullfile(mainFolder,mice{mouseI},'trialbytrial.mat'), 'sortedSessionInds')
+        ssI = sortedSessionInds > 0;
+    else
+        ssI = cellSSI{mouseI} > 0;
+    end
+    
+    % Percent found any other day
+    for sessI = 1:9
+        ssA = ssI(:,sessI);
+        ssB = ssI;
+        ssB(:,sessI) = [];
+        ssB = sum(ssB,2)>0;
+        
+        pctRegOtherDay{mouseI}(1,sessI) = sum(ssA & ssB) / sum(ssA);
+    end
+    
+    % Percent found each day pair
+    for sessI = 1:9
+        for sessJ = 1:9
+            if sessI ~= sessJ
+                ssA = ssI(:,sessI);
+                ssB = ssI(:,sessJ);
+                
+                pctRegEachDayPair{mouseI}(sessI,sessJ) = sum(ssA & ssB) / sum(ssA);
+                
+            end
+        end
+    end
+    
+end
+
+figure; 
+for mouseI = 1:numMice
+    colorH = groupColors{groupNum(mouseI)};
+    plot(1:9,pctRegOtherDay{mouseI}*100,'Color',colorH,'LineWidth',1.5)
+    hold on
+end
+xlabel('Day Number')
+ylabel('pct cells Reg')
+title('Percentage of cells registered any other day')
+xlim([0.75 9.25])
+ylim([90 100.5])
+MakePlotPrettySL(gca);
+
+figure('Position',[332.5000 133 1.0455e+03 521]);
+for mouseI = 1:numMice
+    subplot(2,3,mouseI)
+    imagesc(pctRegEachDayPair{mouseI})
+    ylabel('Session i')
+    xlabel('Session j')
+    title(['Mouse ' num2str(mouseI)])
+    colorbar
+end
+suptitleSL('Day-Pair Registration Proportion')
 %% Remapping Turn1-Turn2
 
 % COM shift

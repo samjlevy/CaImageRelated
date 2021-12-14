@@ -61,7 +61,8 @@ for condJ = 1:length(condPlot)
     if ~isempty(titles)
         title(titles{condJ})
     end
-    
+    ylabel('Trial Number')
+    xlabel('Arm position')
     MakePlotPrettySL(gca);
 end
     

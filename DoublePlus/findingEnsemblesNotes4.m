@@ -1,10 +1,15 @@
 function [coactivityScore,numTrialsActive,numTrialsCoactive,numTotalTrials] = ...
-    findingEnsemblesNotes4(trialbytrial,boundary,condPairs,shuffleLaps)
+    findingEnsemblesNotes4(trialbytrial,boundary,condPairs,shuffleLaps,sessRun)
 
 numConds = length(trialbytrial);
 if isempty(condPairs); condPairs = [1:numConds]'; end
 numCondPairs = size(condPairs,1);
-sessHere = unique(trialbytrial(1).sessID);
+if isempty(sessRun)
+    sessHere = unique(trialbytrial(1).sessID);
+else
+    sessHere = sessRun;
+end
+
 totalSess = max(sessHere); % this way to handle missing sess and keep organization
 numCells = size(trialbytrial(1).trialPSAbool{1},1);
 
@@ -46,6 +51,7 @@ for cpI=1:numCondPairs
 
         end
         
+        if any(trialsHere)
         % Here is where we can shuffle which trials each cells is active on
         if shuffleLaps == true
             for cellI = 1:numCells
@@ -57,21 +63,22 @@ for cpI=1:numCondPairs
         % Gets number of trials coactive, vector against self
         numTrialsH = numTrials(cpI,sessI);
         Nab  = zeros(numCells,numCells);
-        tic
+        
         for trialI = 1:numTrialsH
             cellsCoactiveHere = activeHere(:,trialI) * activeHere(:,trialI)';
             Nab = Nab + cellsCoactiveHere;
             %numTrialsActive{condI}{sessI} = numTrialsActive{condI}{sessI}+cellFiresAtAll{trialI}(:);
         end
-toc
-
-% This seems to work and can cut 0.3s per run...
-tic
-        activeHereThree = reshape(activeHere,1380,1,102);
-activeHereThreeT = permute(activeHereThree,[2 1 3]);
-aaa = activeHereThree .* activeHereThreeT;
-NN  = sum(aaa,3);
-toc
+        %}
+        
+% This seems to work and can cut 0.3s per run... 
+% Nnvm, in practice like 40% slower...
+        %{
+        activeHereThree = reshape(activeHere,numCells,1,numTrialsH);
+        activeHereThreeT = permute(activeHereThree,[2 1 3]);
+        aaa = activeHereThree .* activeHereThreeT;
+        Nab  = sum(aaa,3);
+        %}
         numTrialsActive{sessI,cpI} = sum(activeHere,2);
         pctTrialsActive{sessI,cpI} = numTrialsActive{sessI,cpI}/numTrialsH; % Same as trialReli?
         I = logical(eye(numCells));
@@ -108,6 +115,7 @@ toc
         numTrialsActive{cpI,sessI} = Na;
         numTrialsCoactive{cpI,sessI} = Nab;
         numTotalTrials(cpI,sessI) = Nevents;
+        end
         
     end
 end

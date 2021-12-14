@@ -76,12 +76,6 @@ for condI = 1:numConds
             posX = [posX pxHere];
             posY = [posY pyHere];
             velH = [velH velHere];
-            %{
-            if any(velThresh)
-                velHere = [trialbytrial(condsHere(chJ)).trialVel{lapsUse{chJ},1}];
-                velH = [velH velHere];
-            end
-            %}
         end 
         
         % deal with velocity
