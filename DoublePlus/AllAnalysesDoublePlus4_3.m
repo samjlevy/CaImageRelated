@@ -437,118 +437,142 @@ twoEnvAllCoactivity = [];
 tic
 
 nCoactBins = 2;
-for mouseI = 2:numMice
-    tic
-    coactivityScoreEachBin = cell(4,9,2);
-    for bbI = 1:nCoactBins
-        for condI = 1:4
-            binsHH = lgDataBins.labels==armLabels{condI};
-            xLimsH = [min(min(lgDataBins.X(binsHH,:))) max(max(lgDataBins.X(binsHH,:)))];
-            yLimsH = [min(min(lgDataBins.Y(binsHH,:))) max(max(lgDataBins.Y(binsHH,:)))];
+nCoactBins = 1;
 
-            %This isn't perfect and we'll need to adjust somehow for days 4:6
-            switch armLabels{condI}
-                case 'n'
-                    xBox = [xLimsH fliplr(xLimsH)];
-                    yBoundsUse = linspace(max(yLimsH),min(yLimsH),nCoactBins+1);
+switch nCoactBins
+    case 2
+        coactFileN = 'coactivityScoresBins.mat';
+        coactVariable = 'coactivityScoreEachBin';
+        for mouseI = 1:numMice
+            coactFileH = fullfile(mainFolder,mice{mouseI},coactFileN);
+            if exist(coactFileH,'file')==0
+            tic
+            coactivityScoreEachBin = cell(4,9,2);
+            for bbI = 1:nCoactBins
+                for condI = 1:4
+                    binsHH = lgDataBins.labels==armLabels{condI};
+                    xLimsH = [min(min(lgDataBins.X(binsHH,:))) max(max(lgDataBins.X(binsHH,:)))];
+                    yLimsH = [min(min(lgDataBins.Y(binsHH,:))) max(max(lgDataBins.Y(binsHH,:)))];
 
-                    xB = xBox;
-                    yB = yBoundsUse([bbI bbI bbI+1 bbI+1]); 
+                    %This isn't perfect and we'll need to adjust somehow for days 4:6
+                    switch armLabels{condI}
+                        case 'n'
+                            xBox = [xLimsH fliplr(xLimsH)];
+                            yBoundsUse = linspace(max(yLimsH),min(yLimsH),nCoactBins+1);
 
-                    %bounds = [];
-                    %for bbI = 1:nCoactBins
-                        %bounds{bbI}.X = xBox;
-                        %bounds{bbI}.Y = yBoundsUse([bbI bbI bbI+1 bbI+1]); 
-                    %end
-                case 'w'
-                    yBox = [yLimsH fliplr(yLimsH)];
-                    xBoundsUse = linspace(max(xLimsH),min(xLimsH),nCoactBins+1);
+                            xB = xBox;
+                            yB = yBoundsUse([bbI bbI bbI+1 bbI+1]); 
 
-                    xB = xBoundsUse([bbI bbI bbI+1 bbI+1]);
-                    yB = yBox;
-                case 's'
-                    xBox = [xLimsH fliplr(xLimsH)];
-                    yBoundsUse = linspace(min(yLimsH),max(yLimsH),nCoactBins+1);
+                            %bounds = [];
+                            %for bbI = 1:nCoactBins
+                                %bounds{bbI}.X = xBox;
+                                %bounds{bbI}.Y = yBoundsUse([bbI bbI bbI+1 bbI+1]); 
+                            %end
+                        case 'w'
+                            yBox = [yLimsH fliplr(yLimsH)];
+                            xBoundsUse = linspace(max(xLimsH),min(xLimsH),nCoactBins+1);
 
-                    xB = xBox;
-                    yB = yBoundsUse([bbI bbI bbI+1 bbI+1]); 
-                case 'e'
-                    yBox = [yLimsH fliplr(yLimsH)];
-                    xBoundsUse = linspace(min(xLimsH),max(xLimsH),nCoactBins+1);
+                            xB = xBoundsUse([bbI bbI bbI+1 bbI+1]);
+                            yB = yBox;
+                        case 's'
+                            xBox = [xLimsH fliplr(xLimsH)];
+                            yBoundsUse = linspace(min(yLimsH),max(yLimsH),nCoactBins+1);
 
-                    xB = xBoundsUse([bbI bbI bbI+1 bbI+1]);
-                    yB = yBox;
+                            xB = xBox;
+                            yB = yBoundsUse([bbI bbI bbI+1 bbI+1]); 
+                        case 'e'
+                            yBox = [yLimsH fliplr(yLimsH)];
+                            xBoundsUse = linspace(min(xLimsH),max(xLimsH),nCoactBins+1);
+
+                            xB = xBoundsUse([bbI bbI bbI+1 bbI+1]);
+                            yB = yBox;
+                    end
+
+                    bounds{condI}.X = xB;
+                    bounds{condI}.Y = yB;
+
+                end
+
+                condPairs = [1;2;3;4];
+
+                daysR = [1 2 3 7 8 9];
+                [cse,ntae,ntce,ntte] = ...
+                findingEnsemblesNotes4(cellTBT{mouseI},bounds,condPairs,false,daysR);
+                % Slot into the right days (columns) and binNum (3rd dimension)
+                coactivityScoreEachBin(:,daysR,bbI) = cse(:,daysR);
+
+                daysR = [4 5 6];
+                if mouseI == 1
+                    daysR = 4;
+                end
+                binsHH = lgDataBins.labels==armLabels{4};
+                xLimsH = [min(min(lgDataBins.X(binsHH,:))) max(max(lgDataBins.X(binsHH,:)))];
+                yLimsH = [min(min(lgDataBins.Y(binsHH,:))) max(max(lgDataBins.Y(binsHH,:)))];
+                xBoundsUse = linspace(min(xLimsH),max(xLimsH),nCoactBins+1);
+                xB = xBoundsUse([bbI bbI bbI+1 bbI+1]);
+                yB = yBox;
+                bounds{2}.X = xB;
+                bounds{2}.Y = yB;
+                [cse,ntae,ntce,ntte] = ...
+                findingEnsemblesNotes4(cellTBT{mouseI},bounds,condPairs,false,daysR);
+                % Slot into the right days (columns) and binNum (3rd dimension)
+                coactivityScoreEachBin(:,daysR,bbI) = cse(:,daysR);
+
+                allBounds{bbI} = bounds;
             end
-
-            bounds{condI}.X = xB;
-            bounds{condI}.Y = yB;
-
-        end
-
-        condPairs = [1;2;3;4];
+            save(coactFileH,...
+                    'coactivityScoreEachBin','bounds','-v7.3')
+            toc
+            else
+                disp(['Have coactivity for mouse ' num2str(mouseI)])
+            end  
+            
         
-        daysR = [1 2 3 7 8 9];
-        [cse,ntae,ntce,ntte] = ...
-        findingEnsemblesNotes4(cellTBT{mouseI},bounds,condPairs,false,daysR);
-        % Slot into the right days (columns) and binNum (3rd dimension)
-        coactivityScoreEachBin(:,daysR,bbI) = cse(:,daysR);
-
-        daysR = [4 5 6];
-        if mouseI == 1
-            daysR = 4;
         end
-        binsHH = lgDataBins.labels==armLabels{4};
-        xLimsH = [min(min(lgDataBins.X(binsHH,:))) max(max(lgDataBins.X(binsHH,:)))];
-        yLimsH = [min(min(lgDataBins.Y(binsHH,:))) max(max(lgDataBins.Y(binsHH,:)))];
-        xBoundsUse = linspace(min(xLimsH),max(xLimsH),nCoactBins+1);
-        xB = xBoundsUse([bbI bbI bbI+1 bbI+1]);
-        yB = yBox;
-        bounds{2}.X = xB;
-        bounds{2}.Y = yB;
-        [cse,ntae,ntce,ntte] = ...
-        findingEnsemblesNotes4(cellTBT{mouseI},bounds,condPairs,false,daysR);
-        % Slot into the right days (columns) and binNum (3rd dimension)
-        coactivityScoreEachBin(:,daysR,bbI) = cse(:,daysR);
 
-        allBounds{bbI} = bounds;
-    end
-    save(fullfile(mainFolder,mice{mouseI},'coactivityScoresBins.mat'),...
-            'coactivityScoreEachBin','bounds','-v7.3')
-    toc
-end
+    case 1
+        coactFileN = 'coactivityScores.mat';
+        for mouseI = 1:numMice
+            coactFileH = fullfile(mainFolder,mice{mouseI},'coactivityScores.mat');
+            coactVariable = 'coactivityScoreEach';
+            if exist(coactFileH,'file')==0
+            tic
+            condPairs = [1 2 3 4];
+            % Would be great to adjust this to only run certain sessions...
+            [coactivityScoreAll,numTrialsActiveAll,numTrialsCoactiveAll,numTotalTrialsAll] = ...
+                findingEnsemblesNotes4(cellTBT{mouseI},allMazeBound,condPairs,false,[]);
 
+            condPairs = [1;2;3;4];
+            [coactivityScoreEach,numTrialsActiveEach,numTrialsCoactiveEach,numTotalTrialsEach] = ...
+                findingEnsemblesNotes4(cellTBT{mouseI},allMazeBound,condPairs,false,[]);
 
-for mouseI = 1:numMice
-    tic
-    condPairs = [1 2 3 4];
-    % Would be great to adjust this to only run certain sessions...
-    [coactivityScoreAll,numTrialsActiveAll,numTrialsCoactiveAll,numTotalTrialsAll] = ...
-        findingEnsemblesNotes4(cellTBT{mouseI},allMazeBound,condPairs,false,[]);
-     
-    condPairs = [1;2;3;4];
-    [coactivityScoreEach,numTrialsActiveEach,numTrialsCoactiveEach,numTotalTrialsEach] = ...
-        findingEnsemblesNotes4(cellTBT{mouseI},allMazeBound,condPairs,false,[]);
-    
-    toc
-    
-    % Smaller bins in coactivity; maybe just give it bins, iterate from
-    % there? Or could use smaller bins as a replacement for allMazeBound,
-    % work with one cond at a time
-        % the way this is setup, we should do each cond together but go by
-        % the same subset of boundary bins
-    
-    %Should shuffle laps to test for significance: just compare coactivity
-    %score against each shuffle, get num greater
-    % May need to profile this to make it run a bit faster...
-    
-    % Normalize some how?
-    save(fullfile(mainFolder,mice{mouseI},'coactivityScores.mat'),...
-        'coactivityScoreAll','numTrialsActiveAll','numTrialsCoactiveAll','numTotalTrialsAll',...
-        'coactivityScoreEach','numTrialsActiveEach','numTrialsCoactiveEach','numTotalTrialsEach')
+            toc
+
+            % Smaller bins in coactivity; maybe just give it bins, iterate from
+            % there? Or could use smaller bins as a replacement for allMazeBound,
+            % work with one cond at a time
+                % the way this is setup, we should do each cond together but go by
+                % the same subset of boundary bins
+
+            %Should shuffle laps to test for significance: just compare coactivity
+            %score against each shuffle, get num greater
+            % May need to profile this to make it run a bit faster...
+
+            % Normalize some how?
+            save(coactFileH,...
+                'coactivityScoreAll','numTrialsActiveAll','numTrialsCoactiveAll','numTotalTrialsAll',...
+                'coactivityScoreEach','numTrialsActiveEach','numTrialsCoactiveEach','numTotalTrialsEach')
+            else
+                disp(['Have coactivity for mouse ' num2str(mouseI)])
+            
+            end
+            
+        end
+
 end
 toc
 
-coactivityScore{mouseI},numTrialsActive{mouseI},numTrialsCoactive{mouseI},numTotalTrials{mouseI}
+%coactivityScore{mouseI},numTrialsActive{mouseI},numTrialsCoactive{mouseI},numTotalTrials{mouseI}
 
 % Example dotplot, Example heatmap, rasters of cells with, make sure rois are distant
 cellI = 2;
@@ -618,7 +642,6 @@ for mouseI = 1:numMice
         switch groupNum(mouseI)
             case 1
                 oneEnvCellPairs = [oneEnvCellPairs; cellPairsHere];
-                %{
                 oneEnvTmapRhos = [oneEnvTmapRhos; tmapRhosHere];
                 oneEnvTmapPs = [oneEnvTmapPs; tmapPsHere];
                 oneEnvCoactRhos = [oneEnvCoactRhos; coactRhosHere];
@@ -627,10 +650,8 @@ for mouseI = 1:numMice
                 
                 oneEnvMouseNum = [oneEnvMouseNum; mouseI*ones(size(tmapRhosHere))];
                 oneEnvSessNum = [oneEnvSessNum; sessI*ones(size(tmapRhosHere))];
-                %}
             case 2
                 twoEnvCellPairs = [twoEnvCellPairs; cellPairsHere];
-                %{
                 twoEnvTmapRhos = [twoEnvTmapRhos; tmapRhosHere];
                 twoEnvTmapPs = [twoEnvTmapPs; tmapPsHere];
                 twoEnvCoactRhos = [twoEnvCoactRhos; coactRhosHere];
@@ -639,7 +660,7 @@ for mouseI = 1:numMice
                 
                 twoEnvMouseNum = [twoEnvMouseNum; mouseI*ones(size(tmapRhosHere))];
                 twoEnvSessNum = [twoEnvSessNum; sessI*ones(size(tmapRhosHere))];
-                %}
+                
         end
             %{
             rhosH = [rhosH; rr];
