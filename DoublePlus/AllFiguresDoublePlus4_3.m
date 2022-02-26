@@ -274,9 +274,11 @@ bd = 14;
 figure;
 ii = histogram(oneData,histbins,'FaceColor',groupColors{1},'FaceAlpha',1); %[0.0745    0.6235    1.0000]
 ii.DisplayName = 'One-Maze';
+ii.Normalization = 'Probability';
 hold on
 hh = histogram(twoData,histbins,'FaceColor',groupColors{2},'FaceAlpha',1);%[1 0.3235 0.0745]
 hh.DisplayName = 'Two-Maze';
+hh.Normalization = 'Probability';
 xlabel('Correlation (Spearman rho)')
 ylabel('Number of cells')
 legend('Location','NW')
@@ -326,6 +328,29 @@ text(textX,0.65,['KS p= ' num2str(pKS)])
 text(textX,0.8,['KS stat = ' num2str(ksStat)])
 title('Turn Right 1 vs. Turn Right 2')
 MakePlotPrettySL(gca);
+
+
+figure('Position',[389 309 748.5000 331.5000]); 
+subplot(1,2,1); histogram(oneEnvMIagg,19,'FaceColor',groupColors{1},'Normalization','probability');  %[-1 -0.95:0.1:0.95 1]
+title('OneMaze')
+xlabel('MI score change'); ylabel('Proportion of cells')
+MakePlotPrettySL(gca);
+subplot(1,2,2); histogram(twoEnvMIagg,19,'FaceColor',groupColors{2},'Normalization','probability');
+xlabel('MI score change'); ylabel('Proportion of cells')
+title('TwoMaze')
+MakePlotPrettySL(gca);
+ylim([0 0.07])
+
+figure('Position',[645 306.5000 321 332]); 
+[f,x] = ecdf(oneEnvMIagg); 
+plot(x,f,'Color',groupColors{1},'LineWidth',1.5,'DisplayName','OneMaze'); 
+hold on 
+[f,x] = ecdf(twoEnvMIagg); 
+plot(x,f,'Color',groupColors{2},'LineWidth',1.5,'DisplayName','TwoMaze');
+xlabel('MI score change'); ylabel('Cumuluative Proportion')
+legend('location','NW')
+[~,p] = kstest2(oneEnvMIagg,twoEnvMIagg);
+title(['Turn 1 - Turn 2 change in MI score, p=' num2str(p)])
 
 %% Each arms
 % COM shift

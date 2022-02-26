@@ -283,28 +283,6 @@ for dpI = 1:numDayPairs
     end
 end
 
-figure('Position',[389 309 748.5000 331.5000]); 
-subplot(1,2,1); histogram(oneEnvMIagg,19,'FaceColor',groupColors{1},'Normalization','probability');  %[-1 -0.95:0.1:0.95 1]
-title('OneMaze')
-xlabel('MI score change'); ylabel('Proportion of cells')
-MakePlotPrettySL(gca);
-subplot(1,2,2); histogram(twoEnvMIagg,19,'FaceColor',groupColors{2},'Normalization','probability');
-xlabel('MI score change'); ylabel('Proportion of cells')
-title('TwoMaze')
-MakePlotPrettySL(gca);
-ylim([0 0.07])
-
-figure('Position',[645 306.5000 321 332]); 
-[f,x] = ecdf(oneEnvMIagg); 
-plot(x,f,'Color',groupColors{1},'LineWidth',1.5,'DisplayName','OneMaze'); 
-hold on 
-[f,x] = ecdf(twoEnvMIagg); 
-plot(x,f,'Color',groupColors{2},'LineWidth',1.5,'DisplayName','TwoMaze');
-xlabel('MI score change'); ylabel('Cumuluative Proportion')
-legend('location','NW')
-[~,p] = kstest2(oneEnvMIagg,twoEnvMIagg);
-title(['Turn 1 - Turn 2 change in MI score, p=' num2str(p)])
-
 
 oneEnvCOMagg = []; twoEnvCOMagg = [];
 oneEnvCOMaggEach = cell(1,numConds); twoEnvCOMaggEach = cell(1,length(condsUse));
