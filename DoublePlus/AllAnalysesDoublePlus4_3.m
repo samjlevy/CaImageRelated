@@ -2,7 +2,7 @@
 
 %mainFolder = 'G:\DoublePlus';
 %mainFolder = 'C:\Users\Sam\Desktop\DoublePlusFinalData';
-mainFolder = 'E:\DoublePlus';
+mainFolder = 'D:\DoublePlus';
 %mainFolder = 'C:\Users\samwi_000\Desktop\DoublePlus';
 load(fullfile(mainFolder,'groupAssign.mat'))
 groupNum(strcmpi(groupAssign(:,2),'same')) = 1;
@@ -32,6 +32,8 @@ sessDays(strcmpi(sessTypes,'Turn')) = 1; sessDays(strcmpi(sessTypes,'Place')) = 
 nArmBins = 14;
 lgAnchor = load(fullfile(mainFolder,'mainPosAnchor.mat')); 
 [lgDataBins,lgPlotBins] = SmallPlusBounds(lgAnchor.posAnchorIdeal,nArmBins,nArmBins-2);  nArmBins = nArmBins - 2;
+lgPlotBins.labelNumber = [1:49]';
+lgDataBins.labelNumber = [1:49]';
 lgBinVertices = {lgDataBins.X, lgDataBins.Y};
 locInds = {1 'center'; 2 'north'; 3 'south'; 4 'east'; 5 'west'};
 binMidsX = mean(lgDataBins.X,2);
@@ -45,9 +47,41 @@ lgPlotAll.Y = [];
 for condI = 1:4
     lgPlotHere{condI}.X = lgPlotBins.X(binOrderIndex{condI},:);
     lgPlotHere{condI}.Y = lgPlotBins.Y(binOrderIndex{condI},:);
+    lgPlotHere{condI}.labelNumber = lgPlotBins.labelNumber(binOrderIndex{condI});
     lgPlotAll.X = [lgPlotAll.X; lgPlotBins.X(binOrderIndex{condI},:)];
     lgPlotAll.Y = [lgPlotAll.Y; lgPlotBins.Y(binOrderIndex{condI},:)];
 end
+
+% so maybe looks like plot bins getting reordered but data bins are not?
+% plot pv corrs uses lgPlotHere; TMap_unsmoothedEach gets reordered that
+% way; This seems ok, as long as we can be sure other things are getting
+% plotted correct too. 
+%{
+figure;
+subplot(1,3,1)
+for binI = 1:49
+    text(mean(lgDataBins.X(binI,:)),mean(lgDataBins.Y(binI,:)),[num2str(lgDataBins.labelNumber(binI)) ', ' num2str(binI)])
+end
+ylim([min(lgDataBins.Y(:)) max(lgDataBins.Y(:))]); xlim([min(lgDataBins.X(:)) max(lgDataBins.X(:))])
+subplot(1,3,2)
+for binI = 1:49
+    text(mean(lgPlotBins.X(binI,:)),mean(lgPlotBins.Y(binI,:)),[num2str(lgPlotBins.labelNumber(binI)) ', ' num2str(binI)])
+end
+ylim([min(lgPlotBins.Y(:)) max(lgPlotBins.Y(:))]); xlim([min(lgPlotBins.X(:)) max(lgPlotBins.X(:))])
+plotBins.X = []; plotBins.Y = []; plotBins.labelNumber = [];
+for condI = 1:numel(condsUse)
+    plotBins.X = [plotBins.X; lgPlotHere{condsUse(condI)}.X];
+    plotBins.Y = [plotBins.Y; lgPlotHere{condsUse(condI)}.Y];
+    plotBins.labelNumber = [plotBins.labelNumber; lgPlotHere{condsUse(condI)}.labelNumber];
+end
+subplot(1,3,3)
+for binI = 1:size(plotBins.X,1)
+    text(mean(plotBins.X(binI,:)),mean(plotBins.Y(binI,:)),[num2str(plotBins.labelNumber(binI)) ', ' num2str(binI)])
+end
+ylim([min(plotBins.Y(:)) max(plotBins.Y(:))]); xlim([min(plotBins.X(:)) max(plotBins.X(:))])
+%}
+% For some reason I reordered plot bins, and this is what's getting used
+% to plot the pv corrs; looks like this new one is used consistently
 %{
 figure; plot(allMazeBound.X,allMazeBound.Y); hold on
 plot(allMazeBound.X(1),allMazeBound.Y(1),'*r'); plot(allMazeBound.X(end),allMazeBound.Y(end),'og')
@@ -376,7 +410,7 @@ twoEnvPVmeansAll = []; twoEnvPVsemAll = [];
 for dpI = 1:numDayPairs
     for cpI = 1:numCondPairs
         oneEnvMicePVcorrs{dpI,cpI} = pooledPVcorrs{dpI,cpI}(oneEnvMice,:);
-        oneEnvMicePVcorrsMeans{dpI,cpI} = nanmean(oneEnvMicePVcorrs{dpI,cpI},1);
+        oneEnvMicePVcorrsMeans{dpI,cpI} = nanmean(oneEnvMicePVcorrs{dpI,cpI},1); % (1,nBins)
         for binI = 1:size(oneEnvMicePVcorrs{dpI,cpI},2)
             oneEnvMicePVcorrsSEM{dpI,cpI}(1,binI) = standarderrorSL(oneEnvMicePVcorrs{dpI,cpI}(:,binI));
         end
@@ -388,13 +422,14 @@ for dpI = 1:numDayPairs
         end
     end
     
+    %do we need a dimension direction here?
     oneEnvPVmeansAll(dpI) = nanmean(nanmean([oneEnvMicePVcorrs{dpI,:}]));
     oneEnvPVsemAll(dpI) = standarderrorSL([oneEnvMicePVcorrs{dpI,:}]);
     twoEnvPVmeansAll(dpI) = nanmean(nanmean([twoEnvMicePVcorrs{dpI,:}]));
     twoEnvPVsemAll(dpI) = standarderrorSL([twoEnvMicePVcorrs{dpI,:}]);
 end
 
-oneEnvPVcorrs = cell2mat(oneEnvMicePVcorrsMeans);
+oneEnvPVcorrs = cell2mat(oneEnvMicePVcorrsMeans); % size?
 twoEnvPVcorrs = cell2mat(twoEnvMicePVcorrsMeans);
 
 for binI = 1:(nArmBins*numConds)
