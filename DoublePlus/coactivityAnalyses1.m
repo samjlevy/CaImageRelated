@@ -9,6 +9,7 @@ condHere = [1 2 3 4];
 
 % X-corr of timeseries
 maxLag = 20;
+if ~exist(fullfile(mainFolder,'temporalCorrs.mat'),'file')
 for mouseI = 3:numMice
     for sessI = 1:9
         psaHere = [];
@@ -150,7 +151,9 @@ for mouseI = 3:numMice
 
 end
 save(fullfile(mainFolder,'temporalCorrs.mat'),'temporalCorrsR','temporalCorrsP','cellPairsUsed')
-
+else
+    load(fullfile(mainFolder,'temporalCorrs.mat'))
+end
 
 [xcorrmaxes,xcmlags] = max(laggedCorrs,[],2);
 figure; histogram(xcmlags); title('Most cell pairs seem to have a maximum correlation at 1s lag')
@@ -308,6 +311,7 @@ for mouseI = 1:numMice
         %if any(any(temporalCorrsR{mouseI}{sessI}))
         if any(daysHere == sessI)
             %sessI = daysHere(sessJ);
+            % First, build a correlation matrix out of the pairwise corrs
             crossCorrMat = corrsBlank;
             [cellPairsInds] = sub2ind([1 1]*numCells(mouseI),cellPairsUsed{mouseI}{sessI}(:,1),cellPairsUsed{mouseI}{sessI}(:,2));
             [cellPairsIndss] = sub2ind([1 1]*numCells(mouseI),cellPairsUsed{mouseI}{sessI}(:,2),cellPairsUsed{mouseI}{sessI}(:,1));
@@ -315,7 +319,7 @@ for mouseI = 1:numMice
             crossCorrMat(cellPairsIndss) = temporalCorrsR{mouseI}{sessI};
             
             cellsUseHere = dayUseAll{mouseI}(:,sessI);
-            cellPairsUse = cellsUseHere(:) & cellsUseHere(:)';
+            cellPairsUse = cellsUseHere(:) & cellsUseHere(:)'; % To index into our big corr matrix
             
             corrsHere = crossCorrMat(cellPairsUse);
             
@@ -326,6 +330,8 @@ for mouseI = 1:numMice
                     twoEnvTcorrs{sessI} = [twoEnvTcorrs{sessI}; corrsHere];
             end
             
+            % Threshold the correlation matrix as a "significant" correlation
+            % Could also take top x % of correlation scores...
             for edgeI = 1:nEdgeThreshes
                 edgeThresh = edgeThreshes(edgeI);
                 corrEdges = crossCorrMat > edgeThresh;
@@ -339,6 +345,10 @@ for mouseI = 1:numMice
                 connCompSizes = graphBinSizes(compsOverOne);
                 
                 pct cells in a connected component at all
+                
+                % unrelated note: would be good to go back to the lags with
+                % zero padding and visualize that to make sure it was run
+                % right
                 
                 switch groupNum(mouseI)
                     case 1
