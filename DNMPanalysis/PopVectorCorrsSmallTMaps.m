@@ -11,7 +11,7 @@ binComb = 'self';
 %binComb = 'allToAll';
 
 numCells = size(TMapA, 1);
-numBins = length(TMapA{1});
+numBins = numel(TMapA{1});
 
 switch cellsUseOption
     case 'activeEither'
@@ -29,11 +29,12 @@ TRatesB = cell2mat(TMapB(cellsUse)')';
 numCellsUsed = sum(cellsUse);
 
 numNans = 0;
-Corrs = nan(1,numBins);
+
 meanCorr = NaN;
 if sum(cellsUse) > 1
     switch binComb
         case 'self'
+            Corrs = nan(1,numBins);
             for binI = 1:numBins
                 Corrs(1,binI) = corr(TRatesA(:,binI),TRatesB(:,binI),'type',corrType);
 
@@ -46,7 +47,7 @@ if sum(cellsUse) > 1
             numNans = 100;
         end
         case 'allToAll'
-            Corrs = nan(1,numBins);
+            Corrs = nan(numBins,numBins);
             for binI = 1:numBins
                 for binJ = 1:numBins
                     Corrs(binJ,binI) = corr(TRatesA(:,binI),TRatesB(:,binJ),'type',corrType);

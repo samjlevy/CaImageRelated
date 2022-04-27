@@ -33,7 +33,7 @@ for mouseI = 1:numMice
             %pooledMeanCorr{dpI,cpI}(mouseI,:) = [pooledMeanCorr{dpI,cpI}; meanCorr{dpI,cpI}];
             %pooledNumCellsUsed{dpI,cpI}(mouseI,:) = [pooledNumCellsUsed{dpI,cpI}; numCellsUsed{dpI,cpI}];
             
-            pooledPVcorrs{dpI,cpI}(mouseI,:) = pvCorrs{dpI,cpI};
+            pooledPVcorrs{dpI,cpI}(mouseI,:) = pvCorrs{dpI,cpI}; % corrs comes out (1,nBins)
             pooledMeanCorr{dpI,cpI}(mouseI,:) = meanCorr{dpI,cpI};
             pooledNumCellsUsed{dpI,cpI}(mouseI,:) = numCellsUsed{dpI,cpI};
             end
