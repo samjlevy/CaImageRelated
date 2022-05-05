@@ -6,7 +6,8 @@ pvCorrs = cell(numMice,1);
 meanCorr = cell(numMice,1); 
 numCellsUsed = cell(numMice,1); 
 numNan = cell(numMice,1); 
-
+% With day use as TL 1, cell has to be active 1 day
+% with cellSSI > 0 as TL2, cell has to be present on both days
 
 pooledPVcorrs = cell(numDayPairs,numCondPairs); [pooledPVcorrs{:}] = deal(nan(numMice,nArmBins));
 pooledMeanCorr = cell(numDayPairs,numCondPairs); [pooledMeanCorr{:}] = deal(nan(numMice,nArmBins));
@@ -23,7 +24,7 @@ for mouseI = 1:numMice
     disp(['Running mouse ' num2str(mouseI)])
     
     [pvCorrs, meanCorr, numCellsUsed, numNans] =...
-        PVcorrsWrapperMedium(cellTMap{mouseI},condPairs,dayPairs,traitLogical,cellsUseOption,corrType);
+        PVcorrsWrapperMedium(cellTMap{mouseI},condPairs,dayPairs,traitLogical,cellsUseOption,corrType,binComb);
     
     %mousePVcorrs{mouseI} = pvCorrs;
     for cpI = 1:numCondPairs

@@ -1081,6 +1081,21 @@ for condI = 1:length(condsUse)
     plotBins.X = [plotBins.X; lgPlotHere{condsUse(condI)}.X];
     plotBins.Y = [plotBins.Y; lgPlotHere{condsUse(condI)}.Y];
 end
+%{
+    figure;
+    for binI = 1:size(plotBins.X,1)
+        text(mean(plotBins.X(binI,:)),mean(plotBins.Y(binI,:)),num2str(binI))
+        hold on
+    end
+    xlim([min(plotBins.X(:))-5, max(plotBins.X(:))+5])
+    ylim([min(plotBins.Y(:))-5, max(plotBins.Y(:))+5])
+    title('PlotBins Order')
+
+    figure;
+
+
+    title('tMap / pvcorr bin order')
+%}
 [figHand] = PlusMazePVcorrHeatmap3(oneEnvDGmeanAll,plotBins,newGradient,[-0.3, 0.3],dayGroupLabels);
 for ii = 1:3; subplot(1,3,ii); MakePlotPrettySL(gca); end
 suptitleSL('One-Maze')

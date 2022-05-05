@@ -1,5 +1,5 @@
 function [pvCorrs, meanCorr, numCellsUsed, numNans] = PVcorrsWrapperMedium(...
-    cellTMap_unsmoothed,condPairs,dayPairs,traitLogical,cellsUseOption,corrType)
+    cellTMap_unsmoothed,condPairs,dayPairs,traitLogical,cellsUseOption,corrType,binComb)
 % This version allows more multi-level control over cells included; add
 % more qualifiers as cells in traitLogical, correspondingly how to use them
 % with cellsUseOption
@@ -52,7 +52,7 @@ for cpI = 1:numCondPairs
         TMapMinB = cellTMap_unsmoothed(:,dayPairs(dpI,2),condPairs(cpI,2));
         
         [pvCorrs{dpI,cpI},meanCorr{dpI,cpI},numCellsUsed{dpI,cpI},numNans{dpI,cpI}] = ...
-            PopVectorCorrsSmallTMaps(TMapMinA,TMapMinB,trialReliA,trialReliB,'activeBoth',corrType);
+            PopVectorCorrsSmallTMaps(TMapMinA,TMapMinB,trialReliA,trialReliB,'activeBoth',corrType,binComb);
         
         end
     end

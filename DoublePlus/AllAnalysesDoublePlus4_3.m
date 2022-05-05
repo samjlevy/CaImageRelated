@@ -2,7 +2,7 @@
 
 %mainFolder = 'G:\DoublePlus';
 %mainFolder = 'C:\Users\Sam\Desktop\DoublePlusFinalData';
-mainFolder = 'D:\DoublePlus';
+mainFolder = 'E:\DoublePlus';
 %mainFolder = 'C:\Users\samwi_000\Desktop\DoublePlus';
 load(fullfile(mainFolder,'groupAssign.mat'))
 groupNum(strcmpi(groupAssign(:,2),'same')) = 1;
@@ -52,6 +52,7 @@ for condI = 1:4
     lgPlotAll.Y = [lgPlotAll.Y; lgPlotBins.Y(binOrderIndex{condI},:)];
 end
 
+msgbox('See here for bin plot ordering; should be ok')
 % so maybe looks like plot bins getting reordered but data bins are not?
 % plot pv corrs uses lgPlotHere; TMap_unsmoothedEach gets reordered that
 % way; This seems ok, as long as we can be sure other things are getting
@@ -400,6 +401,7 @@ end
 % PV corrs
 condPairs = [1 1; 2 2; 3 3; 4 4];
 numCondPairs = size(condPairs,1);
+binComb = 'self';
 
 PopulationVectorCorrs4_2;
 
@@ -442,6 +444,256 @@ end
 
 oneEnvPVcorrs = mean(cell2mat(oneEnvMicePVcorrsMeans),1);
 twoEnvPVcorrs = mean(cell2mat(twoEnvMicePVcorrsMeans),1);
+
+%% Turn 1 v Turn 2 all to all pv corrs
+%dayPairsForward = GetAllCombs(1:3,7:9);
+%dayPairs = dayPairsForward;
+dayPairs = repmat([1:3, 7:9]',1,2);
+numDayPairs = size(dayPairs,1);
+condsUse = 1:4;
+numConds = numel(condsUse);
+
+binComb = 'allToAll';
+% Sort out plotting labels NOW: should be able to apply these labels to a
+% imagesc of the confusion matrix, show us where each arm is and end vs. mid
+%lgPlotHere
+plotBins.X = []; plotBins.Y = []; plotLabels = []; plotTicks = []; plotTickLabels = {}; plotOrder = []; plotReorder = [];
+for condI = 1:length(condsUse)
+    plotBins.X = [plotBins.X; lgPlotHere{condsUse(condI)}.X];
+    plotBins.Y = [plotBins.Y; lgPlotHere{condsUse(condI)}.Y];
+    plotLabels = [plotLabels; repmat([armLabels{condsUse(condI)}],nArmBins,1)];
+    plotTicks = [plotTicks; [1;mean([1 nArmBins]);nArmBins]+(nArmBins*(condI-1))];
+    plotTickLabels{numel(plotTickLabels)+1} = 'center';
+    plotTickLabels{numel(plotTickLabels)+1} = armLabels{condsUse(condI)};
+    plotTickLabels{numel(plotTickLabels)+1} = 'end';
+    plotOrder = [plotOrder; [[1:nArmBins]+nArmBins*(condI-1)]'];
+    orderAdd = [[1:nArmBins]+nArmBins*(condI-1)]';
+    if (armLabels{condsUse(condI)} == 'n') || (armLabels{condsUse(condI)} == 's')
+        orderAdd = flipud(orderAdd);
+        plotTickLabels{numel(plotTickLabels)-2} = 'start';
+        plotTickLabels{numel(plotTickLabels)} = 'center';
+    end
+    plotReorder = [plotReorder; orderAdd];
+end
+% So now decide how to flip them...
+%{
+    figure;
+    for binI = 1:size(plotBins.X,1)
+        text(mean(plotBins.X(binI,:)),mean(plotBins.Y(binI,:)),num2str(binI))
+        hold on
+    end
+    xlim([min(plotBins.X(:))-5, max(plotBins.X(:))+5])
+    ylim([min(plotBins.Y(:))-5, max(plotBins.Y(:))+5])
+    title('PlotBins Order')
+
+    pbX = plotBins.X(plotReorder,:); pbY = plotBins.Y(plotReorder,:);
+
+    figure;
+    for binI = 1:size(pbX,1)
+        text(mean(pbX(binI,:)),mean(pbY(binI,:)),num2str(binI))
+        hold on
+    end
+    xlim([min(pbX(:))-5, max(pbX(:))+5])
+    ylim([min(pbY(:))-5, max(pbY(:))+5])
+    title('PlotBins Reordered')
+%}
+
+
+corrType = 'Spearman';
+pvCorrsATA = cell(numMice,1); 
+meanCorrATA = cell(numMice,1); 
+numCellsUsedATA = cell(numMice,1); 
+numNanATA = cell(numMice,1); 
+% With day use as TL 1, cell has to be active 1 day
+% with cellSSI > 0 as TL2, cell has to be present on both days
+% pooling conds so...
+condPairs = [1 1];
+
+pooledPVcorrsATA = cell(numDayPairs,1); [pooledPVcorrsATA{:}] = deal(nan(nArmBins*numConds,nArmBins*numConds,numMice));
+pooledMeanCorrATA = cell(numDayPairs,1); [pooledMeanCorrATA{:}] = deal(nan(nArmBins*numConds,nArmBins*numConds,numMice));
+pooledNumCellsUsedATA = cell(numDayPairs,1); [pooledNumCellsUsedATA{:}] = deal(nan(nArmBins*numConds,nArmBins*numConds,numMice));
+clear traitLogical
+% This code copied out of PopulationVectorCorrs4_2
+for mouseI = 1:numMice
+    %traitLogical{1} = dayUse{mouseI};
+    traitLogical{1} = sum(dayUse{mouseI}(:,:,condsUse),3)>0;
+    %traitLogical{2} = repmat(cellSSI{mouseI}>0,1,1,4);
+    traitLogical{2} = cellSSI{mouseI}>0;
+    if mouseI==1
+        traitLogical{2}(:,[5 6]) = 0;
+    end
+    cellsUseOption = {'activeEither','activeBoth'};
+    %traitLogical{2} = trialReli{mouseI}>0;
+    disp(['Running mouse ' num2str(mouseI)])
+    
+    % Easiest way will be to reorganize the cell tmap here, etc.
+    cellTMapAllBins = [];
+    for dayI = 1:9
+        for cellI = 1:numCells(mouseI)
+            ttt = [cellTMap{mouseI}{cellI,dayI,condsUse(:)}];
+            cellTMapAllBins{cellI,dayI} = ttt(:);
+        end
+        cellTMapAllBins = cellfun(@(x) x(plotReorder),cellTMapAllBins,'UniformOutput',false);
+    end
+        
+    [pvCorrsATA{mouseI}, meanCorrATA{mouseI}, numCellsUsedATA{mouseI}, numNansATA{mouseI}] =...
+        PVcorrsWrapperMedium(cellTMapAllBins,[1 1],dayPairs,traitLogical,cellsUseOption,corrType,binComb);
+    tOneTwoCombs = GetAllCombs(1:3,4:6);
+
+    for ttI = 1:size(tOneTwoCombs,1)
+        pvCorrsATAdiffs{mouseI}{ttI,1} = pvCorrsATA{mouseI}{tOneTwoCombs(ttI,2)} - pvCorrsATA{mouseI}{tOneTwoCombs(ttI,1)};
+    end
+
+    % Pool these corrs: 
+      %mousePVcorrs{mouseI} = pvCorrs;
+    for cpI = 1:1
+        for dpI = 1:numDayPairs
+            if any(pvCorrsATA{mouseI}{dpI,cpI})
+            %pooledPVcorrs{dpI,cpI}(mouseI,:) = [pooledPVcorrs{dpI,cpI}; pvCorrs{dpI,cpI}];
+            %pooledMeanCorr{dpI,cpI}(mouseI,:) = [pooledMeanCorr{dpI,cpI}; meanCorr{dpI,cpI}];
+            %pooledNumCellsUsed{dpI,cpI}(mouseI,:) = [pooledNumCellsUsed{dpI,cpI}; numCellsUsed{dpI,cpI}];
+            
+            pooledPVcorrsATA{dpI,cpI}(:,:,mouseI) = pvCorrsATA{mouseI}{dpI,cpI}; % corrs comes out (1,nBins)
+            %pooledMeanCorrATA{dpI,cpI}(:,:,mouseI) = meanCorrATA{mouseI}{dpI,cpI};
+            %pooledNumCellsUsedATA{dpI,cpI}(:,:,mouseI) = numCellsUsedATA{mouseI}{dpI,cpI};
+            end
+        end
+
+        % This is inefficient, but we can re-use the code built out below
+        for ttI = 1:size(tOneTwoCombs,1)
+            pooledPVcorrsATAdiffs{ttI,cpI}(:,:,mouseI) = pvCorrsATAdiffs{mouseI}{ttI,1}; 
+        end
+    end
+end 
+
+oneEnvPVcorrsATA = cellfun(@(x) x(:,:,oneEnvMice),pooledPVcorrsATA,'UniformOutput',false);
+twoEnvPVcorrsATA = cellfun(@(x) x(:,:,twoEnvMice),pooledPVcorrsATA,'UniformOutput',false);
+oneEnvPVcorrsATA = cell2mat(reshape(oneEnvPVcorrsATA,1,1,6)); % but final dim3 length is 18 = 6 days * 3 mice
+twoEnvPVcorrsATA = cell2mat(reshape(twoEnvPVcorrsATA,1,1,6));
+
+meanOneEnvPVcorrsATAturn1 = mean(oneEnvPVcorrsATA(:,:,1:9),3);
+meanOneEnvPVcorrsATAturn2 = mean(oneEnvPVcorrsATA(:,:,10:18),3);
+meanTwoEnvPVcorrsATAturn1 = mean(twoEnvPVcorrsATA(:,:,1:9),3);
+meanTwoEnvPVcorrsATAturn2 = mean(twoEnvPVcorrsATA(:,:,10:18),3);
+
+oneEnvATAcorrsChange = meanOneEnvPVcorrsATAturn2 - meanOneEnvPVcorrsATAturn1;
+twoEnvATAcorrsChange = meanTwoEnvPVcorrsATAturn2 - meanTwoEnvPVcorrsATAturn1;
+
+ATAcorrsChangeDiff = twoEnvATAcorrsChange - oneEnvATAcorrsChange;
+
+figure;
+subplot(2,2,1)
+imagesc(meanOneEnvPVcorrsATAturn1)
+colorbar
+ata = gca;
+ata.XTick = plotTicks;
+ata.YTick = plotTicks;
+ata.XTickLabel = plotTickLabels;
+ata.XTickLabelRotation = 45;
+ata.YTickLabel = plotTickLabels;
+ata.YTickLabelRotation = 45;
+title('OneMaze Days 1-3')
+
+subplot(2,2,3)
+imagesc(meanOneEnvPVcorrsATAturn2)
+colorbar
+ata = gca;
+ata.XTick = plotTicks;
+ata.YTick = plotTicks;
+ata.XTickLabel = plotTickLabels;
+ata.XTickLabelRotation = 45;
+ata.YTickLabel = plotTickLabels;
+ata.YTickLabelRotation = 45;
+title('OneMaze Days 7-9')
+
+subplot(2,2,2)
+imagesc(meanTwoEnvPVcorrsATAturn1)
+colorbar
+ata = gca;
+ata.XTick = plotTicks;
+ata.YTick = plotTicks;
+ata.XTickLabel = plotTickLabels;
+ata.XTickLabelRotation = 45;
+ata.YTickLabel = plotTickLabels;
+ata.YTickLabelRotation = 45;
+title('TwoMaze Days 1-3')
+
+subplot(2,2,4)
+imagesc(meanTwoEnvPVcorrsATAturn2)
+colorbar
+ata = gca;
+ata.XTick = plotTicks;
+ata.YTick = plotTicks;
+ata.XTickLabel = plotTickLabels;
+ata.XTickLabelRotation = 45;
+ata.YTickLabel = plotTickLabels;
+ata.YTickLabelRotation = 45;
+title('TwoMaze Days 7-9')
+
+suptitleSL('PV Corrs All-To-All ("Internal Structure")')
+
+figure;
+subplot(1,3,1)
+imagesc(oneEnvATAcorrsChange)
+colorbar
+ata = gca;
+ata.XTick = plotTicks;
+ata.YTick = plotTicks;
+ata.XTickLabel = plotTickLabels;
+ata.XTickLabelRotation = 45;
+ata.YTickLabel = plotTickLabels;
+ata.YTickLabelRotation = 45;
+title('OneMaze Turn1-2')
+
+subplot(1,3,2)
+imagesc(twoEnvATAcorrsChange)
+colorbar
+ata = gca;
+ata.XTick = plotTicks;
+ata.YTick = plotTicks;
+ata.XTickLabel = plotTickLabels;
+ata.XTickLabelRotation = 45;
+ata.YTickLabel = plotTickLabels;
+ata.YTickLabelRotation = 45;
+title('TwoMaze Turn1-2')
+
+subplot(1,3,3)
+imagesc(ATAcorrsChangeDiff)
+colorbar
+ata = gca;
+ata.XTick = plotTicks;
+ata.YTick = plotTicks;
+ata.XTickLabel = plotTickLabels;
+ata.XTickLabelRotation = 45;
+ata.YTickLabel = plotTickLabels;
+ata.YTickLabelRotation = 45;
+title('TwoMaze-OneMaze Turn1-2')
+
+suptitleSL('PV Corrs All-To-All Change ("Internal Structure")')
+
+%
+oneEnvATAdiffs = cellfun(@(x) x(:,:,oneEnvMice),pooledPVcorrsATAdiffs,'UniformOutput',false);
+twoEnvATAdiffs = cellfun(@(x) x(:,:,twoEnvMice),pooledPVcorrsATAdiffs,'UniformOutput',false);
+oneEnvATAdiffs = cell2mat(reshape(oneEnvATAdiffs,1,1,9)); % final dim is 27 = 9 day combs * 3 mice
+twoEnvATAdiffs = cell2mat(reshape(twoEnvATAdiffs,1,1,9));
+
+meanOneEnvATAdiffs = mean(oneEnvATAdiffs,3);
+meanTwoEnvATAdiffs = mean(twoEnvATAdiffs,3);
+meanATAdiffs = meanTwoEnvATAdiffs - meanOneEnvATAdiffs;
+
+for binI = 1:(nArmBins*numel(condsUse))
+    for binJ = 1:(nArmBins*numel(condsUse))
+        [ATApVals(binI,binJ),ATAhVals(binI,binJ),stat] = ranksum(squeeze(oneEnvATAdiffs(binI,binJ,:)),squeeze(twoEnvATAdiffs(binI,binJ,:)));
+        %ATArsStat(binI,binJ) = stat.zval; stat.ranksum
+    end
+end
+
+Imagesc of meanATAdiffs, put appropriate number of asterisks 
+valH = '*'
+text(binI,binJ,valH,'HorizontalAlignment','centered','VerticalAlignment','centered')
+        
+
+% Next step: thresholding spatial/temporal corrs, plot that out and stats
 
 %% Coactivity again...
 oneEnvAllCoactivity = [];
@@ -787,6 +1039,7 @@ numCondPairs = size(condPairs,1);
 
 cellTMapH = cellfun(@(x) x(:,:,condsUse),cellTMap,'UniformOutput',false);
 SingleCellRemapping4_2
+binComb = 'self';
 PopulationVectorCorrs4_2;
 
 oneEnvMicePVcorrs = []; oneEnvMicePVcorrsMeans = [];
@@ -821,6 +1074,7 @@ numPerms = 1000;
 
 condPairs = [1 1; 3 3; 4 4]; numCondPairs = size(condPairs,1);
 condsHere = [1 3 4];
+    condsUse = condsHere;
 tonepdays = GetAllCombs(1:3,4:6);
 tonettwodays = GetAllCombs(1:3,7:9);
 pttwodays = GetAllCombs(4:6,7:9);
@@ -832,6 +1086,7 @@ numDayPairs = size(dayPairs,1);
 dayIntervals{1} = [diff(tonepdays,[],2); diff(pttwodays,[],2)]
 dayIntervals{2} = diff(tonettwodays,[],2);
 
+binComb = 'self';
 PopulationVectorCorrs4_2;
 
 oneEnvMicePVcorrs = []; oneEnvMicePVcorrsMeans = [];

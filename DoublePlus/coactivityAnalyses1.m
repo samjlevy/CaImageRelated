@@ -10,7 +10,7 @@ condHere = [1 2 3 4];
 % X-corr of timeseries
 maxLag = 20;
 if ~exist(fullfile(mainFolder,'temporalCorrs.mat'),'file')
-for mouseI = 3:numMice
+for mouseI = 1:numMice
     for sessI = 1:9
         psaHere = [];
         florHere = [];
@@ -303,6 +303,8 @@ oneEnvCompPctSizes = cellAndDeal([9, 1],dealHere);
 twoEnvNcomps = cellAndDeal([9, 1],dealHere);
 twoEnvPctComps = cellAndDeal([9, 1],dealHere);
 twoEnvCompPctSizes = cellAndDeal([9, 1],dealHere);
+oneEnvPctCellsInComp = cellAndDeal([9, 1],dealHere);
+twoEnvPctCellsInComp = cellAndDeal([9, 1],dealHere);
 for mouseI = 1:numMice
     corrsBlank = zeros(numCells(mouseI));
     
@@ -342,9 +344,11 @@ for mouseI = 1:numMice
                 [graphBins,graphBinSizes] = conncomp(G);
                 compsOverOne = graphBinSizes > 1; % Connected components with more than 1 member
                 nConnComps = sum(graphBinSizes > 1);
-                connCompSizes = graphBinSizes(compsOverOne);
+                connCompSizes = graphBinSizes(compsOverOne); % Sizes of connected components greater than 1
                 
-                pct cells in a connected component at all
+                theseBinSizes = graphBinSizes(graphBins); % The size of the bin this cell is part of
+                %pctCellsInConnComp{groupNum(mouseI)(edgeI,sessI) = sum(theseBinSizes > 1) / numel(theseBinSizes);
+                %meanConnCompSizes = mean(connCompSizes);
                 
                 % unrelated note: would be good to go back to the lags with
                 % zero padding and visualize that to make sure it was run
@@ -355,33 +359,329 @@ for mouseI = 1:numMice
                         oneEnvNcorrEdges{sessI}{edgeI} = [oneEnvNcorrEdges{sessI}{edgeI}; nCorrEdges(cellsUseHere)];
                         oneEnvPctCorrEdges{sessI}{edgeI} = [oneEnvPctCorrEdges{sessI}{edgeI}; pctCorrEdges(cellsUseHere)];
                         oneEnvNcomps{sessI}{edgeI} = [oneEnvNcomps{sessI}{edgeI}; nConnComps];
+                        % number of comps as pct of cells here
                         oneEnvPctComps{sessI}{edgeI} = [oneEnvPctComps{sessI}{edgeI}; nConnComps/sum(cellsUseHere)];
-                        oneEnvCompPctSizes{sessI}{edgeI} = [oneEnvCompPctSizes{sessI}{edgeI}; connCompSizes(:)/sum(cellsUseHere)];
+                        % Sizes of connComps as pct of cells here
+                        oneEnvCompPctSizes{sessI}{edgeI} = [oneEnvCompPctSizes{sessI}{edgeI}; connCompSizes(:)/sum(cellsUseHere)]; %As pct of cells here
+                        % percent of active cells in a comp
+                        oneEnvPctCellsInComp{sessI}{edgeI} = [oneEnvPctCellsInComp{sessI}{edgeI}; sum(theseBinSizes > 1) / sum(cellsUseHere)];
+                        
+                        %if (connCompSizes(:)/sum(cellsUseHere)) ~= (sum(theseBinSizes > 1) / sum(cellsUseHere))
+                        %    disp('pop pop')
+                        %    keyboard
+                        %end
+                            
                     case 2
                         twoEnvNcorrEdges{sessI}{edgeI} = [twoEnvNcorrEdges{sessI}{edgeI}; nCorrEdges(cellsUseHere)];
                         twoEnvPctCorrEdges{sessI}{edgeI} = [twoEnvPctCorrEdges{sessI}{edgeI}; pctCorrEdges(cellsUseHere)];
                         twoEnvNcomps{sessI}{edgeI} = [twoEnvNcomps{sessI}{edgeI}; nConnComps];
                         twoEnvPctComps{sessI}{edgeI} = [twoEnvPctComps{sessI}{edgeI}; nConnComps/sum(cellsUseHere)];
                         twoEnvCompPctSizes{sessI}{edgeI} = [twoEnvCompPctSizes{sessI}{edgeI}; connCompSizes(:)/sum(cellsUseHere)];
+                        twoEnvPctCellsInComp{sessI}{edgeI} = [twoEnvPctCellsInComp{sessI}{edgeI}; sum(theseBinSizes > 1) / sum(cellsUseHere)];
                 end
             end
             
         end
     end
-    
 end
 
 figure;
 for sessJ = 1:numel(daysHere)
     sessI = daysHere(sessJ);
+    subplot(2,numel(daysHere),sessJ)
     
-    for edgeI = 1:nEdgeThreshes
+    for edgeI = 4:nEdgeThreshes
+        datH = oneEnvPctComps{sessI}{edgeI};
+        plot(edgeThreshes(edgeI)*ones(size(datH)),datH,'.')
+        hold on
+    end
+    title(['Day ' num2str(sessI)])
+    
+    if sessJ == 1; ylabel('nComps / cellsActive'); end
+    
+    subplot(2,numel(daysHere),sessJ+numel(daysHere))
+    
+    for edgeI = 4:nEdgeThreshes
+        datH = twoEnvPctComps{sessI}{edgeI};
+        plot(edgeThreshes(edgeI)*ones(size(datH)),datH,'.')
+        hold on
+    end
+    if sessJ == 1; ylabel('nComps / cellsActive'); end
+    xlabel('Corr Edge Thresh')
+end
+suptitleSL(' number of comps as pct of cells here (xxxEnvPctComps)')
+
+figure;
+for sessJ = 1:numel(daysHere)
+    sessI = daysHere(sessJ);
+    subplot(2,numel(daysHere),sessJ)
+    
+    for edgeI = 4:nEdgeThreshes
+        datH = oneEnvPctCellsInComp{sessI}{edgeI};
+        plot(edgeThreshes(edgeI)*ones(size(datH)),datH,'.')
+        hold on
+    end
+    title(['Day ' num2str(sessI)])
+    
+    if sessJ == 1; ylabel('cellsInComp / cellsActive'); end
+    
+    subplot(2,numel(daysHere),sessJ+numel(daysHere))
+    
+    for edgeI = 4:nEdgeThreshes
+        datH = twoEnvPctCellsInComp{sessI}{edgeI};
+        plot(edgeThreshes(edgeI)*ones(size(datH)),datH,'.')
+        hold on
+    end
+    if sessJ == 1; ylabel('cellsInComp / cellsActive'); end
+    xlabel('Corr Edge Thresh')
+end
+suptitleSL(' pact active cells in a comt (xxxEnvPctCellsInComp)')
+
+figure;
+for edgeI = 1:nEdgeThreshes
+    subplot(1,nEdgeThreshes,edgeI)
+    datH = [];
+    datJ = [];
+    for sessJ = 1:numel(daysHere)
+        sessI = daysHere(sessJ);
+        datH = [datH; oneEnvPctCellsInComp{sessI}{edgeI}];
+        datJ = [datJ; twoEnvPctCellsInComp{sessI}{edgeI}];
+    end
+    
+    plot(1*ones(size(datH)),datH,'.','MarkerEdgeColor',groupColors{1})
+    hold on
+    plot(2*ones(size(datJ)),datJ,'.','MarkerEdgeColor',groupColors{2})
+    
+    ylabel('pct cellsInComp / cellsActive')
+    title(['Thresh = ' num2str(edgeThreshes(edgeI))])
+    xlim([0.9 2.1])
+    ylim([0 1.05])
+end
+
+
+% Across day pairs, among cells active both days:
+% - number of cells that were in a connected comp, now are not
+% - change in comp sizes among just these cells
+% - are each pair of cells still in a comp togehter, are cells that weren't
+% now in a comp together
+for mouseI = 1:numMice
+    corrsBlank = zeros(numCells(mouseI));
+    
+    for dpH = 1:size(dayPairsHere,1)
         
+        sessA = dayPairsHere(dpH,1);
+        [cellPairsInds] = sub2ind([1 1]*numCells(mouseI),cellPairsUsed{mouseI}{sessA}(:,1),cellPairsUsed{mouseI}{sessA}(:,2));
+        [cellPairsIndss] = sub2ind([1 1]*numCells(mouseI),cellPairsUsed{mouseI}{sessA}(:,2),cellPairsUsed{mouseI}{sessA}(:,1));
+        crossCorrMatA = corrsBlank;
+        crossCorrMatA(cellPairsInds) = temporalCorrsR{mouseI}{sessA};
+        crossCorrMatA(cellPairsIndss) = temporalCorrsR{mouseI}{sessA};
         
+        sessB = dayPairsHere(dpH,2);
+        [cellPairsInds] = sub2ind([1 1]*numCells(mouseI),cellPairsUsed{mouseI}{sessB}(:,1),cellPairsUsed{mouseI}{sessB}(:,2));
+        [cellPairsIndss] = sub2ind([1 1]*numCells(mouseI),cellPairsUsed{mouseI}{sessB}(:,2),cellPairsUsed{mouseI}{sessB}(:,1));
+        crossCorrMatB = corrsBlank;
+        crossCorrMatB(cellPairsInds) = temporalCorrsR{mouseI}{sessB};
+        crossCorrMatB(cellPairsIndss) = temporalCorrsR{mouseI}{sessB};
+            
+        cellsUseHereA = dayUseAll{mouseI}(:,sessA);
+        cellPairsUseA = cellsUseHereA(:) & cellsUseHereA(:)'; % To index into our big corr matrix
+        cellsUseHereB = dayUseAll{mouseI}(:,sessB);
+        cellPairsUseB = cellsUseHereB(:) & cellsUseHereB(:)'; % To index into our big corr matrix
         
+        %corrsHere = crossCorrMat(cellPairsUseA & cellPairsUseB);
         
+        cellsBothDays = dayUseAll{mouseI}(:,sessA) & dayUseAll{mouseI}(:,sessB); 
+        cellPairsUseAB = cellsBothDays(:) & cellsBothDays(:)';
+        cellPairsUseABupper = logical(cellPairsUseAB .* triu(true(numCells(mouseI)),1));
+        numCellPairsAB = sum(sum(cellPairsUseABupper));
+        
+        % Did pairs of cells change their status of being above corr threshold
+        for edgeI = 1:nEdgeThreshes
+            edgeThresh = edgeThreshes(edgeI);
+            corrEdgesA = crossCorrMatA > edgeThresh;
+            corrEdgesB = crossCorrMatB > edgeThresh;
+            
+            pairsEverCorrelated = corrEdgesA | corrEdgesB;
+            pairsStillCorrelated = corrEdgesA & corrEdgesB;
+            pairsBecomeUncorr = corrEdgesA & ~corrEdgesB;
+            pairsBecomeCorr = ~corrEdgesA & corrEdgesB;
+            pairsStillUncorrelated = ~corrEdgesA & ~corrEdgesB;
+            
+            pairsEverCorrelated = pairsEverCorrelated.*cellPairsUseABupper;
+            pairsStillCorrelated = pairsStillCorrelated.*cellPairsUseABupper;
+            pairsBecomeUncorr = pairsBecomeUncorr.*cellPairsUseABupper;
+            pairsBecomeCorr = pairsBecomeCorr.*cellPairsUseABupper;
+            pairsStillUncorrelated = pairsStillUncorrelated.*cellPairsUseABupper;
+            
+            if sum(sum(cellPairsUseABupper)) ~= ...
+            sum(sum(pairsStillCorrelated)) + sum(sum(pairsBecomeUncorr)) + sum(sum(pairsBecomeCorr)) + sum(sum(pairsStillUncorrelated))
+                disp('cell pairs indexing error')
+                keyboard
+            end
+            
+            % Should we also evaluate graph/cluster/ensembles?
+            
+            % Aggregate how?...
+            numPairsStillCorr = sum(sum(pairsStillCorrelated));
+            numPairsBecomeUncorr = sum(sum(pairsBecomeUncorr));
+            numPairsBecomeCorr = sum(sum(pairsBecomeCorr));
+            numPairsStillUncorr = sum(sum(pairsStillUncorrelated));
+            
+            numCellPairsEverCorr = sum(sum(pairsEverCorrelated)); % Something still a bit wrong here...
+            denomH = sum(sum(cellPairsUseABupper));
+            %denomH = numCellPairsEverCorr;
+            switch groupNum(mouseI)
+                case 1
+                    oneEnvPctStillCorr{dpH}(mouseI,edgeI) = numPairsStillCorr / denomH;
+                    oneEnvPctStillUncorr{dpH}(mouseI,edgeI) = numPairsStillUncorr / denomH;
+                    oneEnvPctBecomeUncorr{dpH}(mouseI,edgeI) = numPairsBecomeUncorr / denomH;
+                    oneEnvPctBecomeCorr{dpH}(mouseI,edgeI) = numPairsBecomeCorr / denomH;
+                case 2
+                    twoEnvPctStillCorr{dpH}(mouseI-3,edgeI) = numPairsStillCorr / denomH;
+                    twoEnvPctStillUncorr{dpH}(mouseI-3,edgeI) = numPairsStillUncorr / denomH;
+                    twoEnvPctBecomeUncorr{dpH}(mouseI-3,edgeI) = numPairsBecomeUncorr / denomH;
+                    twoEnvPctBecomeCorr{dpH}(mouseI-3,edgeI) = numPairsBecomeCorr / denomH;
+            end
+            
+            
+        end
     end
 end
+
+oneEnvPctStillCorrAgg = cell(nEdgeThreshes,1);
+oneEnvPctBecomeCorrAgg = cell(nEdgeThreshes,1);
+oneEnvPctBecomeUncorrAgg = cell(nEdgeThreshes,1);
+oneEnvPctStillUncorrAgg = cell(nEdgeThreshes,1);
+twoEnvPctStillCorrAgg = cell(nEdgeThreshes,1);
+twoEnvPctBecomeCorrAgg = cell(nEdgeThreshes,1);
+twoEnvPctBecomeUncorrAgg = cell(nEdgeThreshes,1);
+twoEnvPctStillUncorrAgg = cell(nEdgeThreshes,1);
+for edgeI = 1:nEdgeThreshes
+    for dpH = 1:size(dayPairsHere,1)
+        oneEnvPctStillCorrAgg{edgeI} = [oneEnvPctStillCorrAgg{edgeI}; oneEnvPctStillCorr{dpH}(:,edgeI)];
+        oneEnvPctBecomeCorrAgg{edgeI} = [oneEnvPctBecomeCorrAgg{edgeI}; oneEnvPctBecomeCorr{dpH}(:,edgeI)];
+        oneEnvPctBecomeUncorrAgg{edgeI} = [oneEnvPctBecomeUncorrAgg{edgeI}; oneEnvPctBecomeUncorr{dpH}(:,edgeI)];
+        oneEnvPctStillUncorrAgg{edgeI} = [oneEnvPctStillUncorrAgg{edgeI}; oneEnvPctStillUncorr{dpH}(:,edgeI)];
+        
+        twoEnvPctStillCorrAgg{edgeI} = [twoEnvPctStillCorrAgg{edgeI}; twoEnvPctStillCorr{dpH}(:,edgeI)];
+        twoEnvPctBecomeCorrAgg{edgeI} = [twoEnvPctBecomeCorrAgg{edgeI}; twoEnvPctBecomeCorr{dpH}(:,edgeI)];
+        twoEnvPctBecomeUncorrAgg{edgeI} = [twoEnvPctBecomeUncorrAgg{edgeI}; twoEnvPctBecomeUncorr{dpH}(:,edgeI)];
+        twoEnvPctStillUncorrAgg{edgeI} = [twoEnvPctStillUncorrAgg{edgeI}; twoEnvPctStillUncorr{dpH}(:,edgeI)];
+    end
+end
+
+xlabs = {'C-C','U-C','C-U'};
+figure;
+for edgeI = 1:nEdgeThreshes
+    subplot(1,nEdgeThreshes,edgeI)
+    
+    datH = oneEnvPctStillCorrAgg{edgeI};
+    plot(0.9*ones(size(datH)),datH,'.','MarkerEdgeColor',groupColors{1})
+    hold on
+    datJ = twoEnvPctStillCorrAgg{edgeI};
+    plot(1.1*ones(size(datJ)),datJ,'.','MarkerEdgeColor',groupColors{2})
+    [hh,pp] = ranksum(datH,datJ);
+    
+    datH = oneEnvPctBecomeCorrAgg{edgeI};
+    plot(1.9*ones(size(datH)),datH,'.','MarkerEdgeColor',groupColors{1})
+    hold on
+    datJ = twoEnvPctBecomeCorrAgg{edgeI};
+    plot(2.1*ones(size(datJ)),datJ,'.','MarkerEdgeColor',groupColors{2})
+    [hh,pp] = ranksum(datH,datJ);
+    
+    datH = oneEnvPctBecomeUncorrAgg{edgeI};
+    plot(2.9*ones(size(datH)),datH,'.','MarkerEdgeColor',groupColors{1})
+    hold on
+    datJ = twoEnvPctBecomeUncorrAgg{edgeI};
+    plot(3.1*ones(size(datJ)),datJ,'.','MarkerEdgeColor',groupColors{2})
+    [hh,pp] = ranksum(datH,datJ);
+    
+    xlabel('Corr category')
+    ylabel('Pct')
+    title(['thresh=' num2str(edgeThreshes(edgeI))])
+    aa = gca;
+    aa.XTick = [1 2 3];
+    aa.XTickLabel = xlabs;
+    xlim([0.8 3.2])
+end
+suptitleSL('Pct cell pairs correlated across day pairs 1:3 vs. 7:9')
+    
+    
+        
+
+figure;
+%xlabs = {'C-C','U-C','C-U','U-U'};
+xlabs = {'C-C','U-C','C-U'};
+for dpH = 1:size(dayPairsHere,1)
+    for edgeI = 4:nEdgeThreshes
+        subplot(2,numel(4:nEdgeThreshes),edgeI - 3)
+        xlabel('Corr category')
+        ylabel('Pct')
+        title(['One Env, th=' num2str(edgeThreshes(edgeI))])
+        
+        datH = oneEnvPctStillCorr{dpH}(:,edgeI);
+        plot(1*ones(size(datH)),datH,'.','MarkerEdgeColor',groupColors{1})
+        hold on
+        datH = oneEnvPctBecomeCorr{dpH}(:,edgeI);
+        plot(2*ones(size(datH)),datH,'.','MarkerEdgeColor',groupColors{1})
+        hold on
+        datH = oneEnvPctBecomeUncorr{dpH}(:,edgeI);
+        plot(3*ones(size(datH)),datH,'.','MarkerEdgeColor',groupColors{1})
+        %hold on
+        %datH = oneEnvPctStillUncorr{dpH}(:,edgeI);
+        %plot(4*ones(size(datH)),datH,'.','MarkerEdgeColor',groupColors{1})
+        
+        aa = gca; aa.XTickLabel = xlabs;
+        xlim([0.9 3.1])
+        
+        subplot(2,numel(4:nEdgeThreshes),edgeI+numel(4:nEdgeThreshes)-3)
+        xlabel('Corr category')
+        ylabel('Pct')
+        title(['Two Env, th=' num2str(edgeThreshes(edgeI))])
+        
+        datH = twoEnvPctStillCorr{dpH}(:,edgeI);
+        plot(1*ones(size(datH)),datH,'.','MarkerEdgeColor',groupColors{2})
+        hold on
+        datH = twoEnvPctBecomeCorr{dpH}(:,edgeI);
+        plot(2*ones(size(datH)),datH,'.','MarkerEdgeColor',groupColors{2})
+        hold on
+        datH = twoEnvPctBecomeUncorr{dpH}(:,edgeI);
+        plot(3*ones(size(datH)),datH,'.','MarkerEdgeColor',groupColors{2})
+        %hold on
+        %datH = twoEnvPctStillUncorr{dpH}(:,edgeI);
+        %plot(4*ones(size(datH)),datH,'.','MarkerEdgeColor',groupColors{2})
+        
+        aa = gca; aa.XTickLabel = xlabs;
+        %xlim([0.9 4.1])
+        xlim([0.9 3.1])
+    end
+end
+suptitleSL('Need to aggregate these by category, across dayPairs, ranksum test')
+        
+for sessJ = 1:numel(daysHere)
+    sessI = daysHere(sessJ);
+    subplot(2,numel(daysHere),sessJ)
+    
+    for edgeI = 4:nEdgeThreshes
+        datH = oneEnvPctComps{sessI}{edgeI};
+        plot(edgeThreshes(edgeI)*ones(size(datH)),datH,'.')
+        hold on
+    end
+    title(['Day ' num2str(sessI)])
+    
+    if sessJ == 1; ylabel('nComps / cellsActive'); end
+    
+    subplot(2,numel(daysHere),sessJ+numel(daysHere))
+    
+    for edgeI = 4:nEdgeThreshes
+        datH = twoEnvPctComps{sessI}{edgeI};
+        plot(edgeThreshes(edgeI)*ones(size(datH)),datH,'.')
+        hold on
+    end
+    if sessJ == 1; ylabel('nComps / cellsActive'); end
+    xlabel('Corr Edge Thresh')
+end
+suptitleSL(' number of comps as pct of cells here (xxxEnvPctComps)')
 
 
 figure;

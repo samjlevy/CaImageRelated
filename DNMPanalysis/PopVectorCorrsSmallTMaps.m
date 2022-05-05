@@ -1,4 +1,4 @@
-function  [Corrs,meanCorr,numCellsUsed,numNans] = PopVectorCorrsSmallTMaps(TMapA,TMapB,traitLogicalA,traitLogicalB,cellsUseOption,corrType)
+function  [Corrs,meanCorr,numCellsUsed,numNans] = PopVectorCorrsSmallTMaps(TMapA,TMapB,traitLogicalA,traitLogicalB,cellsUseOption,corrType,binComb)
 %Expects small tmaps to be 1 column of the tmaps for each cell on 1 day in
 %one condition
 
@@ -7,7 +7,7 @@ if isempty('corrType')
     disp('Using Spearman corr')
 end
 
-binComb = 'self';
+%binComb = 'self';
 %binComb = 'allToAll';
 
 numCells = size(TMapA, 1);
