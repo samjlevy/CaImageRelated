@@ -199,10 +199,6 @@ for mouseI = 1:numMice
 end
 disp('done reliability')
 
-
-
-%}
-
 disp('checking place fields')
 %pfNameUse = 'PFsLinEach.mat';
 pfNameUse = 'PFsLinEachThresh.mat';
@@ -674,12 +670,12 @@ suptitleSL('PV Corrs All-To-All Change ("Internal Structure")')
 %
 oneEnvATAdiffs = cellfun(@(x) x(:,:,oneEnvMice),pooledPVcorrsATAdiffs,'UniformOutput',false);
 twoEnvATAdiffs = cellfun(@(x) x(:,:,twoEnvMice),pooledPVcorrsATAdiffs,'UniformOutput',false);
-oneEnvATAdiffs = cell2mat(reshape(oneEnvATAdiffs,1,1,9)); % final dim is 27 = 9 day combs * 3 mice
-twoEnvATAdiffs = cell2mat(reshape(twoEnvATAdiffs,1,1,9));
+oneEnvATAdiffs = round(abs(cell2mat(reshape(oneEnvATAdiffs,1,1,9))),4); % final dim is 27 = 9 day combs * 3 mice
+twoEnvATAdiffs = round(abs(cell2mat(reshape(twoEnvATAdiffs,1,1,9))),4);
 
 meanOneEnvATAdiffs = mean(oneEnvATAdiffs,3);
 meanTwoEnvATAdiffs = mean(twoEnvATAdiffs,3);
-meanATAdiffs = meanTwoEnvATAdiffs - meanOneEnvATAdiffs;
+meanATAdiffs = meanOneEnvATAdiffs - meanTwoEnvATAdiffs;
 
 for binI = 1:(nArmBins*numel(condsUse))
     for binJ = 1:(nArmBins*numel(condsUse))
@@ -688,14 +684,117 @@ for binI = 1:(nArmBins*numel(condsUse))
     end
 end
 
-Imagesc of meanATAdiffs, put appropriate number of asterisks 
-valH = '*'
-text(binI,binJ,valH,'HorizontalAlignment','centered','VerticalAlignment','centered')
-        
+climsH = [min([meanOneEnvATAdiffs(:); meanTwoEnvATAdiffs(:)]),...
+         ceil(max([meanOneEnvATAdiffs(:); meanTwoEnvATAdiffs(:)])*10)/10];   
+figure; 
+subplot(2,2,1)
+imagesc(meanOneEnvATAdiffs)
+colorbar
+try; caxis(climsH); catch clim(climsH); end
+ata = gca;
+ata.XTick = plotTicks;
+ata.YTick = plotTicks;
+ata.XTickLabel = plotTickLabels;
+ata.XTickLabelRotation = 45;
+ata.YTickLabel = plotTickLabels;
+ata.YTickLabelRotation = 45;
+title('abs. OneMaze Turn1-2 diffs')
 
-% Next step: thresholding spatial/temporal corrs, plot that out and stats
+subplot(2,2,2)
+imagesc(meanTwoEnvATAdiffs)
+colorbar
+try; caxis(climsH); catch clim(climsH); end
+ata = gca;
+ata.XTick = plotTicks;
+ata.YTick = plotTicks;
+ata.XTickLabel = plotTickLabels;
+ata.XTickLabelRotation = 45;
+ata.YTickLabel = plotTickLabels;
+ata.YTickLabelRotation = 45;
+title('abs. TwoMaze Turn1-2 diffs')
+
+subplot(2,2,3)
+imagesc(meanATAdiffs)
+colorbar
+ata = gca;
+ata.XTick = plotTicks;
+ata.YTick = plotTicks;
+ata.XTickLabel = plotTickLabels;
+ata.XTickLabelRotation = 45;
+ata.YTickLabel = plotTickLabels;
+ata.YTickLabelRotation = 45;
+title('abs. OneMaze - abs. TwoMaze')
+hold on
+
+for binI = 1:(nArmBins*numel(condsUse))
+    for binJ = 1:(nArmBins*numel(condsUse))
+        pHere = ATApVals(binI,binJ);
+        if pHere < 0.05
+            valH= '*';
+            if pHere < 0.005
+                valH = '**';
+                if pHere <0.001
+                    valH = '***';
+                end
+            end
+            
+            text(binJ,binI,valH,'Color',[1 1 1],'HorizontalAlignment','center','VerticalAlignment','middle')
+        end
+    end
+end
+
+subplot(2,2,4)
+figure;
+[cdfH,xVal] = ecdf(meanOneEnvATAdiffs(:));
+plot(xVal,cdfH,'Color',groupColors{1},'LineWidth',1.5)
+hold on
+[cdfH,xVal] = ecdf(meanTwoEnvATAdiffs(:));
+plot(xVal,cdfH,'Color',groupColors{2},'LineWidth',1.5)
+[h,pVal,ksstat] = kstest2(meanOneEnvATAdiffs(:),meanTwoEnvATAdiffs(:));
+title(['p = ' num2str(pVal) ', ks stat = ' num2str(ksstat)])
+xlabel('Absolute Correlation Difference')
+ylabel('Cumulative Density')
+
+oneEnvMore = (meanATAdiffs > 0) & (ATApVals < 0.05);
+twoEnvMore = (meanATAdiffs < 0) & (ATApVals < 0.05);
+
+msgbox({['OneMaze more change in ' num2str(sum(sum(oneEnvMore))/2) ' bin pairs;'];...
+        ['TwoMaze more change in ' num2str(sum(sum(twoEnvMore))/2) ' bin pairs;'];...
+        ['Total bin pairs p<0.05 ' num2str(sum(sum(oneEnvMore))/2 + sum(sum(twoEnvMore))/2)];...
+        ['out of ' num2str( (((nArmBins*numel(condsUse))^2)-(nArmBins*numel(condsUse)))/2 ) ' bin pairs']})
 
 %% Coactivity again...
+
+dayPairsHere = GetAllCombs(1:3,7:9);
+daysHere = [1 2 3 7 8 9];
+condHere = [1 2 3 4];
+
+if ~exist(fullfile(mainFolder,'temporalCorrs.mat'),'file')
+    for mouseI = 1:numMice
+
+        traitLogical = dayUse{mouseI};
+        [HtemporalCorrsR, HtemporalCorrsP] = MakeTemporalCorrs1(trialbytrial,condsHere,traitLogical);
+
+        temporalCorrsR{mouseI} = HtemporalCorrsR;
+        temporalCorrsP{mouseI} = HtemporalCorrsP;
+    end
+    save(fullfile(mainFolder,'temporalCorrs.mat'),'temporalCorrsR','temporalCorrsP','cellPairsUsed')
+else
+    load(fullfile(mainFolder,'temporalCorrs.mat'))
+end
+corrsTest = temporalCorrsR;
+edgeThreshes = 0:0.025:0.4;
+
+
+coactivityAnalyses2;
+
+% Repeat for spatial corrs
+
+
+
+
+
+
 oneEnvAllCoactivity = [];
 twoEnvAllCoactivity = [];
 

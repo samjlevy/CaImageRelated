@@ -464,6 +464,8 @@ end
 % - change in comp sizes among just these cells
 % - are each pair of cells still in a comp togehter, are cells that weren't
 % now in a comp together
+
+function  (corrs, cellPairsUsed, dayPairsHere, corrs, 
 for mouseI = 1:numMice
     corrsBlank = zeros(numCells(mouseI));
     
