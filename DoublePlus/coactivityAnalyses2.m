@@ -106,7 +106,7 @@ for edgeI = 1:nEdgeThreshes
 end
 
 disp('Useful figures here')
-
+%{
 figure;
 for edgeI = 1:nEdgeThreshes
     subplot(1,nEdgeThreshes,edgeI)
@@ -121,12 +121,268 @@ for edgeI = 1:nEdgeThreshes
     plot(1*ones(size(datH)),datH,'.','MarkerEdgeColor',groupColors{1})
     hold on
     plot(2*ones(size(datJ)),datJ,'.','MarkerEdgeColor',groupColors{2})
+    figure;
+subplot(1,2,1)
+daysPlot = 1:3;
+for edgeI = 1:nEdgeThreshes
+    datH = [];
+    datJ = [];
+    for sessJ = 1:numel(daysPlot)
+        sessI = daysPlot(sessJ);
+        datH = [datH; oneEnvPctCellsInComp{sessI}{edgeI}];
+        datJ = [datJ; twoEnvPctCellsInComp{sessI}{edgeI}];
+    end
     
+    plot((plotOffsets(1)+edgeI)*ones(size(datH)),datH,'.','MarkerEdgeColor',groupColors{1})
+    hold on
+    plot((plotOffsets(2)+edgeI)*ones(size(datJ)),datJ,'.','MarkerEdgeColor',groupColors{2})
+    
+    [pHere, hHere] = ranksum(datH,datJ);
+    %text(edgeI,0.3,num2str(pHere),'Rotation',90)
+end
+xlim([1+plotOffsets(1)-0.1 numel(edgeThreshes)+plotOffsets(2)+0.1])
+ylim([0.2 1.1])
+ylabel('pct cellsInComp / cellsActive')
+title('Days 1-3')
+vv = gca;
+vv.XTick = 1:numel(edgeThreshes);
+vv.XTickLabel = cellfun(@(x) num2str(x),mat2cell(edgeThreshes',ones(numel(edgeThreshes),1),1),'UniformOutput',false);
+vv.XTickLabelRotation = 45;
+xlabel('Correlation Edge Threshold')
+MakePlotPrettySL(vv);
+
+subplot(1,2,2)
+daysPlot = 7:9;
+for edgeI = 1:nEdgeThreshes
+    datH = [];
+    datJ = [];
+    for sessJ = 1:numel(daysPlot)
+        sessI = daysPlot(sessJ);
+        datH = [datH; oneEnvPctCellsInComp{sessI}{edgeI}];
+        datJ = [datJ; twoEnvPctCellsInComp{sessI}{edgeI}];
+    end
+    
+    plot((plotOffsets(1)+edgeI)*ones(size(datH)),datH,'.','MarkerEdgeColor',groupColors{1})
+    hold on
+    plot((plotOffsets(2)+edgeI)*ones(size(datJ)),datJ,'.','MarkerEdgeColor',groupColors{2})
+    
+    [pHere, hHere] = ranksum(datH,datJ);
+    %text(edgeI,0.3,num2str(pHere),'Rotation',90)
+end
+xlim([1+plotOffsets(1)-0.1 numel(edgeThreshes)+plotOffsets(2)+0.1])
+ylim([0.2 1.1])
+ylabel('pct cellsInComp / cellsActive')
+title('Days 7-9')
+vv = gca;
+vv.XTick = 1:numel(edgeThreshes);
+vv.XTickLabel = cellfun(@(x) num2str(x),mat2cell(edgeThreshes',ones(numel(edgeThreshes),1),1),'UniformOutput',false);
+vv.XTickLabelRotation = 45;
+xlabel('Correlation Edge Threshold')
+MakePlotPrettySL(vv);
+
+suptitleSL('Pct Cells in a Cluster / number Cells Active')
     ylabel('pct cellsInComp / cellsActive')
     title(['Thresh = ' num2str(edgeThreshes(edgeI))])
     xlim([0.9 2.1])
     ylim([0 1.05])
 end
+%}
+plotOffsets = [-0.1 0.1];
+
+
+
+figure;
+for edgeI = 1:numel(edgeThreshes)
+    datH = oneEnvPctStillCorrAgg{edgeI};
+    plot((edgeI-0.1)*ones(size(datH)),datH,'.','MarkerEdgeColor',groupColors{1})
+    hold on
+    datJ = twoEnvPctStillCorrAgg{edgeI};
+    plot((edgeI+0.1)*ones(size(datJ)),datJ,'.','MarkerEdgeColor',groupColors{2})
+    [pp,hh] = ranksum(datH,datJ);
+    %text(edgeI,0.325,num2str(pp),'Rotation',90)
+    
+    plot([-0.3 0]+edgeI,mean(datH)*[1 1],'k')
+    plot([0 0.3]+edgeI,mean(datJ)*[1 1],'k')
+end
+vv = gca;
+vv.XTick = 1:numel(edgeThreshes);
+vv.XTickLabel = cellfun(@(x) num2str(x),mat2cell(edgeThreshes',ones(numel(edgeThreshes),1),1),'UniformOutput',false);
+vv.XTickLabelRotation = 45;
+xlabel('Correlation Edge Threshold')
+ylabel('Pct pairs still correlated / num pairs active')
+MakePlotPrettySL(vv);
+ylim([-0.01 0.3])
+%{
+figure;
+for edgeI = 1:numel(edgeThreshes)
+    datH = oneEnvPctBecomeCorrAgg{edgeI};
+    plot((edgeI-0.1)*ones(size(datH)),datH,'.','MarkerEdgeColor',groupColors{1})
+    hold on
+    datJ = twoEnvPctBecomeCorrAgg{edgeI};
+    plot((edgeI+0.1)*ones(size(datJ)),datJ,'.','MarkerEdgeColor',groupColors{2})
+    [pp,hh] = ranksum(datH,datJ);
+    text(edgeI,0.325,num2str(pp),'Rotation',90)
+    
+    plot([-0.3 0]+edgeI,mean(datH)*[1 1],'k')
+    plot([0 0.3]+edgeI,mean(datJ)*[1 1],'k')
+end
+vv = gca;
+vv.XTick = 1:numel(edgeThreshes);
+vv.XTickLabel = cellfun(@(x) num2str(x),mat2cell(edgeThreshes',ones(numel(edgeThreshes),1),1),'UniformOutput',false);
+vv.XTickLabelRotation = 45;
+xlabel('Correlation Edge Threshold')
+ylabel('Pct pairs become correlated / num pairs active')
+%ylim([-0.01 0.4])
+
+figure;
+for edgeI = 1:numel(edgeThreshes)
+    datH = oneEnvPctBecomeUncorrAgg{edgeI};
+    plot((edgeI-0.1)*ones(size(datH)),datH,'.','MarkerEdgeColor',groupColors{1})
+    hold on
+    datJ = twoEnvPctBecomeUncorrAgg{edgeI};
+    plot((edgeI+0.1)*ones(size(datJ)),datJ,'.','MarkerEdgeColor',groupColors{2})
+    [pp,hh] = ranksum(datH,datJ);
+    text(edgeI,0.325,num2str(pp),'Rotation',90)
+    
+    plot([-0.3 0]+edgeI,mean(datH)*[1 1],'k')
+    plot([0 0.3]+edgeI,mean(datJ)*[1 1],'k')
+end
+vv = gca;
+vv.XTick = 1:numel(edgeThreshes);
+vv.XTickLabel = cellfun(@(x) num2str(x),mat2cell(edgeThreshes',ones(numel(edgeThreshes),1),1),'UniformOutput',false);
+vv.XTickLabelRotation = 45;
+xlabel('Correlation Edge Threshold')
+ylabel('Pct pairs become ucorrelated / num pairs active')
+%ylim([-0.01 0.4])
+%}
+
+%{
+% number of comps as pct of cells here
+plotOffsets = [-0.1 0.1];
+figure;
+subplot(1,2,1)
+daysPlot = 1:3;
+for edgeI = 1:nEdgeThreshes
+    datH = [];
+    datJ = [];
+    for sessJ = 1:numel(daysPlot)
+        sessI = daysPlot(sessJ);
+        datH = [datH; oneEnvPctComps{sessI}{edgeI}];
+        datJ = [datJ; twoEnvPctComps{sessI}{edgeI}];
+    end
+    
+    plot((plotOffsets(1)+edgeI)*ones(size(datH)),datH,'.','MarkerEdgeColor',groupColors{1})
+    hold on
+    plot((plotOffsets(2)+edgeI)*ones(size(datJ)),datJ,'.','MarkerEdgeColor',groupColors{2})
+    
+    [pHere, hHere] = ranksum(datH,datJ);
+    text(edgeI,0.1,num2str(pHere),'Rotation',90)
+end
+ylim([0 0.15])
+ylabel('number of connComps / cellsActive')
+title('Days 1-3')
+vv = gca;
+vv.XTick = 1:numel(edgeThreshes);
+vv.XTickLabel = cellfun(@(x) num2str(x),mat2cell(edgeThreshes',ones(numel(edgeThreshes),1),1),'UniformOutput',false);
+vv.XTickLabelRotation = 45;
+xlim([1+plotOffsets(1)-0.1 numel(edgeThreshes)+plotOffsets(2)+0.1])
+xlabel('Correlation Edge Threshold')
+
+subplot(1,2,2)
+daysPlot = 7:9;
+for edgeI = 1:nEdgeThreshes
+    datH = [];
+    datJ = [];
+    for sessJ = 1:numel(daysPlot)
+        sessI = daysPlot(sessJ);
+        datH = [datH; oneEnvPctComps{sessI}{edgeI}];
+        datJ = [datJ; twoEnvPctComps{sessI}{edgeI}];
+    end
+    
+    plot((plotOffsets(1)+edgeI)*ones(size(datH)),datH,'.','MarkerEdgeColor',groupColors{1})
+    hold on
+    plot((plotOffsets(2)+edgeI)*ones(size(datJ)),datJ,'.','MarkerEdgeColor',groupColors{2})
+    
+    [pHere, hHere] = ranksum(datH,datJ);
+    text(edgeI,0.1,num2str(pHere),'Rotation',90)
+end
+
+ylim([0 0.15])
+ylabel('number of connComps / cellsActive')
+title('Days 7-9')
+vv = gca;
+vv.XTick = 1:numel(edgeThreshes);
+vv.XTickLabel = cellfun(@(x) num2str(x),mat2cell(edgeThreshes',ones(numel(edgeThreshes),1),1),'UniformOutput',false);
+vv.XTickLabelRotation = 45;
+xlim([1+plotOffsets(1)-0.1 numel(edgeThreshes)+plotOffsets(2)+0.1])
+xlabel('Correlation Edge Threshold')
+suptitleSL('number of connComps / number Cells Active')
+%}
+
+
+
+%{
+% Sizes of connComps as pct of cells here
+plotOffsets = [-0.1 0.1];
+figure;
+subplot(1,2,1)
+daysPlot = 1:3;
+for edgeI = 1:nEdgeThreshes
+    datH = [];
+    datJ = [];
+    for sessJ = 1:numel(daysPlot)
+        sessI = daysPlot(sessJ);
+        datH = [datH; cell2mat(oneEnvCompPctSizes{sessI}{edgeI})];
+        datJ = [datJ; cell2mat(twoEnvCompPctSizes{sessI}{edgeI})];
+    end
+    
+    plot((plotOffsets(1)+edgeI)*ones(size(datH)),datH,'.','MarkerEdgeColor',groupColors{1})
+    hold on
+    plot((plotOffsets(2)+edgeI)*ones(size(datJ)),datJ,'.','MarkerEdgeColor',groupColors{2})
+    
+    [pHere, hHere] = ranksum(datH,datJ);
+    text(edgeI,0.1,num2str(pHere),'Rotation',90)
+end
+%ylim([0 0.15])
+ylabel('connComp sizes / cellsActive')
+title('Days 1-3')
+vv = gca;
+vv.XTick = 1:numel(edgeThreshes);
+vv.XTickLabel = cellfun(@(x) num2str(x),mat2cell(edgeThreshes',ones(numel(edgeThreshes),1),1),'UniformOutput',false);
+vv.XTickLabelRotation = 45;
+xlim([1+plotOffsets(1)-0.1 numel(edgeThreshes)+plotOffsets(2)+0.1])
+xlabel('Correlation Edge Threshold')
+
+subplot(1,2,2)
+daysPlot = 7:9;
+for edgeI = 1:nEdgeThreshes
+    datH = [];
+    datJ = [];
+    for sessJ = 1:numel(daysPlot)
+        sessI = daysPlot(sessJ);
+        datH = [datH; cell2mat(oneEnvCompPctSizes{sessI}{edgeI})];
+        datJ = [datJ; cell2mat(twoEnvCompPctSizes{sessI}{edgeI})];
+    end
+    
+    plot((plotOffsets(1)+edgeI)*ones(size(datH)),datH,'.','MarkerEdgeColor',groupColors{1})
+    hold on
+    plot((plotOffsets(2)+edgeI)*ones(size(datJ)),datJ,'.','MarkerEdgeColor',groupColors{2})
+    
+    [pHere, hHere] = ranksum(datH,datJ);
+    text(edgeI,0.1,num2str(pHere),'Rotation',90)
+end
+%ylim([0 0.15])
+ylabel('connComp sizes / cellsActive')
+title('Days 7-9')
+vv = gca;
+vv.XTick = 1:numel(edgeThreshes);
+vv.XTickLabel = cellfun(@(x) num2str(x),mat2cell(edgeThreshes',ones(numel(edgeThreshes),1),1),'UniformOutput',false);
+vv.XTickLabelRotation = 45;
+xlim([1+plotOffsets(1)-0.1 numel(edgeThreshes)+plotOffsets(2)+0.1])
+xlabel('Correlation Edge Threshold')
+suptitleSL('connComp sizes / number Cells Active')
+%}
+
 
 
 % Single Sess comparisons
@@ -190,7 +446,7 @@ suptitleSL(' pact active cells in a comp (xxxEnvPctCellsInComp)')
 % - change in comp sizes among just these cells
 % - are each pair of cells still in a comp togehter, are cells that weren't
 % now in a comp together
-
+%{
 xlabs = {'C-C','U-C','C-U'};
 figure;
 for edgeI = 1:nEdgeThreshes
@@ -226,8 +482,8 @@ for edgeI = 1:nEdgeThreshes
     xlim([0.8 3.2])
 end
 suptitleSL('Pct cell pairs correlated across day pairs 1:3 vs. 7:9')
-disp('Need to aggregate these by category, across dayPairs, ranksum test')
-        
+%}
+
   %{  
 figure;
 %xlabs = {'C-C','U-C','C-U','U-U'};
