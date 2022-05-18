@@ -772,7 +772,7 @@ MakePlotPrettySL(gg.Children);
 % Bias of activity to a particular arm, does that change (Modulation index)
 
 
-% Whole maze
+% Whole maze remapping by reli
 oneEnvRemapRhoValsWithin = []; 
 oneEnvRemapReliValsWithin = [];
 oneEnvRemapPvalsWithin = [];
@@ -1146,6 +1146,31 @@ ylabel('Cumulative proportion')
 text(-1.5,0.7,['KS p = ' num2str(pKS)])
 text(-1.5,0.8,['KS stat = ' num2str(kstat)])
 MakePlotPrettySL(gca);
+
+figure;
+bbins = linspace(-2,2,40);
+subplot(2,1,1)
+yyDat = oneEnvCDall - oneEnvABall;
+h = histogram(yyDat,bbins,'Normalization','probability');
+h.FaceColor = groupColors{1};
+xlabel('corr(Turn1, Turn2) - corr(Turn1, Place)')
+ylabel('Proportion / Active Cells')
+title('OneMaze')
+ylim([0 0.15])
+xlim([-2 2])
+MakePlotPrettySL(gca);
+
+subplot(2,1,2)
+zzDat = twoEnvCDall - twoEnvABall;
+i = histogram(zzDat,bbins,'Normalization','probability');
+i.FaceColor = groupColors{2};
+xlabel('corr(Turn1, Turn2) - corr(Turn1, Place)')
+ylabel('Proportion / Active Cells')
+title('TwoMaze')
+ylim([0 0.15])
+xlim([-2 2])
+MakePlotPrettySL(gca);
+% searchString:reinstatement
 
 % Pct cells with higher positive correlation in Turn1-Turn2 than
 % Turn1-Place

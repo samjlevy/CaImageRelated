@@ -443,6 +443,86 @@ end
 oneEnvPVcorrs = mean(cell2mat(oneEnvMicePVcorrsMeans),1);
 twoEnvPVcorrs = mean(cell2mat(twoEnvMicePVcorrsMeans),1);
 
+%% Stability by number of days present
+dayPairsForward = GetAllCombs(1:3,7:9);
+dayPairsForward = nchoosek([1:3, 7:9],2);
+%[singleCellCorrsRho, singleCellCorrsP] = GatherSingleCellCorrs;
+GatherSingleCellCorrs;
+
+meanDayPairCorr = [];
+nDayPairs = [];
+oneEnvMeanDPcorrs = [];
+oneEnvNdayPairsPresent = [];
+twoEnvMeanDPcorrs = [];
+twoEnvNdayPairsPresent = [];
+
+numDayPairs = size(dayPairsForward,1);
+for mouseI = 1:numMice
+    mouseSingleCellCorrs = singleCellAllCorrsRho{mouseI}{1};
+    
+    firedAtAll = sum(trialReli{mouseI},3)>0;
+    traitLogical = [];
+    for dpI = 1:numDayPairs
+        firedBothDays = sum(firedAtAll(:,dayPairsForward(dpI,:)),2)==2;
+        aboveThresh = sum(dayUseAll{mouseI}(:,dayPairsForward(dpI,:)),2)>0;
+        cellsUseHere = firedBothDays & aboveThresh;
+        traitLogical{dpI} = cellsUseHere;
+    end
+    
+    corrsMat = cell2mat(mouseSingleCellCorrs);
+    useMat = cell2mat(traitLogical);
+
+    nCells = size(corrsMat,1);
+    meanDayPairCorrH = nan(nCells,1);
+    for cellI = 1:nCells
+        meanDayPairCorrH(cellI,1) = mean(corrsMat(cellI,useMat(cellI,:)));
+        
+    end
+    %meanDayPairCorrAllH = mean(corrsMat,2); % Doesn't work, NaNs here
+    nDayPairsPersist = sum(useMat,2);
+    
+    kickOut = isnan(meanDayPairCorrH);
+    
+    meanDayPairCorr{mouseI} = meanDayPairCorrH(~kickOut);
+    nDayPairs{mouseI} = nDayPairsPersist(~kickOut);
+
+    switch groupNum(mouseI)
+        case 1
+            oneEnvMeanDPcorrs = [oneEnvMeanDPcorrs; meanDayPairCorr{mouseI}];
+            oneEnvNdayPairsPresent = [oneEnvNdayPairsPresent; nDayPairs{mouseI}];
+        case 2
+            twoEnvMeanDPcorrs = [twoEnvMeanDPcorrs; meanDayPairCorr{mouseI}];
+            twoEnvNdayPairsPresent = [twoEnvNdayPairsPresent; nDayPairs{mouseI}];
+    end
+end
+
+% Still coming up with nans...
+
+figure;
+
+subplot(2,1,1)
+boxplot(oneEnvMeanDPcorrs,oneEnvNdayPairsPresent)
+lm = fitlm(table(oneEnvNdayPairsPresent,oneEnvMeanDPcorrs),'linear');
+slope = lm.Coefficients.Estimate(2);
+pSlope = lm.Coefficients.pValue(2);
+rr = lm.Rsquared.Ordinary;
+[rr,pp]=corr(oneEnvNdayPairsPresent,oneEnvMeanDPcorrs,'type','Spearman');
+title({['TwoMaze, rr = ' num2str(rr) ', slope = ' num2str(slope) ', slope pval (vs. constant) = ' num2str(pSlope)];['spearman corr rho = ' num2str(rr) ', p = ', num2str(pp)]})
+xlabel('Day Pairs Present/Active')
+ylabel('Mean Correlation Across Active Day Pairs')
+
+subplot(2,1,2)
+boxplot(twoEnvMeanDPcorrs,twoEnvNdayPairsPresent)
+lm = fitlm(table(twoEnvNdayPairsPresent,twoEnvMeanDPcorrs),'linear');
+slope = lm.Coefficients.Estimate(2);
+pSlope = lm.Coefficients.pValue(2);
+rr = lm.Rsquared.Ordinary;
+[rr,pp]=corr(twoEnvNdayPairsPresent,twoEnvMeanDPcorrs,'type','Spearman');
+title({['TwoMaze, rr = ' num2str(rr) ', slope = ' num2str(slope) ', slope pval (vs. constant) = ' num2str(pSlope)];['spearman corr rho = ' num2str(rr) ', p = ', num2str(pp)]})
+xlabel('Day Pairs Present/Active')
+ylabel('Mean Correlation Across Active Day Pairs')
+
+    
 %% Turn 1 v Turn 2 all to all pv corrs
 %dayPairsForward = GetAllCombs(1:3,7:9);
 %dayPairs = dayPairsForward;
@@ -766,6 +846,7 @@ title('abs. TwoMaze Turn1-2 diffs')
 MakePlotPrettySL(gca);
 
 ax3 = subplot(2,2,3)
+%figure;
 imagesc(meanATAdiffs)
 colormap(newGradient)
 caxis([-0.15 0.15])
@@ -788,13 +869,14 @@ for binI = 1:(nArmBins*numel(condsUse))
         pHere = ATApVals(binI,binJ);
         if pHere < 0.05
             valH= '*';
+            %{
             if pHere < 0.005
                 valH = '**';
                 if pHere <0.001
                     valH = '***';
                 end
             end
-            
+            %}
             moreColor = [0.9294    0.6941    0.1255];
             moreColor = groupColors{2};
             if oneEnvMore(binI,binJ)
@@ -870,7 +952,7 @@ if ~exist(fullfile(mainFolder,'spatialCorrs.mat'),'file')
     %[tmapRhos,tmapPs]
     end
 else
-    load(fullfile(mainFolder,'spatialCorrs.mat'),'file')
+    load(fullfile(mainFolder,'spatialCorrs.mat'))
 end
 
 
@@ -924,44 +1006,50 @@ figure;
 subplot(2,2,1)
 plot(oneEnvSpatialRhosTurn1,oneEnvTemporalRhosTurn1,'.','MarkerEdgeColor',groupColors{1})
 lm = fitlm(table(oneEnvSpatialRhosTurn1(:),oneEnvTemporalRhosTurn1(:)),'linear');
+[rho,pp] = corr(oneEnvSpatialRhosTurn1,oneEnvTemporalRhosTurn1,'type','Spearman');
 hold on
 plotLocalErrorBars(oneEnvSpatialRhosTurn1,oneEnvTemporalRhosTurn1,[-1:0.2:1],'std','k')
 ylabel('Temporal Correlation (rho)')
 xlabel('Spatial bin correlation (rho)')
-title(['OneMaze, Turn 1, rr = ' num2str(lm.Rsquared.Ordinary)])
+title(['OneMaze, Turn 1, rr = ' num2str(lm.Rsquared.Ordinary) ', rho,p = ' num2str(rho) ', ' num2str(pp)])
 MakePlotPrettySL(gca);
 
 subplot(2,2,2)
 plot(oneEnvSpatialRhosTurn2,oneEnvTemporalRhosTurn2,'.','MarkerEdgeColor',groupColors{1})
 lm = fitlm(table(oneEnvSpatialRhosTurn2(:),oneEnvTemporalRhosTurn2(:)),'linear');
+[rho,pp] = corr(oneEnvSpatialRhosTurn2,oneEnvTemporalRhosTurn2,'type','Spearman');
 hold on
 plotLocalErrorBars(oneEnvSpatialRhosTurn2,oneEnvTemporalRhosTurn2,[-1:0.2:1],'std','k')
 ylabel('Temporal Correlation (rho)')
 xlabel('Spatial bin correlation (rho)')
-title(['OneMaze, Turn 2, rr = ' num2str(lm.Rsquared.Ordinary)])
+title(['OneMaze, Turn 2, rr = ' num2str(lm.Rsquared.Ordinary) ', rho,p = ' num2str(rho) ', ' num2str(pp)])
 MakePlotPrettySL(gca);
 
 subplot(2,2,3)
 plot(twoEnvSpatialRhosTurn1,twoEnvTemporalRhosTurn1,'.','MarkerEdgeColor',groupColors{2})
 lm = fitlm(table(twoEnvSpatialRhosTurn1(:),twoEnvTemporalRhosTurn1(:)),'linear');
+[rho,pp] = corr(twoEnvSpatialRhosTurn1,twoEnvTemporalRhosTurn1,'type','Spearman');
 hold on
 plotLocalErrorBars(twoEnvSpatialRhosTurn1,twoEnvTemporalRhosTurn1,[-1:0.2:1],'std','k')
 ylabel('Temporal Correlation (rho)')
 xlabel('Spatial bin correlation (rho)')
-title(['TwoMaze, Turn 1, rr = ' num2str(lm.Rsquared.Ordinary) ', slope = '])
+title(['TwoMaze, Turn 1, rr = ' num2str(lm.Rsquared.Ordinary)  ', rho,p = ' num2str(rho) ', ' num2str(pp)])
 MakePlotPrettySL(gca);
 
 subplot(2,2,4)
 plot(twoEnvSpatialRhosTurn2,twoEnvTemporalRhosTurn2,'.','MarkerEdgeColor',groupColors{2})
 lm = fitlm(table(twoEnvSpatialRhosTurn2(:),twoEnvTemporalRhosTurn2(:)),'linear');
+[rho,pp] = corr(twoEnvSpatialRhosTurn2,twoEnvTemporalRhosTurn2,'type','Spearman');
 hold on
 plotLocalErrorBars(twoEnvSpatialRhosTurn2,twoEnvTemporalRhosTurn2,[-1:0.2:1],'std','k')
 ylabel('Temporal Correlation (rho)')
 xlabel('Spatial bin correlation (rho)')
-title(['TwoMaze, Turn 2, rr = ' num2str(lm.Rsquared.Ordinary)])
+title(['TwoMaze, Turn 2, rr = ' num2str(lm.Rsquared.Ordinary) ', rho,p = ' num2str(rho) ', ' num2str(pp)])
 MakePlotPrettySL(gca);
 
 suptitleSL('Spatial Correlation Vs. Temporal Correlation, Turn 1 vs. 2 (mean+/-STD')
+aa = gcf;
+aa.Renderer = 'painters';
 
 % Is the change in spatial correlation related to change in temporal correlation?
 oneEnvSpatialChanges = [];
@@ -1031,6 +1119,10 @@ suptitleSL('Change in Spatial Corr of pair by Change in Temporal Corr of pair')
 for edgeI = 1:numel(edgeThreshes)
     oneEnvSpatialCorrsE = [];
     twoEnvSpatialCorrsE = [];
+    oneEnvMeanRanks = [];
+    oneEnvRanksAll = [];
+    twoEnvMeanRanks = [];
+    twoEnvRanksAll = [];
     for mouseI = 1:numMice
         for dpH = 1:size(dayPairsHere,1)
             cellPairsHH = [];
@@ -1053,12 +1145,19 @@ for edgeI = 1:numel(edgeThreshes)
             % pcpSpatialCorrs = [singleCellAllCorrsRho{mouseI}{1}{dpH}(potentialCellPairs)];
 
             uniqueCellCorrs = singleCellAllCorrsRho{mouseI}{1}{dpH}(uniqueCellsHere);
-
+            % Percentile rank of these correlations: 
+            percentileRanksH = percentileOfEach(singleCellAllCorrsRho{mouseI}{1}{dpH});
+            percentileRanksThese = percentileRanksH(uniqueCellsHere);
+            
             switch groupNum(mouseI)
                 case 1
                     oneEnvSpatialCorrsE = [oneEnvSpatialCorrsE; uniqueCellCorrs];
+                    oneEnvMeanRanks = [oneEnvMeanRanks; mean(percentileRanksThese)];
+                    oneEnvRanksAll = [oneEnvRanksAll; percentileRanksThese];
                 case 2
                     twoEnvSpatialCorrsE = [twoEnvSpatialCorrsE; uniqueCellCorrs];
+                    twoEnvMeanRanks = [twoEnvMeanRanks; mean(percentileRanksThese)];
+                    twoEnvRanksAll = [twoEnvRanksAll; percentileRanksThese];
             end
         end
     end
@@ -1067,6 +1166,11 @@ for edgeI = 1:numel(edgeThreshes)
     oneEnvSemCorrE(edgeI) = standarderrorSL(oneEnvSpatialCorrsE);
     twoEnvMeanCorrE(edgeI) = mean(twoEnvSpatialCorrsE);
     twoEnvSemCorrE(edgeI) = standarderrorSL(twoEnvSpatialCorrsE);
+    
+    oneEnvMeanRankE(edgeI) = mean(oneEnvRanksAll);
+    oneEnvSemRankE(edgeI) = standarderrorSL(oneEnvRanksAll);
+    twoEnvMeanRankE(edgeI) = mean(twoEnvRanksAll);
+    twoEnvSemRankE(edgeI) = standarderrorSL(twoEnvRanksAll);
     
     [ranksumP(edgeI),~] = ranksum(oneEnvSpatialCorrsE,twoEnvSpatialCorrsE);
     [~,ksP(edgeI)] = kstest2(oneEnvSpatialCorrsE,twoEnvSpatialCorrsE);
@@ -1085,6 +1189,25 @@ xlabel('Correlation Edge Threshold')
 ylabel('Mean Single-Cell Spatial Ratemap Correlation')
 ylim([0 0.8])
 MakePlotPrettySL(gca);
+
+figure;
+errorbar(edgeThreshes,oneEnvMeanRankE,oneEnvSemRankE,'Color',groupColors{1})
+hold on                
+errorbar(edgeThreshes,twoEnvMeanRankE,twoEnvSemRankE,'Color',groupColors{2})
+for edgeI = 1:numel(edgeThreshes)
+    %text(edgeThreshes(edgeI),0.3,num2str(ranksumP(edgeI)),'Rotation',45)
+    %text(edgeThreshes(edgeI),0.1,num2str(ksP(edgeI)),'Rotation',45)
+end
+title('Coordinated remapping')
+xlabel('Correlation Edge Threshold')
+ylabel('Mean Single-Cell Spatial Ratemap Correlation Percentile Rank')
+ylim([0 0.8])
+MakePlotPrettySL(gca);
+
+% For each pair of days a neuron is present, separately keep track of its
+% spatial correlation across that day pair depending on whether it's in a temporally correlated pair or not
+% could then plot these averages, or could get the difference between means
+% of each of these for each cell, average that
 
 
 %{
@@ -1222,7 +1345,7 @@ coactivityAnalyses2;
 
 
 
-
+%{
 oneEnvAllCoactivity = [];
 twoEnvAllCoactivity = [];
 
@@ -1556,7 +1679,7 @@ end
 figure; 
 subplot(1,2,1); histogram(oneEnvAllCoactivity(oneEnvAllCoactivity~=0) );
 subplot(1,2,2); histogram(twoEnvAllCoactivity(twoEnvAllCoactivity~=0));
-
+%}
 
 %% Day to day drift
 

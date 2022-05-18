@@ -235,8 +235,12 @@ end
 %oneEnvRemapReli = cell(1,numDayPairs); oneEnvRemapRho = cell(1,numDayPairs); oneEnvRemapP = cell(1,numDayPairs);
 %twoEnvRemapReli = cell(1,numDayPairs); twoEnvRemapRho = cell(1,numDayPairs); twoEnvRemapP = cell(1,numDayPairs);
 
-oneEnvRemapReliEach = cell(numDayPairs,numel(condsUse)); oneEnvRemapRhoEach = cell(numDayPairs,numel(condsUse)); oneEnvRemapPEach = cell(numDayPairs,numel(condsUse));
-twoEnvRemapReliEach = cell(numDayPairs,numel(condsUse)); twoEnvRemapRhoEach = cell(numDayPairs,numel(condsUse)); twoEnvRemapPEach = cell(numDayPairs,numel(condsUse));
+oneEnvRemapReliEach = cell(numDayPairs,numel(condsUse)); 
+oneEnvRemapRhoEach = cell(numDayPairs,numel(condsUse)); 
+oneEnvRemapPEach = cell(numDayPairs,numel(condsUse));
+twoEnvRemapReliEach = cell(numDayPairs,numel(condsUse)); 
+twoEnvRemapRhoEach = cell(numDayPairs,numel(condsUse)); 
+twoEnvRemapPEach = cell(numDayPairs,numel(condsUse));
 for mouseI = 1:numMice
     for dpI = 1:numDayPairs
         haveCellBothDays = sum(cellSSI{mouseI}(:,dayPairsForward(dpI,:))>0,2)==2;
