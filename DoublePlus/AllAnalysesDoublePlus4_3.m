@@ -2,7 +2,7 @@
 
 %mainFolder = 'G:\DoublePlus';
 %mainFolder = 'C:\Users\Sam\Desktop\DoublePlusFinalData';
-mainFolder = 'E:\DoublePlus';
+mainFolder = 'D:\DoublePlus';
 %mainFolder = 'C:\Users\samwi_000\Desktop\DoublePlus';
 load(fullfile(mainFolder,'groupAssign.mat'))
 groupNum(strcmpi(groupAssign(:,2),'same')) = 1;
@@ -918,6 +918,7 @@ daysHere = [1 2 3 7 8 9];
 condsHere = [1 2 3 4];
 
 edgeThreshes = 0:0.025:0.4;
+nEdgeThreshes = numel(edgeThreshes);
 
 if ~exist(fullfile(mainFolder,'temporalCorrs.mat'),'file')
     for mouseI = 1:numMice
@@ -1005,8 +1006,10 @@ end
 figure;
 subplot(2,2,1)
 plot(oneEnvSpatialRhosTurn1,oneEnvTemporalRhosTurn1,'.','MarkerEdgeColor',groupColors{1})
-lm = fitlm(table(oneEnvSpatialRhosTurn1(:),oneEnvTemporalRhosTurn1(:)),'linear');
-[rho,pp] = corr(oneEnvSpatialRhosTurn1,oneEnvTemporalRhosTurn1,'type','Spearman');
+aa = oneEnvSpatialRhosTurn1(~isnan(oneEnvSpatialRhosTurn1) & ~isnan(oneEnvTemporalRhosTurn1));
+bb = oneEnvTemporalRhosTurn1(~isnan(oneEnvSpatialRhosTurn1) & ~isnan(oneEnvTemporalRhosTurn1));
+lm = fitlm(table(aa(:),bb(:)),'linear');
+[rho,pp] = corr(aa,bb,'type','Spearman');
 hold on
 plotLocalErrorBars(oneEnvSpatialRhosTurn1,oneEnvTemporalRhosTurn1,[-1:0.2:1],'std','k')
 ylabel('Temporal Correlation (rho)')
@@ -1016,8 +1019,10 @@ MakePlotPrettySL(gca);
 
 subplot(2,2,2)
 plot(oneEnvSpatialRhosTurn2,oneEnvTemporalRhosTurn2,'.','MarkerEdgeColor',groupColors{1})
-lm = fitlm(table(oneEnvSpatialRhosTurn2(:),oneEnvTemporalRhosTurn2(:)),'linear');
-[rho,pp] = corr(oneEnvSpatialRhosTurn2,oneEnvTemporalRhosTurn2,'type','Spearman');
+aa = oneEnvSpatialRhosTurn2(~isnan(oneEnvSpatialRhosTurn2) & ~isnan(oneEnvTemporalRhosTurn2));
+bb = oneEnvTemporalRhosTurn2(~isnan(oneEnvSpatialRhosTurn2) & ~isnan(oneEnvTemporalRhosTurn2));
+lm = fitlm(table(aa(:),bb(:)),'linear');
+[rho,pp] = corr(aa,bb,'type','Spearman');
 hold on
 plotLocalErrorBars(oneEnvSpatialRhosTurn2,oneEnvTemporalRhosTurn2,[-1:0.2:1],'std','k')
 ylabel('Temporal Correlation (rho)')
@@ -1027,8 +1032,10 @@ MakePlotPrettySL(gca);
 
 subplot(2,2,3)
 plot(twoEnvSpatialRhosTurn1,twoEnvTemporalRhosTurn1,'.','MarkerEdgeColor',groupColors{2})
-lm = fitlm(table(twoEnvSpatialRhosTurn1(:),twoEnvTemporalRhosTurn1(:)),'linear');
-[rho,pp] = corr(twoEnvSpatialRhosTurn1,twoEnvTemporalRhosTurn1,'type','Spearman');
+aa = twoEnvSpatialRhosTurn1(~isnan(twoEnvSpatialRhosTurn1) & ~isnan(twoEnvTemporalRhosTurn1));
+bb = twoEnvTemporalRhosTurn1(~isnan(twoEnvSpatialRhosTurn1) & ~isnan(twoEnvTemporalRhosTurn1));
+lm = fitlm(table(aa(:),bb(:)),'linear');
+[rho,pp] = corr(aa,bb,'type','Spearman');
 hold on
 plotLocalErrorBars(twoEnvSpatialRhosTurn1,twoEnvTemporalRhosTurn1,[-1:0.2:1],'std','k')
 ylabel('Temporal Correlation (rho)')
@@ -1038,8 +1045,12 @@ MakePlotPrettySL(gca);
 
 subplot(2,2,4)
 plot(twoEnvSpatialRhosTurn2,twoEnvTemporalRhosTurn2,'.','MarkerEdgeColor',groupColors{2})
-lm = fitlm(table(twoEnvSpatialRhosTurn2(:),twoEnvTemporalRhosTurn2(:)),'linear');
-[rho,pp] = corr(twoEnvSpatialRhosTurn2,twoEnvTemporalRhosTurn2,'type','Spearman');
+aa = twoEnvSpatialRhosTurn2(~isnan(twoEnvSpatialRhosTurn2) & ~isnan(twoEnvTemporalRhosTurn2));
+bb = twoEnvTemporalRhosTurn2(~isnan(twoEnvSpatialRhosTurn2) & ~isnan(twoEnvTemporalRhosTurn2));
+%lm = fitlm(table(twoEnvSpatialRhosTurn2(:),twoEnvTemporalRhosTurn2(:)),'linear');
+lm = fitlm(table(aa(:),bb(:)),'linear');
+%[rho,pp] = corr(twoEnvSpatialRhosTurn2,twoEnvTemporalRhosTurn2,'type','Spearman');
+[rho,pp] = corr(aa,bb,'type','Spearman');
 hold on
 plotLocalErrorBars(twoEnvSpatialRhosTurn2,twoEnvTemporalRhosTurn2,[-1:0.2:1],'std','k')
 ylabel('Temporal Correlation (rho)')
@@ -1050,6 +1061,95 @@ MakePlotPrettySL(gca);
 suptitleSL('Spatial Correlation Vs. Temporal Correlation, Turn 1 vs. 2 (mean+/-STD')
 aa = gcf;
 aa.Renderer = 'painters';
+
+%For handling illustrator
+%{
+figure;
+subplot(2,2,1)
+plot(oneEnvSpatialRhosTurn1,oneEnvTemporalRhosTurn1,'.','MarkerEdgeColor',groupColors{1})
+aa = oneEnvSpatialRhosTurn1(~isnan(oneEnvSpatialRhosTurn1) & ~isnan(oneEnvTemporalRhosTurn1));
+bb = oneEnvTemporalRhosTurn1(~isnan(oneEnvSpatialRhosTurn1) & ~isnan(oneEnvTemporalRhosTurn1));
+lm = fitlm(table(aa(:),bb(:)),'linear');
+[rho,pp] = corr(aa,bb,'type','Spearman');
+hold on
+%plotLocalErrorBars(oneEnvSpatialRhosTurn1,oneEnvTemporalRhosTurn1,[-1:0.2:1],'std','k')
+ylabel('Temporal Correlation (rho)')
+xlabel('Spatial bin correlation (rho)')
+title(['OneMaze, Turn 1, rr = ' num2str(lm.Rsquared.Ordinary) ', rho,p = ' num2str(rho) ', ' num2str(pp)])
+MakePlotPrettySL(gca);
+
+subplot(2,2,2)
+plot(oneEnvSpatialRhosTurn2,oneEnvTemporalRhosTurn2,'.','MarkerEdgeColor',groupColors{1})
+aa = oneEnvSpatialRhosTurn2(~isnan(oneEnvSpatialRhosTurn2) & ~isnan(oneEnvTemporalRhosTurn2));
+bb = oneEnvTemporalRhosTurn2(~isnan(oneEnvSpatialRhosTurn2) & ~isnan(oneEnvTemporalRhosTurn2));
+lm = fitlm(table(aa(:),bb(:)),'linear');
+[rho,pp] = corr(aa,bb,'type','Spearman');
+hold on
+%plotLocalErrorBars(oneEnvSpatialRhosTurn2,oneEnvTemporalRhosTurn2,[-1:0.2:1],'std','k')
+ylabel('Temporal Correlation (rho)')
+xlabel('Spatial bin correlation (rho)')
+title(['OneMaze, Turn 2, rr = ' num2str(lm.Rsquared.Ordinary) ', rho,p = ' num2str(rho) ', ' num2str(pp)])
+MakePlotPrettySL(gca);
+
+subplot(2,2,3)
+plot(twoEnvSpatialRhosTurn1,twoEnvTemporalRhosTurn1,'.','MarkerEdgeColor',groupColors{2})
+aa = twoEnvSpatialRhosTurn1(~isnan(twoEnvSpatialRhosTurn1) & ~isnan(twoEnvTemporalRhosTurn1));
+bb = twoEnvTemporalRhosTurn1(~isnan(twoEnvSpatialRhosTurn1) & ~isnan(twoEnvTemporalRhosTurn1));
+lm = fitlm(table(aa(:),bb(:)),'linear');
+[rho,pp] = corr(aa,bb,'type','Spearman');
+hold on
+%plotLocalErrorBars(twoEnvSpatialRhosTurn1,twoEnvTemporalRhosTurn1,[-1:0.2:1],'std','k')
+ylabel('Temporal Correlation (rho)')
+xlabel('Spatial bin correlation (rho)')
+title(['TwoMaze, Turn 1, rr = ' num2str(lm.Rsquared.Ordinary)  ', rho,p = ' num2str(rho) ', ' num2str(pp)])
+MakePlotPrettySL(gca);
+
+subplot(2,2,4)
+plot(twoEnvSpatialRhosTurn2,twoEnvTemporalRhosTurn2,'.','MarkerEdgeColor',groupColors{2})
+aa = twoEnvSpatialRhosTurn2(~isnan(twoEnvSpatialRhosTurn2) & ~isnan(twoEnvTemporalRhosTurn2));
+bb = twoEnvTemporalRhosTurn2(~isnan(twoEnvSpatialRhosTurn2) & ~isnan(twoEnvTemporalRhosTurn2));
+%lm = fitlm(table(twoEnvSpatialRhosTurn2(:),twoEnvTemporalRhosTurn2(:)),'linear');
+lm = fitlm(table(aa(:),bb(:)),'linear');
+%[rho,pp] = corr(twoEnvSpatialRhosTurn2,twoEnvTemporalRhosTurn2,'type','Spearman');
+[rho,pp] = corr(aa,bb,'type','Spearman');
+hold on
+%plotLocalErrorBars(twoEnvSpatialRhosTurn2,twoEnvTemporalRhosTurn2,[-1:0.2:1],'std','k')
+ylabel('Temporal Correlation (rho)')
+xlabel('Spatial bin correlation (rho)')
+title(['TwoMaze, Turn 2, rr = ' num2str(lm.Rsquared.Ordinary) ', rho,p = ' num2str(rho) ', ' num2str(pp)])
+MakePlotPrettySL(gca);
+
+suptitleSL('Spatial Correlation Vs. Temporal Correlation, Turn 1 vs. 2 (mean+/-STD')
+aa = gcf;
+aa.Renderer = 'painters';
+
+figure;
+subplot(2,2,1)
+plot([-1 1],[0 0],'k'); hold on
+plotLocalErrorBars(oneEnvSpatialRhosTurn1,oneEnvTemporalRhosTurn1,[-1:0.2:1],'std','k')
+MakePlotPrettySL(gca);
+xlim([-1 1]); ylim([-0.5 1])
+
+subplot(2,2,2)
+plot([-1 1],[0 0],'k'); hold on
+plotLocalErrorBars(oneEnvSpatialRhosTurn2,oneEnvTemporalRhosTurn2,[-1:0.2:1],'std','k')
+MakePlotPrettySL(gca);
+xlim([-1 1]); ylim([-0.5 1])
+
+subplot(2,2,3)
+plot([-1 1],[0 0],'k'); hold on
+plotLocalErrorBars(twoEnvSpatialRhosTurn1,twoEnvTemporalRhosTurn1,[-1:0.2:1],'std','k')
+MakePlotPrettySL(gca);
+xlim([-1 1]); ylim([-0.5 1])
+
+subplot(2,2,4)
+plot([-1 1],[0 0],'k'); hold on
+plotLocalErrorBars(twoEnvSpatialRhosTurn2,twoEnvTemporalRhosTurn2,[-1:0.2:1],'std','k')
+MakePlotPrettySL(gca);
+xlim([-1 1]); ylim([-0.5 1])
+
+suptitleSL('Spatial Correlation Vs. Temporal Correlation, Turn 1 vs. 2 (mean+/-STD')
+%}
 
 % Is the change in spatial correlation related to change in temporal correlation?
 oneEnvSpatialChanges = [];
@@ -1090,26 +1190,80 @@ for mouseI = 1:numMice
 end
 
 figure;
-subplot(1,2,1)
+subplot(2,2,1)
 plot(oneEnvSpatialChanges,oneEnvTemporalChanges,'.','MarkerEdgeColor',groupColors{1})
-lm = fitlm(table(oneEnvSpatialChanges,oneEnvTemporalChanges),'linear');
+aa = oneEnvSpatialChanges(~isnan(oneEnvSpatialChanges) & ~isnan(oneEnvTemporalChanges));
+bb = oneEnvTemporalChanges(~isnan(oneEnvSpatialChanges) & ~isnan(oneEnvTemporalChanges));
+lm = fitlm(table(aa,bb),'linear');
 hold on
 plotLocalErrorBars(oneEnvSpatialChanges,oneEnvTemporalChanges,[-2:0.25:2],'std','k')
 xlabel('Change in Spatial Corr'); ylabel('Change in Temporal Corr')
-title(['OneMaze, rr = ' num2str(lm.Rsquared.Ordinary)])
+[rho,pp] = corr(aa,bb,'type','Spearman');
+title(['OneMaze, rr = ' num2str(lm.Rsquared.Ordinary) ', rho,p = ' num2str(rho) ', ' num2str(pp)])
 MakePlotPrettySL(gca);
 
-subplot(1,2,2)
+subplot(2,2,3)
 plot(twoEnvSpatialChanges,twoEnvTemporalChanges,'.','MarkerEdgeColor',groupColors{2})
-lm = fitlm(table(twoEnvSpatialChanges,twoEnvTemporalChanges),'linear');
+aa = twoEnvSpatialChanges(~isnan(twoEnvSpatialChanges) & ~isnan(twoEnvTemporalChanges));
+bb = twoEnvTemporalChanges(~isnan(twoEnvSpatialChanges) & ~isnan(twoEnvTemporalChanges));
+lm = fitlm(table(aa,bb),'linear');
 hold on
 plotLocalErrorBars(twoEnvSpatialChanges,twoEnvTemporalChanges,[-2:0.25:2],'std','k')
 xlabel('Change in Spatial Corr'); ylabel('Change in temporal Corr')
-title(['TwoMaze, rr = ' num2str(lm.Rsquared.Ordinary)])
+[rho,pp] = corr(aa,bb,'type','Spearman');
+title(['TwoMaze, rr = ' num2str(lm.Rsquared.Ordinary) ', rho,p = ' num2str(rho) ', ' num2str(pp)])
 MakePlotPrettySL(gca);
 
 suptitleSL('Change in Spatial Corr of pair by Change in Temporal Corr of pair')
-    
+  
+% For handling illustrator
+%{
+figure;
+subplot(2,2,1)
+plot(oneEnvSpatialChanges,oneEnvTemporalChanges,'.','MarkerEdgeColor',groupColors{1})
+aa = oneEnvSpatialChanges(~isnan(oneEnvSpatialChanges) & ~isnan(oneEnvTemporalChanges));
+bb = oneEnvTemporalChanges(~isnan(oneEnvSpatialChanges) & ~isnan(oneEnvTemporalChanges));
+lm = fitlm(table(aa,bb),'linear');
+hold on
+%plotLocalErrorBars(oneEnvSpatialChanges,oneEnvTemporalChanges,[-2:0.25:2],'std','k')
+xlabel('Change in Spatial Corr'); ylabel('Change in Temporal Corr')
+[rho,pp] = corr(aa,bb,'type','Spearman');
+title(['OneMaze, rr = ' num2str(lm.Rsquared.Ordinary) ', rho,p = ' num2str(rho) ', ' num2str(pp)])
+MakePlotPrettySL(gca);
+%axis off
+
+subplot(2,2,3)
+plot(twoEnvSpatialChanges,twoEnvTemporalChanges,'.','MarkerEdgeColor',groupColors{2})
+aa = twoEnvSpatialChanges(~isnan(twoEnvSpatialChanges) & ~isnan(twoEnvTemporalChanges));
+bb = twoEnvTemporalChanges(~isnan(twoEnvSpatialChanges) & ~isnan(twoEnvTemporalChanges));
+lm = fitlm(table(aa,bb),'linear');
+hold on
+%plotLocalErrorBars(twoEnvSpatialChanges,twoEnvTemporalChanges,[-2:0.25:2],'std','k')
+xlabel('Change in Spatial Corr'); ylabel('Change in temporal Corr')
+[rho,pp] = corr(aa,bb,'type','Spearman');
+title(['TwoMaze, rr = ' num2str(lm.Rsquared.Ordinary) ', rho,p = ' num2str(rho) ', ' num2str(pp)])
+MakePlotPrettySL(gca);
+%axis off
+
+suptitleSL('Change in Spatial Corr of pair by Change in Temporal Corr of pair')
+
+
+figure;
+subplot(2,2,1)
+plot([-2 2],[0 0],'k'); hold on
+plotLocalErrorBars(oneEnvSpatialChanges,oneEnvTemporalChanges,[-2:0.4:2],'std','k')
+MakePlotPrettySL(gca);
+xlim([-2 2]); ylim([-1 1])
+
+subplot(2,2,3)
+plot([-2 2],[0 0],'k'); hold on
+plotLocalErrorBars(twoEnvSpatialChanges,twoEnvTemporalChanges,[-2:0.4:2],'std','k')
+MakePlotPrettySL(gca);
+xlim([-2 2]); ylim([-1 1])
+
+suptitleSL('Change in Spatial Corr of pair by Change in Temporal Corr of pair')
+%}
+
 % Correlated remapping:
 % pairs of cells that each have a low spatial correlation across days but
 % maintain a high temporal correlation across days?
@@ -1119,6 +1273,8 @@ suptitleSL('Change in Spatial Corr of pair by Change in Temporal Corr of pair')
 for edgeI = 1:numel(edgeThreshes)
     oneEnvSpatialCorrsE = [];
     twoEnvSpatialCorrsE = [];
+    oneEnvNotTempSpatialCorrsE = [];
+    twoEnvNotTempSpatialCorrsE = [];
     oneEnvMeanRanks = [];
     oneEnvRanksAll = [];
     twoEnvMeanRanks = [];
@@ -1139,12 +1295,29 @@ for edgeI = 1:numel(edgeThreshes)
                              (temporalDayA > edgeThreshes(edgeI));
 
             uniqueCellsHere = unique(pairsHere(stayedTempCorr,:)); 
+
             
+            cellsHereBlank = false(numCells(mouseI),1);
+
+            uch = uniqueCellsHere;
+            uniqueCellsHere = cellsHereBlank; uniqueCellsHere(uch) = true; 
+
+            allCellsActive = unique(pairsHere); % This is all the cells that are active both days in the pair
+            aca = allCellsActive;
+            allCellsActive = cellsHereBlank; allCellsActive(aca) = true;
+
+            uniqueNotTempCorr = allCellsActive & (~uniqueCellsHere);
+            
+            if sum(allCellsActive) ~= sum(uniqueNotTempCorr) + sum(uniqueCellsHere)
+                disp('logical summation error n cells here')
+                keyboard
+            end
             % potentialCellPairs = pairsHere(stayedTempCorr,:); index into vvv to look for low spatial correlation
             % pcpTempCorrs = [temporalDayA(stayedTempCorr), temporalDayB(stayedTempCorr)];
             % pcpSpatialCorrs = [singleCellAllCorrsRho{mouseI}{1}{dpH}(potentialCellPairs)];
 
             uniqueCellCorrs = singleCellAllCorrsRho{mouseI}{1}{dpH}(uniqueCellsHere);
+            uniqueNotTempCorrs = singleCellAllCorrsRho{mouseI}{1}{dpH}(uniqueNotTempCorr);
             % Percentile rank of these correlations: 
             percentileRanksH = percentileOfEach(singleCellAllCorrsRho{mouseI}{1}{dpH});
             percentileRanksThese = percentileRanksH(uniqueCellsHere);
@@ -1152,10 +1325,12 @@ for edgeI = 1:numel(edgeThreshes)
             switch groupNum(mouseI)
                 case 1
                     oneEnvSpatialCorrsE = [oneEnvSpatialCorrsE; uniqueCellCorrs];
+                    oneEnvNotTempSpatialCorrsE = [oneEnvNotTempSpatialCorrsE; uniqueNotTempCorrs];
                     oneEnvMeanRanks = [oneEnvMeanRanks; mean(percentileRanksThese)];
                     oneEnvRanksAll = [oneEnvRanksAll; percentileRanksThese];
                 case 2
                     twoEnvSpatialCorrsE = [twoEnvSpatialCorrsE; uniqueCellCorrs];
+                    twoEnvNotTempSpatialCorrsE = [twoEnvNotTempSpatialCorrsE; uniqueNotTempCorrs];
                     twoEnvMeanRanks = [twoEnvMeanRanks; mean(percentileRanksThese)];
                     twoEnvRanksAll = [twoEnvRanksAll; percentileRanksThese];
             end
@@ -1166,6 +1341,14 @@ for edgeI = 1:numel(edgeThreshes)
     oneEnvSemCorrE(edgeI) = standarderrorSL(oneEnvSpatialCorrsE);
     twoEnvMeanCorrE(edgeI) = mean(twoEnvSpatialCorrsE);
     twoEnvSemCorrE(edgeI) = standarderrorSL(twoEnvSpatialCorrsE);
+
+    oneEnvMeanNotTempCorrE(edgeI) = mean(oneEnvNotTempSpatialCorrsE);
+    oneEnvSemNotTempCorrE(edgeI) = standarderrorSL(oneEnvNotTempSpatialCorrsE);
+    twoEnvMeanNotTempCorrE(edgeI) = mean(twoEnvNotTempSpatialCorrsE);
+    twoEnvSemNotTempCorrE(edgeI) = standarderrorSL(twoEnvNotTempSpatialCorrsE);
+
+    [oneEnvTempNonTempP(edgeI),~] = ranksum(oneEnvSpatialCorrsE,oneEnvNotTempSpatialCorrsE);
+    [twoEnvTempNonTempP(edgeI),~] = ranksum(twoEnvSpatialCorrsE,twoEnvNotTempSpatialCorrsE);
     
     oneEnvMeanRankE(edgeI) = mean(oneEnvRanksAll);
     oneEnvSemRankE(edgeI) = standarderrorSL(oneEnvRanksAll);
@@ -1175,6 +1358,7 @@ for edgeI = 1:numel(edgeThreshes)
     [ranksumP(edgeI),~] = ranksum(oneEnvSpatialCorrsE,twoEnvSpatialCorrsE);
     [~,ksP(edgeI)] = kstest2(oneEnvSpatialCorrsE,twoEnvSpatialCorrsE);
 end
+msgbox('At all these edges, active cells in an ensemble have a higher spatial correlation across the day pair than active cells out of an ensemble, OneMaze and TwoMaze')
 
 figure;
 errorbar(edgeThreshes,oneEnvMeanCorrE,oneEnvSemCorrE,'Color',groupColors{1})
@@ -1208,7 +1392,102 @@ MakePlotPrettySL(gca);
 % spatial correlation across that day pair depending on whether it's in a temporally correlated pair or not
 % could then plot these averages, or could get the difference between means
 % of each of these for each cell, average that
+oneEnvMeanCorrsIn = cell(nEdgeThreshes,1);
+oneEnvMeanCorrsOut = cell(nEdgeThreshes,1);
+oneEnvMeanCorrsInOutDiff = cell(nEdgeThreshes,1);
+oneEnvCorrsDiffInfo = cell(nEdgeThreshes,1);
+twoEnvMeanCorrsIn = cell(nEdgeThreshes,1);
+twoEnvMeanCorrsOut = cell(nEdgeThreshes,1);
+twoEnvMeanCorrsInOutDiff = cell(nEdgeThreshes,1);
+twoEnvCorrsDiffInfo = cell(nEdgeThreshes,1);
 
+for mouseI = 1:numMice
+    for cellI = 1:numCells(mouseI)
+        % will there even be enough dayUse above thresh to check
+        if sum(dayUse{mouseI}(cellI,unique(dayPairsHere))) > 2
+        
+        cellSpatialCorrsH = [];
+        cellTempCorrsH = [];
+        
+        maxTempCorrThisDayPairA = [];
+        maxTempCorrThisDayPairB = [];
+        for dpH = 1:numDayPairs
+            % Is the cell active this day pair
+            cellStaysActive = dayUseAll{mouseI}(cellI,dayPairsHere(dpH,1)) & dayUseAll{mouseI}(cellI,dayPairsHere(dpH,2));
+            if cellStaysActive
+                % Pairs including this cell, to index into tempCorrs
+                pairsThisCellA = sum(cellPairsUsed{mouseI}{dayPairsHere(dpH,1)} == cellI,2) > 0;
+                pairsThisCellB = sum(cellPairsUsed{mouseI}{dayPairsHere(dpH,2)} == cellI,2) > 0;
+                temporalCorrsThisCellDayA = temporalCorrsR{mouseI}{dayPairsHere(dpH,1)}(pairsThisCellA);
+                temporalCorrsThisCellDayB = temporalCorrsR{mouseI}{dayPairsHere(dpH,2)}(pairsThisCellB);
+                spatialCorrThisDayPair = singleCellAllCorrsRho{mouseI}{1}{dpH}(cellI);
+                
+                maxTempCorrThisDayPairA = [maxTempCorrThisDayPairA; max(temporalCorrsThisCellDayA)];
+                maxTempCorrThisDayPairB = [maxTempCorrThisDayPairB; max(temporalCorrsThisCellDayB)];
+                cellSpatialCorrsH = [cellSpatialCorrsH; spatialCorrThisDayPair];
+            end
+        end
+
+        if any(isnan(cellSpatialCorrsH))
+            disp('nan corrs')
+            keyboard
+        end
+
+        for edgeI = 1:nEdgeThreshes
+            corrAcrossDays = (maxTempCorrThisDayPairA > edgeThreshes(edgeI)) & (maxTempCorrThisDayPairB > edgeThreshes(edgeI));
+
+            % Need day pairs where above and below temp corr thresh to make this comparison
+            if any(corrAcrossDays == 1) && any(corrAcrossDays == 0)
+            
+                corrsInEnsemble = cellSpatialCorrsH(corrAcrossDays);
+                corrsOutEnsemble = cellSpatialCorrsH(~corrAcrossDays);
+                
+                meanCorrsIn = mean(corrsInEnsemble);
+                meanCorrsOut = mean(corrsOutEnsemble);
+                meanInOutDiff = meanCorrsIn - meanCorrsOut;
+
+                switch groupNum(mouseI)
+                    case 1
+                        oneEnvMeanCorrsIn{edgeI} = [oneEnvMeanCorrsIn{edgeI}; meanCorrsIn];
+                        oneEnvMeanCorrsOut{edgeI} = [oneEnvMeanCorrsOut{edgeI}; meanCorrsOut];
+                        oneEnvMeanCorrsInOutDiff{edgeI} = [oneEnvMeanCorrsInOutDiff{edgeI}; meanInOutDiff];
+                        oneEnvCorrsDiffInfo{edgeI} = [oneEnvCorrsDiffInfo{edgeI}; [mouseI, cellI, numel(corrAcrossDays)]];
+                    case 2
+                        twoEnvMeanCorrsIn{edgeI} = [twoEnvMeanCorrsIn{edgeI}; meanCorrsIn];
+                        twoEnvMeanCorrsOut{edgeI} = [twoEnvMeanCorrsOut{edgeI}; meanCorrsOut];
+                        twoEnvMeanCorrsInOutDiff{edgeI} = [twoEnvMeanCorrsInOutDiff{edgeI}; meanInOutDiff];
+                        twoEnvCorrsDiffInfo{edgeI} = [twoEnvCorrsDiffInfo{edgeI}; [mouseI, cellI, numel(corrAcrossDays)]];
+                end
+            end 
+        end % edgeI
+        end % enough dayUse
+
+    end % cellI
+end % mouseI
+
+oneEnvInOutDiffMean = cellfun(@mean, oneEnvMeanCorrsInOutDiff);
+oneEnvInOutDiffSEM = cellfun(@standarderrorSL, oneEnvMeanCorrsInOutDiff);
+twoEnvInOutDiffMean = cellfun(@mean, twoEnvMeanCorrsInOutDiff);
+twoEnvInOutDiffSEM = cellfun(@standarderrorSL, twoEnvMeanCorrsInOutDiff);
+[inOutDiffP,inOutDiffH] = cellfun(@(x,y) ranksum(x,y),oneEnvMeanCorrsInOutDiff(7:end),twoEnvMeanCorrsInOutDiff(7:end));
+[oneEnvInOutP,~] = cellfun(@(x,y) ranksum(x,y),oneEnvMeanCorrsIn(7:end),oneEnvMeanCorrsOut(7:end));
+[twoEnvInOutP,~] = cellfun(@(x,y) ranksum(x,y),twoEnvMeanCorrsIn(7:end),twoEnvMeanCorrsOut(7:end));
+[oneEnvInOutP<0.05, twoEnvInOutP < 0.05]
+%should then check what % of cells/tempcorrelation pairs included here...
+
+figure;
+errorbar(edgeThreshes,oneEnvInOutDiffMean,oneEnvInOutDiffSEM,'Color',groupColors{1})
+hold on                
+errorbar(edgeThreshes,twoEnvInOutDiffMean,twoEnvInOutDiffSEM,'Color',groupColors{2})
+for edgeI = 1:numel(edgeThreshes)
+    %text(edgeThreshes(edgeI),0.3,num2str(ranksumP(edgeI)),'Rotation',45)
+    %text(edgeThreshes(edgeI),0.1,num2str(ksP(edgeI)),'Rotation',45)
+end
+title('Coordinated remapping')
+xlabel('Correlation Edge Threshold')
+ylabel('In- Out-Ensemble Correlation Difference')
+ylim([0 0.8])
+MakePlotPrettySL(gca);
 
 %{
 oneEnvPairedCorrsMeans = [];
@@ -1218,7 +1497,7 @@ oneEnvPairedCorrsTempCorrDayB = [];
 oneEnvPairedCorrsTempCorrDayA = [];
 twoEnvPairedCorrsMeans = [];
 twoEnvPairedCorrsDiffs = [];
-twoEnvPairedCorrsTempChange = [];
+twoEnvPairedCorrsTempChange = [];[
 twoEnvPairedCorrsTempCorrDayB = [];
 twoEnvPairedCorrsTempCorrDayA = [];
 oneEnvPairedCorrsCells = [];
