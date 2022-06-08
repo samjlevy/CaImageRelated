@@ -16,7 +16,7 @@ suptitleSL(['Cell ' num2str(cellI), ', session ' num2str(sessI)])
 figHand.Position=[243.5000 207 447 405];
 MakePlotPrettySL(gca);
 %}
-PlotDoublePlusRaster(cellTBT{mouseI},cellI,dayI,condPlot,armLabels)
+PlotDoublePlusRaster(cellTBT{mouseI},cellI,dayI,condPlot,armLabels,armLims)
 %suptitleSL(['Cell ' num2str(cellI), ', session ' num2str(sessI)])
 %aa.Children(2).Children.String
 suptitleSL(['Mouse ' num2str(mouseI) ', Cell ' num2str(cellI), ', session ' num2str(sessI)])

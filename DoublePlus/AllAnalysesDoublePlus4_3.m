@@ -51,6 +51,7 @@ for condI = 1:4
     lgPlotAll.X = [lgPlotAll.X; lgPlotBins.X(binOrderIndex{condI},:)];
     lgPlotAll.Y = [lgPlotAll.Y; lgPlotBins.Y(binOrderIndex{condI},:)];
 end
+armLims = [min(abs(lgDataBins.Y(:)))  max(abs(lgDataBins.Y(:)))];
 
 msgbox('See here for bin plot ordering; should be ok')
 % so maybe looks like plot bins getting reordered but data bins are not?
@@ -944,7 +945,7 @@ end
 if ~exist(fullfile(mainFolder,'spatialCorrs.mat'),'file')
     for mouseI = 1:numMice
         tmapHere = cell(numCells(mouseI),9);
-        for condI = 1:condsHere
+        for condI = 1:numel(condsHere)
             tmapHere = cellfun(@(x,y) [x;y],tmapHere,cellTMap{mouseI}(:,:,condsHere(condI)),'UniformOutput',false);
         end
 
@@ -958,7 +959,7 @@ end
 
 
 %corrsTest = spatialCorrsR;      
-%coactivityAnalyses2;
+%coactvityAnalyses2;
 
 
 
@@ -1264,9 +1265,9 @@ xlim([-2 2]); ylim([-1 1])
 suptitleSL('Change in Spatial Corr of pair by Change in Temporal Corr of pair')
 %}
 
-% Correlated remapping:
-% pairs of cells that each have a low spatial correlation across days but
-% maintain a high temporal correlation across days?
+% Change in temporal correlation by baseline spatial correlation
+% Change in temporal correlation by baseline temporal correlation
+% Stronger with rule/environment than across...
 
 % Among cells that stay in a temporally correlated pair, what are their
 % spatial correlations?
@@ -1364,14 +1365,17 @@ figure;
 errorbar(edgeThreshes,oneEnvMeanCorrE,oneEnvSemCorrE,'Color',groupColors{1})
 hold on                
 errorbar(edgeThreshes,twoEnvMeanCorrE,twoEnvSemCorrE,'Color',groupColors{2})
+errorbar(edgeThreshes,oneEnvMeanNotTempCorrE,oneEnvSemNotTempCorrE,'LineStyle',':','Color',groupColors{1})
+errorbar(edgeThreshes,twoEnvMeanNotTempCorrE,twoEnvSemNotTempCorrE,'LineStyle',':','Color',groupColors{2})
 for edgeI = 1:numel(edgeThreshes)
     %text(edgeThreshes(edgeI),0.3,num2str(ranksumP(edgeI)),'Rotation',45)
     %text(edgeThreshes(edgeI),0.1,num2str(ksP(edgeI)),'Rotation',45)
 end
+plot(edgeThreshes([1 end]),[0 0],'k')
 title('Coordinated remapping')
 xlabel('Correlation Edge Threshold')
 ylabel('Mean Single-Cell Spatial Ratemap Correlation')
-ylim([0 0.8])
+ylim([-0.3 0.8])
 MakePlotPrettySL(gca);
 
 figure;
@@ -1479,14 +1483,41 @@ figure;
 errorbar(edgeThreshes,oneEnvInOutDiffMean,oneEnvInOutDiffSEM,'Color',groupColors{1})
 hold on                
 errorbar(edgeThreshes,twoEnvInOutDiffMean,twoEnvInOutDiffSEM,'Color',groupColors{2})
+plot([min(edgeThreshes) max(edgeThreshes)],[0 0],'k')
 for edgeI = 1:numel(edgeThreshes)
     %text(edgeThreshes(edgeI),0.3,num2str(ranksumP(edgeI)),'Rotation',45)
     %text(edgeThreshes(edgeI),0.1,num2str(ksP(edgeI)),'Rotation',45)
 end
-title('Coordinated remapping')
+title('Within-cell mean diff of in/out ensemble')
 xlabel('Correlation Edge Threshold')
 ylabel('In- Out-Ensemble Correlation Difference')
-ylim([0 0.8])
+ylim([-0.3 0.3])
+MakePlotPrettySL(gca);
+
+
+oneEnvMeanInMean = cellfun(@mean,oneEnvMeanCorrsIn);
+oneEnvMeanInSEM = cellfun(@standarderrorSL,oneEnvMeanCorrsIn);
+oneEnvMeanOutMean = cellfun(@mean,oneEnvMeanCorrsOut);
+oneEnvMeanOutSEM = cellfun(@standarderrorSL,oneEnvMeanCorrsOut);
+twoEnvMeanInMean = cellfun(@mean,twoEnvMeanCorrsIn);
+twoEnvMeanInSEM = cellfun(@standarderrorSL,twoEnvMeanCorrsIn);
+twoEnvMeanOutMean = cellfun(@mean,twoEnvMeanCorrsOut);
+twoEnvMeanOutSEM = cellfun(@standarderrorSL,twoEnvMeanCorrsOut);
+figure;
+errorbar(edgeThreshes,oneEnvMeanInMean,oneEnvMeanInSEM,'Color',groupColors{1})
+hold on                
+errorbar(edgeThreshes,twoEnvMeanInMean,twoEnvMeanInSEM,'Color',groupColors{2})
+errorbar(edgeThreshes,oneEnvMeanOutMean,oneEnvMeanOutSEM,'LineStyle',':','Color',groupColors{1})
+errorbar(edgeThreshes,twoEnvMeanOutMean,twoEnvMeanOutSEM,'LineStyle',':','Color',groupColors{2})
+plot([min(edgeThreshes) max(edgeThreshes)],[0 0],'k')
+for edgeI = 1:numel(edgeThreshes)
+    %text(edgeThreshes(edgeI),0.3,num2str(ranksumP(edgeI)),'Rotation',45)
+    %text(edgeThreshes(edgeI),0.1,num2str(ksP(edgeI)),'Rotation',45)
+end
+title('Within Neuron Mean In/Out-Ensemble Correlation')
+xlabel('Correlation Edge Threshold')
+ylabel('Mean within cell In/Out Corr')
+ylim([-0.3 0.6])
 MakePlotPrettySL(gca);
 
 %{
