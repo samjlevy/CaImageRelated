@@ -2,7 +2,7 @@ function [fixedEpochs, reporter] = FindBadLaps(x_adj_cm, y_adj_cm, epochs)
 inEpochs = epochs;
 
 badFig = figure('name','FindBad','Position',[358 150.5000 883 653.5000]); %[300 100 560*2 420*2]);
-for thisE = 1:length(epochs)
+for thisE = 1:numel(epochs)
     
     %deleteLaps = false(length(epochs(thisE).starts),1);
     
@@ -44,7 +44,7 @@ for thisE = 1:length(epochs)
     hold on
     plot(x_adj_cm(nowInds),y_adj_cm(nowInds),'.m', 'MarkerSize', 10)
     plot(x_adj_cm(epochs(thisE).starts),y_adj_cm(epochs(thisE).starts),'.y', 'MarkerSize', 10)
-    plot(x_adj_cm(epochs(thisE).stops),y_adj_cm(epochs(thisE).stops),'.y', 'MarkerSize', 10)
+    plot(x_adj_cm(epochs(thisE).stops),y_adj_cm(epochs(thisE).stops),'.c', 'MarkerSize', 10)
     set(gca,'Color',[0.8 0.8 0.8]);
     
     anyBad = input('any points are bad? 1/0 >');

@@ -1,7 +1,7 @@
 function MergeDifferentSessionPieces(foldersUse,cellRegInds,saveFolder)
 
 % folders use as a cell array, cellReginds cell session inds
-for fI = 1:length(foldersUse)
+for fI = 1:numel(foldersUse)
     pb{fI} = load(fullfile(foldersUse{fI},'Pos_brain.mat'));
     ff{fI} = readtable(fullfile(foldersUse{fI},'PlusBehavior_BrainTime.xlsx'));
     

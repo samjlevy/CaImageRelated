@@ -29,7 +29,12 @@ for dpI = 1:numDayPairs
     xlim(xll); ylim(yll);
     %axis manual
     if ~isempty(titles)
-    title(titles{dpI})
+        switch class(titles)
+            case 'cell'
+                title(titles{dpI})
+            case 'char'
+                title(titles(dpI,:))
+        end
     end
 end
 

@@ -1,9 +1,22 @@
-function MakeQuickPlusSpreadsheet
+function MakeQuickPlusSpreadsheet(sessType,behaviorFile,destFolder)
+%,positionFile
 
+if isempty(sessType)
 sessType = questdlg('Session Type:','Sess Type','Within Day','Turn Right','Go East','Turn Right');
+end
 
-behVariables = load('plusMazeBehavior.mat');
-load('posAnchored.mat','v0')
+if isempty(behaviorFile)
+    behVariables = load('plusMazeBehavior.mat');
+else
+    behVariables = load(behaviorFile);
+end
+%{
+if isempty(positionFile)
+    load('posAnchored.mat','v0')
+else
+    load(positionFile,'v0');
+end
+%}
 
 numTrials = length(behVariables.trialEpoch);
 
@@ -38,6 +51,7 @@ end
 allowedFix = cell2mat(cellfun(@length,sequences,'UniformOutput',false))'>3;
     
 %Check for bad laps
+%{
 haveBounds = cell2mat(cellfun(@length,behVariables.trialBounds,'UniformOutput',false));
 if any(haveBounds~=2)
     disp('found some bad laps')
@@ -45,17 +59,24 @@ if any(haveBounds~=2)
     keyboard
 end
 lapBounds = cell2mat(behVariables.trialBounds');
+%}
+lapBounds = behVariables.trialBounds;
+if size(seqLabeled,1)==1; seqLabeled = seqLabeled'; end
 
 PlusDataTable = table([1:numTrials]',...
                       behVariables.trialEpoch,...
-                      seqLabeled',...
+                      seqLabeled,...
                       lapBounds(:,1),...
                       lapBounds(:,2),...
-                      trialCorrect,...
-                      allowedFix,...
+                      trialCorrect(:),...
+                      allowedFix(:),...
      'VariableNames',{'TrialNum','Epoch','ArmSequence','LapStart','LapStop','Correct','AllowedFix'});
  
-writetable(PlusDataTable,'PlusBehavior.xlsx')
+if isempty(destFolder)
+    writetable(PlusDataTable,'PlusBehavior.xlsx')
+else
+    writetable(PlusDataTable,fullfile(destFolder,'PlusBehavior.xlsx'))
+end
 
 end
 

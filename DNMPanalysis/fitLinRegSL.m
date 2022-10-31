@@ -1,16 +1,17 @@
-function [slope, intercept, fitLine, rr, pSlope, pInt] = fitLinRegSL(data, realDays)
+function [slope, intercept, fitLine, rr, pSlope, pInt] = fitLinRegSL(yData, xData)
 
-data = data(:);
+yData = yData(:);
 %numDays = length(data);
 
-if isempty(realDays)
-    realDays = (1:length(data))';
+if isempty(xData)
+    xData = (1:length(yData))';
 end
+xData = xData(:);
 
 %model = [ones(numDays,1) [1:numDays]'.*data];
 %[b,~,r,~,stats] = regress(data, model);
 
-lm = fitlm(table(realDays(:),data(:)),'linear');
+lm = fitlm(table(xData(:),yData(:)),'linear');
 
 %slope = b(2);
 %intercept = b(1);
@@ -22,5 +23,5 @@ rr = lm.Rsquared;
 pInt = lm.Coefficients.pValue(1);
 pSlope = lm.Coefficients.pValue(2);
 
-fitLine = [realDays'; realDays'*slope+intercept]';
+fitLine = [xData(:), xData(:)*slope+intercept];
 end

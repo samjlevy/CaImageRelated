@@ -19,7 +19,7 @@ yHagg = [];
 spikingHagg = [];
                 
 figure;
-for condJ = 1:length(condPlot)
+for condJ = 1:numel(condPlot)
     condI = condPlot(condJ);
     
     lapsH = trialbytrial(condI).sessID == dayI;
@@ -56,6 +56,10 @@ for condJ = 1:length(condPlot)
                 binIn = in | on;
                 plot(spikePosX{condJ}(binIn),spikePosY{condJ}(binIn),'.','MarkerEdgeColor',[1.0000    0    0])
             end
+        case 'classicRed'
+            plot(spikePosX{condJ},spikePosY{condJ},'.','MarkerEdgeColor','r')
+        otherwise 
+            disp('not a coloring option')
     end
     
     end
@@ -63,14 +67,16 @@ for condJ = 1:length(condPlot)
 end
 maxClose = max(maxRate);
 
-[eachSpikeColor,ptsClose,maxRate] = DynamicColorMap(...
-            spikePosXagg,spikePosYagg,xHagg,yHagg,spikingHagg,radiusLimit,[]);
-[~,rateIndexOrder] = sort(ptsClose,'ascend');
-reorderedX = spikePosXagg(rateIndexOrder);
-reorderedY = spikePosYagg(rateIndexOrder);
-reorderedColors = eachSpikeColor(rateIndexOrder,:);
-for ptI = 1:length(spikePosXagg)
-    plot(reorderedX(ptI),reorderedY(ptI),'.','Color',reorderedColors(ptI,:),'MarkerSize',9)
+if strcmpi(coloring,'dynamic')
+    [eachSpikeColor,ptsClose,maxRate] = DynamicColorMap(...
+                spikePosXagg,spikePosYagg,xHagg,yHagg,spikingHagg,radiusLimit,[]);
+    [~,rateIndexOrder] = sort(ptsClose,'ascend');
+    reorderedX = spikePosXagg(rateIndexOrder);
+    reorderedY = spikePosYagg(rateIndexOrder);
+    reorderedColors = eachSpikeColor(rateIndexOrder,:);
+    for ptI = 1:length(spikePosXagg)
+        plot(reorderedX(ptI),reorderedY(ptI),'.','Color',reorderedColors(ptI,:),'MarkerSize',9)
+    end
 end
         %{
 for condJ = 1:length(condPlot)

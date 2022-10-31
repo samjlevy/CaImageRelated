@@ -1,4 +1,4 @@
-function PlotDoublePlusRaster(trialbytrial,cellI,dayI,condPlot,titles,binLimsPlot)
+function PlotDoublePlusRaster(trialbytrial,cellI,dayI,condPlot,titles,binLimsPlot,binLimsAsAxisLims)
 
 if isempty(binLimsPlot)
     binLimsPlot = [NaN NaN];
@@ -82,6 +82,10 @@ for condJ = 1:length(condPlot)
     aa = gca;
     if condI == 1 || condI == 2
         set(aa,'XTickLabel',cellfun(@num2str,mat2cell(aa.XTick'*-1,ones(numel(aa.XTick),1),1),'UniformOutput',false))
+    end
+
+    if binLimsAsAxisLims==true
+        xlim([min(binLimsX) max(binLimsX)])
     end
     
     if ~isempty(titles)

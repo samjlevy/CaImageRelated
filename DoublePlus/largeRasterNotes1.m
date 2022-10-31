@@ -9,7 +9,7 @@ binVertices = lgBinVertices;
 
 armMax = max(lgDataBins.X(:));
 armMin = min(abs(lgDataBins.X(:)));
-nBinsHere = 36;
+nBinsHere = 48;
 binLimitsHere = linspace(armMin,armMax,nBinsHere+1); 
 tempBin = [];
 for binI = 1:nBinsHere
@@ -65,6 +65,26 @@ for condI = 1:numConds
 end
 nicePlotBins{1} = aggBinX;
 nicePlotBins{2} = aggBinY;
+for bbI = 1:size(nicePlotBins{1},1)
+    for bbJ = 1:size(nicePlotBins{1},2)
+        thisPt = [nicePlotBins{1}(bbI,bbJ) nicePlotBins{2}(bbI,bbJ)];
+        if abs(thisPt(1)) < lgDataBins.X(2,3) &&...
+            abs(thisPt(2)) < lgDataBins.X(2,3)
+            [~,biggerPt] = max(abs(thisPt));
+            nicePlotBins{1}(bbI,bbJ) = abs(nicePlotBins{biggerPt}(bbI,bbJ)) * ( nicePlotBins{1}(bbI,bbJ)/abs(nicePlotBins{1}(bbI,bbJ)) );
+            nicePlotBins{2}(bbI,bbJ) = abs(nicePlotBins{biggerPt}(bbI,bbJ)) * ( nicePlotBins{2}(bbI,bbJ)/abs(nicePlotBins{2}(bbI,bbJ)) );
+        elseif abs(thisPt(1)) >= lgDataBins.X(2,3) ||...
+            abs(thisPt(2)) >= lgDataBins.X(2,3)
+            if thisPt(1) ~= thisPt(2)
+            [~,smallerPt] = min(abs(thisPt));
+            nicePlotBins{smallerPt}(bbI,bbJ) = lgDataBins.X(2,3) * ( nicePlotBins{smallerPt}(bbI,bbJ)/abs(nicePlotBins{smallerPt}(bbI,bbJ)) ); 
+            end
+                                    % Last bit here to get the sign right
+
+
+        end
+    end
+end
 
 %{
 figure; 
@@ -75,6 +95,7 @@ xlim([min(aggBinX(:)) max(aggBinX(:))]); ylim([min(aggBinY(:)) max(aggBinY(:))])
 %}
 
 for mouseI=1:numMice
+        disp(['mouse ' num2str(mouseI)])
         pfNam = [];
         [plotMaps{mouseI},~] = RateMapsDoublePlusV2(cellTBT{mouseI}, nicePlotBins, 'vertices', condPairs, 0, 'zeroOut', pfNam, false);
         
@@ -228,13 +249,16 @@ for ddJ = 1:2
     for condI = 1:4
         subplot(1,4,condI)
         imagesc(oneEnvPlottingNorm{ddI,ddJ}{condI})
-        colormap bone
+        %colormap bone
+        colormap gray
         title(armLabels{condI})
         vv = gca;
         vv.XTick = [1 nBinsHere];
         vv.XTickLabel = xlabls(condI,:);
+        vv.YTick = [1 size(oneEnvPlottingNorm{ddI,ddJ}{condI},1)];
         if condI==1
             ylabel('Cell Number')
+            vv.YTick = [1 size(oneEnvPlottingNorm{ddI,ddJ}{condI},1)];
         else 
             vv.YTick = [];
         end
@@ -247,13 +271,15 @@ for ddJ = 1:2
     for condI = 1:4
         subplot(1,4,condI)
         imagesc(twoEnvPlottingNorm{ddI,ddJ}{condI})
-        colormap bone
+        %colormap bone
+        colormap gray
         title(armLabels{condI})
         vv = gca;
         vv.XTick = [1 nBinsHere];
         vv.XTickLabel = xlabls(condI,:);
         if condI==1
             ylabel('Cell Number')
+            vv.YTick = [1 size(twoEnvPlottingNorm{ddI,ddJ}{condI},1)];
         else 
             vv.YTick = [];
         end

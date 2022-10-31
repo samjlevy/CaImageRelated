@@ -79,16 +79,12 @@ disp(['Day pair ' num2str(dayPairHere)...
     ', tempCorr day 1 ' num2str( pcpTempCorrs(pairI,1) ) ', tempCorr day 2 ' num2str( pcpTempCorrs(pairI,2) ) ])
 
 
-%%
+%% Within day pair finding notes
 
 % Within day pair finding notes
 mouseI = 5;
 dpH = 9;
 dayHere = 9; dayHereInd = find(dayPairsHere(dpH,:)==dayHere);
-
-cellPairsHH = [];
-[cellPairsHH(:,1),cellPairsHH(:,2)] = ind2sub([numCells(mouseI) numCells(mouseI)],cellPairsOverDays{mouseI}{dpH});
-pairsHere = cellPairsHH;
 
 %singleCellPairCorrs = singleCellAllCorrsRho{mouseI}{1}{dpH}(pairsHere);
 %spatialCorrsHere = corrsAllAB{mouseI}{1}{dpH}(:,dayHereInd);
@@ -149,28 +145,173 @@ MIthresh = 0.65;
 MIkeep = sum(MM > 0.7,2) == 3;
 possiblePlot = [possiblePlot(MIkeep,:), MM(MIkeep,:)];
 
-tripPlot = 1;
+tripPlot = 22; % 57
+% trialReliThresholding
+trialReliPos = [];
+for ii = 1:3
+    for condI = 1:4
+        trialReliPos(:,ii,condI) = trialReli{mouseI}(possiblePlot(:,ii),dayHere,condI);
+    end
+end
+tThresh = 0.2;
+abtt = sum(sum(trialReliPos > tThresh,2)==3,3)>0;
+possiblePlot = possiblePlot(abtt,:);
+
+tripPlot = 50; % 82 99 
+
 
 dayI = dayHere;
 
 %% 
 cellI = possiblePlot(tripPlot,1);
-PlotDoublePlusRaster(cellTBT{mouseI},cellI,dayI,condPlot,armLabels,armLims)
+PlotDoublePlusRaster(cellTBT{mouseI},cellI,dayI,condPlot,armLabels,armLims,true)
 suptitleSL(['Mouse ' num2str(mouseI) ', Cell ' num2str(cellI), ', session ' num2str(dayI)])
-set(gcf,'Position',[4.3333 168.3333 416.6667 310])
+set(gcf,'Position',[4.3333 168.3333 428.0000 312])
+set(gcf,'Renderer','painters')
 
 cellI = possiblePlot(tripPlot,2);
-PlotDoublePlusRaster(cellTBT{mouseI},cellI,dayI,condPlot,armLabels,armLims)
+PlotDoublePlusRaster(cellTBT{mouseI},cellI,dayI,condPlot,armLabels,armLims,true)
 suptitleSL(['Mouse ' num2str(mouseI) ', Cell ' num2str(cellI), ', session ' num2str(dayI)])
-set(gcf,'Position',[409 165 432.6667 312])
+set(gcf,'Position',[409 165 428.0000 312])
+set(gcf,'Renderer','painters')
 
 cellI = possiblePlot(tripPlot,3);
-PlotDoublePlusRaster(cellTBT{mouseI},54,dayI,condPlot,armLabels,armLims)
+PlotDoublePlusRaster(cellTBT{mouseI},cellI,dayI,condPlot,armLabels,armLims,true)
 suptitleSL(['Mouse ' num2str(mouseI) ', Cell ' num2str(cellI), ', session ' num2str(dayI)])
 set(gcf,'Position',[839.6667 170.3333 428.0000 312])
 
-
+cellA = possiblePlot(tripPlot,1);
+cellB = possiblePlot(tripPlot,2);
+cellC = possiblePlot(tripPlot,3);
+disp(['Temporal corr A-B: ' num2str(temporalCorrM(cellA,cellB)) ', cell A-C: '  num2str(temporalCorrM(cellA,cellC)) ', cell B-C: '  num2str(temporalCorrM(cellB,cellC))])
+disp(['Spatial corr A-B: ' num2str(spatialCorrM(cellA,cellB)) ', cell A-C: '  num2str(spatialCorrM(cellA,cellC)) ', cell B-C: '  num2str(spatialCorrM(cellB,cellC))])
+%{
 PlotDoublePlusRaster(trialbytrial,cellPlot,3,[1 2 3 4],{'n','w','s','e'},[])
 suptitleSL(['Cell ' num2str(cellPlot)])
 
 originalCellHere = sortedSessionInds(cellPlot,3);
+%}
+
+footPrints = load('C:\Users\Sam\Desktop\DoublePlus\Styx\StyxFootprints\NeuronFootprint180329.mat')
+
+for cellI = 1:570; cellROIs{cellI} = squeeze(cell_registered_struct.spatial_footprints_corrected{dayHere}(cellI,:,:)); end
+cellOutlines = cellfun(@(x) bwboundaries(x),cellROIs,'UniformOutput',false);
+cellOutlinesPatch = cellfun(@(x) [x{1}; x{1}(end,:)],cellOutlines,'UniformOutput',false);
+
+originalIndsA = cellSSI{mouseI}(cellA,dayHere);
+originalIndsB = cellSSI{mouseI}(cellB,dayHere);
+originalIndsC = cellSSI{mouseI}(cellC,dayHere);
+origCells = [originalIndsA, originalIndsB, originalIndsC];
+figure; axis; hold on
+for cellI = 1:570
+    if cellI == originalIndsA ||...
+            cellI == originalIndsB ||...
+            cellI == originalIndsC
+    else
+        outlineColor = [0    0.4471    0.7412];
+        patchColor = [0.3020    0.7451    0.9333];
+        % Draw the patch
+        patch(cellOutlinesPatch{cellI}(:,1),cellOutlinesPatch{cellI}(:,2),patchColor,'FaceAlpha',0.4,'EdgeColor','none')
+        % Draw the outline
+        plot(cellOutlinesPatch{cellI}(:,1),cellOutlinesPatch{cellI}(:,2),'Color',outlineColor,'LineWidth',0.5)
+    end
+end
+outlineColor = [0.8510    0.3255    0.0980];
+patchColor = [1.0000    0.4118    0.1608];
+for cellI = 1:3
+    % Draw the patch
+    patch(cellOutlinesPatch{origCells(cellI)}(:,1),cellOutlinesPatch{origCells(cellI)}(:,2),patchColor,'FaceAlpha',0.2,'EdgeColor','none')
+    % Draw the outline
+    plot(cellOutlinesPatch{origCells(cellI)}(:,1),cellOutlinesPatch{origCells(cellI)}(:,2),'Color',outlineColor,'LineWidth',0.75)
+
+    %text(mean(cellOutlinesPatch{origCells(cellI)}(:,1)),mean(cellOutlinesPatch{origCells(cellI)}(:,2)),num2str(origCells(cellI)))
+    text(mean(cellOutlinesPatch{origCells(cellI)}(:,1)),mean(cellOutlinesPatch{origCells(cellI)}(:,2)),num2str(possiblePlot(tripPlot,cellI)))
+end
+xlabel('FOV X (um)')
+ylabel('FOV Y (um)')
+set(gcf,'Renderer','painters')
+
+%% Notes for finding cell pairs across days
+mouseI = 6;
+dpH = 4;
+dayPair = dayPairsHere(dpH,:);
+
+cellPairsHH = [];
+[cellPairsHH(:,1),cellPairsHH(:,2)] = ind2sub([numCells(mouseI) numCells(mouseI)],cellPairsOverDays{mouseI}{dpH});
+pairsHere = cellPairsHH;
+
+cellPairsIndsHA = sub2ind([numCells(mouseI) numCells(mouseI)],cellPairsUsed{mouseI}{dayPair(1)}(:,1),cellPairsUsed{mouseI}{dayPair(1)}(:,2));
+
+spatialCorrsHereA = spatialCorrsR{mouseI}{dayPair(1)};
+spatialCorrMA = nan(numCells(mouseI),numCells(mouseI));
+spatialCorrMA(cellPairsIndsHA) = spatialCorrsHereA;
+spatialCorrMA(:,:,2) = spatialCorrMA'; % Pairs are unique combs, so have to combine to fill the square matrix
+scm = nansum(spatialCorrMA,3);
+scm(sum(isnan(spatialCorrMA),3)==2) = NaN;
+spatialCorrMA = scm;
+
+temporalCorrsHereA = temporalCorrsR{mouseI}{dayPair(1)};
+temporalCorrMA = nan(numCells(mouseI),numCells(mouseI));
+temporalCorrMA(cellPairsIndsHA) = temporalCorrsHereA;
+temporalCorrMA(:,:,2) = temporalCorrMA';
+tcm = nansum(temporalCorrMA,3);
+tcm(sum(isnan(temporalCorrMA),3)==2) = NaN;
+temporalCorrMA = tcm;
+
+cellPairsIndsHB = sub2ind([numCells(mouseI) numCells(mouseI)],cellPairsUsed{mouseI}{dayPair(2)}(:,1),cellPairsUsed{mouseI}{dayPair(2)}(:,2));
+
+spatialCorrsHereB = spatialCorrsR{mouseI}{dayPair(2)};
+spatialCorrMB = nan(numCells(mouseI),numCells(mouseI));
+spatialCorrMB(cellPairsIndsHB) = spatialCorrsHereB;
+spatialCorrMB(:,:,2) = spatialCorrMB'; % Pairs are unique combs, so have to combine to fill the square matrix
+scm = nansum(spatialCorrMB,3);
+scm(sum(isnan(spatialCorrMB),3)==2) = NaN;
+spatialCorrMB = scm;
+
+temporalCorrsHereB = temporalCorrsR{mouseI}{dayPair(2)};
+temporalCorrMB = nan(numCells(mouseI),numCells(mouseI));
+temporalCorrMB(cellPairsIndsHB) = temporalCorrsHereB;
+temporalCorrMB(:,:,2) = temporalCorrMB';
+tcm = nansum(temporalCorrMB,3);
+tcm(sum(isnan(temporalCorrMB),3)==2) = NaN;
+temporalCorrMB = tcm;
+
+% Now filter for a triplet of cells which are all well correlated on day A,
+% but one becomes temporally uncorrelated day B
+spatialCorrThresh = 0.75;
+tCorrUp = 0.15;
+tCorrDown = -0.0;
+MIthresh = 0.65;
+reliThreshH = 0.25;
+yesSpatialA = spatialCorrMA > spatialCorrThresh;
+yesTemporalA = temporalCorrMA > tCorrUp;
+yesSpatialB = spatialCorrMB > spatialCorrThresh;
+yesTemporalB = temporalCorrMB > tCorrUp;
+noTemporalB = temporalCorrMB < tCorrDown;
+yesSpatialYesTemporalA = yesSpatialA & yesTemporalA;
+yesSpatialYesTemporalB = yesSpatialB & yesTemporalB;
+yesSpatialNotTemporalB = yesSpatialB & noTemporalB;
+staySpatialAndTemporal = yesSpatialYesTemporalA & yesSpatialYesTemporalB;
+staySpatialNotTemporal = yesSpatialYesTemporalA & yesSpatialNotTemporalB;
+
+%MI, reli thresh here
+MIgood = (repmat(MI{mouseI}(:,dayPair(1)),1,numCells(mouseI)) > MIthresh) &...
+         (repmat(MI{mouseI}(:,dayPair(2))',numCells(mouseI),1) > MIthresh);
+reliGood = (repmat(sum(trialReli{mouseI}(:,dayPair(1),:) > reliThreshH,3) > 0,1,numCells(mouseI))) &... 
+           (repmat(sum(trialReli{mouseI}(:,dayPair(2),:) > reliThreshH,3)' > 0, numCells(mouseI),1));
+staySpatialAndTemporal = staySpatialAndTemporal & MIgood & reliGood;
+staySpatialNotTemporal = staySpatialNotTemporal & MIgood & reliGood;
+
+% Get the combinations of these
+%{
+possiblePlot = [];
+for cellI = 1:numCells(mouseI)
+    indsA = find(staySpatialAndTemporal(cellI,:));
+    indsB = find(staySpatialNotTemporal(cellI,:));
+    if any(indsA) && any(indsB)
+        combsHere = GetAllCombs(indsA,indsB);
+        possiblePlot = [possiblePlot; cellI*ones(size(combsHere,1),1), combsHere];
+    end
+end
+%}
+% No examples of this happening, so we'll just get 2 independent cells

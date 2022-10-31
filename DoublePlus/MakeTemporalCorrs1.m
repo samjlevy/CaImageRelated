@@ -1,4 +1,4 @@
-function [temporalCorrsR, temporalCorrsP] = MakeTemporalCorrs1(trialbytrial,condsHere,traitLogical)
+function [temporalCorrsR, temporalCorrsP, cellPairsUsed] = MakeTemporalCorrs1(trialbytrial,condsHere,traitLogical)
 
 nDays = max(trialbytrial(1).sessID);
 
@@ -30,7 +30,7 @@ for sessI = 1:nDays
                 [rr(cpI,1),pp(cpI,1)] = corr(psaHere(cellPairsHere(cpI,1),:)',psaHere(cellPairsHere(cpI,2),:)','type','Pearson');
             end
             
-            cellPairsUsed{mouseI}{sessI} = cellPairsHere;
+            cellPairsUsed{sessI} = cellPairsHere;
         
             temporalCorrsR{sessI} = rr;
             temporalCorrsP{sessI} = pp;

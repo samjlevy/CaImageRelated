@@ -290,6 +290,7 @@ totalAviTime = time(end);
 
 totalBrainTime = secondEnd - secondStart; % Amount reported by nVista
 brainTimeAt20 = nbFrames / 20;
+
 totalBrainTime = totalAviTime;
 
 adjustedBrainTime = linspace(0,totalBrainTime,nbFrames);

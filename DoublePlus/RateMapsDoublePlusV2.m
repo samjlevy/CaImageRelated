@@ -120,7 +120,7 @@ for condI = 1:numConds
                 end
                 if any(find(zz==0))
                     disp('Error: pos outside of a bin')
-                    %keyboard
+                    keyboard
                 end
                 OccMap{condI,sessions(sessI)} = sum(yy,2);
                 
