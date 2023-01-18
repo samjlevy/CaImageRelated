@@ -315,3 +315,286 @@ for cellI = 1:numCells(mouseI)
 end
 %}
 % No examples of this happening, so we'll just get 2 independent cells
+
+%% Pair of cells that stays temporally correlated but remap together across days
+
+condPlot = [1 2 3 4];
+
+plotBins.X = []; plotBins.Y = [];
+for condI = 1:numel(condsUse)
+    plotBins.X = [plotBins.X; lgPlotHere{condsUse(condI)}.X];
+    plotBins.Y = [plotBins.Y; lgPlotHere{condsUse(condI)}.Y];
+end
+
+mouseI = 1;
+dpH = 7;
+dayPair = dayPairsHere(dpH,:);
+
+cellPairsHH = [];
+[cellPairsHH(:,1),cellPairsHH(:,2)] = ind2sub([numCells(mouseI) numCells(mouseI)],cellPairsOverDays{mouseI}{dpH});
+pairsHere = cellPairsHH;
+
+% within day spatial and temporal corrs day A
+cellPairsIndsHA = sub2ind([numCells(mouseI) numCells(mouseI)],cellPairsUsed{mouseI}{dayPair(1)}(:,1),cellPairsUsed{mouseI}{dayPair(1)}(:,2));
+
+spatialCorrsHereA = spatialCorrsR{mouseI}{dayPair(1)};
+spatialCorrMA = nan(numCells(mouseI),numCells(mouseI));
+spatialCorrMA(cellPairsIndsHA) = spatialCorrsHereA;
+spatialCorrMA(:,:,2) = spatialCorrMA'; % Pairs are unique combs, so have to combine to fill the square matrix
+scm = nansum(spatialCorrMA,3);
+scm(sum(isnan(spatialCorrMA),3)==2) = NaN;
+spatialCorrMA = scm;
+
+temporalCorrsHereA = temporalCorrsR{mouseI}{dayPair(1)};
+temporalCorrMA = nan(numCells(mouseI),numCells(mouseI));
+temporalCorrMA(cellPairsIndsHA) = temporalCorrsHereA;
+temporalCorrMA(:,:,2) = temporalCorrMA';
+tcm = nansum(temporalCorrMA,3);
+tcm(sum(isnan(temporalCorrMA),3)==2) = NaN;
+temporalCorrMA = tcm;
+
+% within day spatial and temporal corrs day B
+cellPairsIndsHB = sub2ind([numCells(mouseI) numCells(mouseI)],cellPairsUsed{mouseI}{dayPair(2)}(:,1),cellPairsUsed{mouseI}{dayPair(2)}(:,2));
+
+spatialCorrsHereB = spatialCorrsR{mouseI}{dayPair(2)};
+spatialCorrMB = nan(numCells(mouseI),numCells(mouseI));
+spatialCorrMB(cellPairsIndsHB) = spatialCorrsHereB;
+spatialCorrMB(:,:,2) = spatialCorrMB'; % Pairs are unique combs, so have to combine to fill the square matrix
+scm = nansum(spatialCorrMB,3);
+scm(sum(isnan(spatialCorrMB),3)==2) = NaN;
+spatialCorrMB = scm;
+
+temporalCorrsHereB = temporalCorrsR{mouseI}{dayPair(2)};
+temporalCorrMB = nan(numCells(mouseI),numCells(mouseI));
+temporalCorrMB(cellPairsIndsHB) = temporalCorrsHereB;
+temporalCorrMB(:,:,2) = temporalCorrMB';
+tcm = nansum(temporalCorrMB,3);
+tcm(sum(isnan(temporalCorrMB),3)==2) = NaN;
+temporalCorrMB = tcm;
+
+% Across day spatial corrs
+acrossDayCorr = singleCellAllCorrsRho{mouseI}{1}{dpH};
+
+spatialCorrThresh = 0.65;
+remapAcrossDaysThresh = 0.35; % Looking for cells across days, so look below this
+tCorrUp = 0.2;
+MIthresh = 0.65;
+reliThreshH = 0.25;
+remapAcrossDays = acrossDayCorr < remapAcrossDaysThresh;
+remapAcrossDaysMat = remapAcrossDays(:) & remapAcrossDays(:)';
+yesSpatialA = spatialCorrMA > spatialCorrThresh;
+yesTemporalA = temporalCorrMA > tCorrUp;
+yesSpatialB = spatialCorrMB > spatialCorrThresh;
+yesTemporalB = temporalCorrMB > tCorrUp;
+yesSpatialYesTemporalA = yesSpatialA & yesTemporalA;
+yesSpatialYesTemporalB = yesSpatialB & yesTemporalB;
+staySpatialAndTemporalAndRemap = yesSpatialYesTemporalA & yesSpatialYesTemporalB & remapAcrossDaysMat;
+
+staySpatialAndTemporalAndRemap = staySpatialAndTemporalAndRemap & logical(triu(ones(numCells(mouseI)),1));
+[cellsA,cellsB] = ind2sub(numCells(mouseI)*[1 1],find(staySpatialAndTemporalAndRemap));
+sum(sum(staySpatialAndTemporalAndRemap))
+
+bvb = [acrossDayCorr(cellsA), acrossDayCorr(cellsB), spatialCorrMA(find(staySpatialAndTemporalAndRemap)),...
+              spatialCorrMB(find(staySpatialAndTemporalAndRemap)),temporalCorrMA(find(staySpatialAndTemporalAndRemap)),...
+              temporalCorrMB(find(staySpatialAndTemporalAndRemap))];
+
+%figure; histogram(acrossDayCorr(sum(yesSpatialYesTemporalA,2)>0))
+haveSomething = sum(yesSpatialYesTemporalA & yesSpatialYesTemporalB,2)>0;
+acds = acrossDayCorr(haveSomething);
+figure; histogram(acds)
+[mm,dd] = min(acds);
+sort(acds,'ascend')
+
+hss = find(haveSomething);
+vv = (yesSpatialYesTemporalA & yesSpatialYesTemporalB);
+find(vv(hss(dd),:))
+pairHere = [hss(dd), find(vv(hss(dd),:))]
+
+figure; histogram()
+
+%MI, reli thresh here
+MIgood = (repmat(MI{mouseI}(:,dayPair(1)),1,numCells(mouseI)) > MIthresh) &...
+         (repmat(MI{mouseI}(:,dayPair(2))',numCells(mouseI),1) > MIthresh);
+staySpatialAndTemporalAndRemap = staySpatialAndTemporalAndRemap & MIgood;
+reliGood = (repmat(sum(trialReli{mouseI}(:,dayPair(1),:) > reliThreshH,3) > 0,1,numCells(mouseI))) &... 
+           (repmat(sum(trialReli{mouseI}(:,dayPair(2),:) > reliThreshH,3)' > 0, numCells(mouseI),1));
+staySpatialAndTemporalAndRemap = staySpatialAndTemporalAndRemap & reliGood;
+sum(sum(staySpatialAndTemporalAndRemap))
+
+% Get the unique pairs above the diagonal
+staySpatialAndTemporalAndRemap = staySpatialAndTemporalAndRemap & logical(triu(ones(numCells(mouseI)),1));
+[cellsA,cellsB] = ind2sub(numCells(mouseI)*[1 1],find(staySpatialAndTemporalAndRemap));
+
+% Plot rasters for both cells, days A and B, msg box with corr/mi values
+pairPlot = 2;
+pairHere = [cellsA(pairPlot), cellsB(pairPlot)];
+
+cellI = pairHere(1);
+dayI = dayPair(1);
+PlotDoublePlusRaster(cellTBT{mouseI},cellI,dayI,condPlot,armLabels,armLims,true)
+suptitleSL(['Mouse ' num2str(mouseI) ', Cell ' num2str(cellI), ', session ' num2str(dayI)])
+set(gcf,'Position',[220 530 560 420])
+set(gcf,'Renderer','painters')
+
+cellI = pairHere(2);
+dayI = dayPair(1);
+PlotDoublePlusRaster(cellTBT{mouseI},cellI,dayI,condPlot,armLabels,armLims,true)
+suptitleSL(['Mouse ' num2str(mouseI) ', Cell ' num2str(cellI), ', session ' num2str(dayI)])
+set(gcf,'Position',[1055 523 560 420])
+set(gcf,'Renderer','painters')
+
+cellI = pairHere(1);
+dayI = dayPair(2);
+PlotDoublePlusRaster(cellTBT{mouseI},cellI,dayI,condPlot,armLabels,armLims,true)
+suptitleSL(['Mouse ' num2str(mouseI) ', Cell ' num2str(cellI), ', session ' num2str(dayI)])
+set(gcf,'Position',[300 41 560 420])
+set(gcf,'Renderer','painters')
+
+cellI = pairHere(2);
+dayI = dayPair(2);
+PlotDoublePlusRaster(cellTBT{mouseI},cellI,dayI,condPlot,armLabels,armLims,true)
+suptitleSL(['Mouse ' num2str(mouseI) ', Cell ' num2str(cellI), ', session ' num2str(dayI)])
+set(gcf,'Position',[1034 61 560 420])
+set(gcf,'Renderer','painters')
+
+ txtSummary = {['Day A-B spatialCorr cell A = ' num2str(acrossDayCorr(pairHere(1)))];...
+              ['Day A-B spatialCorr cell B = ' num2str(acrossDayCorr(pairHere(2)))];...
+              ['Spatial corr A-B day A = ' num2str(spatialCorrMA(pairHere(1),pairHere(2)))];...
+              ['Spatial corr A-B day B = ' num2str(spatialCorrMB(pairHere(1),pairHere(2)))];...
+              ['Temporal corr A-B day A = ' num2str(temporalCorrMA(pairHere(1),pairHere(2)))];...
+              ['Temporal corr A-B day B = ' num2str(temporalCorrMB(pairHere(1),pairHere(2)))];...
+};
+msgbox(txtSummary) 
+
+% Plot cell outlines
+%footPrints = load('C:\Users\Sam\Desktop\DoublePlus\Styx\StyxFootprints\NeuronFootprint180329.mat')
+crFile = ls(fullfile(mainFolder,mice{mouseI},[mice{mouseI} 'Footprints'],'Figures','cellRegistered*'));
+load(fullfile(mainFolder,mice{mouseI},[mice{mouseI} 'Footprints'],'Figures',crFile)) 
+
+SSIhere = cell_registered_struct.cell_to_index_map;
+allROIs = cell(numCells(mouseI),1);
+for cellI = 1:numCells(mouseI)
+    firstDay = find(SSIhere(cellI,:),1,'first');
+    allROIs{cellI} = squeeze(cell_registered_struct.spatial_footprints_corrected{firstDay}(SSIhere(cellI,firstDay),:,:));
+end
+
+numCellsDayA = size(cell_registered_struct.spatial_footprints_corrected{dayPairsHere(dpH,1)},1);
+cellROIsDayA = cell(numCellsDayA,1);
+for cellI = 1:numCellsDayA
+    cellROIsDayA{cellI} = squeeze(cell_registered_struct.spatial_footprints_corrected{dayPairsHere(dpH,1)}(cellI,:,:));
+end
+
+numCellsDayB = size(cell_registered_struct.spatial_footprints_corrected{dayPairsHere(dpH,2)},1);
+cellROIsDayB = cell(numCellsDayB,1);
+for cellI = 1:numCellsDayB
+    cellROIsDayB{cellI} = squeeze(cell_registered_struct.spatial_footprints_corrected{dayPairsHere(dpH,2)}(cellI,:,:));
+end
+
+clear cell_registered_struct
+
+cellOutlinesA = cellfun(@(x) bwboundaries(x),cellROIsDayA,'UniformOutput',false);
+cellOutlinesPatchA = cellfun(@(x) [x{1}; x{1}(end,:)],cellOutlinesA,'UniformOutput',false);
+cellOutlinesB = cellfun(@(x) bwboundaries(x),cellROIsDayB,'UniformOutput',false);
+cellOutlinesPatchB = cellfun(@(x) [x{1}; x{1}(end,:)],cellOutlinesB,'UniformOutput',false);
+cellOutlinesAll = cellfun(@(x) bwboundaries(x),allROIs,'UniformOutput',false);
+cellOutlinesPatchAll = cellfun(@(x) [x{1}; x{1}(end,:)],cellOutlinesAll,'UniformOutput',false);
+
+% All cells from all days
+figure; axis; hold on
+for cellI = 1:numCells(mouseI)
+    %cellJ = SSIhere(cellI,dayPair(1));
+    if cellI == pairHere(1) || cellI == pairHere(2)
+        
+    else
+        outlineColor = [0    0.4471    0.7412];
+        patchColor = [0.3020    0.7451    0.9333];
+        % Draw the patch
+        patch(cellOutlinesPatchAll{cellI}(:,1),cellOutlinesPatchAll{cellI}(:,2),patchColor,'FaceAlpha',0.4,'EdgeColor','none')
+        % Draw the outline
+        plot(cellOutlinesPatchAll{cellI}(:,1),cellOutlinesPatchAll{cellI}(:,2),'Color',outlineColor,'LineWidth',0.5)
+    end
+end
+outlineColor = [0.8510    0.3255    0.0980];
+patchColor = [1.0000    0.4118    0.1608];
+for cellI = 1:2
+    % Draw the patch
+    patch(cellOutlinesPatchAll{pairHere(cellI)}(:,1),cellOutlinesPatchAll{pairHere(cellI)}(:,2),patchColor,'FaceAlpha',0.2,'EdgeColor','none')
+    % Draw the outline
+    plot(cellOutlinesPatchAll{pairHere(cellI)}(:,1),cellOutlinesPatchAll{pairHere(cellI)}(:,2),'Color',outlineColor,'LineWidth',0.75)
+
+    %text(mean(cellOutlinesPatch{origCells(cellI)}(:,1)),mean(cellOutlinesPatch{origCells(cellI)}(:,2)),num2str(origCells(cellI)))
+    text(mean(cellOutlinesPatchAll{pairHere(cellI)}(:,1)),mean(cellOutlinesPatchAll{pairHere(cellI)}(:,2)),num2str(pairHere(cellI)))
+end
+xlabel('FOV X (um)')
+ylabel('FOV Y (um)')
+title(['Mouse ' num2str(mouseI) ' cellROIs from all sessions'])
+set(gcf,'Renderer','painters')
+
+
+% Day A only
+figure; axis; hold on
+for cellI = 1:numCells(mouseI)
+    cellJ = SSIhere(cellI,dayPair(1));
+    if cellJ > 0
+        if cellI == pairHere(1) || cellI == pairHere(2)
+            
+        else
+            outlineColor = [0    0.4471    0.7412];
+            patchColor = [0.3020    0.7451    0.9333];
+            % Draw the patch
+            patch(cellOutlinesPatchA{cellJ}(:,1),cellOutlinesPatchA{cellJ}(:,2),patchColor,'FaceAlpha',0.4,'EdgeColor','none')
+            % Draw the outline
+            plot(cellOutlinesPatchA{cellJ}(:,1),cellOutlinesPatchA{cellJ}(:,2),'Color',outlineColor,'LineWidth',0.5)
+        end
+    end
+end
+outlineColor = [0.8510    0.3255    0.0980];
+patchColor = [1.0000    0.4118    0.1608];
+for cellI = 1:2
+    cellJ = SSIhere(pairHere(cellI),dayPair(1));
+    % Draw the patch
+    patch(cellOutlinesPatchA{cellJ}(:,1),cellOutlinesPatchA{cellJ}(:,2),patchColor,'FaceAlpha',0.2,'EdgeColor','none')
+    % Draw the outline
+    plot(cellOutlinesPatchA{cellJ}(:,1),cellOutlinesPatchA{cellJ}(:,2),'Color',outlineColor,'LineWidth',0.75)
+
+    %text(mean(cellOutlinesPatch{origCells(cellI)}(:,1)),mean(cellOutlinesPatch{origCells(cellI)}(:,2)),num2str(origCells(cellI)))
+    text(mean(cellOutlinesPatchA{cellJ}(:,1)),mean(cellOutlinesPatchA{cellJ}(:,2)),num2str(pairHere(cellI)))
+end
+xlabel('FOV X (um)')
+ylabel('FOV Y (um)')
+title(['Mouse ' num2str(mouseI) ' cellROIs from session ' num2str(dayPair(1))])
+set(gcf,'Renderer','painters')
+
+% Day B only
+figure; axis; hold on
+for cellI = 1:numCells(mouseI)
+    cellJ = SSIhere(cellI,dayPair(2));
+    if cellJ > 0
+        if cellI == pairHere(1) || cellI == pairHere(2)
+            
+        else
+            outlineColor = [0    0.4471    0.7412];
+            patchColor = [0.3020    0.7451    0.9333];
+            % Draw the patch
+            patch(cellOutlinesPatchB{cellJ}(:,1),cellOutlinesPatchB{cellJ}(:,2),patchColor,'FaceAlpha',0.4,'EdgeColor','none')
+            % Draw the outline
+            plot(cellOutlinesPatchB{cellJ}(:,1),cellOutlinesPatchB{cellJ}(:,2),'Color',outlineColor,'LineWidth',0.5)
+        end
+    end
+end
+outlineColor = [0.8510    0.3255    0.0980];
+patchColor = [1.0000    0.4118    0.1608];
+for cellI = 1:2
+    cellJ = SSIhere(pairHere(cellI),dayPair(2));
+    % Draw the patch
+    patch(cellOutlinesPatchB{cellJ}(:,1),cellOutlinesPatchB{cellJ}(:,2),patchColor,'FaceAlpha',0.2,'EdgeColor','none')
+    % Draw the outline
+    plot(cellOutlinesPatchB{cellJ}(:,1),cellOutlinesPatchB{cellJ}(:,2),'Color',outlineColor,'LineWidth',0.75)
+
+    %text(mean(cellOutlinesPatch{origCells(cellI)}(:,1)),mean(cellOutlinesPatch{origCells(cellI)}(:,2)),num2str(origCells(cellI)))
+    text(mean(cellOutlinesPatchB{cellJ}(:,1)),mean(cellOutlinesPatchB{cellJ}(:,2)),num2str(pairHere(cellI)))
+end
+xlabel('FOV X (um)')
+ylabel('FOV Y (um)')
+title(['Mouse ' num2str(mouseI) ' cellROIs from session ' num2str(dayPair(2))])
+set(gcf,'Renderer','painters')

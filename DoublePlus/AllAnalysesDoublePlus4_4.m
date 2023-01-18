@@ -990,6 +990,19 @@ for mouseI = 1:numMice
     end
 end
 
+% Are these distributions different?
+%{
+[h,pA,ks2statA] = kstest2(oneEnvTemporalRhosTurn1,oneEnvTemporalRhosTurn2);
+[h,pB,ks2statB] = kstest2(twoEnvTemporalRhosTurn1,twoEnvTemporalRhosTurn2);
+[h,pC,ks2statC] = kstest2(oneEnvTemporalRhosTurn1,twoEnvTemporalRhosTurn1);
+[h,pD,ks2statD] = kstest2(oneEnvTemporalRhosTurn2,twoEnvTemporalRhosTurn2);
+stText = {['OneMaze: Turn1 v Turn 2: p = ' num2str(pA) ', ksStat= ' num2str(ks2statA)];...
+          ['TwoMaze: Turn1 v Turn 2: p = ' num2str(pB) ', ksStat= ' num2str(ks2statB)];...
+          ['Turn1: OneMaze v TwoMaze: p = ' num2str(pC) ', ksStat= ' num2str(ks2statC)];...
+          ['Turn2: OneMaze v TwoMaze: p = ' num2str(pD) ', ksStat= ' num2str(ks2statD)]};
+msgbox(stText)
+%}
+
 figure;
 subplot(2,2,1)
 plot(oneEnvSpatialRhosTurn1,oneEnvTemporalRhosTurn1,'.','MarkerEdgeColor',groupColors{1})
@@ -1206,6 +1219,16 @@ xlim([-1 1]); ylim([-0.5 1])
 
 suptitleSL('Spatial Correlation Vs. Temporal Correlation, Turn 1 vs. 2 (mean+/-STD')
 %}
+figure;
+%subplot()
+%[cdfH,cdfX] = ecdf(oneEnvTemporalRhosTurn1);
+[cdfH,cdfX] = ecdf(oneEnvTemporalRhosTurn1(oneEnvTemporalRhosTurn1>0));
+plot(cdfX,cdfH,'Color',groupColors{1})
+hold on
+%[cdfH,cdfX] = ecdf(twoEnvTemporalRhosTurn1);
+[cdfH,cdfX] = ecdf(twoEnvTemporalRhosTurn1(twoEnvTemporalRhosTurn1>0));
+plot(cdfX,cdfH,'Color',groupColors{2})
+[h,p] = kstest2(oneEnvTemporalRhosTurn1,twoEnvTemporalRhosTurn1);
 
 % Is the change in spatial correlation related to change in temporal correlation?
 oneEnvSpatialChanges = [];
@@ -1244,6 +1267,7 @@ for mouseI = 1:numMice
         end
     end
 end
+
 
 figure;
 subplot(2,2,1)
@@ -1327,6 +1351,10 @@ suptitleSL('Change in Spatial Corr of pair by Change in Temporal Corr of pair')
 % Change in temporal correlation by baseline spatial correlation
 % Change in temporal correlation by baseline temporal correlation
 % Stronger with rule/environment than across...
+figure; 
+disp('work here')
+%[xx,ff] = ecdf(oneEnvTem
+
 
 % Among cells that stay in a temporally correlated pair, what are their
 % spatial correlations?
